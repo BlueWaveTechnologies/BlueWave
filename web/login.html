@@ -1,0 +1,280 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>Login</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+<link href="style/login.css" type="text/css" rel="stylesheet" />
+
+<script src="lib/javaxt/javaxt.js" type="text/javascript"></script>
+<link href="//fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" />
+
+
+</head>
+<body>
+
+    <table border="0" style="border-collapse:collapse;height:100%;width:100%" cellpadding="0">
+      <tr>
+        <td align="center">
+
+          <div class="login-container" style="display:none;">
+
+            <div class="login-logo"></div>
+            <div class="login-error" style="display:none;"></div>
+
+            <div style="width:100%;">
+
+              <form class="login-form">
+
+
+                <!-- Username -->
+                <div class="login-username-input">
+                  <div style="float: left;">
+                    <span class="login-user-icon"></span>
+                  </div>
+                  <div style="overflow:hidden;">
+                    <input type="text" name="username" placeholder="Username" autocomplete="off" />
+                  </div>
+                </div>
+
+
+                <!-- Password -->
+                <div class="login-password-input">
+                  <div style="float: left;">
+                    <span class="login-lock-icon"></span>
+                  </div>
+                  <div style="overflow:hidden;">
+                    <input type="password" name="password" placeholder="Password" autocomplete="new-password" />
+                  </div>
+                </div>
+
+
+                <!-- Button -->
+                <input type="submit" value="Sign In" />
+
+              </form>
+
+
+              <div class="login-links">
+                <p>
+                  <a href="#">Forgot sign-in credentials?</a>
+                </p>
+                <p>
+                  <a href="#">Don't have an account?</a>
+                </p>
+              </div>
+
+
+            </div>
+
+          </div>
+
+        </td>
+      </tr>
+    </table>
+
+<script type="text/javascript">
+//<![CDATA[
+
+window.onload = function() {
+    javaxt.dhtml.utils.updateDOM();
+    var body = document.body;
+    var auth = new javaxt.dhtml.Authentication("login", "logout");
+    var el = document.getElementsByClassName("login-container")[0];
+    var fx = new javaxt.dhtml.Effects();
+    var errorDiv;
+    var inputs = [];
+
+
+  //Fade in the login form
+    setTimeout(function(){
+        fx.fadeIn(el, "easeIn", 500, initForm);
+    }, 500);
+
+
+
+
+  //Initialize form (called after form has been rendered)
+    var initForm = function(){
+
+      //Get form
+        var form = document.getElementsByTagName("form")[0];
+        form.reset();
+
+
+      //Get form inputs
+        for (var i=0; i<form.elements.length; i++){
+            var input = form.elements[i];
+            if (input.tagName==="INPUT"){
+                inputs.push(input);
+            }
+        }
+
+
+      //Get error div
+        errorDiv = document.getElementsByClassName("login-error")[0];
+
+
+      //Process submit events
+        form.onsubmit = function(){
+            submitForm(this);
+            return false;
+        };
+        form.onkeypress = function(e) {
+            var eve = e || window.event;
+            var keycode = eve.keyCode || eve.which || eve.charCode;
+
+            if (keycode == 13) {
+                eve.cancelBubble = true;
+                eve.returnValue = false;
+
+                if (eve.stopPropagation) {
+                    eve.stopPropagation();
+                    eve.preventDefault();
+                }
+
+                submitForm(this);
+                return false;
+            }
+        };
+    };
+
+
+
+  //Submit form
+    var submitForm = function(form){
+
+      //Remove focus from the submit button
+        for (var i=0; i<inputs.length; i++){
+            if (inputs[i].type === 'submit') {
+                inputs[i].blur();
+                break;
+            }
+        }
+
+
+      //Hide any error messages
+        hideMessage();
+
+
+      //Get username and password
+        var username = form.username.value;
+        var password = form.password.value;
+        if (username.length==0){
+            showMessage("Username is required");
+            return false;
+        }
+        if (password.length==0){
+            showMessage("Password is required");
+            return false;
+        }
+
+
+      //Disable form inputs
+        disable();
+
+
+      //Partially fade out the form
+        el.style.opacity = 0.8;
+
+
+      //Attempt to login the user
+        auth.login(username, password, function(){
+            var response = this;
+            if (response.status==200){
+
+
+              //Get user
+                var text = response.responseText;
+                var user = JSON.parse(text);
+                document.user = user;
+
+
+              //Hide form and load the gypsy app
+                fx.fadeOut(el, "easeIn", 500, function(){
+                    var pageLoader = new javaxt.dhtml.PageLoader();
+                    var url = "main.html";
+                    pageLoader.loadPage(url, function(){
+                        //waitmask.hide();
+                    });
+                });
+
+            }
+            else{
+
+                enable();
+                //if (document.waitMask) document.waitMask.hide(0);
+
+                if (response.status==400 || response.status==401 || response.status==403){
+                    showMessage("Invalid username or password");
+                }
+                else{
+                    var text = response.responseText;
+                    if (text!=null){
+                        text = text.trim();
+                        if (text.length==0) text = null;
+                    }
+                    if (text==null) text = response.statusText;
+
+                    showMessage("Login failure: " + text);
+                }
+
+                //if (document.waitMask) document.waitMask.hide(0);
+            }
+        });
+
+    };
+
+    var enable = function(){
+        for (var i=0; i<inputs.length; i++){
+            inputs[i].disabled = false;
+            if (inputs[i].type !== 'submit') {
+                var div = inputs[i].parentNode.parentNode;
+                var className = div.className;
+                var idx = className.indexOf(" disabled");
+                if (idx>0) div.className = className.substring(0, idx);
+                console.log("|"+div.className+"|");
+            }
+        }
+    };
+
+    var disable = function(){
+        for (var i=0; i<inputs.length; i++){
+            inputs[i].disabled = true;
+            if (inputs[i].type !== 'submit') {
+                var div = inputs[i].parentNode.parentNode;
+                var idx = div.className.indexOf(" disabled");
+                if (idx==-1) div.className += " disabled";
+            }
+        }
+    };
+
+    var showMessage = function(feedbackMsg) {
+
+        el.style.opacity = 1;
+
+        if (errorDiv.style.display=="none"){
+            fx.fadeIn(errorDiv, "linear", 100, function(){
+                errorDiv.innerHTML = feedbackMsg;
+            });
+        }
+        else{
+            errorDiv.style.opacity = 1;
+            errorDiv.innerHTML = feedbackMsg;
+        }
+    };
+
+    var hideMessage = function(){
+        errorDiv.style.opacity = 0;
+        errorDiv.style.display="none";
+    };
+
+};
+//]]>
+</script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+target/
+temp/
+/data/
+
+web/test/
+web/images/thumbnails/
+
+[Cc]onfig.json
+nb-configuration.xml
+
+*.DS_Store
+*.dll
+**/test.html*
+**/!README.TXT

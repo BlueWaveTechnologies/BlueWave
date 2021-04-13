@@ -1,0 +1,646 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans);
+
+html, body {
+    height:100%;
+    margin:0;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #000000;
+}
+
+body, textarea, input, select, td, th {
+    font-family: 'Open Sans',helvetica,arial,verdana,sans-serif;
+}
+
+
+/**************************************************************************/
+/** App Header
+/**************************************************************************/
+
+.app-header {
+    background-color: #007CBA;
+    height: 86px;
+    color: #fff;
+}
+
+
+.app-header-icon {
+    background: url(../images/logo.png) no-repeat;
+    width: 153px;
+    height: 86px;
+    margin: 0 8px;
+}
+
+.app-header-text {
+    margin-top: 56px;
+    display: inline-block;
+    float: left;
+    font-size: 16px;
+    white-space: nowrap;
+    color: #fff;
+}
+
+.app-header-profile,
+.app-header-menu {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    margin: 3px;
+    border-radius: 50%;
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+}
+
+.app-header-profile {
+    background-color: #EE9549;
+    text-transform: uppercase;
+}
+
+ .app-header-profile:hover {
+    background-color: #ffb576;
+    transition: 0.4s;
+ }
+
+.app-header-menu {
+    background-color: #2c7cba;
+    margin-left: 0;
+ }
+
+ .app-header-menu .fas {
+    margin-top: 7px;
+}
+
+ .app-header-menu:hover {
+     background-color: #3baaff;
+     transition: 0.4s;
+ }
+
+ .app-menu {
+    padding: 3px 2px;
+    min-width: 180px;
+}
+
+.app-menu-item:hover {
+    background-color: #bee3ff;
+}
+
+.app-menu-item {
+    line-height: 39px;
+    font-size: 14px;
+    padding: 0 7px 0 0;
+    white-space: nowrap;
+}
+
+.app-menu-item .fas {
+    color:#3876ad;
+    text-align:center;
+    width: 35px;
+    font-size: 20px;
+}
+
+/* override the default style for the javaxt callout
+   prevents overflow issues in the app header
+*/
+.callout-arrow {
+    padding: 10px;
+}
+
+
+/**************************************************************************/
+/** Dashboard Header
+/**************************************************************************/
+
+.dashboard-title {
+    height: 70px;
+    background-color: #fcfcfc;
+    text-align: center;
+    line-height: 59px;
+    color: #007CBA;
+    font-size: 20px;
+}
+
+.dashboard-footer {
+    background-color: #e8e8e8;
+    color: #777;
+    font-size: 12px;
+    padding: 3px;
+    line-height: 20px;
+}
+
+.dashboard-back, .dashboard-next {
+    width: 35px;
+    height: 43px;
+    cursor: pointer;
+    display: block;
+    position: absolute;
+    top: 10px;
+}
+
+.dashboard-back {
+    left:10px;
+}
+
+.dashboard-next {
+    right:10px;
+}
+
+
+.dashboard-back:after, .dashboard-next:after {
+    content:"";
+    position:absolute;
+    border-right: 3px solid #007cba;
+    border-bottom: 3px solid #007cba;
+    width: 16px;
+    height: 16px;
+    margin: 12px 0px 0px 10px;
+}
+
+.dashboard-back:after{
+    transform: rotate(135deg);
+    -webkit-transform: rotate(135deg);
+}
+
+
+.dashboard-next:after {
+    transform: rotate(315deg);
+    -webkit-transform: rotate(315deg);
+}
+
+.dashboard-back:hover::after, .dashboard-next:hover::after {
+    transition: 0.2s;
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0px 0px 2px 0px rgba(255, 255, 255, 1) inset,
+        3px 7px 7px -1px rgba(82, 168, 236, 0.2);
+    outline: 0 none;
+}
+
+
+.dashboard-item {
+    background-color: #fff;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #e0e0e0;
+    display: inline-block;
+    float: left;
+}
+
+
+.dashboard-item-settings {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    font-size: 20px;
+    color: #9a9a9a;
+    cursor: pointer;
+    z-index: 2;
+    width: 32px;
+    height: 24px;
+    text-align: center;
+    padding-top: 8px;
+}
+
+.dashboard-item-settings:hover {
+    color: #2c7cba;
+    transition: 0.4s;
+}
+
+.dashboard-item .waitmask {
+    background-color: rgba(12,44,60,0.3);
+}
+
+
+.dashboard {
+    padding: 10px;
+}
+
+.dashboard-toolbar {
+    height: 36px;
+    padding: 4px 10px;
+    background-color: #e8e8e8;
+    border-top: 1px solid #dcdcdc;
+    border-bottom: 1px solid #dcdcdc;
+}
+
+.dashboard-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background-color: #adacac;
+  outline: none;
+  opacity: 0.7;
+  transition: opacity .2s;
+  cursor: pointer;
+}
+
+.dashboard-slider:hover {
+  opacity: 1;
+}
+
+
+/**************************************************************************/
+/** DBView
+/**************************************************************************/
+
+li.tree-node:hover {
+    background: #5a606d !important;
+    cursor: pointer;
+}
+
+
+/**************************************************************************/
+/** Toolbar Icons
+/**************************************************************************/
+
+.toolbar-button-icon.fas.fa-plus-circle {
+    color: #008000; /*green*/
+}
+
+.toolbar-button-icon.fas.fa-edit {
+    color: #864a00; /*brown*/
+}
+
+.toolbar-button-icon.fas.fa-sync-alt {
+    color: #007cba; /*blue*/
+}
+
+.toolbar-button-icon.fas.fa-play {
+    color: #008000; /*green*/
+}
+
+.toolbar-button-icon.fas.fa-stop {
+    color: #000000;
+}
+
+
+/**************************************************************************/
+/** Map Legend
+/**************************************************************************/
+
+.map-legend {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    background-color: #fff;
+    padding: 7px;
+    border-radius: 3px;
+    box-shadow: 1px 4px 5px -1px rgba(0, 0, 0, 0.3);
+}
+
+
+.map-legend-circle, .map-legend-circle-outline {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: 2px 6px 2px 0;
+    float: left;
+}
+
+.map-legend-label {
+    color: #333;
+    font-size: 12px;
+    float: left;
+    line-height: 20px; /*should match map-legend-circle height (including margin)*/
+}
+
+
+/**************************************************************************/
+/** Screenshot Dialog
+/**************************************************************************/
+
+.screenshot-confirmation td {
+    font-size: 40px;
+}
+
+.screenshot-confirmation .far {
+    color:green;
+    font-size:72px;
+}
+
+
+/**************************************************************************/
+/** ICU Map
+/**************************************************************************/
+
+.icu-map-panel {
+    border-top:1px solid #dcdcdc;
+}
+
+.icu-map-list {
+    border-top:1px solid #dcdcdc;
+    border-right:1px solid #dcdcdc;
+}
+
+.icu-map-list .table-col,
+.icu-map-list .table-header-col{
+    font-size: 11px;
+    line-height: 14px;
+    white-space: normal;
+    padding-top: 3px;
+}
+
+.icu-map-legend {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    height: 45px;
+    width:  200px;
+    background-color: #fff;
+    padding: 7px;
+    border-radius: 3px;
+}
+
+.icu-map-legend-title {
+    font-weight: bold;
+    font-size: 12px;
+    margin: 0 0 3px 0;
+    text-align: center;
+}
+
+.icu-map-legend-label {
+    position: absolute;
+    right: 17px;
+    font-size: 11px;
+}
+
+
+/**************************************************************************/
+/** Drawflow Overrides
+/**************************************************************************/
+
+.drawflow-toolbar {
+    position: absolute;
+    top: 20px;
+    left:  15px;
+    background-color: #5a606d;
+    width: 50px;
+    border-radius: 5px;
+    box-shadow: 0 2px 15px 2px #cacaca;
+    border: 1px solid #000;
+    /*display: table;*/
+}
+
+
+.drawflow-toolbar-button,
+.drawflow-toolbar-button-hover,
+.drawflow-toolbar-button-selected {
+    height: 40px;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0px 7px;
+    margin: 2px 0 2px 2px;
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(0,0,0,0);
+}
+
+.drawflow-toolbar-button-hover {
+    background: #41454e;
+    border: 1px solid #020202;
+    color: #f3f3f3;
+}
+
+.drawflow-toolbar-button-selected {
+    background: #2b2e33;
+    border: 1px solid #020202;
+    color: #f3f3f3;
+}
+
+.drawflow-toolbar-button-icon {
+    font-size: 30px;
+}
+
+
+
+.drag-drawflow {
+    line-height: 50px;
+    border-bottom: 1px solid #cacaca;
+    padding-left: 20px;
+    cursor: move;
+    user-select: none;
+}
+
+.drawflow {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    background-size: 25px 25px;
+    background-image:
+    linear-gradient(to right, #f1f1f1 1px, transparent 1px),
+    linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
+}
+
+
+
+.drawflow .drawflow-node {
+    background-color: #fff;
+    border: 1px solid #cacaca;
+    -webkit-box-shadow: 0 2px 15px 2px #cacaca;
+    box-shadow: 0 2px 15px 2px #cacaca;
+    padding: 0px;
+    width: 200px;
+}
+
+.drawflow .drawflow-node.selected  {
+    background: white;
+    border: 1px solid #4ea9ff;
+    -webkit-box-shadow: 0 2px 20px 2px #4ea9ff;
+    box-shadow: 0 2px 20px 2px #4ea9ff;
+}
+
+.drawflow .drawflow-node.selected .drawflow-node-title {
+    color: #22598c;
+}
+
+.drawflow .connection .main-path {
+    stroke: #4ea9ff;
+    stroke-width: 3px;
+}
+
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
+    height: 15px;
+    width: 15px;
+    border: 2px solid #cacaca;
+}
+
+.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
+    background: #4ea9ff;
+}
+
+.drawflow .drawflow-node .output {
+    right: 10px;
+}
+
+.drawflow .drawflow-node .input {
+    left: -10px;
+    background: white;
+}
+
+.drawflow > .drawflow-delete {
+    border: 2px solid #43b993;
+    background: white;
+    color: #43b993;
+    -webkit-box-shadow: 0 2px 20px 2px #43b993;
+    box-shadow: 0 2px 20px 2px #43b993;
+}
+
+.drawflow-delete {
+    border: 2px solid #ff4e4e;
+    background: white;
+    color: #ff4e4e;
+    -webkit-box-shadow: 0 2px 20px 2px #ff4e4e;
+    box-shadow: 0 2px 20px 2px #ff4e4e;
+}
+
+.drawflow-node-title {
+    height: 50px;
+    line-height: 50px;
+    background-color: #f7f7f7;
+    border-bottom: 1px solid #e9e9e9;
+    border-radius: 4px 4px 0px 0px;
+    padding-left: 10px;
+}
+
+.drawflow-node-title .fas {
+    margin: 0 5px 0 0;
+    font-size: 16px;
+}
+
+.drawflow-node-body {
+    padding: 5px;
+    min-height: 100px;
+    text-align: center;
+}
+
+.drawflow-node-body .fas {
+    color:#eaeaea;
+    font-size:75px;
+    margin-top:10px;
+}
+
+.drawflow-node-title svg {
+    position: initial;
+}
+
+.drawflow-node .box {
+    padding: 10px 20px 20px 20px;
+    font-size: 14px;
+    color: #555555;
+
+}
+.drawflow-node .box p {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+
+
+.drawflow .connection .point {
+    stroke: #cacaca;
+    stroke-width: 2;
+    fill: white;
+    transform: translate(-9999px, -9999px);
+}
+
+.drawflow .connection .point.selected, .drawflow .connection .point:hover {
+    fill: #4ea9ff;
+}
+
+
+/**************************************************************************/
+/** D3 SVG Styles
+/**************************************************************************/
+
+svg text {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    -ms-user-select: none;
+    -khtml-user-select: none;
+    user-select: none;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
+.line:hover {
+  stroke-width: 4px;
+}
+
+
+.chart-title {
+    color: #000;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 20px;
+}
+.chart-subtitle {
+    color: #8c8c8c;
+    font-size: 13px;
+}
+
+
+.state-lines {
+  fill: #f5f5f5;
+  stroke: #000;
+  stroke-width: 0.5px;
+}
+
+
+.sankey-node rect {
+    fill-opacity: 0.9;
+    shape-rendering: crispEdges;
+}
+
+.sankey-node text {
+    pointer-events: none;
+    text-shadow: 0 1px 0 #fff;
+}
+
+.sankey-link {
+    fill: none;
+    stroke: #000;
+    stroke-opacity: 0.2;
+}
+
+.sankey-link:hover {
+    stroke-opacity: 0.5;
+}
+
+
+.graph-node circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.graph-link line {
+  stroke: #999;
+  stroke-opacity: 0.6;
+}
+
+
+.grid line {
+  stroke: lightgrey;
+  stroke-opacity: 0.7;
+  shape-rendering: crispEdges;
+}
+
+.grid path {
+  stroke-width: 0;
+}
+
+.tooltip {
+    position: absolute;
+    background-color: #fff;
+    padding: 5px 7px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    color: #636363;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
