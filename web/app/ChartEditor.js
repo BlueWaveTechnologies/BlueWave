@@ -108,10 +108,18 @@ bluewave.ChartEditor = function(parent, config) {
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        previewArea = document.createElement("div");
-        previewArea.style.width = this.width;
-        previewArea.style.height = this.height;
-        previewArea.style.padding = 0;
+//        previewArea = document.createElement("div");
+//        previewArea.style.width = this.width;
+//        previewArea.style.height = this.height;
+//        previewArea.style.padding = 0;
+
+        var panel = createDashboardItem(td,{
+                    width: this.width,
+                    height: this.height,
+                    title: "Untitled"
+                });
+        previewArea = panel.innerDiv;
+        console.log(previewArea);
         td.appendChild(previewArea);
 
         initializeChartSpace();
@@ -273,7 +281,6 @@ bluewave.ChartEditor = function(parent, config) {
         div.appendChild(table);
         var tbody = table.firstChild;
         var tr = document.createElement("tr");
-
         tbody.appendChild(tr);
         switch(chartConfig.chartType){
             case "pieChart":
@@ -292,7 +299,6 @@ bluewave.ChartEditor = function(parent, config) {
                 break;
         }
     };
-
 
   //**************************************************************************
   //** createPieDropdown
@@ -354,7 +360,6 @@ bluewave.ChartEditor = function(parent, config) {
 
         dropdownItem(tr,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
     };
-
 
   //**************************************************************************
   //** dropdownItem
@@ -989,6 +994,6 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var getData = bluewave.utils.getData;
-
+    var createDashboardItem = bluewave.utils.createDashboardItem;
     init();
 };
