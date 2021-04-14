@@ -308,12 +308,16 @@ bluewave.utils = {
       //Merge config with default config
         javaxt.dhtml.utils.merge(config, defaultConfig);
 
+        var width = config.width+"";
+        var height = config.height+"";
+        if (width.indexOf("%")===-1) parseInt(width) + "px";
+        if (height.indexOf("%")===-1) parseInt(height) + "px";
 
 
         var div = document.createElement("div");
         div.className = "dashboard-item";
-        div.style.width = parseInt(config.width) + "px";
-        div.style.height = parseInt(config.height) + "px";
+        div.style.width = width;
+        div.style.height = height;
         div.style.position = "relative";
         parent.appendChild(div);
 
@@ -325,21 +329,33 @@ bluewave.utils = {
             div.appendChild(settings);
         }
 
-        var title = document.createElement("div");
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr;
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        var title = document.createElement("td");
         title.className = "chart-title noselect";
         title.innerHTML = config.title;
-        div.appendChild(title);
+        tr.appendChild(title);
 
-        var subtitle = document.createElement("div");
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        var subtitle = document.createElement("td");
         subtitle.className = "chart-subtitle noselect";
         subtitle.innerHTML = config.subtitle;
-        div.appendChild(subtitle);
+        tr.appendChild(subtitle);
 
-
-        var innerDiv = document.createElement("div");
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        var innerDiv = document.createElement("td");
         innerDiv.style.height = "100%";
         innerDiv.style.position = "relative";
-        div.appendChild(innerDiv);
+        tr.appendChild(innerDiv);
+
+        div.appendChild(table);
 
         var waitmask;
         if (config.waitmask){
@@ -347,6 +363,7 @@ bluewave.utils = {
         }
 
         return {
+            el: div,
             title: title,
             subtitle: subtitle,
             innerDiv: innerDiv,
