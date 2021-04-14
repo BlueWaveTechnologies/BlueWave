@@ -63,8 +63,6 @@ bluewave.ChartEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-        this.height = 548;
-        this.width = 840;
 
         // Setup Map Projection Options
         // Set Scale here
@@ -97,24 +95,29 @@ bluewave.ChartEditor = function(parent, config) {
         td = document.createElement("td");
         tr.appendChild(td);
         let div = document.createElement("div");
-        div.className = "chart-list";
-        div.style.width = "200px";
-        div.style.height = "100%";
-        div.style.color = "rgb(191, 192, 195)";
+        div.className = "chart-editor-options";
         td.appendChild(div);
         optionsDiv = div;
 
         td = document.createElement("td");
         td.style.width = "100%";
         td.style.height = "100%";
+        td.style.padding = "10px";
         tr.appendChild(td);
-        previewArea = document.createElement("div");
-        previewArea.style.width = this.width;
-        previewArea.style.height = this.height;
-        previewArea.style.padding = 0;
-        td.appendChild(previewArea);
+        var panel = createDashboardItem(td,{
+            width: "100%",
+            height: "100%",
+            title: "Untitled"
+        });
+        previewArea = panel.innerDiv;
+        panel.el.className = "";
 
-        initializeChartSpace();
+
+
+        onRender(previewArea, function(){
+            initializeChartSpace();
+        });
+
     };
 
 
@@ -147,14 +150,17 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         inputData = [];
-        optionsDiv.innerHTML = "";
-        pieArea.selectAll("*").remove();
-        plotArea.selectAll("*").remove();
-        d3.select(xAxis).remove();
-        d3.select(yAxis).remove();
         Object.keys(chartConfig).forEach(v=>chartConfig[v] = null);
-        mapArea.selectAll("*").remove();
-        mapLayer.selectAll("circle").remove();
+        optionsDiv.innerHTML = "";
+        try{
+            pieArea.selectAll("*").remove();
+            plotArea.selectAll("*").remove();
+            d3.select(xAxis).remove();
+            d3.select(yAxis).remove();
+            mapArea.selectAll("*").remove();
+            mapLayer.selectAll("circle").remove();
+        }
+        catch(e){}
     };
 
 
@@ -263,30 +269,25 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createDropDown
   //**************************************************************************
-    var createDropDown = function (parent){
-        var div = document.createElement("div");
-        div.className = "dashboard-toolbar";
-        div.style.height = "100%";
-        parent.appendChild(div);
+    var createDropDown = function(parent){
 
         var table = createTable();
-        div.appendChild(table);
         var tbody = table.firstChild;
-        var tr = document.createElement("tr");
+        table.style.height = "";
+        parent.appendChild(table);
 
-        tbody.appendChild(tr);
         switch(chartConfig.chartType){
             case "pieChart":
-                createPieDropdown(tr,tbody);
+                createPieDropdown(tbody);
                 break;
             case "barChart":
-                createBarDropDown(tr,tbody);
+                createBarDropDown(tbody);
                 break;
             case "lineChart":
-                createLineDropDown(tr,tbody);
+                createLineDropDown(tbody);
                 break;
             case "map":
-                createMapDropDown(tr,tbody);
+                createMapDropDown(tbody);
                 break;
             default:
                 break;
@@ -297,21 +298,21 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createPieDropdown
   //**************************************************************************
-    var createPieDropdown = function(tr,tbody){
-        dropdownItem(tr,"pieKey","Key",createPiePreview,pieInputs,"key");
-        dropdownItem(tr,"pieValue","Value",createPiePreview,pieInputs,"value");
+    var createPieDropdown = function(tbody){
+        dropdownItem(tbody,"pieKey","Key",createPiePreview,pieInputs,"key");
+        dropdownItem(tbody,"pieValue","Value",createPiePreview,pieInputs,"value");
     };
 
 
   //**************************************************************************
   //** createBarDropDown
   //**************************************************************************
-    var createBarDropDown = function(tr,tbody){
-        dropdownItem(tr,"xAxis","X-Axis",createBarPreview,plotInputs,"xAxis");
-        dropdownItem(tr,"yAxis","Y-Axis",createBarPreview,plotInputs,"yAxis");
+    var createBarDropDown = function(tbody){
+        dropdownItem(tbody,"xAxis","X-Axis",createBarPreview,plotInputs,"xAxis");
+        dropdownItem(tbody,"yAxis","Y-Axis",createBarPreview,plotInputs,"yAxis");
         if (inputData.length>1){
-            dropdownItem(tr,"xAxis2","X-Axis2",createBarPreview,plotInputs,"xAxis2");
-            dropdownItem(tr,"yAxis2","Y-Axis2",createBarPreview,plotInputs,"yAxis2");
+            dropdownItem(tbody,"xAxis2","X-Axis2",createBarPreview,plotInputs,"xAxis2");
+            dropdownItem(tbody,"yAxis2","Y-Axis2",createBarPreview,plotInputs,"yAxis2");
         }
     };
 
@@ -319,13 +320,13 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createLineDropDown
   //**************************************************************************
-    var createLineDropDown = function(tr,tbody){
-        dropdownItem(tr,"xAxis","X-Axis",createLinePreview,plotInputs,"xAxis");
-        dropdownItem(tr,"yAxis","Y-Axis",createLinePreview,plotInputs,"yAxis");
-        dropdownItem(tr,"group","Group By",createLinePreview,plotInputs,"group");
+    var createLineDropDown = function(tbody){
+        dropdownItem(tbody,"xAxis","X-Axis",createLinePreview,plotInputs,"xAxis");
+        dropdownItem(tbody,"yAxis","Y-Axis",createLinePreview,plotInputs,"yAxis");
+        dropdownItem(tbody,"group","Group By",createLinePreview,plotInputs,"group");
         if (inputData.length>1){
-            dropdownItem(tr,"xAxis2","X-Axis2",createLinePreview,plotInputs,"xAxis2");
-            dropdownItem(tr,"yAxis2","Y-Axis2",createLinePreview,plotInputs,"yAxis2");
+            dropdownItem(tbody,"xAxis2","X-Axis2",createLinePreview,plotInputs,"xAxis2");
+            dropdownItem(tbody,"yAxis2","Y-Axis2",createLinePreview,plotInputs,"yAxis2");
         }
     };
 
@@ -333,15 +334,21 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createMapDropDown
   //**************************************************************************
-    var createMapDropDown = function(tr,tbody){
-        var row = document.createElement("tr");
-        row.innerHTML= "Projection:";
-        row.style.width = "100%";
-        tr.appendChild(row);
-        row = document.createElement("tr");
-        row.style.width = "100%";
-        tr.appendChild(row);
-        mapProjection = new javaxt.dhtml.ComboBox(row, {
+    var createMapDropDown = function(tbody){
+        var tr, td;
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+        td.innerHTML= "Projection:";
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+        mapProjection = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
@@ -359,16 +366,22 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** dropdownItem
   //**************************************************************************
-    var dropdownItem = function(tr,chartConfigRef,displayName,callBack,input,inputType){
-        let row = document.createElement("tr");
-        row.innerHTML = displayName+":";
-        row.style.width = "100%";
-        tr.appendChild(row);
-        row = document.createElement("tr");
-        row.style.width = "100%";
-        tr.appendChild(row);
+    var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
+        var tr, td;
 
-        input[inputType] = new javaxt.dhtml.ComboBox(row, {
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+        td.innerHTML= displayName+":";
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+
+        input[inputType] = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
@@ -391,17 +404,20 @@ bluewave.ChartEditor = function(parent, config) {
             left: 82
         };
 
-        this.plotHeight = this.height - this.margin.top - this.margin.bottom;
-        this.plotWidth = this.width - this.margin.left - this.margin.right;
+        var width = previewArea.offsetWidth;
+        var height = previewArea.offsetHeight;
 
-        this.axisHeight = this.height - this.margin.top - this.margin.bottom;
-        this.axisWidth = this.width - this.margin.left - this.margin.right;
+        this.plotHeight = height - this.margin.top - this.margin.bottom;
+        this.plotWidth = width - this.margin.left - this.margin.right;
 
-        this.innerHTML = "";
+        this.axisHeight = height - this.margin.top - this.margin.bottom;
+        this.axisWidth = width - this.margin.left - this.margin.right;
+
+
 
         svg = d3.select(previewArea).append("svg");
-        svg.attr("width", this.width);
-        svg.attr("height", this.height);
+        svg.attr("width", width);
+        svg.attr("height", height);
 
         plotArea = svg;
         pieArea = svg.append("g");
@@ -418,11 +434,11 @@ bluewave.ChartEditor = function(parent, config) {
 
         pieArea
             .attr("id", "pieArea")
-            .attr("width", this.width)
-            .attr("height", this.height)
+            .attr("width", width)
+            .attr("height", height)
             .attr(
                 "transform",
-                "translate(" + this.width / 2 + "," + this.height / 2 + ")"
+                "translate(" + width / 2 + "," + height / 2 + ")"
             );
         mapArea = svg.append("g");
         mapLayer = svg.append("g");
@@ -455,8 +471,11 @@ bluewave.ChartEditor = function(parent, config) {
 
         var data_ready = pie(d3.entries(pieData));
 
+        var width = previewArea.offsetWidth;
+        var height = previewArea.offsetHeight;
+
         var radius =
-            Math.min(this.width, this.height) / 2 -
+            Math.min(width, height) / 2 -
             this.margin.left -
             this.margin.right;
 
@@ -987,8 +1006,10 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
     var getData = bluewave.utils.getData;
+    var createDashboardItem = bluewave.utils.createDashboardItem;
 
     init();
 };
