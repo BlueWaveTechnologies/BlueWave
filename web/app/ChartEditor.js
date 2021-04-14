@@ -19,9 +19,7 @@ if(!bluewave) var bluewave={};
 
 bluewave.ChartEditor = function(parent, config) {
     var me = this;
-    var data;
-    var data1;
-    var data2;
+    var inputData = [];
     var svg;
     var previewArea;
     var pieArea;
@@ -58,10 +56,12 @@ bluewave.ChartEditor = function(parent, config) {
         mapProjectionValue:null,
         mapType:null
     };
+    var xAxis, yAxis;
 
-    //**************************************************************************
-    //** Constructor
-    //**************************************************************************
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
     var init = function(){
         this.height = 548;
         this.width = 840;
@@ -83,7 +83,7 @@ bluewave.ChartEditor = function(parent, config) {
             {name: "Mercator", projection: d3.geoMercator()
                         .scale(this.width/2/Math.PI)
 
-            },
+            }
         ];
 
         let table = createTable();
@@ -99,33 +99,37 @@ bluewave.ChartEditor = function(parent, config) {
         let div = document.createElement("div");
         div.className = "chart-list";
         div.style.width = "200px";
-        div.style.height = "90%";
+        div.style.height = "100%";
         div.style.color = "rgb(191, 192, 195)";
         td.appendChild(div);
         optionsDiv = div;
 
         td = document.createElement("td");
         td.style.width = "100%";
-        td.style.height = "90%";
+        td.style.height = "100%";
         tr.appendChild(td);
         previewArea = document.createElement("div");
         previewArea.style.width = this.width;
         previewArea.style.height = this.height;
-        previewArea.id = "Viz_area";
         previewArea.style.padding = 0;
         td.appendChild(previewArea);
 
         initializeChartSpace();
     };
 
-    //**************************************************************************
-    //** Update
-    //**************************************************************************
-    this.update = function (csv,nodeType,config,inputs){
-        this.clear();
-        data = d3.csvParse(csv);
-        data1 = d3.csvParse(inputs[0])
-        data2 = inputs[1]?d3.csvParse(inputs[1]):null;
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(nodeType, config, inputs){
+        me.clear();
+
+        for (var i=0; i<inputs.length; i++){
+            var input = inputs[i];
+            if (input!=null) inputs[i] = d3.csvParse(input);
+        }
+        inputData = inputs;
+
         if(config !== null && config !== undefined){
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
@@ -137,32 +141,51 @@ bluewave.ChartEditor = function(parent, config) {
         createOptions();
     };
 
-    //**************************************************************************
-    //** Clear Chart area
-    //**************************************************************************
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
     this.clear = function(){
+        inputData = [];
         optionsDiv.innerHTML = "";
         pieArea.selectAll("*").remove();
         plotArea.selectAll("*").remove();
-        d3.select("#xAxis").remove();
-        d3.select("#yAxis").remove();
+        d3.select(xAxis).remove();
+        d3.select(yAxis).remove();
         Object.keys(chartConfig).forEach(v=>chartConfig[v] = null);
         mapArea.selectAll("*").remove();
         mapLayer.selectAll("circle").remove();
     };
 
-    //**************************************************************************
-    //** Return chart configuration file
-    //**************************************************************************
+
+  //**************************************************************************
+  //** getConfig
+  //**************************************************************************
+  /** Return chart configuration file
+   */
     this.getConfig = function(){
         let copy = Object.assign({},chartConfig);
         return copy;
     };
 
-    //**************************************************************************
-    //** Initializes Options for Dropdowns.
-    //**************************************************************************
-    createOptions = function() {
+
+  //**************************************************************************
+  //** getChart
+  //**************************************************************************
+    this.getChart = function(){
+        return previewArea;
+    };
+
+
+  //**************************************************************************
+  //** createOptions
+  //**************************************************************************
+  /** Initializes Options for Dropdowns.
+   */
+    var createOptions = function() {
+        var data = inputData[0];
+        var data2 = inputData[1];
+
         let dataOptions = Object.keys(data[0]);
         let dataOptions2 = data2?Object.keys(data2[0]):null;
         switch(chartConfig.chartType){
@@ -236,7 +259,11 @@ bluewave.ChartEditor = function(parent, config) {
         }
     };
 
-    createDropDown = function (parent){
+
+  //**************************************************************************
+  //** createDropDown
+  //**************************************************************************
+    var createDropDown = function (parent){
         var div = document.createElement("div");
         div.className = "dashboard-toolbar";
         div.style.height = "100%";
@@ -266,31 +293,47 @@ bluewave.ChartEditor = function(parent, config) {
         }
     };
 
-    createPieDropdown = function(tr,tbody){
+
+  //**************************************************************************
+  //** createPieDropdown
+  //**************************************************************************
+    var createPieDropdown = function(tr,tbody){
         dropdownItem(tr,"pieKey","Key",createPiePreview,pieInputs,"key");
         dropdownItem(tr,"pieValue","Value",createPiePreview,pieInputs,"value");
     };
 
-    createBarDropDown = function(tr,tbody){
+
+  //**************************************************************************
+  //** createBarDropDown
+  //**************************************************************************
+    var createBarDropDown = function(tr,tbody){
         dropdownItem(tr,"xAxis","X-Axis",createBarPreview,plotInputs,"xAxis");
         dropdownItem(tr,"yAxis","Y-Axis",createBarPreview,plotInputs,"yAxis");
-        if(data2!==null){
+        if (inputData.length>1){
             dropdownItem(tr,"xAxis2","X-Axis2",createBarPreview,plotInputs,"xAxis2");
             dropdownItem(tr,"yAxis2","Y-Axis2",createBarPreview,plotInputs,"yAxis2");
         }
     };
 
-    createLineDropDown = function(tr,tbody){
+
+  //**************************************************************************
+  //** createLineDropDown
+  //**************************************************************************
+    var createLineDropDown = function(tr,tbody){
         dropdownItem(tr,"xAxis","X-Axis",createLinePreview,plotInputs,"xAxis");
         dropdownItem(tr,"yAxis","Y-Axis",createLinePreview,plotInputs,"yAxis");
         dropdownItem(tr,"group","Group By",createLinePreview,plotInputs,"group");
-        if(data2!==null){
+        if (inputData.length>1){
             dropdownItem(tr,"xAxis2","X-Axis2",createLinePreview,plotInputs,"xAxis2");
             dropdownItem(tr,"yAxis2","Y-Axis2",createLinePreview,plotInputs,"yAxis2");
         }
     };
 
-    createMapDropDown = function(tr,tbody){
+
+  //**************************************************************************
+  //** createMapDropDown
+  //**************************************************************************
+    var createMapDropDown = function(tr,tbody){
         var row = document.createElement("tr");
         row.innerHTML= "Projection:";
         row.style.width = "100%";
@@ -312,7 +355,11 @@ bluewave.ChartEditor = function(parent, config) {
         dropdownItem(tr,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
     };
 
-    dropdownItem = function(tr,chartConfigRef,displayName,callBack,input,inputType){
+
+  //**************************************************************************
+  //** dropdownItem
+  //**************************************************************************
+    var dropdownItem = function(tr,chartConfigRef,displayName,callBack,input,inputType){
         let row = document.createElement("tr");
         row.innerHTML = displayName+":";
         row.style.width = "100%";
@@ -334,10 +381,9 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** Chart Initialization
+  //** initializeChartSpace
   //**************************************************************************
-
-    initializeChartSpace = function(){
+    var initializeChartSpace = function(){
         this.margin = {
             top: 15,
             right: 5,
@@ -382,15 +428,17 @@ bluewave.ChartEditor = function(parent, config) {
         mapLayer = svg.append("g");
     };
 
-    //**************************************************************************
-    //** Pie Chart
-    //**************************************************************************
-    createPiePreview = function(){
+
+  //**************************************************************************
+  //** createPiePreview
+  //**************************************************************************
+    var createPiePreview = function(){
         pieArea.selectAll("*").remove();
         if(chartConfig.pieKey===null || chartConfig.pieValue===null){
             return;
         }
 
+        var data = inputData[0];
         let pieData = data.reduce((acc,curVal)=>{
             acc[curVal[chartConfig.pieKey]] = curVal[chartConfig.pieValue];
             return acc;
@@ -432,10 +480,12 @@ bluewave.ChartEditor = function(parent, config) {
             .style("opacity", 0.7);
 
     };
-    //**************************************************************************
-    //** Map Creation
-    //**************************************************************************
-    createMapPreview = function(){
+
+
+  //**************************************************************************
+  //** createMapPreview
+  //**************************************************************************
+    var createMapPreview = function(){
         if(!politicalBoundries){
             getData("worldGeoJson", function(data) {
                 politicalBoundries = data;
@@ -446,7 +496,11 @@ bluewave.ChartEditor = function(parent, config) {
         }
     };
 
-    displayMap = function(){
+
+  //**************************************************************************
+  //** displayMap
+  //**************************************************************************
+    var displayMap = function(){
         // TODO:
         // Add option to center
         // Add scaling to defaults
@@ -518,14 +572,17 @@ bluewave.ChartEditor = function(parent, config) {
         }
     };
 
-    //**************************************************************************
-    //** Line Preview
-    //**************************************************************************
-    createLinePreview = function(){
+
+  //**************************************************************************
+  //** createLinePreview
+  //**************************************************************************
+    var createLinePreview = function(){
          // Setup:
         // Check that axis exist and are populated
         let xKey;
         let yKey;
+        let xKey2;
+        let yKey2;
         let group;
 
         if(chartConfig.xAxis===null || chartConfig.yAxis===null){
@@ -540,6 +597,11 @@ bluewave.ChartEditor = function(parent, config) {
             xKey2 = chartConfig.xAxis2;
             yKey2 = chartConfig.yAxis2;
         }
+
+        var data = inputData[0];
+        var data2 = inputData[1];
+        var data1 = data;
+
         if(data2!==null && data2!==undefined && xKey2 && yKey2){
             data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
         }
@@ -582,7 +644,7 @@ bluewave.ChartEditor = function(parent, config) {
         }else{
             let xType = typeOfAxisValue();
 
-            sumData = d3.nest()
+            var sumData = d3.nest()
                 .key(function(d){return d[xKey];})
                 .rollup(function(d){
                     return d3.sum(d,function(g){
@@ -617,10 +679,11 @@ bluewave.ChartEditor = function(parent, config) {
         }
     };
 
-    //**************************************************************************
-    //** Create A Bar Chart
-    //**************************************************************************
-    createBarPreview = function(){
+
+  //**************************************************************************
+  //** createBarPreview
+  //**************************************************************************
+    var createBarPreview = function(){
         let xKey;
         let yKey;
         let xKey2;
@@ -636,11 +699,16 @@ bluewave.ChartEditor = function(parent, config) {
             xKey2 = chartConfig.xAxis2;
             yKey2 = chartConfig.yAxis2;
         }
+
+        var data = inputData[0];
+        var data2 = inputData[1];
+        var data1 = data;
+
         if(data2!==null && data2!==undefined && xKey2 && yKey2){
             data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
         }
 
-        sumData = d3.nest()
+        var sumData = d3.nest()
             .key(function(d){return d[xKey];})
             .rollup(function(d){
                 return d3.sum(d,function(g){
@@ -726,10 +794,12 @@ bluewave.ChartEditor = function(parent, config) {
         }
     };
 
-    //**************************************************************************
-    //** Axis Display
-    //**************************************************************************
-    displayAxis = function(xKey,yKey,chartData){
+
+
+  //**************************************************************************
+  //** displayAxis
+  //**************************************************************************
+    var displayAxis = function(xKey,yKey,chartData){
         let axisTemp = createAxisScale(xKey,'x',chartData);
         this.x = axisTemp.scale;
         this.xBand = axisTemp.band;
@@ -738,7 +808,7 @@ bluewave.ChartEditor = function(parent, config) {
         this.y = axisTemp.scale;
         this.yBand = axisTemp.band;
 
-        d3.select("#xAxis").remove();
+        d3.select(xAxis).remove();
         xAxis = svg
             .append("g")
             .attr("id", "xAxis")
@@ -755,7 +825,7 @@ bluewave.ChartEditor = function(parent, config) {
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
 
-        d3.select("#yAxis").remove();
+        d3.select(yAxis).remove();
         yAxis = svg
             .append("g")
             .attr("id", "yAxis")
@@ -766,11 +836,11 @@ bluewave.ChartEditor = function(parent, config) {
             .call(d3.axisLeft(this.y));
     };
 
-    //**************************************************************************
-    //** Utils
-    //**************************************************************************
 
-     typeOfAxisValue = function(value) {
+  //**************************************************************************
+  //** typeOfAxisValue
+  //**************************************************************************
+     var typeOfAxisValue = function(value) {
         let dataType;
 
         const validNumberRegex = /^[\+\-]?\d*\.?\d+(?:[Ee][\+\-]?\d+)?$/;
@@ -796,10 +866,11 @@ bluewave.ChartEditor = function(parent, config) {
         return dataType;
     };
 
-    //**************************************************************************
-    //** Axis Scale helper.
-    //**************************************************************************
-    createAxisScale = function(key,axisName,chartData){
+
+  //**************************************************************************
+  //** createAxisScale
+  //**************************************************************************
+    var createAxisScale = function(key,axisName,chartData){
         let scale;
         let band;
         let type = typeOfAxisValue(chartData[0][key]);
@@ -870,6 +941,9 @@ bluewave.ChartEditor = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** mergeToAxis
+  //**************************************************************************
     const mergeToAxis = (data1,data2,xKey1,xKey2,newXKey,yKey1,yKey2,newYKey)=>{
         let mergedArray = [];
         data1.forEach(val=>{
@@ -886,9 +960,10 @@ bluewave.ChartEditor = function(parent, config) {
         return mergedArray;
     };
 
-    //**************************************************************************
-    //** Fake Data for Testing
-    //**************************************************************************
+
+  //**************************************************************************
+  //** Fake Data for Testing
+  //**************************************************************************
     let mapData = [
         {lat:-122.490402,long:37.786453,label:"work"},
         {lat:5.389809,long:37.72728,label:"home"}
@@ -908,10 +983,10 @@ bluewave.ChartEditor = function(parent, config) {
         {name: "United States", code: "USA", pop: "299846449"}
     ];
 
-    //**************************************************************************
-    //** External helper functions
-    //**************************************************************************
 
+  //**************************************************************************
+  //** Utils
+  //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var getData = bluewave.utils.getData;
 
