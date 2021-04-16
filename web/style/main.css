@@ -551,6 +551,15 @@ li.tree-node:hover {
 }
 
 
+
+.chart-editor-options{
+    width: 200px;
+    height:100%;
+    background-color: #dcdcdc;
+    padding: 0px 12px;
+    border-radius: 0 0 0 5px;
+}
+
 /**************************************************************************/
 /** D3 SVG Styles
 /**************************************************************************/

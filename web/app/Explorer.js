@@ -107,20 +107,13 @@ bluewave.Explorer = function(parent, config) {
         drawflow.reroute = true;
         drawflow.start();
         drawflow.on('connectionCreated', function(info) {
-            var outputID = info.output_id;
-            var inputID = info.input_id;
+            var outputID = info.output_id+"";
+            var inputID = info.input_id+"";
             console.log("Connected " + outputID + " to " + inputID);
 
-            var node = nodes[inputID+""];
-            let drawflowNode = drawflow.getNodeFromId(inputID)
-            let input_1_id = drawflowNode.inputs.input_1.connections[0]?.node;
-            let input_2_id = drawflowNode.inputs.input_2.connections[0]?.node;
-            let input1Node = nodes[input_1_id+""];
-            let input2Node = nodes[input_2_id+""];
+            var node = nodes[inputID];
+            node.inputs[outputID] = nodes[outputID];
 
-            node.input = nodes[outputID+""];
-            node.input1 = input1Node;
-            node.input2 = input2Node;
             node.ondblclick();
         });
         drawflow.on('nodeRemoved', function(nodeID) {
@@ -301,14 +294,22 @@ bluewave.Explorer = function(parent, config) {
                     icon: icon,
                     content: i,
                     position: [pos_x, pos_y],
-                    inputs: 2,
+                    inputs: 1,
                     outputs: 0
                 });
 
                 node.ondblclick = function(){
-                    console.log(this.input)
-//                    console.log(this)
-                    if (this.input.csv){
+                    var hasData = false;
+                    var inputs = this.inputs;
+                    for (var key in inputs) {
+                        if (inputs.hasOwnProperty(key)){
+                            if (inputs[key].csv){
+                                hasData = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasData){
                         editChart(this);
                     }
                 };
@@ -350,9 +351,11 @@ bluewave.Explorer = function(parent, config) {
             {},
             div.outerHTML
         );
-        var nodeType = node.type
+
         div = document.getElementById(div.id);
-        div.type = nodeType;
+        div.type = node.type;
+        div.inputs = {};
+        div.outputs = {};
         nodes[nodeID+""] = div;
         return div;
     };
@@ -449,6 +452,19 @@ bluewave.Explorer = function(parent, config) {
     var editChart = function(node){
         if (!chartEditor){
 
+            var style = merge({
+                body: {
+                    padding: "0px"
+                },
+                closeIcon: {
+                    //content: "&#10006;",
+                    content: "&#x2715;",
+                    lineHeight: "16px",
+                    textAlign: "center"
+                }
+            }, config.style.window);
+
+
             var win = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Chart",
                 width: 1060,
@@ -456,7 +472,39 @@ bluewave.Explorer = function(parent, config) {
                 valign: "top",
                 modal: true,
                 resizable: false,
-                style: config.style.window
+                style: style,
+                renderers: {
+                    
+                  //Create custom renderer for the close button. Basically, we
+                  //want to delay closing the window until after the tumbnail
+                  //is created
+                    headerButtons: function(buttonDiv){
+                        var btn = document.createElement('div');
+                        setStyle(btn, style.button);
+                        var icon = document.createElement('div');
+                        setStyle(icon, style.closeIcon);
+                        btn.appendChild(icon);
+                        btn.onclick = function(){
+                            var chartConfig = chartEditor.getConfig();
+                            var orgConfig = node.config;
+                            if (!orgConfig) orgConfig = {};
+                            if (isDirty(chartConfig, orgConfig)){
+                                node.config = chartConfig;
+                                waitmask.show();
+                                var el = chartEditor.getChart();
+                                createPreview(el, function(canvas){
+                                    createThumbnail(node, canvas);
+                                    win.close();
+                                    waitmask.hide();
+                                }, this);
+                            }
+                            else{
+                                win.close();
+                            }
+                        };
+                        buttonDiv.appendChild(btn);
+                    }
+                }
             });
 
             chartEditor = new bluewave.ChartEditor(win.getBody(), config);
@@ -468,24 +516,19 @@ bluewave.Explorer = function(parent, config) {
             chartEditor.hide = function(){
                 win.hide();
             };
-            win.onClose = function (){
-                chartEditor.onClose();
-            };
+
         }
 
-        chartEditor.onClose = function(){
-            node.config = chartEditor.getConfig()
-        }
-        // node input1, nodeinput2
 
-        let input1 = node.input1.csv;
-        let input2 = null;
-        if(node.input2){
-            input2 = node.input2.csv
-        }
 
-        let inputs = [input1,input2]
-        chartEditor.update(node.input.csv,node.type,node.config,inputs)
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                data.push(csv);
+            }
+        }
+        chartEditor.update(node.type, node.config, data);
 
         chartEditor.show();
     };
@@ -623,8 +666,10 @@ bluewave.Explorer = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var isDirty = javaxt.dhtml.utils.isDirty;
     var setStyle = javaxt.dhtml.utils.setStyle;
     var resizeCanvas = bluewave.utils.resizeCanvas;
+
 
     init();
 };
