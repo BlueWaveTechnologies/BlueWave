@@ -111,9 +111,21 @@ bluewave.ChartEditor = function(parent, config) {
         });
         previewArea = panel.innerDiv;
         panel.el.className = "";
-
-
-
+        panel.title.onclick = function(){
+            if (this.childNodes[0].nodeType===1) return;
+            var currText = this.innerHTML;
+            this.innerHTML = "";
+            var input = document.createElement("input");
+            input.type = "text";
+            input.value = currText;
+            input.onkeydown = function(event){
+                var key = event.keyCode;
+                if(key == 13) {
+                    panel.title.innerHTML = this.value;
+                }
+            };
+            this.appendChild(input);
+            };
         onRender(previewArea, function(){
             initializeChartSpace();
         });
