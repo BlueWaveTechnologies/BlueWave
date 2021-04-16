@@ -588,14 +588,10 @@ svg text {
     font-size: 15px;
     font-weight: bold;
     line-height: 20px;
-    top: 0;
-    position: absolute;
 }
 .chart-subtitle {
     color: #8c8c8c;
     font-size: 13px;
-    top: 25px;
-    position: absolute;
 }
 
 
