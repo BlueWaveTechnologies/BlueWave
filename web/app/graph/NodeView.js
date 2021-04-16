@@ -144,6 +144,9 @@ bluewave.NodeView = function(parent, config) {
             this.style.fillOpacity=0.8;
             tooltip.hide();
         })
+        .on("click", function(){
+            getRelationshipOnClick(width, height, node);
+        })
         .call(d3.drag() // call specific function when circle is dragged
             .on("start", function(d) {
                 if (!d3.event.active) simulation.alphaTarget(.03).restart();
@@ -234,6 +237,62 @@ bluewave.NodeView = function(parent, config) {
         tooltip.hide();
         parent.appendChild(tooltip);
     };
+
+
+  //**************************************************************************
+  //** getRelationshipOnClick
+  //**************************************************************************
+    var getRelationshipOnClick = function(width, height, nodes){
+        var simulation = d3.forceSimulation()
+            .velocityDecay(0.1)
+            .force("x", d3.forceX(width / 2).strength(.05))
+            .force("y", d3.forceY(height / 2).strength(.05))
+            .force("charge", d3.forceManyBody().strength(.1))
+            .force("collide", d3.forceCollide(30).strength(1).iterations(1))
+            .on('tick', ticked);
+
+        function ticked() {
+          nodes.attr('cx', function (d) { return d.x = pythag(d.rad, d.y, d.x); })
+                  .attr('cy', function (d) { return d.y = pythag(d.rad, d.x, d.y); });
+        }
+
+
+
+
+        var clickedNodeRelUrl = "http://localhost:8080/graph/relationships?id=19";
+        var graph = fetch(clickedNodeRelUrl)
+        .then(function(response) {
+            return response.json();
+        }).then(function(json) {
+            return drawClickedNodeRelationship(json);
+        });
+    };
+
+  //**************************************************************************
+  //** drawClickedNodeRelationship
+  //**************************************************************************
+    var drawClickedNodeRelationship = function(graph) {
+
+
+    }
+
+
+    var pythag = function(r, b, coord) {
+        r += 5;
+        var radius = 430/2;
+        var hyp2 = Math.pow(radius, 2);
+        // force use of b coord that exists in circle to avoid sqrt(x<0)
+        b = Math.min(430 - r - 4, Math.max(r + 4, b));
+
+        var b2 = Math.pow((b - radius), 2),
+            a = Math.sqrt(hyp2 - b2);
+
+        // radius - sqrt(hyp^2 - b^2) < coord < sqrt(hyp^2 - b^2) + radius
+        coord = Math.max(radius - a + r + 4,
+                    Math.min(a + radius - r - 4, coord));
+
+        return coord;
+    }
 
 
   //**************************************************************************
