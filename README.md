@@ -65,6 +65,28 @@ file should include connection information to the neo4j database
 ```
 
 
+# Branding
+
+The BlueWave application name and logos can be updated to suit your needs. To do
+so, you will need to add a "branding" section to the "webserver" config where you
+can specify the app name and specify a path to a custom stylesheet. Example:
+```javascript
+{
+    "webserver" : {
+        "webDir" : "/bluewave/app/web",
+        "branding" : {
+            "appName" : "Rogue Wave",
+            "appStyle" : "branding/rogue/main.css"
+        }
+    }
+}
+```
+
+Note that the path to the stylesheet is relative to the "webDir". In the stylesheet
+you can override default styles like the "app-header-icon".
+
+
+
 # Create User Account via Command Line
 
 To create a new user, open a console and run the following:
