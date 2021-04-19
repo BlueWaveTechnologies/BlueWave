@@ -429,13 +429,18 @@ li.tree-node:hover {
     position: relative;
     width: 100%;
     height: 100%;
+}
+
+.drawflow.parent-drawflow {
+    position: relative;
+    width: 100%;
+    height: 100%;
     background-color: #fff;
     background-size: 25px 25px;
     background-image:
     linear-gradient(to right, #f1f1f1 1px, transparent 1px),
     linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
 }
-
 
 
 .drawflow .drawflow-node {
