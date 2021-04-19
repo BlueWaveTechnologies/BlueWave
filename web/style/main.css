@@ -30,17 +30,18 @@ body, textarea, input, select, td, th {
     background: url(../images/logo.png) no-repeat;
     width: 43px;
     height: 58px;
-    margin: 14px 0 0 8px;
+    margin: 7px 0 0 14px;
 }
 
 .app-header-icon:after {
     content:"BlueWave";
-    margin-left: 50px;
+    margin-left: 54px;
     display: inline-block;
     float: left;
     font-size: 50px;
     white-space: nowrap;
     color: #fff;
+    margin-top: -6px;
 }
 
 .app-header-profile,
