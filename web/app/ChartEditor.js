@@ -51,6 +51,7 @@ bluewave.ChartEditor = function(parent, config) {
         xAxis:null,
         yAxis:null,
         chartType:null,
+        chartTitle:null,
         nodeId:null,
         mapProjectionName:null,
         mapProjectionValue:null,
@@ -122,6 +123,7 @@ bluewave.ChartEditor = function(parent, config) {
                 var key = event.keyCode;
                 if(key == 13) {
                     panel.title.innerHTML = this.value;
+                    chartConfig.chartTitle = this.value;
                 }
             };
             this.appendChild(input);
