@@ -15,6 +15,8 @@ public class WebApp extends HttpServlet {
     private FileManager fileManager;
     private WebServices ws;
     private ArrayList<InetSocketAddress> addresses;
+    private String appName;
+    private String appStyle;
 
 
   //**************************************************************************
@@ -50,6 +52,7 @@ public class WebApp extends HttpServlet {
   //** init
   //**************************************************************************
     private void init(JSONObject config) throws Exception {
+
       //Set path to the web directory
         if (config.has("webDir")){
             String webDir = config.get("webDir").toString();
@@ -58,7 +61,6 @@ public class WebApp extends HttpServlet {
                 throw new IllegalArgumentException("Invalid \"webDir\" defined in config file");
             }
         }
-        console.log("webDir: " + web);
 
 
       //Instantiate file manager
@@ -69,7 +71,7 @@ public class WebApp extends HttpServlet {
         ws = new WebServices(web);
 
 
-      //Instantiate authnticator
+      //Instantiate authenticator
         setAuthenticator(new Authenticator());
 
 
@@ -77,6 +79,23 @@ public class WebApp extends HttpServlet {
         addresses = new ArrayList<>();
         Integer port = config.get("port").toInteger();
         addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
+
+
+      //Get branding
+        if (config.has("branding")){
+            JSONObject branding = config.get("branding").toJSONObject();
+            appName = branding.get("appName").toString();
+            appStyle = branding.get("appStyle").toString();
+            if (appStyle!=null){
+                appStyle = appStyle.trim();
+                if (appStyle.startsWith("/")) appStyle = appStyle.substring(1);
+                javaxt.io.File f = new javaxt.io.File(web + appStyle);
+                if (f.exists()) appStyle = f.getText();
+                else appStyle = null;
+            }
+        }
+        if (appName==null) appName = "BlueWave";
+        if (appStyle==null) appStyle = "";
     }
 
 
@@ -158,6 +177,9 @@ public class WebApp extends HttpServlet {
                 response.write(username);
             }
         }
+        else if (service.equals("appinfo")){
+            response.write("{\"name\":\"" + appName + "\"}");
+        }
         else if (service.equals("data")){
             ws.processRequest(service, request, response);
         }
@@ -186,7 +208,7 @@ public class WebApp extends HttpServlet {
                         name = ((javaxt.io.Directory) obj).getName();
                     }
                     if (service.equalsIgnoreCase(name)){
-                        fileManager.sendFile(request, response);
+                        sendFile(path, request, response);
                         return;
                     }
                 }
@@ -198,5 +220,38 @@ public class WebApp extends HttpServlet {
             ws.processRequest(service, request, response);
 
         }
+    }
+
+  //**************************************************************************
+  //** sendFile
+  //**************************************************************************
+    private void sendFile(String path, HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
+
+
+      //Authenticate users requesting sensitive files
+        if (path.endsWith("main.html")){
+            try{
+                request.authenticate();
+                User user = (User) request.getUserPrincipal();
+                if (user.getAccessLevel()<3) throw new Exception();
+            }
+            catch(Exception e){
+                response.setStatus(403, "Not Authorized");
+                response.setContentType("text/plain");
+                response.write("Unauthorized");
+                return;
+            }
+        }
+
+
+      //Add custom app style
+        if (path.endsWith("branding.css")){
+            response.write(appStyle);
+            return;
+        }
+
+
+        fileManager.sendFile(request, response);
     }
 }
