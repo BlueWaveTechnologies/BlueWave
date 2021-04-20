@@ -99,6 +99,8 @@ bluewave.ChartEditor = function(parent, config) {
         td.appendChild(div);
         optionsDiv = div;
 
+
+      //Create chart preview
         td = document.createElement("td");
         td.style.width = "100%";
         td.style.height = "100%";
@@ -111,6 +113,9 @@ bluewave.ChartEditor = function(parent, config) {
         });
         previewArea = panel.innerDiv;
         panel.el.className = "";
+
+
+      //Allow users to change the title associated with the chart
         panel.title.onclick = function(e){
             if (this.childNodes[0].nodeType===1) return;
             e.stopPropagation();
@@ -128,19 +133,21 @@ bluewave.ChartEditor = function(parent, config) {
                 }
             };
             this.appendChild(input);
-            };
-        table.onclick = function(event){
+        };
+        document.body.addEventListener('click', function(e) {
             var input = panel.title.childNodes[0];
-            var className = event.target.className
+            var className = e.target.className;
             if(input.nodeType === 1 && className != "form-input") {
                 panel.title.innerHTML = input.value;
                 chartConfig.chartTitle = input.value;
             };
-        };
+        });
+
+
+      //Initialize chart area when ready
         onRender(previewArea, function(){
             initializeChartSpace();
         });
-
     };
 
 
