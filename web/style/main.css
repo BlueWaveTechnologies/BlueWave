@@ -618,7 +618,15 @@ svg text {
     font-size: 15px;
     font-weight: bold;
     line-height: 20px;
+    height: 32px;
 }
+
+.chart-title input[type="text"] {
+    width: 100%;
+    font-size: 15px;
+    font-weight: bold;
+}
+
 .chart-subtitle {
     color: #8c8c8c;
     font-size: 13px;
