@@ -18,6 +18,7 @@ bluewave.Explorer = function(parent, config) {
     };
 
     var toolbar;
+    var tooltip, tooltipTimer, lastToolTipEvent;
     var button = {};
     var nodes = {};
     var drawflow;
@@ -88,13 +89,30 @@ bluewave.Explorer = function(parent, config) {
         toolbar.className = "drawflow-toolbar";
         parent.appendChild(toolbar);
 
-        createButton("addData", "fas fa-plus-circle");
+
+      //Create tooltip
+        tooltip = new javaxt.dhtml.Callout(document.body,{
+            style: {
+                panel: "tooltip-panel",
+                arrow: "tooltip-arrow"
+            }
+        });
+        var _hideToolTip = tooltip.hide;
+        tooltip.hide = function(){
+            if (tooltipTimer) clearTimeout(tooltipTimer);
+            _hideToolTip();
+        };
+
+
+
+      //Create buttons
+        createButton("addData", "fas fa-plus-circle", "Data");
         createButton("pieChart", "fas fa-chart-pie", "Pie Chart");
         createButton("barChart", "fas fa-chart-bar", "Bar Chart");
         createButton("lineChart", "fas fa-chart-line", "Line Chart");
         createButton("map", "fas fa-map-marked-alt", "Map");
 
-
+      //Enable addData button
         button.addData.enable();
     };
 
@@ -474,7 +492,7 @@ bluewave.Explorer = function(parent, config) {
                 resizable: false,
                 style: style,
                 renderers: {
-                    
+
                   //Create custom renderer for the close button. Basically, we
                   //want to delay closing the window until after the tumbnail
                   //is created
@@ -651,6 +669,46 @@ bluewave.Explorer = function(parent, config) {
                 return false;
             }
             drag(e);
+        };
+
+
+
+      //Add tooltip
+        btn.el.onmouseover = function(e){
+            var button = this;
+            if (tooltipTimer) clearTimeout(tooltipTimer);
+            if (btn.isEnabled()){
+
+                var showToolTip = function(){
+                    var nodeType = button.dataset["node"];
+                    var title = button.dataset["title"];
+                    var label = "Add " + (title==null ? nodeType : title);
+                    tooltip.getInnerDiv().innerHTML = label;
+                    var rect = javaxt.dhtml.utils.getRect(button);
+                    var rect2 = javaxt.dhtml.utils.getRect(button.parentNode);
+                    var x = rect2.x + rect2.width + 3;
+                    var y = rect.y + Math.ceil(rect.height/2);
+                    tooltip.showAt(x, y, "right", "center");
+                    lastToolTipEvent = new Date().getTime();
+                };
+
+                var delay = false; //disable delay for now...
+                if (lastToolTipEvent){
+                    if (new Date().getTime()-lastToolTipEvent<3000) delay = false;
+                }
+                if (delay){
+                    tooltipTimer = setTimeout(showToolTip, 1000);
+                }
+                else{
+                    showToolTip();
+                }
+            }
+        };
+        btn.el.onmouseleave = function(){
+            tooltip.hide();
+        };
+        btn.el.onmousedown=function(){
+            tooltip.hide();
         };
 
 

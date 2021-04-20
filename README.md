@@ -10,9 +10,14 @@ Web application used visualize supply chain shortages and fraud analysis.
 - Neo4J graph database
 
 
-# Start the Server
+# Command Line Interface
 
-To start the server, open a console and run the following:
+The BlueWave application is accessed via command line (aka terminal).
+All command line options require an external `config.json` file.
+
+
+## Starting the Server
+To start the server, open a terminal and run the following:
 ```console
 cd /path/to/project/
 java -jar target/bluewave-1.0.0.jar -config ../config.json
@@ -20,6 +25,17 @@ java -jar target/bluewave-1.0.0.jar -config ../config.json
 Note that you will need a user account to login. If this is the first time
 you are starting the server, stop the server and create an admin account via
 the command line.
+
+## Create User Account
+
+To create a new user, open a terminal and run the following:
+```console
+cd /path/to/project/
+java -jar target/bluewave-1.0.0.jar -config ../config.json -addUser john -accessLevel 5
+```
+In this example, we will create a new user with a login username called `john` with level 5 access (admin rights).
+The application will prompt the user for a password. Note that you can add, edit, and delete users via the web application
+once the server is up and running.
 
 
 # Config.json
@@ -65,10 +81,25 @@ file should include connection information to the neo4j database
 ```
 
 
-# Create User Account via Command Line
+# Branding
 
-To create a new user, open a console and run the following:
-```console
-cd /path/to/project/
-java -jar target/bluewave-1.0.0.jar -config ../config.json -addUser john -accessLevel 5
+The BlueWave application name and logos can be updated to suit your needs. To do
+so, you will need to add a "branding" section to the "webserver" config where you
+can specify the app name and specify a path to a custom stylesheet. Example:
+```javascript
+{
+    "webserver" : {
+        "webDir" : "/bluewave/app/web",
+        "branding" : {
+            "appName" : "Rogue Wave",
+            "appStyle" : "branding/rogue/main.css"
+        }
+    }
+}
 ```
+
+Note that the path to the stylesheet is relative to the "webDir". In the stylesheet
+you can override default styles like the "app-header-icon".
+
+
+

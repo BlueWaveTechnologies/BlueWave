@@ -62,12 +62,10 @@ select:focus, textarea:focus, input:focus{
     .login-container {
         box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
         width: 456px;
-        height: 580px;
+        height: 525px;
         padding: 20px 72px 0 72px;
         border-radius: 5px;
-        background: url(../images/login.jpg) no-repeat;
         background-color: #bdd2e4;
-        background-position-x: -14px;
     }
 
 }
@@ -85,14 +83,26 @@ select:focus, textarea:focus, input:focus{
 
 
         .login-logo {
-            margin: 2px 0 56px 0;
-            /* background: url(../images/login.jpg) no-repeat; */
-            /* background-size: 200px 120px; */
-            width: 547px;
+            margin: -20px 0 56px 0;
+            background: url(../images/logo.png) no-repeat;
+            width: 600px;
             height: 144px;
-            margin-left: -45px;
-            border-radius: 5px;
-            background-position-x: -46px;
+            margin-left: -72px;
+            border-radius: 5px 5px 0 0;
+            background-position-x: 130px;
+            background-color: #1974a9;
+            color: #fff;
+            background-position-y: 40px;
+        }
+        .login-logo:after {
+            content:"BlueWave";
+            margin-left: 190px;
+            display: inline-block;
+            float: left;
+            font-size: 50px;
+            white-space: nowrap;
+            color: #fff;
+            margin-top: 37px;
         }
 
     }

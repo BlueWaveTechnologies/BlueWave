@@ -2,6 +2,7 @@ target/
 temp/
 /data/
 
+web/branding/
 web/test/
 web/images/thumbnails/
 

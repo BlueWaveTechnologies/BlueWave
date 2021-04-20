@@ -58,7 +58,15 @@ bluewave.Application = function(parent, config) {
         if (!waitmask.el.parentNode) document.body.appendChild(waitmask.el);
         if (!config.dataStores) config.dataStores = {};
         appName = config.appName;
-
+        if (!appName){
+            get("appinfo", {
+                success: function(appInfo){
+                    appName = appInfo.name;
+                    config.appName = appName;
+                    me.setTitle("");
+                }
+            });
+        }
 
 
       //Prevent native browser shortcuts (ctrl+a,h,o,p,s,...)
@@ -143,15 +151,8 @@ bluewave.Application = function(parent, config) {
         td = document.createElement("td");
         tr.appendChild(td);
         var icon = document.createElement("div");
-        icon.className = "app-header-icon";
+        icon.className = "app-header-icon noselect";
         td.appendChild(icon);
-        td.style.cursor = "pointer";
-        td.onclick = fn;
-
-        td = document.createElement("td");
-        tr.appendChild(td);
-        td.className = "app-header-text noselect";
-        td.innerHTML = "Product Authentication System";
         td.style.cursor = "pointer";
         td.onclick = fn;
 

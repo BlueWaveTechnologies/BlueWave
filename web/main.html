@@ -1,6 +1,6 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-<title>FDA CDRH</title>
+<title>Loading...</title>
 
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0" />
@@ -68,6 +68,7 @@
 
 <!-- Application -->
 <link href="style/main.css" type="text/css" rel="stylesheet" />
+<link href="style/branding.css" type="text/css" rel="stylesheet" />
 <script src="app/Application.js" type="text/javascript"></script>
 <script src="app/Homepage.js" type="text/javascript"></script>
 <script src="app/Utils.js" type="text/javascript"></script>
@@ -105,7 +106,6 @@
 window.onload = function() {
     if (!document.bluewave){
         document.bluewave = new bluewave.Application(document.body, {
-            appName: document.title,
             waitmask: document.waitmask
         });
     }
