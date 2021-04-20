@@ -84,7 +84,6 @@ bluewave.ChartEditor = function(parent, config) {
 
             }
         ];
-
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -112,8 +111,9 @@ bluewave.ChartEditor = function(parent, config) {
         });
         previewArea = panel.innerDiv;
         panel.el.className = "";
-        panel.title.onclick = function(){
+        panel.title.onclick = function(e){
             if (this.childNodes[0].nodeType===1) return;
+            e.stopPropagation();
             var currText = this.innerHTML;
             this.innerHTML = "";
             var input = document.createElement("input");
@@ -129,6 +129,14 @@ bluewave.ChartEditor = function(parent, config) {
             };
             this.appendChild(input);
             };
+        table.onclick = function(event){
+            var input = panel.title.childNodes[0];
+            var className = event.target.className
+            if(input.nodeType === 1 && className != "form-input") {
+                panel.title.innerHTML = input.value;
+                chartConfig.chartTitle = input.value;
+            };
+        };
         onRender(previewArea, function(){
             initializeChartSpace();
         });
