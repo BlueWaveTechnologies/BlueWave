@@ -117,6 +117,7 @@ bluewave.ChartEditor = function(parent, config) {
             var currText = this.innerHTML;
             this.innerHTML = "";
             var input = document.createElement("input");
+            input.className = "form-input";
             input.type = "text";
             input.value = currText;
             input.onkeydown = function(event){
