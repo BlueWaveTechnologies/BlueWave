@@ -370,6 +370,29 @@ li.tree-node:hover {
 }
 
 
+
+/**************************************************************************/
+/** Tooltip
+/**************************************************************************/
+
+.tooltip-panel, .tooltip-arrow {
+    border: 1px solid #1d6479;
+    background: #459db7;
+}
+.tooltip-panel {
+    padding: 2px 7px 2px 3px !important;
+    color: #fff;
+    border-radius: 2px 4px 4px 2px;
+    border-radius: 4px;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+.tooltip-arrow {
+    width: 10px;
+    height: 10px;
+    padding: 10px;
+}
+
+
 /**************************************************************************/
 /** Drawflow Overrides
 /**************************************************************************/
