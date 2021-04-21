@@ -192,7 +192,10 @@ bluewave.ChartEditor = function(parent, config) {
         try{
             pieArea.selectAll("*").remove();
             plotArea.selectAll("*").remove();
-            d3.selectAll("svg > *").remove();
+            console.log(xAxis);
+            console.log(yAxis);
+            d3.select(xAxis).remove();
+            d3.select(yAxis).remove();
             mapArea.selectAll("*").remove();
             mapLayer.selectAll("circle").remove();
         }
