@@ -19,6 +19,8 @@ if(!bluewave) var bluewave={};
 
 bluewave.ChartEditor = function(parent, config) {
     var me = this;
+    var currentNode;
+    var panel;
     var inputData = [];
     var svg;
     var previewArea;
@@ -106,7 +108,7 @@ bluewave.ChartEditor = function(parent, config) {
         td.style.height = "100%";
         td.style.padding = "10px";
         tr.appendChild(td);
-        var panel = createDashboardItem(td,{
+        panel = createDashboardItem(td,{
             width: "100%",
             height: "100%",
             title: "Untitled"
@@ -150,13 +152,17 @@ bluewave.ChartEditor = function(parent, config) {
         });
     };
 
+    this.getNode = function() {
+        return currentNode;
+    }
+
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(nodeType, config, inputs){
+    this.update = function(nodeType, config, inputs, node){
         me.clear();
-
+        currentNode = node;
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
             if (input!=null) inputs[i] = d3.csvParse(input);
@@ -167,8 +173,8 @@ bluewave.ChartEditor = function(parent, config) {
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
             });
+            panel.title.innerHTML = config.chartTitle;
         }
-
         chartConfig.chartType = nodeType;
         createDropDown(optionsDiv);
         createOptions();
@@ -180,13 +186,13 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         inputData = [];
-        Object.keys(chartConfig).forEach(v=>chartConfig[v] = null);
+        chartConfig = {};
+        panel.title.innerHTML = "Untitled";
         optionsDiv.innerHTML = "";
         try{
             pieArea.selectAll("*").remove();
             plotArea.selectAll("*").remove();
-            d3.select(xAxis).remove();
-            d3.select(yAxis).remove();
+            d3.selectAll("svg > *").remove();
             mapArea.selectAll("*").remove();
             mapLayer.selectAll("circle").remove();
         }

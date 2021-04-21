@@ -504,14 +504,17 @@ bluewave.Explorer = function(parent, config) {
                         btn.appendChild(icon);
                         btn.onclick = function(){
                             var chartConfig = chartEditor.getConfig();
+                            var node = chartEditor.getNode();
                             var orgConfig = node.config;
                             if (!orgConfig) orgConfig = {};
                             if (isDirty(chartConfig, orgConfig)){
+                                console.log(node);
                                 node.config = chartConfig;
                                 waitmask.show();
                                 var el = chartEditor.getChart();
                                 createPreview(el, function(canvas){
                                     createThumbnail(node, canvas);
+                                    updateTitle(node);
                                     win.close();
                                     waitmask.hide();
                                 }, this);
@@ -546,11 +549,22 @@ bluewave.Explorer = function(parent, config) {
                 data.push(csv);
             }
         }
-        chartEditor.update(node.type, node.config, data);
+        chartEditor.update(node.type, node.config, data, node);
 
         chartEditor.show();
     };
 
+  //**************************************************************************
+  //** updateTitle
+  //**************************************************************************
+  // Updates the Title of the Node based on what is in the chart config
+    var updateTitle = function(node) {
+        var chartTitle = chartEditor.getConfig().chartTitle;
+        var el = node.childNodes[0];
+        if(chartTitle != null) {
+            el.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + chartTitle + "</span>";
+        }
+    }
 
   //**************************************************************************
   //** createPreview
