@@ -449,7 +449,7 @@ bluewave.ChartEditor = function(parent, config) {
   //** createPiePreview
   //**************************************************************************
     var createPiePreview = function(){
-        pieArea.selectAll("*").remove();
+        if (pieArea) pieArea.selectAll("*").remove();
         if(chartConfig.pieKey===null || chartConfig.pieValue===null){
             return;
         }
@@ -460,10 +460,6 @@ bluewave.ChartEditor = function(parent, config) {
             return acc;
         },{});
 
-        var color = d3
-            .scaleOrdinal()
-            .domain(data)
-            .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"]);
 
         var pie = d3.pie().value(function (d) {
             return d.value;
@@ -487,17 +483,16 @@ bluewave.ChartEditor = function(parent, config) {
             .attr(
                 "d",
                 d3
-                    .arc()
-                    .innerRadius(100)
-                    .outerRadius(radius)
+                .arc()
+                .innerRadius(100)
+                .outerRadius(radius)
             )
             .attr("fill", function (d) {
-                return color(d.data.key);
+                return getColor(d.data.key);
             })
-            .attr("stroke", "black")
-            .style("stroke-width", "2px")
+            .attr("stroke", "#777")
+            .style("stroke-width", "1px")
             .style("opacity", 0.7);
-
     };
 
 
@@ -1010,6 +1005,7 @@ bluewave.ChartEditor = function(parent, config) {
     var createTable = javaxt.dhtml.utils.createTable;
     var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
+    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();
 };
