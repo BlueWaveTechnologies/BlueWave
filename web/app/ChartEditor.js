@@ -861,20 +861,21 @@ bluewave.ChartEditor = function(parent, config) {
   //** editStyle
   //**************************************************************************
     var editStyle = function(chartType){
-        if (!styleEditor){
 
+      //Create styleEditor as needed
+        if (!styleEditor){
             styleEditor = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Style",
                 width: 400,
-                //height: 600,
                 valign: "top",
                 modal: false,
                 resizable: false,
                 style: config.style.window
             });
-
         }
 
+
+      //Update form
         var body = styleEditor.getBody();
         body.innerHTML = "";
         if (chartType==="pieChart"){
@@ -921,17 +922,24 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
 
-          //Update opacity field (add slider)
-            createSlider("cutout", form, 0, 100, "%");
-            form.findField("cutout").setValue("65%");
+          //Update cutout field (add slider) and set initial value
+            createSlider("cutout", form, "%");
+            var cutout = chartConfig.pieCutout;
+            if (cutout==null) cutout = 0.65;
+            chartConfig.pieCutout = cutout;
+            form.findField("cutout").setValue(cutout*100);
 
+          //Tweak height of the label field and set initial value
             var labelField = form.findField("labels");
             labelField.row.style.height = "68px";
             labelField.setValue(false);
 
+          //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
                 console.log(settings);
+                chartConfig.pieCutout = settings.cutout/100;
+                createPiePreview();
             };
         }
 
@@ -947,7 +955,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   /** Creates a custom form input using a text field
    */
-    var createSlider = function(inputName, form, minVal, maxVal, label){
+    var createSlider = function(inputName, form){
 
       //Add row under the given input
         var input = form.findField(inputName);
@@ -959,43 +967,26 @@ bluewave.ChartEditor = function(parent, config) {
         input.row.parentNode.insertBefore(row, input.row.nextSibling);
 
 
-
       //Add slider to the last column of the new row
-        var slider = new javaxt.dhtml.Slider(cols[2], config);
-        var sliding = false;
-        slider.onChange = function(){
-            var percent = slider.getValue()/slider.getWidth();
-            var val = round(percent*maxVal, 0);
-            if (val==0 && minVal>0) val = minVal;
-
-            sliding = true;
+        var slider = document.createElement("input");
+        cols[2].appendChild(slider);
+        slider.type = "range";
+        slider.className = "dashboard-slider";
+        slider.setAttribute("min", 1);
+        slider.setAttribute("max", 20);
+        slider.onchange = function(){
+            var val = (this.value-1)*5;
             input.setValue(val);
-            sliding = false;
-        };
-
-
-      //Override the slider setValue method
-        var _setValue = slider.setValue;
-        slider.setValue = function(val){
-            var x = parseFloat(val);
-            if (isNumber(x)){
-                var w = slider.getWidth();
-                if (x<0) x = 0;
-                if (x>maxVal) x = w;
-                else x = (x/maxVal) * w;
-                _setValue(x, true);
-            }
         };
 
 
         var setValue = input.setValue;
         input.setValue = function(val){
             val = parseFloat(val);
-            setValue(val + "" + label);
-            if (!sliding){
-                slider.setValue(val<2? 0 : val);
-            }
+            setValue(val + "%");
+            slider.value = round(val/5)+1;
         };
+
         var getValue = input.getValue;
         input.getValue = function(){
             var val = parseFloat(getValue());
@@ -1003,9 +994,16 @@ bluewave.ChartEditor = function(parent, config) {
             else return 0;
         };
 
-        slider.onRender = function(){
-            input.setValue(getValue());
-        };
+        input.row.getElementsByTagName("input")[0].addEventListener('input', function(e) {
+            var val = parseFloat(this.value);
+            if (isNumber(val)){
+                if (val<0 || val>95){
+                    if (val<0) val = 0;
+                    else val = 95;
+                }
+                input.setValue(val);
+            }
+        });
     };
 
 
