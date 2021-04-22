@@ -145,6 +145,18 @@ bluewave.NodeView = function(parent, config) {
             tooltip.hide();
         })
         .on("click", function(){
+         var g = d3.select('svg').attr('width', width).attr('height', height)
+                .select('g').attr('transform', 'translate(' + width/2 + ',' + height/2 + ')');
+
+            var vLayout = d3.cluster().size([2 * Math.PI, Math.min(width, height)/2 - 10]); // margin!
+            var vRoot = d3.hierarchy(data);
+            var vNodes = vRoot.descendants();
+
+            g.selectAll('circle').data(vNodes).enter().append('circle')
+             .attr('r', 10)
+             .attr("transform", function(d) { return "translate(" + d3.pointRadial(d.x, d.y) + ")"})
+
+
             getRelationshipOnClick(width, height, node);
         })
         .call(d3.drag() // call specific function when circle is dragged
@@ -243,6 +255,19 @@ bluewave.NodeView = function(parent, config) {
   //** getRelationshipOnClick
   //**************************************************************************
     var getRelationshipOnClick = function(width, height, nodes){
+        var radius = width/2;
+
+        var vLayout = d3.cluster().size([2 * Math.PI, Math.min(width, height)/2 - 10]); // margin!
+
+        var vRoot = d3.hierarchy(nodes);
+        var vNodes = vRoot.descendants();
+
+
+
+        
+
+
+
         var simulation = d3.forceSimulation()
             .velocityDecay(0.1)
             .force("x", d3.forceX(width / 2).strength(.05))
@@ -252,8 +277,8 @@ bluewave.NodeView = function(parent, config) {
             .on('tick', ticked);
 
         function ticked() {
-          nodes.attr('cx', function (d) { return d.x = pythag(d.rad, d.y, d.x); })
-                  .attr('cy', function (d) { return d.y = pythag(d.rad, d.x, d.y); });
+//          nodes.attr('cx', function (d) { return d.x = pythag(d.rad, d.y, d.x); })
+//               .attr('cy', function (d) { return d.y = pythag(d.rad, d.x, d.y); });
         }
 
 
