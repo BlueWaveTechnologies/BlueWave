@@ -192,10 +192,10 @@ bluewave.ChartEditor = function(parent, config) {
         try{
             pieArea.selectAll("*").remove();
             plotArea.selectAll("*").remove();
-            console.log(xAxis);
-            console.log(yAxis);
-            d3.select(xAxis).remove();
-            d3.select(yAxis).remove();
+            var clearX = d3.select(xAxis);
+            var clearY = d3.select(yAxis);
+            clearX.selectAll("*").remove();;
+            clearY.selectAll("*").remove();
             mapArea.selectAll("*").remove();
             mapLayer.selectAll("circle").remove();
         }
