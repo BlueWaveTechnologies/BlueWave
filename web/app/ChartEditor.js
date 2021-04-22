@@ -853,7 +853,7 @@ bluewave.ChartEditor = function(parent, config) {
                 });
         }).entries(data);
 
-        plotArea.selectAll("*").remove();
+        if(plotArea) plotArea.selectAll("*").remove();
 
         let height = parseInt(plotArea.attr("height"));
         let width = parseInt(plotArea.attr("width"));
