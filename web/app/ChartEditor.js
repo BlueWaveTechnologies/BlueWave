@@ -1108,7 +1108,7 @@ bluewave.ChartEditor = function(parent, config) {
             .attr(
                 "transform",
                 "translate(" +
-                    margin.left +
+                    0 +
                     "," +
                     (axisHeight + margin.top) +
                     ")"
@@ -1122,7 +1122,7 @@ bluewave.ChartEditor = function(parent, config) {
             .append("g")
             .attr(
                 "transform",
-                "translate(" + margin.left + "," + margin.top + ")"
+                "translate(" + 0 + "," + margin.top + ")"
             )
             .call(d3.axisLeft(this.y));
     };
