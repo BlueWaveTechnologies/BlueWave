@@ -1105,14 +1105,7 @@ bluewave.ChartEditor = function(parent, config) {
 
         xAxis = plotArea
             .append("g")
-            .attr(
-                "transform",
-                "translate(" +
-                    0 +
-                    "," +
-                    (axisHeight + margin.top) +
-                    ")"
-            )
+            .attr("transform", "translate(0," + axisHeight + ")")
             .call(d3.axisBottom(this.x))
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
@@ -1120,10 +1113,6 @@ bluewave.ChartEditor = function(parent, config) {
 
         yAxis = plotArea
             .append("g")
-            .attr(
-                "transform",
-                "translate(" + 0 + "," + margin.top + ")"
-            )
             .call(d3.axisLeft(this.y));
     };
 
