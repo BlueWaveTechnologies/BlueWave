@@ -205,15 +205,11 @@ bluewave.ChartEditor = function(parent, config) {
         chartConfig = {};
         panel.title.innerHTML = "Untitled";
         optionsDiv.innerHTML = "";
-        try{
-            pieArea.selectAll("*").remove();
-            plotArea.selectAll("*").remove();
-            d3.selectAll('g').selectAll('xAxis').remove();
-            d3.selectAll('g').selectAll('yAxis').remove();
-            mapArea.selectAll("*").remove();
-            mapLayer.selectAll("circle").remove();
-        }
-        catch(e){}
+
+        if (pieArea) pieArea.selectAll("*").remove();
+        if (plotArea) plotArea.selectAll("*").remove();
+        if (mapArea) mapArea.selectAll("*").remove();
+        if (mapLayer) mapLayer.selectAll("circle").remove();
     };
 
 
@@ -1103,11 +1099,12 @@ bluewave.ChartEditor = function(parent, config) {
         this.y = axisTemp.scale;
         this.yBand = axisTemp.band;
 
-        d3.selectAll('g').select('xAxis').remove();
-        d3.selectAll('g').select('yAxis').remove();
-        xAxis = svg
+
+        if (xAxis) xAxis.selectAll("*").remove();
+        if (yAxis) yAxis.selectAll("*").remove();
+
+        xAxis = plotArea
             .append("g")
-            .attr("id", "xAxis")
             .attr(
                 "transform",
                 "translate(" +
@@ -1121,9 +1118,8 @@ bluewave.ChartEditor = function(parent, config) {
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
 
-        yAxis = svg
+        yAxis = plotArea
             .append("g")
-            .attr("id", "yAxis")
             .attr(
                 "transform",
                 "translate(" + margin.left + "," + margin.top + ")"
