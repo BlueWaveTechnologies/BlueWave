@@ -59,7 +59,8 @@ bluewave.ChartEditor = function(parent, config) {
         mapProjectionValue:null,
         mapType:null
     };
-    var xAxis, yAxis;
+    var xAxis;
+    var yAxis;
     var axisWidth, axisHeight;
     var margin = {
         top: 15,
@@ -207,10 +208,8 @@ bluewave.ChartEditor = function(parent, config) {
         try{
             pieArea.selectAll("*").remove();
             plotArea.selectAll("*").remove();
-            var clearX = d3.select(xAxis);
-            var clearY = d3.select(yAxis);
-            clearX.selectAll("*").remove();;
-            clearY.selectAll("*").remove();
+            d3.selectAll('g').selectAll('xAxis').remove();
+            d3.selectAll('g').selectAll('yAxis').remove();
             mapArea.selectAll("*").remove();
             mapLayer.selectAll("circle").remove();
         }
@@ -1104,7 +1103,8 @@ bluewave.ChartEditor = function(parent, config) {
         this.y = axisTemp.scale;
         this.yBand = axisTemp.band;
 
-        d3.select(xAxis).remove();
+        d3.selectAll('g').select('xAxis').remove();
+        d3.selectAll('g').select('yAxis').remove();
         xAxis = svg
             .append("g")
             .attr("id", "xAxis")
@@ -1121,7 +1121,6 @@ bluewave.ChartEditor = function(parent, config) {
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
 
-        d3.select(yAxis).remove();
         yAxis = svg
             .append("g")
             .attr("id", "yAxis")

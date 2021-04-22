@@ -508,7 +508,6 @@ bluewave.Explorer = function(parent, config) {
                             var orgConfig = node.config;
                             if (!orgConfig) orgConfig = {};
                             if (isDirty(chartConfig, orgConfig)){
-                                console.log(node);
                                 node.config = chartConfig;
                                 waitmask.show();
                                 var el = chartEditor.getChart();
@@ -559,11 +558,38 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   // Updates the Title of the Node based on what is in the chart config
     var updateTitle = function(node) {
+        var icon = iconHelper(chartEditor.getConfig().chartType);
         var chartTitle = chartEditor.getConfig().chartTitle;
         var el = node.childNodes[0];
         if(chartTitle != null) {
-            el.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + chartTitle + "</span>";
+            el.innerHTML = "<i class=\"" + icon + "\"></i><span>" + chartTitle + "</span>";
         }
+    }
+
+  //**************************************************************************
+  //** iconHelper
+  //**************************************************************************
+    var iconHelper = function(chartType) {
+        switch(chartType) {
+            case "addData":
+                console.log("Its Add Data");
+                return "fas fa-plus-circle";
+            case "pieChart":
+                console.log("Its Pie Chart");
+                return "fas fa-chart-pie";
+            case "barChart":
+                console.log("Its Bar Chart");
+                return "fas fa-chart-bar";
+            case "lineChart":
+                console.log("Its Line Chart");
+                return "fas fa-chart-line";
+            case "map":
+                console.log("Its Map");
+                return "fas fa-map-marked-alt";
+            default:
+                console.log("Its Nothing");
+                return null;
+        };
     }
 
   //**************************************************************************
