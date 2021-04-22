@@ -569,25 +569,20 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** iconHelper
   //**************************************************************************
+  //Grabs the corresponding Icon for the given Chart Type
     var iconHelper = function(chartType) {
         switch(chartType) {
             case "addData":
-                console.log("Its Add Data");
                 return "fas fa-plus-circle";
             case "pieChart":
-                console.log("Its Pie Chart");
                 return "fas fa-chart-pie";
             case "barChart":
-                console.log("Its Bar Chart");
                 return "fas fa-chart-bar";
             case "lineChart":
-                console.log("Its Line Chart");
                 return "fas fa-chart-line";
             case "map":
-                console.log("Its Map");
                 return "fas fa-map-marked-alt";
             default:
-                console.log("Its Nothing");
                 return null;
         };
     }
