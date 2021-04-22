@@ -1103,8 +1103,7 @@ bluewave.ChartEditor = function(parent, config) {
         this.y = axisTemp.scale;
         this.yBand = axisTemp.band;
 
-        d3.selectAll('g').select('xAxis').remove();
-        d3.selectAll('g').select('yAxis').remove();
+        d3.select(xAxis).remove();
         xAxis = svg
             .append("g")
             .attr("id", "xAxis")
@@ -1121,6 +1120,8 @@ bluewave.ChartEditor = function(parent, config) {
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
 
+
+        d3.select(yAxis).remove();
         yAxis = svg
             .append("g")
             .attr("id", "yAxis")
