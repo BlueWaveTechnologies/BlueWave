@@ -542,7 +542,7 @@ bluewave.ChartEditor = function(parent, config) {
 
 
 
-
+        if (chartConfig.pieLabels==null) chartConfig.pieLabels = true;
         if (chartConfig.pieLabels===true){
 
           //Another arc that won't be drawn. Just for labels positioning
