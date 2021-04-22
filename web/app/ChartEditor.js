@@ -51,12 +51,21 @@ bluewave.ChartEditor = function(parent, config) {
         xAxis:null,
         yAxis:null,
         chartType:null,
+        chartTitle:null,
         nodeId:null,
         mapProjectionName:null,
         mapProjectionValue:null,
         mapType:null
     };
     var xAxis, yAxis;
+    var axisWidth, axisHeight;
+    var margin = {
+        top: 15,
+        right: 5,
+        bottom: 65,
+        left: 82
+    };
+    var styleEditor;
 
 
   //**************************************************************************
@@ -83,7 +92,6 @@ bluewave.ChartEditor = function(parent, config) {
 
             }
         ];
-
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -99,6 +107,8 @@ bluewave.ChartEditor = function(parent, config) {
         td.appendChild(div);
         optionsDiv = div;
 
+
+      //Create chart preview
         td = document.createElement("td");
         td.style.width = "100%";
         td.style.height = "100%";
@@ -107,17 +117,52 @@ bluewave.ChartEditor = function(parent, config) {
         var panel = createDashboardItem(td,{
             width: "100%",
             height: "100%",
-            title: "Untitled"
+            title: "Untitled",
+            settings: true
         });
         previewArea = panel.innerDiv;
         panel.el.className = "";
 
 
+      //Allow users to change the title associated with the chart
+        panel.title.onclick = function(e){
+            if (this.childNodes[0].nodeType===1) return;
+            e.stopPropagation();
+            var currText = this.innerHTML;
+            this.innerHTML = "";
+            var input = document.createElement("input");
+            input.className = "form-input";
+            input.type = "text";
+            input.value = currText;
+            input.onkeydown = function(event){
+                var key = event.keyCode;
+                if(key == 13) {
+                    panel.title.innerHTML = this.value;
+                    chartConfig.chartTitle = this.value;
+                }
+            };
+            this.appendChild(input);
+        };
+        document.body.addEventListener('click', function(e) {
+            var input = panel.title.childNodes[0];
+            var className = e.target.className;
+            if(input.nodeType === 1 && className != "form-input") {
+                panel.title.innerHTML = input.value;
+                chartConfig.chartTitle = input.value;
+            };
+        });
 
+
+      //Watch for settings
+        panel.settings.onclick = function(){
+            if (chartConfig) editStyle(chartConfig.chartType);
+        };
+
+
+      //Initialize chart area when ready
         onRender(previewArea, function(){
             initializeChartSpace();
         });
-
     };
 
 
@@ -397,21 +442,15 @@ bluewave.ChartEditor = function(parent, config) {
   //** initializeChartSpace
   //**************************************************************************
     var initializeChartSpace = function(){
-        this.margin = {
-            top: 15,
-            right: 5,
-            bottom: 65,
-            left: 82
-        };
 
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
 
-        this.plotHeight = height - this.margin.top - this.margin.bottom;
-        this.plotWidth = width - this.margin.left - this.margin.right;
+        var plotHeight = height - margin.top - margin.bottom;
+        var plotWidth = width - margin.left - margin.right;
 
-        this.axisHeight = height - this.margin.top - this.margin.bottom;
-        this.axisWidth = width - this.margin.left - this.margin.right;
+        axisHeight = height - margin.top - margin.bottom;
+        axisWidth = width - margin.left - margin.right;
 
 
 
@@ -419,27 +458,19 @@ bluewave.ChartEditor = function(parent, config) {
         svg.attr("width", width);
         svg.attr("height", height);
 
-        plotArea = svg;
+
+        plotArea = svg.append("g");
+        plotArea
+            .attr("width", plotWidth)
+            .attr("height", plotHeight)
+            .attr(
+                "transform",
+                "translate(" + margin.left + "," + (margin.top) + ")"
+            );
+
+
+
         pieArea = svg.append("g");
-
-        plotArea = plotArea
-            .append('g')
-            .attr("id", "plotArea")
-            .attr("width", this.plotWidth)
-            .attr("height", this.plotHeight)
-            .attr(
-                "transform",
-                "translate(" + this.margin.left + "," + (this.margin.top) + ")"
-            );
-
-        pieArea
-            .attr("id", "pieArea")
-            .attr("width", width)
-            .attr("height", height)
-            .attr(
-                "transform",
-                "translate(" + width / 2 + "," + height / 2 + ")"
-            );
         mapArea = svg.append("g");
         mapLayer = svg.append("g");
     };
@@ -464,35 +495,120 @@ bluewave.ChartEditor = function(parent, config) {
         var pie = d3.pie().value(function (d) {
             return d.value;
         });
+        pieData = pie(d3.entries(pieData));
 
-        var data_ready = pie(d3.entries(pieData));
 
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
-
         var radius =
             Math.min(width, height) / 2 -
-            this.margin.left -
-            this.margin.right;
+            margin.left -
+            margin.right;
+
+        radius = radius*1.2;
+
+
+        var cutout = chartConfig.pieCutout;
+        if (cutout==null) cutout = 0.65;
+        var innerRadius = radius*cutout;
+        var arc = d3.arc()
+            .innerRadius(innerRadius)
+            .outerRadius(radius);
+
 
         pieArea
+            .attr("width", width)
+            .attr("height", height)
+            .attr(
+                "transform",
+                "translate(" + width/2 + "," + height/2 + ")"
+            );
+
+
+        var pieChart = pieArea.append("g");
+
+        pieChart
             .selectAll("whatever")
-            .data(data_ready)
+            .data(pieData)
             .enter()
             .append("path")
-            .attr(
-                "d",
-                d3
-                .arc()
-                .innerRadius(100)
-                .outerRadius(radius)
-            )
+            .attr("d", arc)
             .attr("fill", function (d) {
                 return getColor(d.data.key);
             })
             .attr("stroke", "#777")
             .style("stroke-width", "1px")
             .style("opacity", 0.7);
+
+
+
+        if (chartConfig.pieLabels==null) chartConfig.pieLabels = true;
+        if (chartConfig.pieLabels===true){
+
+          //Another arc that won't be drawn. Just for labels positioning
+            var outerArc = d3
+              .arc()
+              .innerRadius(radius * 0.9)
+              .outerRadius(radius * 0.9);
+
+
+          //Add the polylines between chart and labels:
+            let cPositions = [];
+            var lines = pieArea.append("g");
+            lines
+              .selectAll("allPolylines")
+              .data(pieData)
+              .enter()
+              .append("polyline")
+              .attr("stroke", "black")
+              .style("fill", "none")
+              .attr("stroke-width", 1)
+              .attr("points", function (d) {
+                var posA = arc.centroid(d); // line insertion in the slice
+                var posB = outerArc.centroid(d); // line break: we use the other arc generator that has been built only for that
+                var posC = outerArc.centroid(d); // Label position = almost the same as posB
+                cPositions.forEach((val) => {
+                  if (posC[1] < val + 5 && posC[1] > val - 5) {
+                    posC[1] -= 14;
+                    posB[1] -= 14;
+                  }
+                });
+                cPositions.push(posC[1]);
+                var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; // we need the angle to see if the X position will be at the extreme right or extreme left
+                posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+                return [posA, posB, posC];
+              });
+
+
+          //Add the polylines between chart and labels:
+            var positions = [];
+            var labels = pieArea.append("g");
+            labels
+              .selectAll("allLabels")
+              .data(pieData)
+              .enter()
+              .append("text")
+              .text(function (d) {
+                  return d.data.key;
+              })
+              .attr("transform", function (d) {
+                var pos = outerArc.centroid(d);
+                positions.forEach((val) => {
+                  if (pos[1] < val + 5 && pos[1] > val - 5) {
+                    pos[1] -= 14;
+                  }
+                });
+                positions.push(pos[1]);
+
+                var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1);
+                return "translate(" + pos + ")";
+              })
+              .style("text-anchor", function (d) {
+                var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                return midangle < Math.PI ? "start" : "end";
+              });
+        }
     };
 
 
@@ -521,7 +637,10 @@ bluewave.ChartEditor = function(parent, config) {
         if(chartConfig.mapProjectionValue === null){
             return;
         }
-        mapArea.selectAll("*").remove();
+        if (mapArea) mapArea.selectAll("*").remove();
+        var width = previewArea.offsetWidth;
+        var height = previewArea.offsetHeight;
+
         var projection = chartConfig.mapProjectionValue
                 .translate([width/2,height/2])
 
@@ -622,7 +741,7 @@ bluewave.ChartEditor = function(parent, config) {
 
 
         // Remove previous data from chart
-        plotArea.selectAll("*").remove();
+        if (plotArea) plotArea.selectAll("*").remove();
         let x;
         let y;
 
@@ -732,8 +851,8 @@ bluewave.ChartEditor = function(parent, config) {
 
         plotArea.selectAll("*").remove();
 
-        let height = this.plotHeight;
-        let width = this.plotWidth;
+        let height = parseInt(plotArea.attr("height"));
+        let width = parseInt(plotArea.attr("width"));
 
         displayAxis("key","value",sumData);
         let x = this.x;
@@ -809,6 +928,160 @@ bluewave.ChartEditor = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** editStyle
+  //**************************************************************************
+    var editStyle = function(chartType){
+
+      //Create styleEditor as needed
+        if (!styleEditor){
+            styleEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Style",
+                width: 400,
+                valign: "top",
+                modal: false,
+                resizable: false,
+                style: config.style.window
+            });
+        }
+
+
+      //Update form
+        var body = styleEditor.getBody();
+        body.innerHTML = "";
+        if (chartType==="pieChart"){
+            var form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            {
+                                name: "color",
+                                label: "Color",
+                                type: new javaxt.dhtml.ComboBox(
+                                    document.createElement("div"),
+                                    {
+                                        style: config.style.combobox
+                                    }
+                                )
+                            },
+                            {
+                                name: "cutout",
+                                label: "Cutout",
+                                type: "text"
+                            },
+                            {
+                                name: "labels",
+                                label: "Labels",
+                                type: "radio",
+                                alignment: "vertical",
+                                options: [
+                                    {
+                                        label: "True",
+                                        value: true
+                                    },
+                                    {
+                                        label: "False",
+                                        value: false
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+          //Update cutout field (add slider) and set initial value
+            createSlider("cutout", form, "%");
+            var cutout = chartConfig.pieCutout;
+            if (cutout==null) cutout = 0.65;
+            chartConfig.pieCutout = cutout;
+            form.findField("cutout").setValue(cutout*100);
+
+
+          //Tweak height of the label field and set initial value
+            var labelField = form.findField("labels");
+            labelField.row.style.height = "68px";
+            var labels = chartConfig.pieLabels;
+            labelField.setValue(labels===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+                chartConfig.pieCutout = settings.cutout/100;
+                if (settings.labels==="true") settings.labels = true;
+                else if (settings.labels==="false") settings.labels = false;
+                chartConfig.pieLabels = settings.labels;
+                createPiePreview();
+            };
+        }
+
+
+
+        styleEditor.showAt(108,57);
+        form.resize();
+    };
+
+
+  //**************************************************************************
+  //** createSlider
+  //**************************************************************************
+  /** Creates a custom form input using a text field
+   */
+    var createSlider = function(inputName, form){
+
+      //Add row under the given input
+        var input = form.findField(inputName);
+        var row = input.row.cloneNode(true);
+        var cols = row.childNodes;
+        for (var i=0; i<cols.length; i++){
+            cols[i].innerHTML = "";
+        }
+        input.row.parentNode.insertBefore(row, input.row.nextSibling);
+
+
+      //Add slider to the last column of the new row
+        var slider = document.createElement("input");
+        cols[2].appendChild(slider);
+        slider.type = "range";
+        slider.className = "dashboard-slider";
+        slider.setAttribute("min", 1);
+        slider.setAttribute("max", 20);
+        slider.onchange = function(){
+            var val = (this.value-1)*5;
+            input.setValue(val);
+        };
+
+
+        var setValue = input.setValue;
+        input.setValue = function(val){
+            val = parseFloat(val);
+            setValue(val + "%");
+            slider.value = round(val/5)+1;
+        };
+
+        var getValue = input.getValue;
+        input.getValue = function(){
+            var val = parseFloat(getValue());
+            if (isNumber(val)) return round(val, 0);
+            else return 0;
+        };
+
+        input.row.getElementsByTagName("input")[0].addEventListener('input', function(e) {
+            var val = parseFloat(this.value);
+            if (isNumber(val)){
+                if (val<0 || val>95){
+                    if (val<0) val = 0;
+                    else val = 95;
+                }
+                input.setValue(val);
+            }
+        });
+    };
+
 
   //**************************************************************************
   //** displayAxis
@@ -829,9 +1102,9 @@ bluewave.ChartEditor = function(parent, config) {
             .attr(
                 "transform",
                 "translate(" +
-                    this.margin.left +
+                    margin.left +
                     "," +
-                    (this.axisHeight + this.margin.top) +
+                    (axisHeight + margin.top) +
                     ")"
             )
             .call(d3.axisBottom(this.x))
@@ -845,7 +1118,7 @@ bluewave.ChartEditor = function(parent, config) {
             .attr("id", "yAxis")
             .attr(
                 "transform",
-                "translate(" + this.margin.left + "," + this.margin.top + ")"
+                "translate(" + margin.left + "," + margin.top + ")"
             )
             .call(d3.axisLeft(this.y));
     };
@@ -893,11 +1166,11 @@ bluewave.ChartEditor = function(parent, config) {
         let axisRange;
         let axisRangePadded;
         if(axisName === "x"){
-            axisRange = [0,this.axisWidth];
-            axisRangePadded = [10,this.axisWidth-10];
+            axisRange = [0,axisWidth];
+            axisRangePadded = [10,axisWidth-10];
         }else{
-            axisRange = [this.axisHeight,0];
-            axisRangePadded = [this.axisHeight-10,10];
+            axisRange = [axisHeight,0];
+            axisRangePadded = [axisHeight-10,10];
         }
 
         switch (type) {
@@ -1003,6 +1276,8 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
+    var isNumber = javaxt.dhtml.utils.isNumber;
+    var round = javaxt.dhtml.utils.round;
     var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
