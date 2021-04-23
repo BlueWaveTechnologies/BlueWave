@@ -558,33 +558,10 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   // Updates the Title of the Node based on what is in the chart config
     var updateTitle = function(node) {
-        var icon = iconHelper(chartEditor.getConfig().chartType);
         var chartTitle = chartEditor.getConfig().chartTitle;
-        var el = node.childNodes[0];
         if(chartTitle != null) {
-            el.innerHTML = "<i class=\"" + icon + "\"></i><span>" + chartTitle + "</span>";
+            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = chartTitle;
         }
-    }
-
-  //**************************************************************************
-  //** iconHelper
-  //**************************************************************************
-  //Grabs the corresponding Icon for the given Chart Type
-    var iconHelper = function(chartType) {
-        switch(chartType) {
-            case "addData":
-                return "fas fa-plus-circle";
-            case "pieChart":
-                return "fas fa-chart-pie";
-            case "barChart":
-                return "fas fa-chart-bar";
-            case "lineChart":
-                return "fas fa-chart-line";
-            case "map":
-                return "fas fa-map-marked-alt";
-            default:
-                return null;
-        };
     }
 
   //**************************************************************************
