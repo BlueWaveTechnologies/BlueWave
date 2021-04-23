@@ -282,8 +282,24 @@ bluewave.charts.Sankey = function(parent, config) {
             return;
         }
 
+
+      //Set name
+        var name = btn.el.dataset["title"];
+        var id = 0;
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                var type = node.type;
+                if (type===nodeType){
+                    id++;
+                }
+            }
+        }
+        if (id>0) name += " " + (id+1);
+
+
+      //Set icon
         var icon = btn.el.dataset["icon"];
-        var title = btn.el.dataset["title"];
         var i = document.createElement("i");
         i.className = icon;
 
@@ -306,7 +322,7 @@ bluewave.charts.Sankey = function(parent, config) {
 
 
         var node = createNode({
-            name: title,
+            name: name,
             type: nodeType,
             icon: icon,
             content: i,
@@ -357,6 +373,7 @@ bluewave.charts.Sankey = function(parent, config) {
         );
 
         div = document.getElementById(div.id);
+        div.name = node.name;
         div.type = node.type;
         div.inputs = {};
         div.outputs = {};
@@ -409,14 +426,18 @@ bluewave.charts.Sankey = function(parent, config) {
         }
 
 
-        nodeEditor.update(node.data);
+        nodeEditor.update({
+            name: node.name,
+            notes: node.notes
+        });
         nodeEditor.onClose = function(){
             var data = nodeEditor.getData();
-            node.data = data;
-            if (data.name){
-                data.name = data.name.trim();
-                if (data.name.length>0){
-                    node.childNodes[0].getElementsByTagName("span")[0].innerHTML = data.name;
+            node.name = data.name;
+            node.notes = data.notes;
+            if (node.name){
+                node.name = node.name.trim();
+                if (node.name.length>0){
+                    node.childNodes[0].getElementsByTagName("span")[0].innerHTML = node.name;
                 }
             }
         };
@@ -557,7 +578,7 @@ bluewave.charts.Sankey = function(parent, config) {
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
-                var name = getName(node);
+                var name = node.name;
 
                 data.nodes.push({
                     name: name,
@@ -570,10 +591,10 @@ bluewave.charts.Sankey = function(parent, config) {
                     if (inputs.hasOwnProperty(k)){
                         var n = nodes[k];
                         var v = quantities[k + "->" + key];
-                        console.log(k + "->" + key, );
+                        //console.log(k + "->" + key, );
 
                         data.links.push({
-                            source: getName(n),
+                            source: n.name,
                             target: name,
                             value: v
                         });
@@ -685,16 +706,6 @@ bluewave.charts.Sankey = function(parent, config) {
             return d.x1 + 6;
           })
           .attr("text-anchor", "start");
-    };
-
-
-  //**************************************************************************
-  //** getName
-  //**************************************************************************
-    var getName = function(node){
-        var name = node.type;
-        if (node.data) name = node.data.name;
-        return name;
     };
 
 
