@@ -290,6 +290,45 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** createToggleButton
+  //**************************************************************************
+    createToggleButton: function(parent, config){
+        var div = document.createElement("div");
+        div.className = "toggle-button-bar noselect";
+        parent.appendChild(div);
+
+
+        for (var i=0; i<config.options.length; i++){
+            var btn = document.createElement("div");
+            btn.className = "toggle-button";
+            if (config.options[i]==config.defaultValue) btn.className+="-active";
+            btn.innerHTML = config.options[i];
+            btn.onclick = function(){
+                if (this.className==="toggle-button-active") return;
+                for (var i=0; i<div.childNodes.length; i++){
+                    div.childNodes[i].className = "toggle-button";
+                }
+                this.className="toggle-button-active";
+                if (config.onChange) config.onChange.apply(this, [this.innerHTML]);
+            };
+            div.appendChild(btn);
+        }
+
+        div.setValue = function(val){
+            for (var i=0; i<div.childNodes.length; i++){
+                var btn = div.childNodes[i];
+                if (btn.innerHTML===val){
+                    btn.click();
+                    break;
+                }
+            }
+        };
+
+        return div;
+    },
+
+
+  //**************************************************************************
   //** createDashboardItem
   //**************************************************************************
     createDashboardItem: function(parent, config){
