@@ -22,6 +22,7 @@ bluewave.charts.Sankey = function(parent, config) {
     var tooltip, tooltipTimer, lastToolTipEvent;
     var button = {};
     var nodes = {};
+    var connections = {};
     var drawflow;
     var waitmask;
     var button = {};
@@ -106,21 +107,83 @@ bluewave.charts.Sankey = function(parent, config) {
   //** createDrawFlow
   //**************************************************************************
     var createDrawFlow = function(parent){
+
+      //Create drawflow
         drawflow = new Drawflow(parent);
         drawflow.reroute = true;
         drawflow.start();
+
+
+      //Watch for click events
+        var x,y;
+        drawflow.on('click', function(e){
+            x = e.clientX;
+            y = e.clientY;
+        });
+
+
+      //Watch for link creation
         drawflow.on('connectionCreated', function(info) {
             var outputID = info.output_id+"";
             var inputID = info.input_id+"";
-            console.log("Connected " + outputID + " to " + inputID);
+            //console.log("Connected " + outputID + " to " + inputID);
 
+          //Update nodes
             var node = nodes[inputID];
             node.inputs[outputID] = nodes[outputID];
 
-            node.ondblclick();
+          //Update connections
+            connections[outputID + "->" + inputID] = 1;
         });
+
+
+      //Watch for link removals
+        drawflow.on('connectionRemoved', function(info){
+            var outputID = info.output_id+"";
+            var inputID = info.input_id+"";
+            //console.log("Removed connection " + outputID + " to " + inputID);
+            delete connections[outputID + "->" + inputID];
+        });
+
+
+      //Watch for node removals
         drawflow.on('nodeRemoved', function(nodeID) {
             delete nodes[nodeID+""];
+        });
+
+
+      //Process link click events
+        drawflow.on('connectionSelected', function(info){
+            var outputID = info.output_id+"";
+            var inputID = info.input_id+"";
+            var currVal = connections[outputID + "->" + inputID];
+            //console.log("Clicked link between " + outputID + " and " + inputID);
+
+            var div = document.createElement("div");
+            div.style.minWidth = "50px";
+            div.style.textAlign = "center";
+            div.innerHTML = currVal;
+            div.onclick = function(e){
+                if (this.childNodes[0].nodeType===1) return;
+                e.stopPropagation();
+                this.innerHTML = "";
+                var input = document.createElement("input");
+                input.className = "form-input";
+                input.type = "text";
+                input.value = currVal;
+                input.onkeydown = function(event){
+                    var key = event.keyCode;
+                    if(key == 13) {
+                        div.innerHTML = this.value;
+                    }
+                };
+                this.appendChild(input);
+                input.focus();
+            };
+
+            tooltip.getInnerDiv().innerHTML = "";
+            tooltip.getInnerDiv().appendChild(div);
+            tooltip.showAt(x, y, "right", "center");
         });
     };
 
