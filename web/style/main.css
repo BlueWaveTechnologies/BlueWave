@@ -393,6 +393,53 @@ li.tree-node:hover {
 }
 
 
+
+/**************************************************************************/
+/** Toggle Button
+/**************************************************************************/
+
+.toggle-button-bar {
+    background-color: #718fb6; /*rgba(0,60,136,.5); */
+    display: inline-block;
+    padding: 2px;
+    border-radius:5px;
+}
+
+.toggle-button, .toggle-button-active {
+    display:inline-block;
+    padding: 1px 5px;
+    border-radius: 0px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #ffffff;
+    height: 22px;
+    line-height: 22px;
+    min-width: 40px;
+    text-align: center;
+    padding: 0 7px;
+}
+
+.toggle-button:first-child, .toggle-button-active:first-child{
+    border-radius: 5px 0 0 5px;
+}
+
+.toggle-button:last-child, .toggle-button-active:last-child{
+    border-radius: 0 5px 5px 0;
+}
+
+.toggle-button:hover{
+    background-color: #6783a7;
+    box-shadow: inset -1px 1px 5px 0px #335177;
+}
+
+.toggle-button-active{
+    background-color: #335177;
+    color: #c7c7c7;
+    box-shadow: inset 0px 1px 2px 0px #000000;
+}
+
+
+
 /**************************************************************************/
 /** Drawflow Overrides
 /**************************************************************************/
@@ -420,6 +467,8 @@ li.tree-node:hover {
     margin: 2px 0 2px 2px;
     color: rgba(255,255,255,0.7);
     border: 1px solid rgba(0,0,0,0);
+    width: 30px;
+    overflow: hidden;
 }
 
 .drawflow-toolbar-button-hover {

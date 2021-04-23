@@ -23,7 +23,7 @@ bluewave.Explorer = function(parent, config) {
     var nodes = {};
     var drawflow;
     var dbView;
-    var chartEditor;
+    var chartEditor, sankeyEditor;
     var waitmask;
 
 
@@ -111,9 +111,12 @@ bluewave.Explorer = function(parent, config) {
         createButton("barChart", "fas fa-chart-bar", "Bar Chart");
         createButton("lineChart", "fas fa-chart-line", "Line Chart");
         createButton("map", "fas fa-map-marked-alt", "Map");
+        createButton("sankey", "fas fa-link", "Sankey");
+
 
       //Enable addData button
         button.addData.enable();
+        button.sankey.enable();
     };
 
 
@@ -291,6 +294,30 @@ bluewave.Explorer = function(parent, config) {
                     outputs: 1
                 });
 
+
+                break;
+
+            case "sankey":
+
+                var btn = button[nodeType];
+                var icon = btn.el.dataset["icon"];
+                var title = btn.el.dataset["title"];
+                var i = document.createElement("i");
+                i.className = icon;
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 0,
+                    outputs: 0
+                });
+
+                node.ondblclick = function(){
+                    editSankey(this);
+                };
 
                 break;
 
@@ -549,6 +576,36 @@ bluewave.Explorer = function(parent, config) {
         chartEditor.update(node.type, node.config, data);
 
         chartEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** editSankey
+  //**************************************************************************
+    var editSankey = function(node){
+        if (!sankeyEditor){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Sankey",
+                width: 1680,
+                height: 920,
+                valign: "top",
+                modal: true,
+                resizable: true,
+                style: config.style.window
+            });
+
+            sankeyEditor = new bluewave.charts.Sankey(win.getBody(), config);
+
+            sankeyEditor.show = function(){
+                win.show();
+            };
+
+            sankeyEditor.hide = function(){
+                win.hide();
+            };
+        }
+
+        sankeyEditor.show();
     };
 
 
