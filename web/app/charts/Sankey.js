@@ -25,6 +25,7 @@ bluewave.charts.Sankey = function(parent, config) {
     var drawflow;
     var waitmask;
     var button = {};
+    var nodeEditor;
 
 
   //**************************************************************************
@@ -237,19 +238,7 @@ bluewave.charts.Sankey = function(parent, config) {
         });
 
         node.ondblclick = function(){
-            var hasData = false;
-            var inputs = this.inputs;
-            for (var key in inputs) {
-                if (inputs.hasOwnProperty(key)){
-                    if (inputs[key].csv){
-                        hasData = true;
-                        break;
-                    }
-                }
-            }
-            if (hasData){
-                editChart(this);
-            }
+            editNode(this);
         };
     };
 
@@ -296,6 +285,68 @@ bluewave.charts.Sankey = function(parent, config) {
         nodes[nodeID+""] = div;
         return div;
     };
+
+
+  //**************************************************************************
+  //** editNode
+  //**************************************************************************
+    var editNode = function(node){
+        if (!nodeEditor){
+
+            nodeEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Node",
+                width: 400,
+                valign: "top",
+                modal: true,
+                resizable: false,
+                style: config.style.window
+            });
+
+
+            var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
+                style: config.style.form,
+                items: [
+                    {
+                        name: "name",
+                        label: "Name",
+                        type: "text"
+                    },
+                    {
+                        name: "notes",
+                        label: "Notes",
+                        type: "textarea"
+                    }
+                ]
+            });
+
+            nodeEditor.update = function(data){
+                form.clear();
+                if (!data) return;
+                if (data.name) form.setValue("name", data.name);
+                if (data.notes) form.setValue("notes", data.notes);
+            };
+            nodeEditor.getData = function(){
+                return form.getData();
+            };
+        }
+
+
+        nodeEditor.update(node.data);
+        nodeEditor.onClose = function(){
+            var data = nodeEditor.getData();
+            node.data = data;
+            if (data.name){
+                data.name = data.name.trim();
+                if (data.name.length>0){
+                    node.childNodes[0].getElementsByTagName("span")[0].innerHTML = data.name;
+                }
+            }
+        };
+
+
+        nodeEditor.show();
+    };
+
 
   //**************************************************************************
   //** createButton
