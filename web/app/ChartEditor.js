@@ -19,6 +19,8 @@ if(!bluewave) var bluewave={};
 
 bluewave.ChartEditor = function(parent, config) {
     var me = this;
+    var currentNode;
+    var panel;
     var inputData = [];
     var svg;
     var previewArea;
@@ -57,7 +59,8 @@ bluewave.ChartEditor = function(parent, config) {
         mapProjectionValue:null,
         mapType:null
     };
-    var xAxis, yAxis;
+    var xAxis;
+    var yAxis;
     var axisWidth, axisHeight;
     var margin = {
         top: 15,
@@ -114,7 +117,7 @@ bluewave.ChartEditor = function(parent, config) {
         td.style.height = "100%";
         td.style.padding = "10px";
         tr.appendChild(td);
-        var panel = createDashboardItem(td,{
+        panel = createDashboardItem(td,{
             width: "100%",
             height: "100%",
             title: "Untitled",
@@ -165,13 +168,17 @@ bluewave.ChartEditor = function(parent, config) {
         });
     };
 
+    this.getNode = function() {
+        return currentNode;
+    }
+
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(nodeType, config, inputs){
+    this.update = function(nodeType, config, inputs, node){
         me.clear();
-
+        currentNode = node;
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
             if (input!=null) inputs[i] = d3.csvParse(input);
@@ -182,8 +189,8 @@ bluewave.ChartEditor = function(parent, config) {
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
             });
+            panel.title.innerHTML = config.chartTitle;
         }
-
         chartConfig.chartType = nodeType;
         createDropDown(optionsDiv);
         createOptions();
@@ -195,17 +202,14 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         inputData = [];
-        Object.keys(chartConfig).forEach(v=>chartConfig[v] = null);
+        chartConfig = {};
+        panel.title.innerHTML = "Untitled";
         optionsDiv.innerHTML = "";
-        try{
-            pieArea.selectAll("*").remove();
-            plotArea.selectAll("*").remove();
-            d3.select(xAxis).remove();
-            d3.select(yAxis).remove();
-            mapArea.selectAll("*").remove();
-            mapLayer.selectAll("circle").remove();
-        }
-        catch(e){}
+
+        if (pieArea) pieArea.selectAll("*").remove();
+        if (plotArea) plotArea.selectAll("*").remove();
+        if (mapArea) mapArea.selectAll("*").remove();
+        if (mapLayer) mapLayer.selectAll("circle").remove();
     };
 
 
@@ -849,7 +853,7 @@ bluewave.ChartEditor = function(parent, config) {
                 });
         }).entries(data);
 
-        plotArea.selectAll("*").remove();
+        if(plotArea) plotArea.selectAll("*").remove();
 
         let height = parseInt(plotArea.attr("height"));
         let width = parseInt(plotArea.attr("width"));
@@ -1095,31 +1099,20 @@ bluewave.ChartEditor = function(parent, config) {
         this.y = axisTemp.scale;
         this.yBand = axisTemp.band;
 
-        d3.select(xAxis).remove();
-        xAxis = svg
+
+        if (xAxis) xAxis.selectAll("*").remove();
+        if (yAxis) yAxis.selectAll("*").remove();
+
+        xAxis = plotArea
             .append("g")
-            .attr("id", "xAxis")
-            .attr(
-                "transform",
-                "translate(" +
-                    margin.left +
-                    "," +
-                    (axisHeight + margin.top) +
-                    ")"
-            )
+            .attr("transform", "translate(0," + axisHeight + ")")
             .call(d3.axisBottom(this.x))
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
 
-        d3.select(yAxis).remove();
-        yAxis = svg
+        yAxis = plotArea
             .append("g")
-            .attr("id", "yAxis")
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + margin.top + ")"
-            )
             .call(d3.axisLeft(this.y));
     };
 

@@ -531,6 +531,7 @@ bluewave.Explorer = function(parent, config) {
                         btn.appendChild(icon);
                         btn.onclick = function(){
                             var chartConfig = chartEditor.getConfig();
+                            var node = chartEditor.getNode();
                             var orgConfig = node.config;
                             if (!orgConfig) orgConfig = {};
                             if (isDirty(chartConfig, orgConfig)){
@@ -539,6 +540,7 @@ bluewave.Explorer = function(parent, config) {
                                 var el = chartEditor.getChart();
                                 createPreview(el, function(canvas){
                                     createThumbnail(node, canvas);
+                                    updateTitle(node);
                                     win.close();
                                     waitmask.hide();
                                 }, this);
@@ -573,11 +575,21 @@ bluewave.Explorer = function(parent, config) {
                 data.push(csv);
             }
         }
-        chartEditor.update(node.type, node.config, data);
+        chartEditor.update(node.type, node.config, data, node);
 
         chartEditor.show();
     };
 
+  //**************************************************************************
+  //** updateTitle
+  //**************************************************************************
+  // Updates the Title of the Node based on what is in the chart config
+    var updateTitle = function(node) {
+        var chartTitle = chartEditor.getConfig().chartTitle;
+        if(chartTitle != null) {
+            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = chartTitle;
+        }
+    }
 
   //**************************************************************************
   //** editSankey
