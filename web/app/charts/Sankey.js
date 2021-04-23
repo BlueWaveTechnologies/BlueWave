@@ -18,6 +18,7 @@ bluewave.charts.Sankey = function(parent, config) {
         }
     };
 
+    var editPanel, previewPanel;
     var toolbar;
     var tooltip, tooltipTimer, lastToolTipEvent;
     var button = {};
@@ -27,6 +28,7 @@ bluewave.charts.Sankey = function(parent, config) {
     var waitmask;
     var button = {};
     var nodeEditor;
+    var preview;
 
 
   //**************************************************************************
@@ -39,29 +41,39 @@ bluewave.charts.Sankey = function(parent, config) {
         waitmask = config.waitmask;
 
 
-
+      //Create main panel
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
+        createToggleButton(div);
 
 
-      //Create Drawflow
-        var mainPanel = document.createElement("div");
-        mainPanel.className = "drawflow";
-        mainPanel.ondrop = drop;
-        mainPanel.ondragover = function(e){
+
+      //Create preview panel
+        previewPanel = document.createElement("div");
+        previewPanel.style.height = "100%";
+        addShowHide(previewPanel);
+        createPreview(previewPanel);
+        previewPanel.hide();
+
+
+      //Create editor
+        editPanel = document.createElement("div");
+        editPanel.className = "drawflow";
+        editPanel.ondrop = drop;
+        editPanel.ondragover = function(e){
             e.preventDefault();
         };
-        div.appendChild(mainPanel);
-        createDrawFlow(mainPanel);
+        div.appendChild(editPanel);
+        createDrawFlow(editPanel);
+        createToolbar(editPanel);
+        addShowHide(editPanel);
 
 
-        createToolbar(mainPanel);
 
         parent.appendChild(div);
         me.el = div;
         addShowHide(me);
-
     };
 
 
@@ -488,6 +500,55 @@ bluewave.charts.Sankey = function(parent, config) {
         button[nodeType] = btn;
         return btn;
     };
+
+
+  //**************************************************************************
+  //** createPreview
+  //**************************************************************************
+    var createPreview = function(parent){
+        preview = d3.select(parent).append("svg");
+        preview.update = function(){
+            preview.selectAll("*").remove();
+            var width = parent.offsetWidth;
+            var height = parent.offsetHeight;
+            preview.attr("width", width);
+            preview.attr("height", height);
+            console.log(preview);
+        };
+    };
+
+
+  //**************************************************************************
+  //** createToggleButton
+  //**************************************************************************
+    var createToggleButton = function(parent){
+
+        var div = document.createElement("div");
+        div.style.position = "absolute";
+        div.style.top = "20px";
+        div.style.right = "20px";
+        div.style.zIndex = 2;
+        parent.appendChild(div);
+
+
+        var options = ["Edit","Preview"];
+        var toggle = bluewave.utils.createToggleButton(div, {
+            options: options,
+            defaultValue: options[0],
+            onChange: function(val){
+                if (val==="Edit"){
+                    previewPanel.hide();
+                    editPanel.show();
+                }
+                else{
+                    editPanel.hide();
+                    previewPanel.show();
+                    preview.update();
+                }
+            }
+        });
+    };
+
 
   //**************************************************************************
   //** Utils
