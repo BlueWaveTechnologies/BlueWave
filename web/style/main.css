@@ -101,7 +101,10 @@ body, textarea, input, select, td, th {
     text-align:center;
     width: 35px;
     font-size: 20px;
+    vertical-align: middle;
 }
+
+
 
 /* override the default style for the javaxt callout
    prevents overflow issues in the app header
@@ -112,9 +115,8 @@ body, textarea, input, select, td, th {
 
 
 
-
 /**************************************************************************/
-/** Dashboard Header
+/** Dashboard
 /**************************************************************************/
 
 .dashboard-title {
@@ -499,8 +501,12 @@ li.tree-node:hover {
 
 .drawflow-toolbar-button-icon {
     font-size: 30px;
+    text-align: center;
+    width: 30px;
 }
-
+.drawflow-toolbar-button-icon.fas.fa-project-diagram {
+    font-size: 22px;
+}
 
 
 .drag-drawflow {

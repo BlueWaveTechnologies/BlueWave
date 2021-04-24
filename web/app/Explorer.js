@@ -106,12 +106,12 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Create buttons
-        createButton("addData", "fas fa-plus-circle", "Data");
+        createButton("addData", "fas fa-database", "Data");
         createButton("pieChart", "fas fa-chart-pie", "Pie Chart");
         createButton("barChart", "fas fa-chart-bar", "Bar Chart");
         createButton("lineChart", "fas fa-chart-line", "Line Chart");
         createButton("map", "fas fa-map-marked-alt", "Map");
-        createButton("sankey", "fas fa-link", "Sankey");
+        createButton("sankey", "fas fa-project-diagram", "Sankey");
 
 
       //Enable addData button

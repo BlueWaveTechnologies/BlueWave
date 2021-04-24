@@ -676,7 +676,7 @@ bluewave.Application = function(parent, config) {
             }));
 
 
-            div.appendChild(createMenuOption("Explore Data", "database", function(label){
+            div.appendChild(createMenuOption("Create Dashboard", "plus-circle", function(label){
                 dashboardPanel.hide();
                 backButton.hide();
                 nextButton.hide();
