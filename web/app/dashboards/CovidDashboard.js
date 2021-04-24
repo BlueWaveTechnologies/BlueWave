@@ -5,6 +5,7 @@ bluewave.dashboards.CovidDashboard = function(parent, config) {
 
     var me = this;
     var title = "";
+    var mapPanel, menuPanel; //dashboard items
     var svg, path; //d3 stuff
     var countiesAndStates; //topojson
     var dates = [];
@@ -28,8 +29,21 @@ bluewave.dashboards.CovidDashboard = function(parent, config) {
         innerDiv.style.display = "inline-block";
         div.appendChild(innerDiv);
 
-        createMap(innerDiv);
-        createForm(innerDiv);
+
+
+        mapPanel = createDashboardItem(innerDiv, {
+            width: 1000,
+            height: 640,
+            waitmask: true
+        });
+
+        menuPanel = createDashboardItem(innerDiv, {
+            width: 250,
+            height: 65,
+            waitmask: true
+        });
+        createForm(menuPanel.innerDiv);
+
     };
 
 
@@ -48,6 +62,18 @@ bluewave.dashboards.CovidDashboard = function(parent, config) {
         dates = [];
         covidData = {};
 
+        if (!svg){
+            svg = d3
+            .select(mapPanel.innerDiv)
+            .append("svg")
+            .attr("width", 1000)
+            .attr("height", 640);
+
+            path = d3.geoPath();
+        }
+
+        mapPanel.waitmask.show();
+        menuPanel.waitmask.show();
         getCountiesAndStates(function(topo_data){
             getData("Distinct_Dates_In_Covid_Cases", function(csv){
                 var rows = csv.split("\n");
@@ -88,6 +114,9 @@ bluewave.dashboards.CovidDashboard = function(parent, config) {
                     }
 
                     form.setValue("type", "new_cases_7_day_average");
+
+                    mapPanel.waitmask.hide();
+                    menuPanel.waitmask.hide();
                 });
 
             });
@@ -103,35 +132,14 @@ bluewave.dashboards.CovidDashboard = function(parent, config) {
     this.onUpdate = function(){};
 
 
-  //**************************************************************************
-  //** createMap
-  //**************************************************************************
-    var createMap = function(parent){
-        var div = document.createElement("div");
-        div.className = "dashboard-item";
-        parent.appendChild(div);
-
-        svg = d3
-        .select(div)
-        .append("svg")
-        .attr("width", 1000)
-        .attr("height", 640);
-
-        path = d3.geoPath();
-    };
-
 
   //**************************************************************************
   //** createForm
   //**************************************************************************
     var createForm = function(parent){
-        var div = document.createElement("div");
-        div.className = "dashboard-item";
-        div.style.width = "250px";
-        div.style.height = "85px";
-        parent.appendChild(div);
 
-        form = new javaxt.dhtml.Form(div, {
+
+        form = new javaxt.dhtml.Form(parent, {
             style: config.style.form,
             items: [
                 {
