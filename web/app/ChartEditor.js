@@ -113,9 +113,9 @@ bluewave.ChartEditor = function(parent, config) {
 
       //Create chart preview
         td = document.createElement("td");
+        td.className = "chart-editor-preview";
         td.style.width = "100%";
         td.style.height = "100%";
-        td.style.padding = "10px";
         tr.appendChild(td);
         panel = createDashboardItem(td,{
             width: "100%",
@@ -145,6 +145,7 @@ bluewave.ChartEditor = function(parent, config) {
                 }
             };
             this.appendChild(input);
+            input.focus();
         };
         document.body.addEventListener('click', function(e) {
             var input = panel.title.childNodes[0];
