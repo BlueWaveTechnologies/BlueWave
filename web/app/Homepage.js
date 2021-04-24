@@ -22,6 +22,7 @@ bluewave.Homepage = function(parent, config) {
 
 
         var div = document.createElement("div");
+        div.className = "dashboard-homepage";
         div.style.height = "100%";
         div.style.textAlign = "center";
         div.style.overflowY = "auto";
@@ -30,7 +31,6 @@ bluewave.Homepage = function(parent, config) {
 
         var innerDiv = document.createElement("div");
         innerDiv.style.height = "100%";
-        innerDiv.style.display = "inline-block";
         div.appendChild(innerDiv);
         mainDiv = innerDiv;
 

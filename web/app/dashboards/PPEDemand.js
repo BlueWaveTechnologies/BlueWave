@@ -77,7 +77,7 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
 
         mapGraph = createDashboardItem(innerDiv, {
           width: 480,
-          height: 350,
+          height: 320,
           title: "Predicted Shortages",
           waitmask: true
         });
@@ -89,6 +89,7 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
         tbody.appendChild(tr);
         td = document.createElement("td");
         td.style.height = "100%";
+        td.style.textAlign = "center";
         tr.appendChild(td);
         createGrid(td);
 
@@ -260,7 +261,7 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
         innerDiv.innerHTML = "";
 
       //Subtract 20px height
-        innerDiv.style.marginTop = "-20px";
+        //innerDiv.style.marginTop = "-20px";
         //mapGraph.innerDiv.parentNode.style.height = "320px";
 
 
@@ -269,9 +270,9 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
 
 
       //set the dimensions and margins of the graph
-        var margin = {top: 20, right: 0, bottom: 0, left: 0},
-        width = innerDiv.offsetWidth - margin.left - margin.right,
-        height = innerDiv.offsetHeight - margin.top - margin.bottom;
+        var margin = {top: 0, right: 0, bottom: 0, left: 0},
+        width = 480;//innerDiv.offsetWidth - margin.left - margin.right,
+        height = 330; //innerDiv.offsetHeight - margin.top - margin.bottom;
 
 
 
@@ -628,6 +629,7 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
         div.style.width = "1304px";
         div.style.height = "100%";
         div.style.padding = "0px";
+        div.style.float = "none";
         parent.appendChild(div);
 
         grid = new javaxt.dhtml.Table(div, {

@@ -101,7 +101,10 @@ body, textarea, input, select, td, th {
     text-align:center;
     width: 35px;
     font-size: 20px;
+    vertical-align: middle;
 }
+
+
 
 /* override the default style for the javaxt callout
    prevents overflow issues in the app header
@@ -111,8 +114,9 @@ body, textarea, input, select, td, th {
 }
 
 
+
 /**************************************************************************/
-/** Dashboard Header
+/** Dashboard
 /**************************************************************************/
 
 .dashboard-title {
@@ -240,6 +244,18 @@ body, textarea, input, select, td, th {
 
 .dashboard-slider:hover {
   opacity: 1;
+}
+
+
+/**************************************************************************/
+/** Dashboard Homepage
+/**************************************************************************/
+.dashboard-homepage {
+
+}
+
+.dashboard-homepage .dashboard-item {
+    float: none;
 }
 
 
@@ -485,8 +501,12 @@ li.tree-node:hover {
 
 .drawflow-toolbar-button-icon {
     font-size: 30px;
+    text-align: center;
+    width: 30px;
 }
-
+.drawflow-toolbar-button-icon.fas.fa-project-diagram {
+    font-size: 22px;
+}
 
 
 .drag-drawflow {
@@ -630,14 +650,27 @@ li.tree-node:hover {
 }
 
 
+/**************************************************************************/
+/** Chart Editor
+/**************************************************************************/
 
-.chart-editor-options{
+.chart-editor-preview {
+    padding: 10px;
+}
+
+.chart-editor-preview .chart-title {
+    line-height: 20px;
+    height: 32px;
+}
+
+.chart-editor-options {
     width: 200px;
     height:100%;
     background-color: #dcdcdc;
     padding: 0px 12px;
     border-radius: 0 0 0 5px;
 }
+
 
 /**************************************************************************/
 /** D3 SVG Styles
@@ -666,8 +699,10 @@ svg text {
     color: #000;
     font-size: 15px;
     font-weight: bold;
+    /*
     line-height: 20px;
     height: 32px;
+    */
 }
 
 .chart-title input[type="text"] {
