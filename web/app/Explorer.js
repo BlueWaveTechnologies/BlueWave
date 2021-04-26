@@ -23,7 +23,7 @@ bluewave.Explorer = function(parent, config) {
     var nodes = {};
     var drawflow;
     var dbView;
-    var chartEditor, sankeyEditor;
+    var chartEditor, sankeyEditor, layoutEditor;
     var waitmask;
 
 
@@ -111,12 +111,13 @@ bluewave.Explorer = function(parent, config) {
         createButton("barChart", "fas fa-chart-bar", "Bar Chart");
         createButton("lineChart", "fas fa-chart-line", "Line Chart");
         createButton("map", "fas fa-map-marked-alt", "Map");
-        createButton("sankey", "fas fa-project-diagram", "Sankey");
+        createButton("sankeyChart", "fas fa-project-diagram", "Sankey");
+        createButton("layout", "fas fa-border-all", "Layout");
 
 
       //Enable addData button
         button.addData.enable();
-        button.sankey.enable();
+        button.sankeyChart.enable();
     };
 
 
@@ -128,13 +129,28 @@ bluewave.Explorer = function(parent, config) {
         drawflow.reroute = true;
         drawflow.start();
         drawflow.on('connectionCreated', function(info) {
+
+          //Get input/output IDs
             var outputID = info.output_id+"";
             var inputID = info.input_id+"";
-            console.log("Connected " + outputID + " to " + inputID);
+            //console.log("Connected " + outputID + " to " + inputID);
 
+
+          //Get target and input nodes
             var node = nodes[inputID];
-            node.inputs[outputID] = nodes[outputID];
+            var inputNode = nodes[outputID];
 
+
+          //Ensure that charts can't be connected to other charts
+            if (node.type.indexOf("Chart")>0){
+                if (inputNode.type.indexOf("Chart")>0){
+                    drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+                    return;
+                }
+            }
+
+          //If we're still here, update node and open editor
+            node.inputs[outputID] = inputNode;
             node.ondblclick();
         });
         drawflow.on('nodeRemoved', function(nodeID) {
@@ -219,9 +235,9 @@ bluewave.Explorer = function(parent, config) {
             case "addData":
 
                 var node = createNode({
-                    name: "Table Selection",
+                    name: "Input Data",
                     type: nodeType,
-                    icon: "fas fa-table",
+                    icon: "fas fa-database",
                     content: "Db Click here",
                     position: [pos_x, pos_y],
                     inputs: 0,
@@ -244,11 +260,18 @@ bluewave.Explorer = function(parent, config) {
                                 if (grid){
                                     waitmask.show();
                                     this.csv = createCSV(grid);
-                                    createPreview(grid.el, function(canvas){
-                                        createThumbnail(this, canvas);
+                                    try{
+                                        createPreview(grid.el, function(canvas){
+                                            createThumbnail(this, canvas);
+                                            dbView.hide();
+                                            waitmask.hide();
+                                        }, this);
+                                    }
+                                    catch(e){
                                         dbView.hide();
                                         waitmask.hide();
-                                    }, this);
+                                        console.log(e);
+                                    }
                                 }
                                 else{
                                     this.csv = null;
@@ -297,7 +320,7 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
 
-            case "sankey":
+            case "sankeyChart":
 
                 var btn = button[nodeType];
                 var icon = btn.el.dataset["icon"];
@@ -312,11 +335,35 @@ bluewave.Explorer = function(parent, config) {
                     content: i,
                     position: [pos_x, pos_y],
                     inputs: 0,
-                    outputs: 0
+                    outputs: 1
                 });
 
                 node.ondblclick = function(){
                     editSankey(this);
+                };
+
+                break;
+
+            case "layout":
+
+                var btn = button[nodeType];
+                var icon = btn.el.dataset["icon"];
+                var title = btn.el.dataset["title"];
+                var i = document.createElement("i");
+                i.className = icon;
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 0
+                });
+
+                node.ondblclick = function(){
+                    editLayout(this);
                 };
 
                 break;
@@ -340,7 +387,7 @@ bluewave.Explorer = function(parent, config) {
                     content: i,
                     position: [pos_x, pos_y],
                     inputs: 1,
-                    outputs: 0
+                    outputs: 1
                 });
 
                 node.ondblclick = function(){
@@ -412,41 +459,15 @@ bluewave.Explorer = function(parent, config) {
     var showQuery = function(query, callback, scope){
         if (!dbView){
 
-            var style = merge({
-                body: {
-                    padding: "0px"
-                },
-                closeIcon: {
-                    //content: "&#10006;",
-                    content: "&#x2715;",
-                    lineHeight: "16px",
-                    textAlign: "center"
-                }
-            }, config.style.window);
-
-
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Query",
                 width: 1020,
                 height: 600,
-                valign: "top",
-                modal: true,
-                resizable: true,
-                style: style,
-                renderers: { //custom renderer for the close button
-                    headerButtons: function(buttonDiv){
-                        var btn = document.createElement('div');
-                        setStyle(btn, style.button);
-                        var icon = document.createElement('div');
-                        setStyle(icon, style.closeIcon);
-                        btn.appendChild(icon);
-                        btn.onclick = function(){
-                            dbView.onClose();
-                        };
-                        buttonDiv.appendChild(btn);
-                    }
+                beforeClose: function(){
+                    dbView.onClose();
                 }
             });
+
 
             var body = win.getBody();
             var div = document.createElement("div");
@@ -497,59 +518,28 @@ bluewave.Explorer = function(parent, config) {
     var editChart = function(node){
         if (!chartEditor){
 
-            var style = merge({
-                body: {
-                    padding: "0px"
-                },
-                closeIcon: {
-                    //content: "&#10006;",
-                    content: "&#x2715;",
-                    lineHeight: "16px",
-                    textAlign: "center"
-                }
-            }, config.style.window);
-
-
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Edit Chart",
                 width: 1060,
                 height: 600,
-                valign: "top",
-                modal: true,
-                resizable: false,
-                style: style,
-                renderers: {
-
-                  //Create custom renderer for the close button. Basically, we
-                  //want to delay closing the window until after the tumbnail
-                  //is created
-                    headerButtons: function(buttonDiv){
-                        var btn = document.createElement('div');
-                        setStyle(btn, style.button);
-                        var icon = document.createElement('div');
-                        setStyle(icon, style.closeIcon);
-                        btn.appendChild(icon);
-                        btn.onclick = function(){
-                            var chartConfig = chartEditor.getConfig();
-                            var node = chartEditor.getNode();
-                            var orgConfig = node.config;
-                            if (!orgConfig) orgConfig = {};
-                            if (isDirty(chartConfig, orgConfig)){
-                                node.config = chartConfig;
-                                waitmask.show();
-                                var el = chartEditor.getChart();
-                                createPreview(el, function(canvas){
-                                    createThumbnail(node, canvas);
-                                    updateTitle(node);
-                                    win.close();
-                                    waitmask.hide();
-                                }, this);
-                            }
-                            else{
-                                win.close();
-                            }
-                        };
-                        buttonDiv.appendChild(btn);
+                beforeClose: function(){
+                    var chartConfig = chartEditor.getConfig();
+                    var node = chartEditor.getNode();
+                    var orgConfig = node.config;
+                    if (!orgConfig) orgConfig = {};
+                    if (isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        waitmask.show();
+                        var el = chartEditor.getChart();
+                        createPreview(el, function(canvas){
+                            createThumbnail(node, canvas);
+                            updateTitle(node);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
                     }
                 }
             });
@@ -563,9 +553,7 @@ bluewave.Explorer = function(parent, config) {
             chartEditor.hide = function(){
                 win.hide();
             };
-
         }
-
 
 
         var data = [];
@@ -580,31 +568,32 @@ bluewave.Explorer = function(parent, config) {
         chartEditor.show();
     };
 
+
   //**************************************************************************
   //** updateTitle
   //**************************************************************************
-  // Updates the Title of the Node based on what is in the chart config
+  /** Updates the Title of the Node based on what is in the chart config
+   */
     var updateTitle = function(node) {
         var chartTitle = chartEditor.getConfig().chartTitle;
-        if(chartTitle != null) {
+        if (chartTitle != null) {
             node.childNodes[0].getElementsByTagName("span")[0].innerHTML = chartTitle;
         }
-    }
+    };
+
 
   //**************************************************************************
   //** editSankey
   //**************************************************************************
     var editSankey = function(node){
         if (!sankeyEditor){
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Edit Sankey",
                 width: 1680,
                 height: 920,
-                valign: "top",
-                modal: true,
-                resizable: true,
-                style: config.style.window
+                resizable: true
             });
+
 
             sankeyEditor = new bluewave.charts.Sankey(win.getBody(), config);
 
@@ -618,6 +607,103 @@ bluewave.Explorer = function(parent, config) {
         }
 
         sankeyEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** editLayout
+  //**************************************************************************
+    var editLayout = function(node){
+
+        if (!layoutEditor){
+            var win = createWindow({
+                title: "Edit Layout",
+                width: 1680,
+                height: 920,
+                resizable: true
+            });
+
+            layoutEditor = new bluewave.charts.Layout(win.getBody(), config);
+
+            layoutEditor.show = function(){
+                win.show();
+            };
+
+            layoutEditor.hide = function(){
+                win.hide();
+            };
+        }
+
+
+        var inputs = node.inputs;
+        for (var key in inputs) {
+            if (inputs.hasOwnProperty(key)){
+
+            }
+        }
+
+        //layoutEditor.update(node.inputs);
+        layoutEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** createWindow
+  //**************************************************************************
+    var createWindow = function(conf){
+
+
+        merge(conf, {
+            title: "Edit Chart",
+            width: 1060,
+            height: 600,
+            resizable: false,
+            beforeClose: null
+        });
+
+
+        var style = merge({
+            body: {
+                padding: "0px"
+            },
+            closeIcon: {
+                //content: "&#10006;",
+                content: "&#x2715;",
+                lineHeight: "16px",
+                textAlign: "center"
+            }
+        }, config.style.window);
+
+
+        var win = new javaxt.dhtml.Window(document.body, {
+            title: conf.title,
+            width: conf.width,
+            height: conf.height,
+            //valign: "top",
+            modal: true,
+            resizable: conf.resizable,
+            style: style,
+            renderers: {
+
+              //Create custom renderer for the close button. Basically, we
+              //want to delay closing the window until after the thumbnail
+              //is created
+                headerButtons: function(buttonDiv){
+                    var btn = document.createElement('div');
+                    setStyle(btn, style.button);
+                    var icon = document.createElement('div');
+                    setStyle(icon, style.closeIcon);
+                    btn.appendChild(icon);
+                    btn.onclick = function(){
+                        if (conf.beforeClose) conf.beforeClose.apply(me, [win]);
+                        else win.close();
+                    };
+                    buttonDiv.appendChild(btn);
+                }
+            }
+        });
+
+        return win;
     };
 
 
