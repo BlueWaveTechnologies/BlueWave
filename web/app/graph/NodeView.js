@@ -144,20 +144,22 @@ bluewave.NodeView = function(parent, config) {
             this.style.fillOpacity=0.8;
             tooltip.hide();
         })
-        .on("click", function(){
-        var nWidth = 500;
+        .on("click", function(d){
+        var nWidth = 960;
         var nHeight = 500;
 
-        
+        var clickedId = d.node;
 
         var radius = Math.min(nWidth, nHeight)/2;
         var anglePerNode = Math.PI*2/ data.length;
 
          for (i =0; i < data.length; i++) {
          var nodeSize = 30;
-         data[i].fx = (radius-nodeSize) * Math.cos(anglePerNode*i) + nWidth*2;
+         data[i].fx = (radius-nodeSize) * Math.cos(anglePerNode*i) + nWidth;
          data[i].fy = (radius-nodeSize) * Math.sin(anglePerNode*i) + nHeight;
          }
+         d.fx = nWidth;
+         d.fy = nHeight;
 
 
 
