@@ -145,19 +145,44 @@ bluewave.NodeView = function(parent, config) {
             tooltip.hide();
         })
         .on("click", function(){
-         var g = d3.select('svg').attr('width', width).attr('height', height)
-                .select('g').attr('transform', 'translate(' + width/2 + ',' + height/2 + ')');
+        var nWidth = 500;
+        var nHeight = 500;
 
-            var vLayout = d3.cluster().size([2 * Math.PI, Math.min(width, height)/2 - 10]); // margin!
-            var vRoot = d3.hierarchy(data);
-            var vNodes = vRoot.descendants();
+        
 
-            g.selectAll('circle').data(vNodes).enter().append('circle')
-             .attr('r', 10)
-             .attr("transform", function(d) { return "translate(" + d3.pointRadial(d.x, d.y) + ")"})
+        var radius = Math.min(nWidth, nHeight)/2;
+        var anglePerNode = Math.PI*2/ data.length;
+
+         for (i =0; i < data.length; i++) {
+         var nodeSize = 30;
+         data[i].fx = (radius-nodeSize) * Math.cos(anglePerNode*i) + nWidth*2;
+         data[i].fy = (radius-nodeSize) * Math.sin(anglePerNode*i) + nHeight;
+         }
 
 
-            getRelationshipOnClick(width, height, node);
+
+         //divide circle by # of nodes
+
+
+         //set fx, fy to null when we want to use force-directed graph
+
+
+
+//         svg.data(data);
+
+//         var g = d3.select('svg').attr('width', width).attr('height', height)
+//                .select('g').attr('transform', 'translate(' + width/2 + ',' + height/2 + ')');
+//
+//            var vLayout = d3.cluster().size([2 * Math.PI, Math.min(width, height)/2 - 10]); // margin!
+//            var vRoot = d3.hierarchy(data);
+//            var vNodes = vRoot.descendants();
+
+//            g.selectAll('circle').data(vNodes).enter().append('circle')
+//             .attr('r', 10)
+//             .attr("transform", function(d) { return "translate(" + d3.pointRadial(d.x, d.y) + ")"})
+
+
+//            getRelationshipOnClick(width, height, node);
         })
         .call(d3.drag() // call specific function when circle is dragged
             .on("start", function(d) {
@@ -264,7 +289,7 @@ bluewave.NodeView = function(parent, config) {
 
 
 
-        
+
 
 
 
