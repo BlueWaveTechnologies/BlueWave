@@ -447,7 +447,6 @@ bluewave.ChartEditor = function(parent, config) {
   //** initializeChartSpace
   //**************************************************************************
     var initializeChartSpace = function(){
-
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
 
@@ -476,6 +475,11 @@ bluewave.ChartEditor = function(parent, config) {
 
 
         pieArea = svg.append("g");
+        pieArea .attr("width", width)
+            .attr("height", height)
+                .attr("transform",
+                    "translate(" + width/2 + "," + height/2 + ")"
+                );
         mapArea = svg.append("g");
         mapLayer = svg.append("g");
     };
@@ -502,7 +506,6 @@ bluewave.ChartEditor = function(parent, config) {
         });
         pieData = pie(d3.entries(pieData));
 
-
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
         var radius =
@@ -519,16 +522,6 @@ bluewave.ChartEditor = function(parent, config) {
         var arc = d3.arc()
             .innerRadius(innerRadius)
             .outerRadius(radius);
-
-
-        pieArea
-            .attr("width", width)
-            .attr("height", height)
-            .attr(
-                "transform",
-                "translate(" + width/2 + "," + height/2 + ")"
-            );
-
 
         var pieChart = pieArea.append("g");
 
