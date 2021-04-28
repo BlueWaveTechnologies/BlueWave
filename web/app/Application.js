@@ -393,7 +393,27 @@ bluewave.Application = function(parent, config) {
 
               //Add event handler
                 homepage.onClick = function(dashboard){
-                    raisePanel(dashboard.app);
+                    if (!dashboard.app){
+                        dashboardPanel.hide();
+                        backButton.hide();
+                        nextButton.hide();
+                        if (!explorerPanel) explorerPanel = new bluewave.Explorer(body, config);
+                        explorerPanel.show();
+                        waitmask.show();
+                        get("dashboard?id="+dashboard.id,{
+                            success: function(dashboard){
+                                me.setTitle(dashboard.name);
+                                waitmask.hide();
+                                explorerPanel.update(dashboard);
+                            },
+                            failure: function(){
+                                waitmask.hide();
+                            }
+                        });
+                    }
+                    else{
+                        raisePanel(dashboard.app);
+                    }
                 };
 
 
@@ -527,19 +547,24 @@ bluewave.Application = function(parent, config) {
         var panel = panels[panels.length-1];
 
         var cls = eval(className);
-        var instance = new cls(div, config);
-        instance.className = className;
-        instance.onUpdate = function(){
-            var app = getVisibleApp();
-            if (app==instance) me.setTitle(instance.getTitle());
-        };
+        if (cls){
+            var instance = new cls(div, config);
+            instance.className = className;
+            instance.onUpdate = function(){
+                var app = getVisibleApp();
+                if (app==instance) me.setTitle(instance.getTitle());
+            };
 
-        views.push({
-            app: instance,
-            div: panel.div
-        });
+            views.push({
+                app: instance,
+                div: panel.div
+            });
 
-        return instance;
+            return instance;
+        }
+        else{
+            console.log("Cannot instantiate " + className);
+        }
     };
 
 
