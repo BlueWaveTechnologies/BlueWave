@@ -70,9 +70,20 @@ bluewave.Explorer = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+
+      //Reset class variables
         id = name = thumbnail = null;
         nodes = {};
+
+      //Clear drawflow
         drawflow.clear();
+
+      //Reset toolbar buttons
+        for (var id in button) {
+            if (button.hasOwnProperty(id)){
+                button[id].disable();
+            }
+        }
     };
 
 
@@ -81,10 +92,95 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     this.update = function(dashboard){
         me.clear();
+
+        
+      //Update class variables
         if (!dashboard) dashboard = {};
         id = dashboard.id;
         name = dashboard.name;
         thumbnail = dashboard.thumbnail;
+
+
+      //Enable default buttons
+        button.addData.enable();
+        button.sankeyChart.enable();
+
+
+
+      //Import layout
+        drawflow.import({
+            drawflow: {
+                Home: {
+                    data: dashboard.info.layout
+                }
+            }
+        });
+
+
+      //Update nodes
+        for (var id in dashboard.info.nodes) {
+            if (dashboard.info.nodes.hasOwnProperty(id)){
+
+              //Get node (dom object)
+                var drawflowNode = drawflow.getNodeFromId(id);
+                var temp = document.createElement("div");
+                temp.innerHTML = drawflowNode.html;
+                var node = document.getElementById(temp.childNodes[0].id);
+
+
+              //Add props to node
+                var props = dashboard.info.nodes[id];
+                for (var key in props) {
+                    if (props.hasOwnProperty(key)){
+                        var val = props[key];
+                        node[key] = val;
+                    }
+                }
+
+
+              //Create thumbnail
+                if (props.preview) createThumbnail(node, props.preview);
+
+
+
+              //Add event listeners
+                addEventListeners(node);
+
+
+
+              //Add inputs
+                node.inputs = {};
+                for (var key in drawflowNode.inputs) {
+                    if (drawflowNode.inputs.hasOwnProperty(key)){
+                        //node.inputs[outputID] = inputNode;
+                    }
+                }
+
+              //Add outputs
+                node.outputs = {};
+                for (var key in drawflowNode.outputs) {
+                    if (drawflowNode.outputs.hasOwnProperty(key)){
+
+                    }
+                }
+
+
+              //Update nodes variable
+                nodes[id] = node;
+
+
+              //Special case for data nodes
+                if (node.type==="addData"){
+                    //TODO: Execute query
+                    console.log(node.config.query);
+                    for (var buttonName in button) {
+                        if (button.hasOwnProperty(buttonName)){
+                            button[buttonName].enable();
+                        }
+                    }
+                }
+            }
+        }
     };
 
 
@@ -125,7 +221,6 @@ bluewave.Explorer = function(parent, config) {
             };
 
 
-            console.log(dashboard);
             post("dashboard", JSON.stringify(dashboard),{
                 success: function(text) {
                     id = parseInt(text);
@@ -173,11 +268,6 @@ bluewave.Explorer = function(parent, config) {
         createButton("map", "fas fa-map-marked-alt", "Map");
         createButton("sankeyChart", "fas fa-project-diagram", "Sankey");
         createButton("layout", "fas fa-border-all", "Layout");
-
-
-      //Enable addData button
-        button.addData.enable();
-        button.sankeyChart.enable();
     };
 
 
@@ -325,6 +415,76 @@ bluewave.Explorer = function(parent, config) {
                     outputs: 1
                 });
 
+                addEventListeners(node);
+                node.ondblclick();
+
+                break;
+            case "transformData":
+
+                var node = createNode({
+                    name: "Transform Data",
+                    type: nodeType,
+                    icon: "fas fa-table",
+                    content: "Db Click here",
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 1
+                });
+
+                break;
+            case "sankeyChart":
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 0,
+                    outputs: 1
+                });
+
+                addEventListeners(node);
+
+                break;
+            case "layout":
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 0
+                });
+
+                addEventListeners(node);
+
+                break;
+            default:
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 1
+                });
+
+                addEventListeners(node);
+        }
+    };
+
+
+  //**************************************************************************
+  //** addEventListeners
+  //**************************************************************************
+    var addEventListeners = function(node){
+        switch (node.type) {
+            case "addData":
 
                 node.ondblclick = function(){
                     showQuery(this.config.query, function(){
@@ -368,7 +528,7 @@ bluewave.Explorer = function(parent, config) {
 
                           //Enable/disable toolbar buttons
                             for (var key in button) {
-                                if (button.hasOwnProperty(key) && key!==nodeType){
+                                if (button.hasOwnProperty(key) && key!==node.type){
                                     if (this.csv){
                                         button[key].enable();
                                     }
@@ -381,35 +541,15 @@ bluewave.Explorer = function(parent, config) {
                         }
                     }, this);
                 };
-                node.ondblclick();
 
 
                 break;
             case "transformData":
 
-                var node = createNode({
-                    name: "Transform Data",
-                    type: nodeType,
-                    icon: "fas fa-table",
-                    content: "Db Click here",
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 1
-                });
-
 
                 break;
             case "sankeyChart":
 
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 0,
-                    outputs: 1
-                });
 
                 node.ondblclick = function(){
                     editSankey(this);
@@ -418,32 +558,12 @@ bluewave.Explorer = function(parent, config) {
                 break;
             case "layout":
 
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 0
-                });
-
                 node.ondblclick = function(){
                     editLayout(this);
                 };
 
                 break;
             default:
-
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 1
-                });
 
                 node.ondblclick = function(){
                     var hasData = false;
@@ -798,14 +918,23 @@ bluewave.Explorer = function(parent, config) {
         var padding = width-rect.width;
 
 
-        var maxWidth = width-padding;
-        var maxHeight = height-padding;
 
-        resizeCanvas(canvas, maxWidth, maxHeight, true);
-        var type = "image/png";
-        var base64image = canvas.toDataURL(type);
+        var base64image;
+        if (typeof canvas === "string"){
+            base64image = canvas;
+        }
+        else{ //instanceof HTMLCanvasElement?
 
-        node.preview = base64image;
+            var maxWidth = width-padding;
+            var maxHeight = height-padding;
+
+            resizeCanvas(canvas, maxWidth, maxHeight, true);
+            var type = "image/png";
+            base64image = canvas.toDataURL(type);
+
+            node.preview = base64image;
+        }
+
         el.innerHTML = "<img class='noselect' src='" + base64image + "'/>";
         el.childNodes[0].ondragstart = function(e){
             e.preventDefault();
