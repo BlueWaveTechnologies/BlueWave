@@ -349,8 +349,8 @@ bluewave.ChartEditor = function(parent, config) {
   //** createPieDropdown
   //**************************************************************************
     var createPieDropdown = function(tbody){
-        dropdownItem(tbody,"pieKey","Key",createPiePreview,pieInputs,"key");
-        dropdownItem(tbody,"pieValue","Value",createPiePreview,pieInputs,"value");
+        dropdownItem(tbody,"pieKey","Key",piePreviewRender,pieInputs,"key");
+        dropdownItem(tbody,"pieValue","Value",piePreviewRender,pieInputs,"value");
     };
 
 
@@ -447,7 +447,6 @@ bluewave.ChartEditor = function(parent, config) {
   //** initializeChartSpace
   //**************************************************************************
     var initializeChartSpace = function(){
-
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
 
@@ -457,12 +456,9 @@ bluewave.ChartEditor = function(parent, config) {
         axisHeight = height - margin.top - margin.bottom;
         axisWidth = width - margin.left - margin.right;
 
-
-
         svg = d3.select(previewArea).append("svg");
         svg.attr("width", width);
         svg.attr("height", height);
-
 
         plotArea = svg.append("g");
         plotArea
@@ -474,21 +470,26 @@ bluewave.ChartEditor = function(parent, config) {
             );
 
 
-
         pieArea = svg.append("g");
         mapArea = svg.append("g");
         mapLayer = svg.append("g");
     };
 
+  //**************************************************************************
+  //** piePreviewRender
+  //**************************************************************************
+    var piePreviewRender = function(){
+        if(chartConfig.pieKey===null || chartConfig.pieValue===null){ return; }
+        onRender(previewArea, function(){
+            createPiePreview();
+            });
+    }
 
   //**************************************************************************
   //** createPiePreview
   //**************************************************************************
     var createPiePreview = function(){
         if (pieArea) pieArea.selectAll("*").remove();
-        if(chartConfig.pieKey===null || chartConfig.pieValue===null){
-            return;
-        }
 
         var data = inputData[0];
         let pieData = data.reduce((acc,curVal)=>{
@@ -501,15 +502,12 @@ bluewave.ChartEditor = function(parent, config) {
             return d.value;
         });
         pieData = pie(d3.entries(pieData));
-
-
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
         var radius =
             Math.min(width, height) / 2 -
             margin.left -
             margin.right;
-
         radius = radius*1.2;
 
 
@@ -520,7 +518,6 @@ bluewave.ChartEditor = function(parent, config) {
             .innerRadius(innerRadius)
             .outerRadius(radius);
 
-
         pieArea
             .attr("width", width)
             .attr("height", height)
@@ -528,8 +525,6 @@ bluewave.ChartEditor = function(parent, config) {
                 "transform",
                 "translate(" + width/2 + "," + height/2 + ")"
             );
-
-
         var pieChart = pieArea.append("g");
 
         pieChart
