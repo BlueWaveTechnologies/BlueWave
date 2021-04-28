@@ -11,19 +11,14 @@ if(!bluewave) var bluewave={};
 bluewave.Explorer = function(parent, config) {
 
     var me = this;
-    var defaultConfig = {
-        style: {
-
-        }
-    };
-
+    var id, name, thumbnail;
     var toolbar;
     var tooltip, tooltipTimer, lastToolTipEvent;
     var button = {};
     var nodes = {};
     var drawflow;
     var dbView;
-    var chartEditor, sankeyEditor, layoutEditor;
+    var chartEditor, sankeyEditor, layoutEditor, nameEditor;
     var waitmask;
 
 
@@ -31,29 +26,19 @@ bluewave.Explorer = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-/*
-      //Clone the config so we don't modify the original config object
-        var clone = {};
-        javaxt.dhtml.utils.merge(clone, config);
-
-
-      //Merge clone with default config
-        javaxt.dhtml.utils.merge(clone, defaultConfig);
-        config = clone;
-*/
 
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
 
 
-
+      //Create main panel
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
 
 
-      //Create Drawflow
+      //Create canvas
         var mainPanel = document.createElement("div");
         mainPanel.className = "drawflow";
         mainPanel.ondrop = drop;
@@ -63,8 +48,16 @@ bluewave.Explorer = function(parent, config) {
         div.appendChild(mainPanel);
         createDrawFlow(mainPanel);
 
+
       //Add toolbar
         createToolbar(mainPanel);
+
+
+      //Add save button
+        var btn = document.createElement("div");
+        btn.className = "drawflow-save noselect";
+        mainPanel.appendChild(btn);
+        btn.onclick = me.save;
 
 
         parent.appendChild(div);
@@ -74,11 +67,78 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        id = name = thumbnail = null;
+        nodes = {};
+        drawflow.clear();
+    };
+
+
+  //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(){
-
+    this.update = function(dashboard){
+        me.clear();
+        if (!dashboard) dashboard = {};
+        id = dashboard.id;
+        name = dashboard.name;
+        thumbnail = dashboard.thumbnail;
     };
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    this.save = function(){
+
+        getName(function(formInputs){
+            name = formInputs.name;
+            waitmask.show();
+
+            var dashboard = {
+                id: id,
+                name: name,
+                className: name,
+                thumbnail: thumbnail,
+                info: {
+                    layout: drawflow.export().drawflow.Home.data,
+                    nodes: {}
+                }
+            };
+
+
+            for (var key in nodes) {
+                if (nodes.hasOwnProperty(key)){
+                    var node = nodes[key];
+                    //var inputs = node.inputs;
+                    //var outputs = node.outputs;
+
+                    dashboard.info.nodes[key] = {
+                        name: node.name,
+                        type: node.type,
+                        config: node.config,
+                        preview: node.preview
+                    };
+                }
+            };
+
+
+            console.log(dashboard);
+            post("dashboard", JSON.stringify(dashboard),{
+                success: function(text) {
+                    id = parseInt(text);
+                    waitmask.hide();
+                },
+                failure: function(request){
+                    alert(request);
+                    waitmask.hide();
+                }
+            });
+        });
+    };
+
 
 
   //**************************************************************************
@@ -213,9 +273,12 @@ bluewave.Explorer = function(parent, config) {
   //** addNodeToDrawFlow
   //**************************************************************************
     var addNodeToDrawFlow = function (nodeType, pos_x, pos_y) {
-        if (drawflow.editor_mode === "fixed") {
-            return false;
-        }
+
+      //Don't add node if the view is "fixed"
+        if (drawflow.editor_mode === "fixed")  return false;
+
+
+      //Update x/y position
         pos_x =
             pos_x *
                 (drawflow.precanvas.clientWidth /
@@ -231,14 +294,32 @@ bluewave.Explorer = function(parent, config) {
                 (drawflow.precanvas.clientHeight /
                     (drawflow.precanvas.clientHeight * drawflow.zoom));
 
+
+
+     //Get toolbar button associated with the nodeType
+        var btn = button[nodeType];
+        if (!btn){
+            console.log("Unsupported Node Type: " + nodeType);
+            return;
+        }
+
+      //Get button icon and title to decorate the node
+        var icon = btn.el.dataset["icon"];
+        var title = btn.el.dataset["title"];
+        var i = document.createElement("i");
+        i.className = icon;
+
+
+
+      //Create node
         switch (nodeType) {
             case "addData":
 
                 var node = createNode({
                     name: "Input Data",
                     type: nodeType,
-                    icon: "fas fa-database",
-                    content: "Db Click here",
+                    icon: icon,
+                    content: i,
                     position: [pos_x, pos_y],
                     inputs: 0,
                     outputs: 1
@@ -246,7 +327,7 @@ bluewave.Explorer = function(parent, config) {
 
 
                 node.ondblclick = function(){
-                    showQuery(this.query, function(){
+                    showQuery(this.config.query, function(){
                         var grid = dbView.getComponents().grid;
                         var query = dbView.getQuery();
                         if (query.length==0){
@@ -255,23 +336,22 @@ bluewave.Explorer = function(parent, config) {
                         else{
 
                           //Update node
-                            if (query!==this.query){
-                                this.query = query;
+                            if (query!==this.config.query){
+                                this.config.query = query;
                                 if (grid){
                                     waitmask.show();
                                     this.csv = createCSV(grid);
-                                    try{
-                                        createPreview(grid.el, function(canvas){
+                                    createPreview(grid.el, function(canvas){
+                                        if (typeof canvas === "string"){
+                                            var error = canvas;
+                                            console.log(error);
+                                        }
+                                        else{
                                             createThumbnail(this, canvas);
-                                            dbView.hide();
-                                            waitmask.hide();
-                                        }, this);
-                                    }
-                                    catch(e){
+                                        }
                                         dbView.hide();
                                         waitmask.hide();
-                                        console.log(e);
-                                    }
+                                    }, this);
                                 }
                                 else{
                                     this.csv = null;
@@ -319,14 +399,7 @@ bluewave.Explorer = function(parent, config) {
 
 
                 break;
-
             case "sankeyChart":
-
-                var btn = button[nodeType];
-                var icon = btn.el.dataset["icon"];
-                var title = btn.el.dataset["title"];
-                var i = document.createElement("i");
-                i.className = icon;
 
                 var node = createNode({
                     name: title,
@@ -343,14 +416,7 @@ bluewave.Explorer = function(parent, config) {
                 };
 
                 break;
-
             case "layout":
-
-                var btn = button[nodeType];
-                var icon = btn.el.dataset["icon"];
-                var title = btn.el.dataset["title"];
-                var i = document.createElement("i");
-                i.className = icon;
 
                 var node = createNode({
                     name: title,
@@ -367,18 +433,7 @@ bluewave.Explorer = function(parent, config) {
                 };
 
                 break;
-
             default:
-                var btn = button[nodeType];
-                if (!btn){
-                    console.log("Unsupported Node Type: " + nodeType);
-                    return;
-                }
-
-                var icon = btn.el.dataset["icon"];
-                var title = btn.el.dataset["title"];
-                var i = document.createElement("i");
-                i.className = icon;
 
                 var node = createNode({
                     name: title,
@@ -448,6 +503,7 @@ bluewave.Explorer = function(parent, config) {
         div.type = node.type;
         div.inputs = {};
         div.outputs = {};
+        div.config = {};
         nodes[nodeID+""] = div;
         return div;
     };
@@ -711,8 +767,12 @@ bluewave.Explorer = function(parent, config) {
   //** createPreview
   //**************************************************************************
     var createPreview = function(el, callback, scope){
-        html2canvas(el).then((canvas) => {
+        html2canvas(el)
+        .then((canvas) => {
             if (callback) callback.apply(scope, [canvas]);
+        })
+        .catch(function(error){
+            if (callback) callback.apply(scope, ["Preview Failed: " + error]);
         });
     };
 
@@ -872,16 +932,160 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** getName
+  //**************************************************************************
+    var getName = function(callback){
+        if (!name){
+            editName(null, callback);
+        }
+        else{
+            checkName(name, function(isValid){
+                if (!isValid){
+                    editName(name, callback);
+                }
+                else{
+                    callback.apply(me,[{
+                        name: name
+                    }]);
+                }
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** checkName
+  //**************************************************************************
+    var checkName = function(name, callback){
+        get("dashboards?fields=id,name",{
+            success: function(dashboards) {
+                var isValid = true;
+                for (var i in dashboards){
+                    var dashboard = dashboards[i];
+                    if (dashboard.name.toLowerCase()===name.toLowerCase()){
+                        if (dashboard.id!==id){
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+                callback.apply(me,[isValid]);
+            },
+            failure: function(request){
+                alert(request);
+                callback.apply(me,[false]);
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** editName
+  //**************************************************************************
+    var editName = function(name, callback){
+        if (!nameEditor){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Save Dashboard",
+                width: 450,
+                valign: "top",
+                modal: true,
+                style: config.style.window
+            });
+
+            var form = new javaxt.dhtml.Form(win.getBody(), {
+                style: config.style.form,
+                items: [
+                    {
+                        name: "name",
+                        label: "Name",
+                        type: "text"
+                    },
+                    {
+                        name: "description",
+                        label: "Description",
+                        type: "textarea"
+                    },
+                    {
+                        name: "private",
+                        label: "Private",
+                        type: "radio",
+                        alignment: "vertical",
+                        options: [
+                            {
+                                label: "True",
+                                value: true
+                            },
+                            {
+                                label: "False",
+                                value: false
+                            }
+                        ]
+                    }
+                ],
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
+                            form.clear();
+                            win.close();
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
+
+                            var inputs = form.getData();
+                            var name = inputs.name;
+                            if (name) name = name.trim();
+                            if (name==null || name==="") {
+                                warn("Name is required", form.findField("name"));
+                                return;
+                            }
+
+                            waitmask.show();
+                            checkName(name, function(isValid){
+                                waitmask.hide();
+                                if (!isValid){
+                                    warn("Name is not unique", form.findField("name"));
+                                }
+                                else{
+                                    win.close();
+                                    if (callback) callback.apply(me,[inputs]);
+                                }
+                            });
+                        }
+                    }
+                ]
+
+            });
+
+            nameEditor = form;
+            nameEditor.show = function(){
+                win.show();
+            };
+        }
+
+        nameEditor.clear();
+        if (name) nameEditor.setValue("name", name);
+        nameEditor.setValue("private", true);
+
+
+        nameEditor.show();
+    };
+
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
-    var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var isDirty = javaxt.dhtml.utils.isDirty;
     var setStyle = javaxt.dhtml.utils.setStyle;
     var resizeCanvas = bluewave.utils.resizeCanvas;
+    var warn = bluewave.utils.warn;
+    var post = javaxt.dhtml.utils.post;
+    var get = bluewave.utils.get;
 
 
     init();
