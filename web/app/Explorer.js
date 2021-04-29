@@ -27,9 +27,11 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        if (!config) config = {};
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
+        if (!config.queryService) config.queryService = "query/"
 
 
       //Create main panel
@@ -93,7 +95,7 @@ bluewave.Explorer = function(parent, config) {
     this.update = function(dashboard){
         me.clear();
 
-        
+
       //Update class variables
         if (!dashboard) dashboard = {};
         id = dashboard.id;
@@ -156,14 +158,6 @@ bluewave.Explorer = function(parent, config) {
                     }
                 }
 
-              //Add outputs
-                node.outputs = {};
-                for (var key in drawflowNode.outputs) {
-                    if (drawflowNode.outputs.hasOwnProperty(key)){
-
-                    }
-                }
-
 
               //Update nodes variable
                 nodes[id] = node;
@@ -171,8 +165,16 @@ bluewave.Explorer = function(parent, config) {
 
               //Special case for data nodes
                 if (node.type==="addData"){
-                    //TODO: Execute query
-                    console.log(node.config.query);
+
+
+                  //Update node with csv data
+                    node.csv = null;
+                    getCSV(node.config.query, function(csv){
+                        this.csv = csv;
+                    }, node);
+
+
+                  //Update buttons
                     for (var buttonName in button) {
                         if (button.hasOwnProperty(buttonName)){
                             button[buttonName].enable();
@@ -208,9 +210,6 @@ bluewave.Explorer = function(parent, config) {
             for (var key in nodes) {
                 if (nodes.hasOwnProperty(key)){
                     var node = nodes[key];
-                    //var inputs = node.inputs;
-                    //var outputs = node.outputs;
-
                     dashboard.info.nodes[key] = {
                         name: node.name,
                         type: node.type,
@@ -497,10 +496,20 @@ bluewave.Explorer = function(parent, config) {
 
                           //Update node
                             if (query!==this.config.query){
+
+                              //Update config
                                 this.config.query = query;
+
+                              //Update csv
+                                this.csv = null;
+                                getCSV(query, function(csv){
+                                    this.csv = csv;
+                                }, this);
+
+
+                              //Create thumbnail
                                 if (grid){
                                     waitmask.show();
-                                    this.csv = createCSV(grid);
                                     createPreview(grid.el, function(canvas){
                                         if (typeof canvas === "string"){
                                             var error = canvas;
@@ -514,7 +523,6 @@ bluewave.Explorer = function(parent, config) {
                                     }, this);
                                 }
                                 else{
-                                    this.csv = null;
                                     dbView.hide();
                                 }
 
@@ -522,6 +530,13 @@ bluewave.Explorer = function(parent, config) {
 
                             }
                             else{
+
+                                if (!this.csv){
+                                    getCSV(query, function(csv){
+                                        this.csv = csv;
+                                    }, this);
+                                };
+
                                 dbView.hide();
                             }
 
@@ -622,7 +637,6 @@ bluewave.Explorer = function(parent, config) {
         div = document.getElementById(div.id);
         div.type = node.type;
         div.inputs = {};
-        div.outputs = {};
         div.config = {};
         nodes[nodeID+""] = div;
         return div;
@@ -657,8 +671,8 @@ bluewave.Explorer = function(parent, config) {
             dbView = new javaxt.express.DBView(div, {
                 waitmask: waitmask,
                 queryLanguage: "cypher",
-                queryService: "query/job/",
-                getTables: "query/tables/",
+                queryService: config.queryService + "job/",
+                getTables: config.queryService + "nodes/",
                 style:{
                     table: javaxt.dhtml.style.default.table,
                     toolbar: javaxt.dhtml.style.default.toolbar,
@@ -943,42 +957,54 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** createCSV
+  //** getCSV
   //**************************************************************************
-    var createCSV = function(grid){
+    var getCSV = function(query, callback, scope){
 
-      //Create csv
-        var csvContent = ""; //"data:text/csv;charset=utf-8,";
+        var url = config.queryService + "job/";
+        var payload = {
+            query: query,
+            format: "csv"
+        };
 
-      //Add csv header
-        var columns = grid.getColumns();
-        for (var i=0; i<columns.length; i++){
-            if (i>0) csvContent += ",";
-            csvContent += columns[i];
-        }
-        csvContent += "\r\n";
+        post(url, JSON.stringify(payload), {
+            success : function(text){
+
+              //Get jobID
+                var jobID = JSON.parse(text).job_id;
 
 
-      //Add csv data
-        grid.forEachRow(function (row, content) {
-            var row = "";
-            for (var i=0; i<content.length; i++){
-                if (i>0) row += ",";
-                var cell = content[i];
-                if (!(typeof cell === "string")){
-                    if (cell!=null) cell = cell.innerText;
-                    else cell = "";
-                }
-                if (cell.indexOf(",")>-1 || cell.indexOf("\n")>-1){
-                    cell = "\"" + cell + "\"";
-                }
-                cell = cell.replace("#",""); //TODO: find proper way to encode characters like this
-                row += cell;
+              //Periodically check job status
+                var timer, interval=1000;
+                var checkStatus = function(){
+                    if (jobID){
+                        get(url + jobID, {
+                            success : function(text){
+                                if (text==="pending" || text==="running"){
+                                    timer = setTimeout(checkStatus, interval);
+                                }
+                                else{
+                                    clearTimeout(timer);
+                                    callback.apply(scope, [text]);
+                                }
+                            },
+                            failure: function(response){
+                                clearTimeout(timer);
+                                alert(response);
+                            }
+                        });
+                    }
+                    else{
+                        clearTimeout(timer);
+                    }
+                };
+                timer = setTimeout(checkStatus, interval);
+
+            },
+            failure: function(response){
+                alert(response);
             }
-            csvContent += row + "\r\n";
         });
-
-        return csvContent;
     };
 
 
