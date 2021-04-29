@@ -104,8 +104,8 @@ public class QueryService extends WebService {
                     return new ServiceResponse(501, "Not implemented");
                 }
             }
-            else if (path.equals("tables")){
-                return getTables();
+            else if (path.equals("nodes")){
+                return getNodes();
             }
             else{
                 return new ServiceResponse(501, "Not implemented");
@@ -142,7 +142,7 @@ public class QueryService extends WebService {
 
           //Collect misc params
             JSONObject params = new JSONObject();
-            params.set("format", request.getParameter("format").toString());
+            params.set("format", getParameter("format",request).toString());
             Boolean addMetadata = getParameter("metadata", request).toBoolean();
             if (addMetadata!=null && addMetadata==true){
                 params.set("metadata", true);
@@ -283,11 +283,18 @@ public class QueryService extends WebService {
                                 value = "\"" + v + "\"";
                             }
                         }
-                        if (value instanceof java.util.Date) {
+                        else if (value instanceof java.util.Date) {
                             value = new javaxt.utils.Date(((java.util.Date) value)).toISOString();
                         }
                         else if (value instanceof java.util.Calendar) {
                             value = new javaxt.utils.Date(((java.util.Calendar) value)).toISOString();
+                        }
+                        else if (value instanceof java.util.Map) {
+                            java.util.Map map = (java.util.Map) value;
+                            value = "\"" + map + "\""; //<- this needs to be improved, values in the map can contain quotes
+                        }
+                        else{
+                            //console.log(value.getClass());
                         }
 
                     }
@@ -517,11 +524,11 @@ public class QueryService extends WebService {
 
 
   //**************************************************************************
-  //** getTables
+  //** getNodes
   //**************************************************************************
-  /** Returns a list of tables and columns
+  /** Returns a list of nodes
    */
-    public ServiceResponse getTables() {
+    public ServiceResponse getNodes() {
 
         synchronized(cache){
             Object obj = cache.get("nodes");
@@ -619,6 +626,15 @@ public class QueryService extends WebService {
         public QueryJob(long userID, String query, Long offset, Long limit, JSONObject params) {
             this.id = UUID.randomUUID().toString();
             this.userID = userID;
+
+            query = query.replace("\r", " ").replace("\n", " ").replace("\t", " ").trim();
+            while (query.contains("  ")) query = query.replace("  ", " ");
+            query = query.trim();
+            if (query.endsWith(";")) query = query.substring(0, query.length()-1).trim();
+
+            console.log(query);
+
+
             this.query = query;
             this.offset = offset;
             this.limit = limit;
@@ -655,7 +671,95 @@ public class QueryService extends WebService {
         }
 
         public String getQuery(){
-            return query;
+            if (offset==null && limit==null){
+                return query;
+            }
+
+          //Copy query
+            String query = this.query;
+
+
+          //Remove limit as needed
+            Long currLimit = null;
+            if (limit!=null){
+                int idx = query.toUpperCase().lastIndexOf("LIMIT ");
+                if (idx>0){
+                    String a = query.substring(0, idx);
+                    String b = query.substring(idx+"LIMIT ".length());
+
+                    if (a.substring(a.length()-1).equals(" ")){
+                        a = a.trim();
+                        idx = b.indexOf(" ");
+                        if (idx==-1) idx = b.length();
+                        try{
+
+                            if (idx==-1){
+                                currLimit = Long.parseLong(b);
+                                query = a;
+                            }
+                            else{
+                                currLimit = Long.parseLong(b.substring(0, idx));
+                                query = a + b.substring(idx);
+                            }
+
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                }
+            }
+            Long limit = currLimit==null ? this.limit : currLimit;
+
+
+          //Remove limit as needed
+            Long currOffset = null;
+            if (limit!=null){
+                int idx = query.toUpperCase().lastIndexOf("OFFSET ");
+                if (idx>0){
+                    String a = query.substring(0, idx);
+                    String b = query.substring(idx+"OFFSET ".length());
+
+                    if (a.substring(a.length()-1).equals(" ")){
+                        a = a.trim();
+                        idx = b.indexOf(" ");
+                        if (idx==-1) idx = b.length();
+                        try{
+
+                            if (idx==-1){
+                                currLimit = Long.parseLong(b);
+                                query = a;
+                            }
+                            else{
+                                currLimit = Long.parseLong(b.substring(0, idx));
+                                query = a + b.substring(idx);
+                            }
+
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                }
+            }
+            Long offset = currOffset==null ? this.offset : currOffset;
+
+
+
+          //Add limit and offset to the query and return
+            if (offset!=null) query += " SKIP " + offset;
+            if (limit!=null) query += " LIMIT " + limit;
+            return query.trim();
+        }
+
+        public String getCountQuery(){
+            String query = this.query;
+            int idx = query.toUpperCase().lastIndexOf("RETURN ");
+            String a = query.substring(0, idx);
+            if (a.substring(a.length()-1).equals(" ")){
+                return a.trim() + " RETURN count(*)";
+            }
+            else{ //Can we have a query without a valid return statement?
+                return query + " RETURN count(*)";
+            }
         }
 
         public boolean countTotal(){
@@ -775,14 +879,19 @@ public class QueryService extends WebService {
 
                           //Count total records as needed
                             if (job.countTotal()){
-                                //writer.setCount(ttl);
+                                rs = session.run(job.getCountQuery());
+                                if (rs.hasNext()){
+                                    Record r = rs.next();
+                                    Long ttl = r.get(0).asLong();
+                                    if (ttl!=null){
+                                        writer.setCount(ttl);
+                                    }
+                                }
                             }
                             if (job.isCanceled()) throw new Exception();
 
 
 
-                          //Drop temp table
-                            if (job.isCanceled()) throw new Exception();
 
 
                           //Close database connection

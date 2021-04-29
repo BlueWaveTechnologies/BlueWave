@@ -11,19 +11,14 @@ if(!bluewave) var bluewave={};
 bluewave.Explorer = function(parent, config) {
 
     var me = this;
-    var defaultConfig = {
-        style: {
-
-        }
-    };
-
+    var id, name, thumbnail;
     var toolbar;
     var tooltip, tooltipTimer, lastToolTipEvent;
     var button = {};
     var nodes = {};
     var drawflow;
     var dbView;
-    var chartEditor, sankeyEditor;
+    var chartEditor, sankeyEditor, layoutEditor, nameEditor;
     var waitmask;
 
 
@@ -31,29 +26,21 @@ bluewave.Explorer = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-/*
-      //Clone the config so we don't modify the original config object
-        var clone = {};
-        javaxt.dhtml.utils.merge(clone, config);
 
-
-      //Merge clone with default config
-        javaxt.dhtml.utils.merge(clone, defaultConfig);
-        config = clone;
-*/
-
+        if (!config) config = {};
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
+        if (!config.queryService) config.queryService = "query/"
 
 
-
+      //Create main panel
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
 
 
-      //Create Drawflow
+      //Create canvas
         var mainPanel = document.createElement("div");
         mainPanel.className = "drawflow";
         mainPanel.ondrop = drop;
@@ -63,8 +50,16 @@ bluewave.Explorer = function(parent, config) {
         div.appendChild(mainPanel);
         createDrawFlow(mainPanel);
 
+
       //Add toolbar
         createToolbar(mainPanel);
+
+
+      //Add save button
+        var btn = document.createElement("div");
+        btn.className = "drawflow-save noselect";
+        mainPanel.appendChild(btn);
+        btn.onclick = me.save;
 
 
         parent.appendChild(div);
@@ -74,11 +69,170 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+
+      //Reset class variables
+        id = name = thumbnail = null;
+        nodes = {};
+
+      //Clear drawflow
+        drawflow.clear();
+
+      //Reset toolbar buttons
+        for (var id in button) {
+            if (button.hasOwnProperty(id)){
+                button[id].disable();
+            }
+        }
+    };
+
+
+  //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(){
+    this.update = function(dashboard){
+        me.clear();
 
+
+      //Update class variables
+        if (!dashboard) dashboard = {};
+        id = dashboard.id;
+        name = dashboard.name;
+        thumbnail = dashboard.thumbnail;
+
+
+      //Enable default buttons
+        button.addData.enable();
+        button.sankeyChart.enable();
+
+
+
+      //Import layout
+        drawflow.import({
+            drawflow: {
+                Home: {
+                    data: dashboard.info.layout
+                }
+            }
+        });
+
+
+      //Update nodes
+        for (var id in dashboard.info.nodes) {
+            if (dashboard.info.nodes.hasOwnProperty(id)){
+
+              //Get node (dom object)
+                var drawflowNode = drawflow.getNodeFromId(id);
+                var temp = document.createElement("div");
+                temp.innerHTML = drawflowNode.html;
+                var node = document.getElementById(temp.childNodes[0].id);
+
+
+              //Add props to node
+                var props = dashboard.info.nodes[id];
+                for (var key in props) {
+                    if (props.hasOwnProperty(key)){
+                        var val = props[key];
+                        node[key] = val;
+                    }
+                }
+
+
+              //Create thumbnail
+                if (props.preview) createThumbnail(node, props.preview);
+
+
+
+              //Add event listeners
+                addEventListeners(node);
+
+
+
+              //Add inputs
+                node.inputs = {};
+                for (var key in drawflowNode.inputs) {
+                    if (drawflowNode.inputs.hasOwnProperty(key)){
+                        //node.inputs[outputID] = inputNode;
+                    }
+                }
+
+
+              //Update nodes variable
+                nodes[id] = node;
+
+
+              //Special case for data nodes
+                if (node.type==="addData"){
+
+
+                  //Update node with csv data
+                    node.csv = null;
+                    getCSV(node.config.query, function(csv){
+                        this.csv = csv;
+                    }, node);
+
+
+                  //Update buttons
+                    for (var buttonName in button) {
+                        if (button.hasOwnProperty(buttonName)){
+                            button[buttonName].enable();
+                        }
+                    }
+                }
+            }
+        }
     };
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    this.save = function(){
+
+        getName(function(formInputs){
+            name = formInputs.name;
+            waitmask.show();
+
+            var dashboard = {
+                id: id,
+                name: name,
+                className: name,
+                thumbnail: thumbnail,
+                info: {
+                    layout: drawflow.export().drawflow.Home.data,
+                    nodes: {}
+                }
+            };
+
+
+            for (var key in nodes) {
+                if (nodes.hasOwnProperty(key)){
+                    var node = nodes[key];
+                    dashboard.info.nodes[key] = {
+                        name: node.name,
+                        type: node.type,
+                        config: node.config,
+                        preview: node.preview
+                    };
+                }
+            };
+
+
+            post("dashboard", JSON.stringify(dashboard),{
+                success: function(text) {
+                    id = parseInt(text);
+                    waitmask.hide();
+                },
+                failure: function(request){
+                    alert(request);
+                    waitmask.hide();
+                }
+            });
+        });
+    };
+
 
 
   //**************************************************************************
@@ -111,12 +265,8 @@ bluewave.Explorer = function(parent, config) {
         createButton("barChart", "fas fa-chart-bar", "Bar Chart");
         createButton("lineChart", "fas fa-chart-line", "Line Chart");
         createButton("map", "fas fa-map-marked-alt", "Map");
-        createButton("sankey", "fas fa-project-diagram", "Sankey");
-
-
-      //Enable addData button
-        button.addData.enable();
-        button.sankey.enable();
+        createButton("sankeyChart", "fas fa-project-diagram", "Sankey");
+        createButton("layout", "fas fa-border-all", "Layout");
     };
 
 
@@ -128,13 +278,28 @@ bluewave.Explorer = function(parent, config) {
         drawflow.reroute = true;
         drawflow.start();
         drawflow.on('connectionCreated', function(info) {
+
+          //Get input/output IDs
             var outputID = info.output_id+"";
             var inputID = info.input_id+"";
-            console.log("Connected " + outputID + " to " + inputID);
+            //console.log("Connected " + outputID + " to " + inputID);
 
+
+          //Get target and input nodes
             var node = nodes[inputID];
-            node.inputs[outputID] = nodes[outputID];
+            var inputNode = nodes[outputID];
 
+
+          //Ensure that charts can't be connected to other charts
+            if (node.type.indexOf("Chart")>0){
+                if (inputNode.type.indexOf("Chart")>0){
+                    drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+                    return;
+                }
+            }
+
+          //If we're still here, update node and open editor
+            node.inputs[outputID] = inputNode;
             node.ondblclick();
         });
         drawflow.on('nodeRemoved', function(nodeID) {
@@ -197,9 +362,12 @@ bluewave.Explorer = function(parent, config) {
   //** addNodeToDrawFlow
   //**************************************************************************
     var addNodeToDrawFlow = function (nodeType, pos_x, pos_y) {
-        if (drawflow.editor_mode === "fixed") {
-            return false;
-        }
+
+      //Don't add node if the view is "fixed"
+        if (drawflow.editor_mode === "fixed")  return false;
+
+
+      //Update x/y position
         pos_x =
             pos_x *
                 (drawflow.precanvas.clientWidth /
@@ -215,71 +383,39 @@ bluewave.Explorer = function(parent, config) {
                 (drawflow.precanvas.clientHeight /
                     (drawflow.precanvas.clientHeight * drawflow.zoom));
 
+
+
+     //Get toolbar button associated with the nodeType
+        var btn = button[nodeType];
+        if (!btn){
+            console.log("Unsupported Node Type: " + nodeType);
+            return;
+        }
+
+      //Get button icon and title to decorate the node
+        var icon = btn.el.dataset["icon"];
+        var title = btn.el.dataset["title"];
+        var i = document.createElement("i");
+        i.className = icon;
+
+
+
+      //Create node
         switch (nodeType) {
             case "addData":
 
                 var node = createNode({
-                    name: "Table Selection",
+                    name: "Input Data",
                     type: nodeType,
-                    icon: "fas fa-table",
-                    content: "Db Click here",
+                    icon: icon,
+                    content: i,
                     position: [pos_x, pos_y],
                     inputs: 0,
                     outputs: 1
                 });
 
-
-                node.ondblclick = function(){
-                    showQuery(this.query, function(){
-                        var grid = dbView.getComponents().grid;
-                        var query = dbView.getQuery();
-                        if (query.length==0){
-                            //Ignore?
-                        }
-                        else{
-
-                          //Update node
-                            if (query!==this.query){
-                                this.query = query;
-                                if (grid){
-                                    waitmask.show();
-                                    this.csv = createCSV(grid);
-                                    createPreview(grid.el, function(canvas){
-                                        createThumbnail(this, canvas);
-                                        dbView.hide();
-                                        waitmask.hide();
-                                    }, this);
-                                }
-                                else{
-                                    this.csv = null;
-                                    dbView.hide();
-                                }
-
-                                //TODO: Find and notify nodes that rely on this node
-
-                            }
-                            else{
-                                dbView.hide();
-                            }
-
-
-                          //Enable/disable toolbar buttons
-                            for (var key in button) {
-                                if (button.hasOwnProperty(key) && key!==nodeType){
-                                    if (this.csv){
-                                        button[key].enable();
-                                    }
-                                    else{
-                                        button[key].disable();
-                                    }
-                                }
-                            }
-
-                        }
-                    }, this);
-                };
+                addEventListeners(node);
                 node.ondblclick();
-
 
                 break;
             case "transformData":
@@ -294,16 +430,8 @@ bluewave.Explorer = function(parent, config) {
                     outputs: 1
                 });
 
-
                 break;
-
-            case "sankey":
-
-                var btn = button[nodeType];
-                var icon = btn.el.dataset["icon"];
-                var title = btn.el.dataset["title"];
-                var i = document.createElement("i");
-                i.className = icon;
+            case "sankeyChart":
 
                 var node = createNode({
                     name: title,
@@ -312,26 +440,13 @@ bluewave.Explorer = function(parent, config) {
                     content: i,
                     position: [pos_x, pos_y],
                     inputs: 0,
-                    outputs: 0
+                    outputs: 1
                 });
 
-                node.ondblclick = function(){
-                    editSankey(this);
-                };
+                addEventListeners(node);
 
                 break;
-
-            default:
-                var btn = button[nodeType];
-                if (!btn){
-                    console.log("Unsupported Node Type: " + nodeType);
-                    return;
-                }
-
-                var icon = btn.el.dataset["icon"];
-                var title = btn.el.dataset["title"];
-                var i = document.createElement("i");
-                i.className = icon;
+            case "layout":
 
                 var node = createNode({
                     name: title,
@@ -342,6 +457,128 @@ bluewave.Explorer = function(parent, config) {
                     inputs: 1,
                     outputs: 0
                 });
+
+                addEventListeners(node);
+
+                break;
+            default:
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 1
+                });
+
+                addEventListeners(node);
+        }
+    };
+
+
+  //**************************************************************************
+  //** addEventListeners
+  //**************************************************************************
+    var addEventListeners = function(node){
+        switch (node.type) {
+            case "addData":
+
+                node.ondblclick = function(){
+                    showQuery(this.config.query, function(){
+                        var grid = dbView.getComponents().grid;
+                        var query = dbView.getQuery();
+                        if (query.length==0){
+                            //Ignore?
+                        }
+                        else{
+
+                          //Update node
+                            if (query!==this.config.query){
+
+                              //Update config
+                                this.config.query = query;
+
+                              //Update csv
+                                this.csv = null;
+                                getCSV(query, function(csv){
+                                    this.csv = csv;
+                                }, this);
+
+
+                              //Create thumbnail
+                                if (grid){
+                                    waitmask.show();
+                                    createPreview(grid.el, function(canvas){
+                                        if (typeof canvas === "string"){
+                                            var error = canvas;
+                                            console.log(error);
+                                        }
+                                        else{
+                                            createThumbnail(this, canvas);
+                                        }
+                                        dbView.hide();
+                                        waitmask.hide();
+                                    }, this);
+                                }
+                                else{
+                                    dbView.hide();
+                                }
+
+                                //TODO: Find and notify nodes that rely on this node
+
+                            }
+                            else{
+
+                                if (!this.csv){
+                                    getCSV(query, function(csv){
+                                        this.csv = csv;
+                                    }, this);
+                                };
+
+                                dbView.hide();
+                            }
+
+
+                          //Enable/disable toolbar buttons
+                            for (var key in button) {
+                                if (button.hasOwnProperty(key) && key!==node.type){
+                                    if (this.csv){
+                                        button[key].enable();
+                                    }
+                                    else{
+                                        button[key].disable();
+                                    }
+                                }
+                            }
+
+                        }
+                    }, this);
+                };
+
+
+                break;
+            case "transformData":
+
+
+                break;
+            case "sankeyChart":
+
+
+                node.ondblclick = function(){
+                    editSankey(this);
+                };
+
+                break;
+            case "layout":
+
+                node.ondblclick = function(){
+                    editLayout(this);
+                };
+
+                break;
+            default:
 
                 node.ondblclick = function(){
                     var hasData = false;
@@ -400,7 +637,7 @@ bluewave.Explorer = function(parent, config) {
         div = document.getElementById(div.id);
         div.type = node.type;
         div.inputs = {};
-        div.outputs = {};
+        div.config = {};
         nodes[nodeID+""] = div;
         return div;
     };
@@ -412,41 +649,15 @@ bluewave.Explorer = function(parent, config) {
     var showQuery = function(query, callback, scope){
         if (!dbView){
 
-            var style = merge({
-                body: {
-                    padding: "0px"
-                },
-                closeIcon: {
-                    //content: "&#10006;",
-                    content: "&#x2715;",
-                    lineHeight: "16px",
-                    textAlign: "center"
-                }
-            }, config.style.window);
-
-
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Query",
                 width: 1020,
                 height: 600,
-                valign: "top",
-                modal: true,
-                resizable: true,
-                style: style,
-                renderers: { //custom renderer for the close button
-                    headerButtons: function(buttonDiv){
-                        var btn = document.createElement('div');
-                        setStyle(btn, style.button);
-                        var icon = document.createElement('div');
-                        setStyle(icon, style.closeIcon);
-                        btn.appendChild(icon);
-                        btn.onclick = function(){
-                            dbView.onClose();
-                        };
-                        buttonDiv.appendChild(btn);
-                    }
+                beforeClose: function(){
+                    dbView.onClose();
                 }
             });
+
 
             var body = win.getBody();
             var div = document.createElement("div");
@@ -460,8 +671,8 @@ bluewave.Explorer = function(parent, config) {
             dbView = new javaxt.express.DBView(div, {
                 waitmask: waitmask,
                 queryLanguage: "cypher",
-                queryService: "query/job/",
-                getTables: "query/tables/",
+                queryService: config.queryService + "job/",
+                getTables: config.queryService + "nodes/",
                 style:{
                     table: javaxt.dhtml.style.default.table,
                     toolbar: javaxt.dhtml.style.default.toolbar,
@@ -497,59 +708,28 @@ bluewave.Explorer = function(parent, config) {
     var editChart = function(node){
         if (!chartEditor){
 
-            var style = merge({
-                body: {
-                    padding: "0px"
-                },
-                closeIcon: {
-                    //content: "&#10006;",
-                    content: "&#x2715;",
-                    lineHeight: "16px",
-                    textAlign: "center"
-                }
-            }, config.style.window);
-
-
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Edit Chart",
                 width: 1060,
                 height: 600,
-                valign: "top",
-                modal: true,
-                resizable: false,
-                style: style,
-                renderers: {
-
-                  //Create custom renderer for the close button. Basically, we
-                  //want to delay closing the window until after the tumbnail
-                  //is created
-                    headerButtons: function(buttonDiv){
-                        var btn = document.createElement('div');
-                        setStyle(btn, style.button);
-                        var icon = document.createElement('div');
-                        setStyle(icon, style.closeIcon);
-                        btn.appendChild(icon);
-                        btn.onclick = function(){
-                            var chartConfig = chartEditor.getConfig();
-                            var node = chartEditor.getNode();
-                            var orgConfig = node.config;
-                            if (!orgConfig) orgConfig = {};
-                            if (isDirty(chartConfig, orgConfig)){
-                                node.config = chartConfig;
-                                waitmask.show();
-                                var el = chartEditor.getChart();
-                                createPreview(el, function(canvas){
-                                    createThumbnail(node, canvas);
-                                    updateTitle(node);
-                                    win.close();
-                                    waitmask.hide();
-                                }, this);
-                            }
-                            else{
-                                win.close();
-                            }
-                        };
-                        buttonDiv.appendChild(btn);
+                beforeClose: function(){
+                    var chartConfig = chartEditor.getConfig();
+                    var node = chartEditor.getNode();
+                    var orgConfig = node.config;
+                    if (!orgConfig) orgConfig = {};
+                    if (isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        waitmask.show();
+                        var el = chartEditor.getChart();
+                        createPreview(el, function(canvas){
+                            createThumbnail(node, canvas);
+                            updateTitle(node);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
                     }
                 }
             });
@@ -563,9 +743,7 @@ bluewave.Explorer = function(parent, config) {
             chartEditor.hide = function(){
                 win.hide();
             };
-
         }
-
 
 
         var data = [];
@@ -580,31 +758,32 @@ bluewave.Explorer = function(parent, config) {
         chartEditor.show();
     };
 
+
   //**************************************************************************
   //** updateTitle
   //**************************************************************************
-  // Updates the Title of the Node based on what is in the chart config
+  /** Updates the Title of the Node based on what is in the chart config
+   */
     var updateTitle = function(node) {
         var chartTitle = chartEditor.getConfig().chartTitle;
-        if(chartTitle != null) {
+        if (chartTitle != null) {
             node.childNodes[0].getElementsByTagName("span")[0].innerHTML = chartTitle;
         }
-    }
+    };
+
 
   //**************************************************************************
   //** editSankey
   //**************************************************************************
     var editSankey = function(node){
         if (!sankeyEditor){
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Edit Sankey",
                 width: 1680,
                 height: 920,
-                valign: "top",
-                modal: true,
-                resizable: true,
-                style: config.style.window
+                resizable: true
             });
+
 
             sankeyEditor = new bluewave.charts.Sankey(win.getBody(), config);
 
@@ -622,11 +801,112 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** editLayout
+  //**************************************************************************
+    var editLayout = function(node){
+
+        if (!layoutEditor){
+            var win = createWindow({
+                title: "Edit Layout",
+                width: 1680,
+                height: 920,
+                resizable: true
+            });
+
+            layoutEditor = new bluewave.charts.Layout(win.getBody(), config);
+
+            layoutEditor.show = function(){
+                win.show();
+            };
+
+            layoutEditor.hide = function(){
+                win.hide();
+            };
+        }
+
+
+        var inputs = node.inputs;
+        for (var key in inputs) {
+            if (inputs.hasOwnProperty(key)){
+
+            }
+        }
+
+        //layoutEditor.update(node.inputs);
+        layoutEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** createWindow
+  //**************************************************************************
+    var createWindow = function(conf){
+
+
+        merge(conf, {
+            title: "Edit Chart",
+            width: 1060,
+            height: 600,
+            resizable: false,
+            beforeClose: null
+        });
+
+
+        var style = merge({
+            body: {
+                padding: "0px"
+            },
+            closeIcon: {
+                //content: "&#10006;",
+                content: "&#x2715;",
+                lineHeight: "16px",
+                textAlign: "center"
+            }
+        }, config.style.window);
+
+
+        var win = new javaxt.dhtml.Window(document.body, {
+            title: conf.title,
+            width: conf.width,
+            height: conf.height,
+            //valign: "top",
+            modal: true,
+            resizable: conf.resizable,
+            style: style,
+            renderers: {
+
+              //Create custom renderer for the close button. Basically, we
+              //want to delay closing the window until after the thumbnail
+              //is created
+                headerButtons: function(buttonDiv){
+                    var btn = document.createElement('div');
+                    setStyle(btn, style.button);
+                    var icon = document.createElement('div');
+                    setStyle(icon, style.closeIcon);
+                    btn.appendChild(icon);
+                    btn.onclick = function(){
+                        if (conf.beforeClose) conf.beforeClose.apply(me, [win]);
+                        else win.close();
+                    };
+                    buttonDiv.appendChild(btn);
+                }
+            }
+        });
+
+        return win;
+    };
+
+
+  //**************************************************************************
   //** createPreview
   //**************************************************************************
     var createPreview = function(el, callback, scope){
-        html2canvas(el).then((canvas) => {
+        html2canvas(el)
+        .then((canvas) => {
             if (callback) callback.apply(scope, [canvas]);
+        })
+        .catch(function(error){
+            if (callback) callback.apply(scope, ["Preview Failed: " + error]);
         });
     };
 
@@ -652,14 +932,23 @@ bluewave.Explorer = function(parent, config) {
         var padding = width-rect.width;
 
 
-        var maxWidth = width-padding;
-        var maxHeight = height-padding;
 
-        resizeCanvas(canvas, maxWidth, maxHeight, true);
-        var type = "image/png";
-        var base64image = canvas.toDataURL(type);
+        var base64image;
+        if (typeof canvas === "string"){
+            base64image = canvas;
+        }
+        else{ //instanceof HTMLCanvasElement?
 
-        node.preview = base64image;
+            var maxWidth = width-padding;
+            var maxHeight = height-padding;
+
+            resizeCanvas(canvas, maxWidth, maxHeight, true);
+            var type = "image/png";
+            base64image = canvas.toDataURL(type);
+
+            node.preview = base64image;
+        }
+
         el.innerHTML = "<img class='noselect' src='" + base64image + "'/>";
         el.childNodes[0].ondragstart = function(e){
             e.preventDefault();
@@ -668,42 +957,54 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** createCSV
+  //** getCSV
   //**************************************************************************
-    var createCSV = function(grid){
+    var getCSV = function(query, callback, scope){
 
-      //Create csv
-        var csvContent = ""; //"data:text/csv;charset=utf-8,";
+        var url = config.queryService + "job/";
+        var payload = {
+            query: query,
+            format: "csv"
+        };
 
-      //Add csv header
-        var columns = grid.getColumns();
-        for (var i=0; i<columns.length; i++){
-            if (i>0) csvContent += ",";
-            csvContent += columns[i];
-        }
-        csvContent += "\r\n";
+        post(url, JSON.stringify(payload), {
+            success : function(text){
+
+              //Get jobID
+                var jobID = JSON.parse(text).job_id;
 
 
-      //Add csv data
-        grid.forEachRow(function (row, content) {
-            var row = "";
-            for (var i=0; i<content.length; i++){
-                if (i>0) row += ",";
-                var cell = content[i];
-                if (!(typeof cell === "string")){
-                    if (cell!=null) cell = cell.innerText;
-                    else cell = "";
-                }
-                if (cell.indexOf(",")>-1 || cell.indexOf("\n")>-1){
-                    cell = "\"" + cell + "\"";
-                }
-                cell = cell.replace("#",""); //TODO: find proper way to encode characters like this
-                row += cell;
+              //Periodically check job status
+                var timer, interval=1000;
+                var checkStatus = function(){
+                    if (jobID){
+                        get(url + jobID, {
+                            success : function(text){
+                                if (text==="pending" || text==="running"){
+                                    timer = setTimeout(checkStatus, interval);
+                                }
+                                else{
+                                    clearTimeout(timer);
+                                    callback.apply(scope, [text]);
+                                }
+                            },
+                            failure: function(response){
+                                clearTimeout(timer);
+                                alert(response);
+                            }
+                        });
+                    }
+                    else{
+                        clearTimeout(timer);
+                    }
+                };
+                timer = setTimeout(checkStatus, interval);
+
+            },
+            failure: function(response){
+                alert(response);
             }
-            csvContent += row + "\r\n";
         });
-
-        return csvContent;
     };
 
 
@@ -786,16 +1087,160 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** getName
+  //**************************************************************************
+    var getName = function(callback){
+        if (!name){
+            editName(null, callback);
+        }
+        else{
+            checkName(name, function(isValid){
+                if (!isValid){
+                    editName(name, callback);
+                }
+                else{
+                    callback.apply(me,[{
+                        name: name
+                    }]);
+                }
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** checkName
+  //**************************************************************************
+    var checkName = function(name, callback){
+        get("dashboards?fields=id,name",{
+            success: function(dashboards) {
+                var isValid = true;
+                for (var i in dashboards){
+                    var dashboard = dashboards[i];
+                    if (dashboard.name.toLowerCase()===name.toLowerCase()){
+                        if (dashboard.id!==id){
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+                callback.apply(me,[isValid]);
+            },
+            failure: function(request){
+                alert(request);
+                callback.apply(me,[false]);
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** editName
+  //**************************************************************************
+    var editName = function(name, callback){
+        if (!nameEditor){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Save Dashboard",
+                width: 450,
+                valign: "top",
+                modal: true,
+                style: config.style.window
+            });
+
+            var form = new javaxt.dhtml.Form(win.getBody(), {
+                style: config.style.form,
+                items: [
+                    {
+                        name: "name",
+                        label: "Name",
+                        type: "text"
+                    },
+                    {
+                        name: "description",
+                        label: "Description",
+                        type: "textarea"
+                    },
+                    {
+                        name: "private",
+                        label: "Private",
+                        type: "radio",
+                        alignment: "vertical",
+                        options: [
+                            {
+                                label: "True",
+                                value: true
+                            },
+                            {
+                                label: "False",
+                                value: false
+                            }
+                        ]
+                    }
+                ],
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
+                            form.clear();
+                            win.close();
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
+
+                            var inputs = form.getData();
+                            var name = inputs.name;
+                            if (name) name = name.trim();
+                            if (name==null || name==="") {
+                                warn("Name is required", form.findField("name"));
+                                return;
+                            }
+
+                            waitmask.show();
+                            checkName(name, function(isValid){
+                                waitmask.hide();
+                                if (!isValid){
+                                    warn("Name is not unique", form.findField("name"));
+                                }
+                                else{
+                                    win.close();
+                                    if (callback) callback.apply(me,[inputs]);
+                                }
+                            });
+                        }
+                    }
+                ]
+
+            });
+
+            nameEditor = form;
+            nameEditor.show = function(){
+                win.show();
+            };
+        }
+
+        nameEditor.clear();
+        if (name) nameEditor.setValue("name", name);
+        nameEditor.setValue("private", true);
+
+
+        nameEditor.show();
+    };
+
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
-    var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var isDirty = javaxt.dhtml.utils.isDirty;
     var setStyle = javaxt.dhtml.utils.setStyle;
     var resizeCanvas = bluewave.utils.resizeCanvas;
+    var warn = bluewave.utils.warn;
+    var post = javaxt.dhtml.utils.post;
+    var get = bluewave.utils.get;
 
 
     init();
