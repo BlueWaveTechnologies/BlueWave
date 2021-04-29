@@ -709,6 +709,7 @@ bluewave.Application = function(parent, config) {
                 me.setTitle(label);
                 if (!explorerPanel) explorerPanel = new bluewave.Explorer(body, config);
                 explorerPanel.show();
+                explorerPanel.update();
             }));
 
 

@@ -108,6 +108,8 @@ bluewave.Explorer = function(parent, config) {
         button.sankeyChart.enable();
 
 
+        if (!dashboard.info) return;
+
 
       //Import layout
         drawflow.import({
