@@ -150,6 +150,8 @@ bluewave.NodeView = function(parent, config) {
 
         var clickedId = d.node;
 
+        var test = data;
+
         var radius = Math.min(nWidth, nHeight)/2;
         var anglePerNode = Math.PI*2/ data.length;
 
@@ -160,6 +162,8 @@ bluewave.NodeView = function(parent, config) {
          }
          d.fx = nWidth;
          d.fy = nHeight;
+
+
 
 
 

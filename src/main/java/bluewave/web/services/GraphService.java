@@ -118,29 +118,54 @@ public class GraphService extends WebService {
         Session session = null;
         try {
 
-          //Parse parameters
-            Long id = request.getParameter("id").toLong();
-            if (id==null) return new ServiceResponse(400, "ID is required");
-
-          //Get query and replace id
-            String query = bluewave.queries.Index.getQuery("Nodes_And_Edges_By_Selected_Node", "cypher");
-            query = query.replace("{id}", id+"");
-
-          //Generate response (json string)
-            String json = "{}";
-            session = graph.getSession();
-            Result rs = session.run(query);
-            if (rs.hasNext()){
-                Record record = rs.next();
-                Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                json = gson.toJson(record.get(0).asMap());
+            if (request.hasParameter("id")) {
+                //Parse parameters
+                Long id = request.getParameter("id").toLong();
+                if (id==null) return new ServiceResponse(400, "ID is required");
+                //Get query and replace id
+                String query = bluewave.queries.Index.getQuery("Nodes_And_Edges_By_Selected_Node", "cypher");
+                query = query.replace("{id}", id+"");
+                //Generate response (json string)
+                String json = "{}";
+                session = graph.getSession();
+                Result rs = session.run(query);
+                if (rs.hasNext()){
+                    Record record = rs.next();
+                    Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                    json = gson.toJson(record.get(0).asMap());
+                }
+                session.close();
+                //Return response
+                ServiceResponse response = new ServiceResponse(json);
+                response.setContentType("application/json");
+                return response;
             }
-            session.close();
+            else if (request.hasParameter("nodeType")){
+                //Parse parameters
+                String nodeType = request.getParameter("nodeType").toString();
+                if (nodeType==null) return new ServiceResponse(400, "nodeType is required");
 
-          //Return response
-            ServiceResponse response = new ServiceResponse(json);
-            response.setContentType("application/json");
-            return response;
+                //Get query and replace id
+                String query = bluewave.queries.Index.getQuery("Nodes_And_Edges_By_Selected_Pack", "cypher");
+                query = query.replace("{packLabel}", nodeType+"");
+
+                //Generate response (json string)
+                String json = "{}";
+                session = graph.getSession();
+                Result rs = session.run(query);
+                if (rs.hasNext()){
+                    Record record = rs.next();
+                    Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                    json = gson.toJson(record.get(0).asMap());
+                }
+                session.close();
+
+                //Return response
+                ServiceResponse response = new ServiceResponse(json);
+                response.setContentType("application/json");
+                return response;
+            }
+            return new ServiceResponse(400, "Invalid parameters");
         }
         catch (Exception e) {
             if (session != null) session.close();
