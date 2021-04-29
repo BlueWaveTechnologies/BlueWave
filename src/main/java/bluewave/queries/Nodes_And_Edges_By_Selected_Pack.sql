@@ -4,4 +4,7 @@ WITH collect (a {.*,id: id(a),labels: labels(a)}) + collect (b{.*,id: id(b),labe
 unwind nodes as nodesrow
 with distinct nodesrow as uniquenodes, edges
 with collect(uniquenodes) as nodesfinal, edges
-RETURN {nodes: nodesfinal, links: edges}
+unwind edges as edgesrow
+with distinct edgesrow as uniqueedges, nodesfinal
+with collect(uniqueedges) as edgesfinal, nodesfinal
+RETURN {nodes: nodesfinal, links: edgesfinal}

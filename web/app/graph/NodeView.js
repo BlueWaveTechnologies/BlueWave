@@ -150,8 +150,6 @@ bluewave.NodeView = function(parent, config) {
 
         var clickedId = d.node;
 
-        var test = data;
-
         var radius = Math.min(nWidth, nHeight)/2;
         var anglePerNode = Math.PI*2/ data.length;
 
@@ -164,31 +162,7 @@ bluewave.NodeView = function(parent, config) {
          d.fy = nHeight;
 
 
-
-
-
-         //divide circle by # of nodes
-
-
-         //set fx, fy to null when we want to use force-directed graph
-
-
-
-//         svg.data(data);
-
-//         var g = d3.select('svg').attr('width', width).attr('height', height)
-//                .select('g').attr('transform', 'translate(' + width/2 + ',' + height/2 + ')');
-//
-//            var vLayout = d3.cluster().size([2 * Math.PI, Math.min(width, height)/2 - 10]); // margin!
-//            var vRoot = d3.hierarchy(data);
-//            var vNodes = vRoot.descendants();
-
-//            g.selectAll('circle').data(vNodes).enter().append('circle')
-//             .attr('r', 10)
-//             .attr("transform", function(d) { return "translate(" + d3.pointRadial(d.x, d.y) + ")"})
-
-
-//            getRelationshipOnClick(width, height, node);
+         getRelationshipOnClick(clickedId);
         })
         .call(d3.drag() // call specific function when circle is dragged
             .on("start", function(d) {
@@ -285,41 +259,15 @@ bluewave.NodeView = function(parent, config) {
   //**************************************************************************
   //** getRelationshipOnClick
   //**************************************************************************
-    var getRelationshipOnClick = function(width, height, nodes){
-        var radius = width/2;
+    var getRelationshipOnClick = function(clickedId){
 
-        var vLayout = d3.cluster().size([2 * Math.PI, Math.min(width, height)/2 - 10]); // margin!
-
-        var vRoot = d3.hierarchy(nodes);
-        var vNodes = vRoot.descendants();
-
-
-
-
-
-
-
-        var simulation = d3.forceSimulation()
-            .velocityDecay(0.1)
-            .force("x", d3.forceX(width / 2).strength(.05))
-            .force("y", d3.forceY(height / 2).strength(.05))
-            .force("charge", d3.forceManyBody().strength(.1))
-            .force("collide", d3.forceCollide(30).strength(1).iterations(1))
-            .on('tick', ticked);
-
-        function ticked() {
-//          nodes.attr('cx', function (d) { return d.x = pythag(d.rad, d.y, d.x); })
-//               .attr('cy', function (d) { return d.y = pythag(d.rad, d.x, d.y); });
-        }
-
-
-
-
-        var clickedNodeRelUrl = "http://localhost:8080/graph/relationships?id=19";
+        var clickedNodeRelUrl = "http://localhost:8080/graph/relationships?nodeType=" + clickedId;
         var graph = fetch(clickedNodeRelUrl)
         .then(function(response) {
             return response.json();
         }).then(function(json) {
+
+            var lol = json;
             return drawClickedNodeRelationship(json);
         });
     };
@@ -332,23 +280,6 @@ bluewave.NodeView = function(parent, config) {
 
     }
 
-
-    var pythag = function(r, b, coord) {
-        r += 5;
-        var radius = 430/2;
-        var hyp2 = Math.pow(radius, 2);
-        // force use of b coord that exists in circle to avoid sqrt(x<0)
-        b = Math.min(430 - r - 4, Math.max(r + 4, b));
-
-        var b2 = Math.pow((b - radius), 2),
-            a = Math.sqrt(hyp2 - b2);
-
-        // radius - sqrt(hyp^2 - b^2) < coord < sqrt(hyp^2 - b^2) + radius
-        coord = Math.max(radius - a + r + 4,
-                    Math.min(a + radius - r - 4, coord));
-
-        return coord;
-    }
 
 
   //**************************************************************************
