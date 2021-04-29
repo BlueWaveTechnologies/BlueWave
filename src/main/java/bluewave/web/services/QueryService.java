@@ -142,7 +142,7 @@ public class QueryService extends WebService {
 
           //Collect misc params
             JSONObject params = new JSONObject();
-            params.set("format", request.getParameter("format").toString());
+            params.set("format", getParameter("format",request).toString());
             Boolean addMetadata = getParameter("metadata", request).toBoolean();
             if (addMetadata!=null && addMetadata==true){
                 params.set("metadata", true);
@@ -283,11 +283,18 @@ public class QueryService extends WebService {
                                 value = "\"" + v + "\"";
                             }
                         }
-                        if (value instanceof java.util.Date) {
+                        else if (value instanceof java.util.Date) {
                             value = new javaxt.utils.Date(((java.util.Date) value)).toISOString();
                         }
                         else if (value instanceof java.util.Calendar) {
                             value = new javaxt.utils.Date(((java.util.Calendar) value)).toISOString();
+                        }
+                        else if (value instanceof java.util.Map) {
+                            java.util.Map map = (java.util.Map) value;
+                            value = "\"" + map + "\""; //<- this needs to be improved, values in the map can contain quotes
+                        }
+                        else{
+                            //console.log(value.getClass());
                         }
 
                     }
