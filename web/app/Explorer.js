@@ -120,18 +120,18 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update nodes
-        for (var dashboardID in dashboard.info.nodes) {
-            if (dashboard.info.nodes.hasOwnProperty(dashboardID)){
+        for (var nodeID in dashboard.info.nodes) {
+            if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
               //Get node (dom object)
-                var drawflowNode = drawflow.getNodeFromId(dashboardID);
+                var drawflowNode = drawflow.getNodeFromId(nodeID);
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
 
 
               //Add props to node
-                var props = dashboard.info.nodes[dashboardID];
+                var props = dashboard.info.nodes[nodeID];
                 for (var key in props) {
                     if (props.hasOwnProperty(key)){
                         var val = props[key];
@@ -154,13 +154,19 @@ bluewave.Explorer = function(parent, config) {
                 node.inputs = {};
                 for (var key in drawflowNode.inputs) {
                     if (drawflowNode.inputs.hasOwnProperty(key)){
-                        //node.inputs[outputID] = inputNode;
+                        var connections = drawflowNode.inputs[key].connections;
+                        for (var i in connections){
+                            var connection = connections[i];
+                            var inputID = connection.node;
+                            var inputNode = nodes[inputID];
+                            node.inputs[inputID] = inputNode;
+                        }
                     }
                 }
 
 
               //Update nodes variable
-                nodes[dashboardID] = node;
+                nodes[nodeID] = node;
 
 
               //Special case for data nodes
@@ -181,6 +187,17 @@ bluewave.Explorer = function(parent, config) {
                         }
                     }
                 }
+            }
+        }
+
+
+
+      //Fill in any missing node inputs
+        for (var nodeID in nodes){
+            var node = nodes[nodeID];
+            for (var inputID in node.inputs){
+                var inputNode = node.inputs[inputID];
+                if (!inputNode) node.inputs[inputID] = nodes[inputID];
             }
         }
     };
@@ -825,14 +842,17 @@ bluewave.Explorer = function(parent, config) {
         }
 
 
+      //Generate list of thumbnails
+        var thumbnails = {};
         var inputs = node.inputs;
-        for (var key in inputs) {
-            if (inputs.hasOwnProperty(key)){
-
+        for (var inputID in inputs) {
+            if (inputs.hasOwnProperty(inputID)){
+                var inputNode = inputs[inputID];
+                thumbnails[inputID] = inputNode.preview;
             }
         }
 
-        //layoutEditor.update(node.inputs);
+        layoutEditor.update(thumbnails, node.config);
         layoutEditor.show();
     };
 
