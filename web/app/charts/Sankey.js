@@ -29,6 +29,7 @@ bluewave.charts.Sankey = function(parent, config) {
     var button = {};
     var nodeEditor;
     var svg, sankey;
+    var currNode; //drawflow node from Explorer
 
 
   //**************************************************************************
@@ -75,6 +76,153 @@ bluewave.charts.Sankey = function(parent, config) {
         parent.appendChild(div);
         me.el = div;
         addShowHide(me);
+    };
+
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        drawflow.clear();
+        svg.selectAll("*").remove();
+        currNode = null;
+        nodes = {};
+        quantities = {};
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(sankeyConfig, node){
+        me.clear();
+        currNode = node;
+        console.log(sankeyConfig);
+
+        if (!sankeyConfig) sankeyConfig = {};
+
+
+      //Import layout
+        if (sankeyConfig.layout){
+            drawflow.import({
+                drawflow: {
+                    Home: {
+                        data: sankeyConfig.layout
+                    }
+                }
+            });
+        }
+
+
+      //Update nodes
+        for (var nodeID in sankeyConfig.nodes) {
+            if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
+
+              //Get node (dom object)
+                var drawflowNode = drawflow.getNodeFromId(nodeID);
+                var temp = document.createElement("div");
+                temp.innerHTML = drawflowNode.html;
+                var node = document.getElementById(temp.childNodes[0].id);
+
+
+              //Add props to node
+                var props = sankeyConfig.nodes[nodeID];
+                for (var key in props) {
+                    if (props.hasOwnProperty(key)){
+                        var val = props[key];
+                        node[key] = val;
+                    }
+                }
+
+
+
+              //Add event listeners
+                addEventListeners(node);
+
+
+
+              //Add inputs
+                node.inputs = {};
+                for (var key in drawflowNode.inputs) {
+                    if (drawflowNode.inputs.hasOwnProperty(key)){
+                        var connections = drawflowNode.inputs[key].connections;
+                        for (var i in connections){
+                            var connection = connections[i];
+                            var inputID = connection.node;
+                            var inputNode = nodes[inputID];
+                            node.inputs[inputID] = inputNode;
+                        }
+                    }
+                }
+
+
+              //Update nodes variable
+                nodes[nodeID] = node;
+
+            }
+        }
+
+
+
+      //Fill in any missing node inputs
+        for (var nodeID in nodes){
+            var node = nodes[nodeID];
+            for (var inputID in node.inputs){
+                var inputNode = node.inputs[inputID];
+                if (!inputNode) node.inputs[inputID] = nodes[inputID];
+            }
+        }
+
+    };
+
+
+  //**************************************************************************
+  //** getConfig
+  //**************************************************************************
+    this.getConfig = function(){
+        var sankeyConfig = {
+            layout: drawflow.export().drawflow.Home.data,
+            nodes: {},
+            quantities: {}
+        };
+
+
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                sankeyConfig.nodes[key] = {
+                    name: node.name,
+                    notes: node.notes
+                };
+            }
+        };
+
+
+        for (var key in quantities) {
+            if (quantities.hasOwnProperty(key)){
+                var quantity = quantities[key];
+                sankeyConfig.quantities[key] = quantity;
+            }
+        };
+
+
+        return sankeyConfig;
+    };
+
+
+  //**************************************************************************
+  //** getNode
+  //**************************************************************************
+    this.getNode = function(){
+        return currNode;
+    };
+
+
+  //**************************************************************************
+  //** getChart
+  //**************************************************************************
+    this.getChart = function(){
+        return previewPanel;
     };
 
 
@@ -331,6 +479,14 @@ bluewave.charts.Sankey = function(parent, config) {
             outputs: numOutputs
         });
 
+        addEventListeners(node);
+    };
+
+
+  //**************************************************************************
+  //** addEventListeners
+  //**************************************************************************
+    var addEventListeners = function(node){
         node.ondblclick = function(){
             editNode(this);
         };
