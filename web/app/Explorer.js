@@ -81,9 +81,9 @@ bluewave.Explorer = function(parent, config) {
         drawflow.clear();
 
       //Reset toolbar buttons
-        for (var id in button) {
-            if (button.hasOwnProperty(id)){
-                button[id].disable();
+        for (var buttonName in button) {
+            if (button.hasOwnProperty(buttonName)){
+                button[buttonName].disable();
             }
         }
     };
@@ -120,18 +120,18 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update nodes
-        for (var id in dashboard.info.nodes) {
-            if (dashboard.info.nodes.hasOwnProperty(id)){
+        for (var dashboardID in dashboard.info.nodes) {
+            if (dashboard.info.nodes.hasOwnProperty(dashboardID)){
 
               //Get node (dom object)
-                var drawflowNode = drawflow.getNodeFromId(id);
+                var drawflowNode = drawflow.getNodeFromId(dashboardID);
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
 
 
               //Add props to node
-                var props = dashboard.info.nodes[id];
+                var props = dashboard.info.nodes[dashboardID];
                 for (var key in props) {
                     if (props.hasOwnProperty(key)){
                         var val = props[key];
@@ -160,7 +160,7 @@ bluewave.Explorer = function(parent, config) {
 
 
               //Update nodes variable
-                nodes[id] = node;
+                nodes[dashboardID] = node;
 
 
               //Special case for data nodes
