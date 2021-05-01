@@ -740,7 +740,7 @@ bluewave.Explorer = function(parent, config) {
                         var el = chartEditor.getChart();
                         createPreview(el, function(canvas){
                             createThumbnail(node, canvas);
-                            updateTitle(node);
+                            updateTitle(node, node.config.chartTitle);
                             win.close();
                             waitmask.hide();
                         }, this);
@@ -779,12 +779,11 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** updateTitle
   //**************************************************************************
-  /** Updates the Title of the Node based on what is in the chart config
+  /** Updates the title of a drawflow node
    */
-    var updateTitle = function(node) {
-        var chartTitle = chartEditor.getConfig().chartTitle;
-        if (chartTitle != null) {
-            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = chartTitle;
+    var updateTitle = function(node, title) {
+        if (title) {
+            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
         }
     };
 
@@ -798,7 +797,27 @@ bluewave.Explorer = function(parent, config) {
                 title: "Edit Sankey",
                 width: 1680,
                 height: 920,
-                resizable: true
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = sankeyEditor.getConfig();
+                    var node = sankeyEditor.getNode();
+                    var orgConfig = node.config;
+                    if (!orgConfig) orgConfig = {};
+                    if (isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        waitmask.show();
+                        var el = sankeyEditor.getChart();
+                        if (el.show) el.show();
+                        createPreview(el, function(canvas){
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
+                    }
+                }
             });
 
 
@@ -813,6 +832,7 @@ bluewave.Explorer = function(parent, config) {
             };
         }
 
+        sankeyEditor.update(node.config, node);
         sankeyEditor.show();
     };
 
