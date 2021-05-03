@@ -67,10 +67,10 @@ bluewave.NodeView = function(parent, config) {
         .attr("height", "100%");
 
         svg2 = d3
-                .select(div)
-                .append("svg2")
-                .attr("width", "100%")
-                .attr("height", "100%");
+        .select(div)
+        .append("svg2")
+        .attr("width", "100%")
+        .attr("height", "100%");
 
       //Create color function
         getColor = d3.scaleOrdinal(getColorPalette());
@@ -277,14 +277,18 @@ bluewave.NodeView = function(parent, config) {
     var getRelationshipOnClick = function(clickedId){
 
         var clickedNodeRelUrl = "http://localhost:8080/graph/relationships?nodeType=" + clickedId;
+        var animate = false;
         var graph = fetch(clickedNodeRelUrl)
         .then(function(response) {
             return response.json();
         }).then(function(json) {
             var relData = JSON.parse(JSON.stringify(json));
 
+            var test = relData.links;
 
-            var link = svg.append("g")
+
+
+            var link = svg2.append("g")
                 .attr("class", config.style.edge)
                 .selectAll("line")
                 .data(relData.links)
@@ -298,12 +302,37 @@ bluewave.NodeView = function(parent, config) {
                 });
 
 
-            var node = svg.append("g")
+            var node = svg2.append("g")
             .attr("class", config.style.node)
             .selectAll("g")
             .data(relData.nodes)
             .enter().append("g");
-            
+
+             var circles = node.append("circle")
+            .attr("r", 5)
+            .attr("fill", function(d) { return getColor(d[config.colorBy]); })
+            if (animate){
+                circles.call(d3.drag()
+                .on("start", function(d) {
+                    if (!d3.event.active) graph.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                })
+                .on("drag", function(d) {
+                    d.fx = d3.event.x;
+                    d.fy = d3.event.y;
+                })
+                .on("end", function(d) {
+                    if (!d3.event.active) graph.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }));
+            }
+            else{
+                circles.attr("cx", function(d) { return d.x; });
+                circles.attr("cy", function(d) { return d.y; });
+            }
+
             return drawClickedNodeRelationship(json);
         });
     };
