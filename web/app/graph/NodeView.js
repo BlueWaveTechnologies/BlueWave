@@ -270,9 +270,8 @@ bluewave.NodeView = function(parent, config) {
   //**************************************************************************
     var getRelationshipOnClick = function(clickedId){
 
-        var clickedNodeRelUrl = "http://localhost:8080/graph/relationships?nodeType=" + clickedId;
         var animate = false;
-        var graph = fetch(clickedNodeRelUrl)
+        var graph = fetch("graph/relationships?nodeType=" + clickedId)
         .then(function(response) {
             return response.json();
         }).then(function(json) {
