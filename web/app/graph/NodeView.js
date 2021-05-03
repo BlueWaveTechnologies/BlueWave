@@ -12,9 +12,18 @@ bluewave.NodeView = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        url: "graph/nodes"
+        url: "graph/nodes",
+        remoteRender: false,
+        animate: false,
+        colorBy: "labels",
+        label: "labels",
+        style: {
+            node: "graph-node",
+            edge: "graph-link"
+        }
     };
     var svg; //d3
+    var svg2;
     var getColor; //d3 function
     var nodes = [];
     var waitmask;
@@ -56,6 +65,12 @@ bluewave.NodeView = function(parent, config) {
         .append("svg")
         .attr("width", "100%")
         .attr("height", "100%");
+
+        svg2 = d3
+                .select(div)
+                .append("svg2")
+                .attr("width", "100%")
+                .attr("height", "100%");
 
       //Create color function
         getColor = d3.scaleOrdinal(getColorPalette());
@@ -266,8 +281,29 @@ bluewave.NodeView = function(parent, config) {
         .then(function(response) {
             return response.json();
         }).then(function(json) {
+            var relData = JSON.parse(JSON.stringify(json));
 
-            var lol = json;
+
+            var link = svg.append("g")
+                .attr("class", config.style.edge)
+                .selectAll("line")
+                .data(relData.links)
+                .enter().append("line")
+                .attr("x1", function(d) { return d.source.x; })
+                .attr("y1", function(d) { return d.source.y; })
+                .attr("x2", function(d) { return d.target.x; })
+                .attr("y2", function(d) { return d.target.y; })
+                .attr("stroke-width", function(d) {
+                    return Math.sqrt(d.value);
+                });
+
+
+            var node = svg.append("g")
+            .attr("class", config.style.node)
+            .selectAll("g")
+            .data(relData.nodes)
+            .enter().append("g");
+            
             return drawClickedNodeRelationship(json);
         });
     };
