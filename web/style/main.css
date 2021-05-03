@@ -260,6 +260,58 @@ body, textarea, input, select, td, th {
 
 
 /**************************************************************************/
+/** Dashboard Layout
+/**************************************************************************/
+
+.dashboard-layout {
+
+}
+.dashboard-layout:after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
+.dashboard-layout div {
+    background-color: #fff; /*#e7eff3;*/
+    border: 1px solid #e0e0e0;
+    box-sizing: border-box;
+    float: left;
+}
+
+.dashboard-layout div:hover {
+    background-color: #fff;
+    cursor: move;
+    transition: box-shadow 0.2s;
+
+
+    border: 1px solid #4ea9ff;
+    -webkit-box-shadow: 0 2px 20px 2px #4ea9ff;
+    box-shadow: 0 2px 20px 2px #4ea9ff;
+}
+
+.dashboard-layout .is-dragging,
+.dashboard-layout .is-positioning-post-drag {
+    background-color: #fff;
+    z-index: 2;
+}
+
+.dashboard-layout .packery-drop-placeholder {
+    outline: 1px dashed hsla(0, 0%, 0%, 0.5);
+    outline-offset: -2px;
+    transition: transform 0.2s;
+    background-color: rgba(0,0,0,0.1) !important;
+    border: none !important;
+}
+
+.dashboard-layout .dashboard-item {
+    margin: 0;
+}
+
+
+
+
+/**************************************************************************/
 /** DBView
 /**************************************************************************/
 
@@ -523,16 +575,6 @@ li.tree-node:hover {
     height: 100%;
 }
 
-.drawflow.parent-drawflow {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background-color: #fff;
-    background-size: 25px 25px;
-    background-image:
-    linear-gradient(to right, #f1f1f1 1px, transparent 1px),
-    linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
-}
 
 
 .drawflow .drawflow-node {
@@ -674,6 +716,23 @@ li.tree-node:hover {
     box-shadow: 0 2px 6px 2px #b5b5b5;
 }
 
+
+/**************************************************************************/
+/** Grid panel
+/**************************************************************************/
+/** Graph paper background for the dashboard editors
+*/
+.grid-panel,
+.drawflow.parent-drawflow {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    background-size: 25px 25px;
+    background-image:
+    linear-gradient(to right, #f1f1f1 1px, transparent 1px),
+    linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
+}
 
 
 /**************************************************************************/
