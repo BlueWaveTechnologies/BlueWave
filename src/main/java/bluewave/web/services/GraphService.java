@@ -146,7 +146,7 @@ public class GraphService extends WebService {
                 if (nodeType==null) return new ServiceResponse(400, "nodeType is required");
 
                 //Get query and replace id
-                String query = bluewave.queries.Index.getQuery("Nodes_And_Edges_By_Selected_Pack", "cypher");
+                String query = bluewave.queries.Index.getQuery("Edges_By_Selected_Pack", "cypher");
                 query = query.replace("{packLabel}", nodeType+"");
 
                 //Generate response (json string)

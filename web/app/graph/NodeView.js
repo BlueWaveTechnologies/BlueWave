@@ -171,7 +171,7 @@ bluewave.NodeView = function(parent, config) {
          d.fy = nHeight;
 
 
-         getRelationshipOnClick(clickedId);
+         getRelationshipOnClick(clickedId, data);
         })
         .call(d3.drag() // call specific function when circle is dragged
             .on("start", function(d) {
@@ -268,65 +268,46 @@ bluewave.NodeView = function(parent, config) {
   //**************************************************************************
   //** getRelationshipOnClick
   //**************************************************************************
-    var getRelationshipOnClick = function(clickedId){
+    var getRelationshipOnClick = function(clickedId, data){
+
 
         var animate = false;
+        var test = clickedId;
+        var newData = data;
         var graph = fetch("graph/relationships?nodeType=" + clickedId)
         .then(function(response) {
             return response.json();
         }).then(function(json) {
             var relData = JSON.parse(JSON.stringify(json));
+            var relationshipArray = [];
+            var counter = 0;
+            var sources = relData.source;
+            var targets = relData.target;
 
-            var test = relData.links;
+            for(i=0; i < sources.length; i++) {
+                var link={};
+                link.source = sources[i];
+                link.target = test;
+                relationshipArray[counter++] = link;
 
-
-
-            var link = svg.append("g")
-                .attr("class", config.style.edge)
-                .selectAll("line")
-                .data(relData.links)
-                .enter().append("line")
-                .attr("x1", function(d) { return d.source.x; })
-                .attr("y1", function(d) { return d.source.y; })
-                .attr("x2", function(d) { return d.target.x; })
-                .attr("y2", function(d) { return d.target.y; })
-                .attr("stroke-width", function(d) {
-                    return Math.sqrt(d.value);
-                });
-
-
-            var node = svg.append("g")
-            .attr("class", config.style.node)
-            .selectAll("g")
-            .data(relData.nodes)
-            .enter().append("g");
-
-             var circles = node.append("circle")
-            .attr("r", 5)
-            .attr("fill", function(d) { return getColor(d[config.colorBy]); })
-            if (animate){
-                circles.call(d3.drag()
-                .on("start", function(d) {
-                    if (!d3.event.active) graph.alphaTarget(0.3).restart();
-                    d.fx = d.x;
-                    d.fy = d.y;
-                })
-                .on("drag", function(d) {
-                    d.fx = d3.event.x;
-                    d.fy = d3.event.y;
-                })
-                .on("end", function(d) {
-                    if (!d3.event.active) graph.alphaTarget(0);
-                    d.fx = null;
-                    d.fy = null;
-                }));
-            }
-            else{
-                circles.attr("cx", function(d) { return d.x; });
-                circles.attr("cy", function(d) { return d.y; });
             }
 
-            return drawClickedNodeRelationship(json);
+            for(i=0; i < targets.length; i++) {
+                var link={};
+                link.source = test;
+                link.target = targets[i];
+                relationshipArray[counter++] = link;
+            }
+
+            var simulation = d3.forceSimulation();
+
+            newData.links = relationshipArray;
+            svg.selectAll("newCircle")
+            .data(newData);
+
+//            simulation.force('link', d3.forceLink().links(relationshipArray));
+
+
         });
     };
 
