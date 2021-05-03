@@ -23,7 +23,6 @@ bluewave.NodeView = function(parent, config) {
         }
     };
     var svg; //d3
-    var svg2;
     var getColor; //d3 function
     var nodes = [];
     var waitmask;
@@ -66,11 +65,6 @@ bluewave.NodeView = function(parent, config) {
         .attr("width", "100%")
         .attr("height", "100%");
 
-        svg2 = d3
-        .select(div)
-        .append("svg2")
-        .attr("width", "100%")
-        .attr("height", "100%");
 
       //Create color function
         getColor = d3.scaleOrdinal(getColorPalette());
@@ -288,7 +282,7 @@ bluewave.NodeView = function(parent, config) {
 
 
 
-            var link = svg2.append("g")
+            var link = svg.append("g")
                 .attr("class", config.style.edge)
                 .selectAll("line")
                 .data(relData.links)
@@ -302,7 +296,7 @@ bluewave.NodeView = function(parent, config) {
                 });
 
 
-            var node = svg2.append("g")
+            var node = svg.append("g")
             .attr("class", config.style.node)
             .selectAll("g")
             .data(relData.nodes)
