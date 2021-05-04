@@ -627,12 +627,20 @@ public class QueryService extends WebService {
             this.id = UUID.randomUUID().toString();
             this.userID = userID;
 
-            query = query.replace("\r", " ").replace("\n", " ").replace("\t", " ").trim();
-            while (query.contains("  ")) query = query.replace("  ", " ");
-            query = query.trim();
+            StringBuilder str = new StringBuilder();
+            for (String row : query.split("\n")){
+                row = row.replace("\r", " ").replace("\n", " ").replace("\t", " ").trim();
+                while (row.contains("  ")) row = row.replace("  ", " ");
+                row = row.trim();
+                if (row.length()==0 || row.startsWith("//")) continue;
+                str.append(row);
+                str.append(" ");
+            }
+
+            query = str.toString().trim();
             if (query.endsWith(";")) query = query.substring(0, query.length()-1).trim();
 
-            console.log(query);
+            //console.log(query);
 
 
             this.query = query;
