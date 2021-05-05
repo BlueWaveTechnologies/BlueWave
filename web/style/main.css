@@ -258,6 +258,11 @@ body, textarea, input, select, td, th {
     float: none;
 }
 
+.dashboard-homepage .dashboard-item .fas {
+    color: #eaeaea;
+    font-size: 120px;
+}
+
 
 /**************************************************************************/
 /** Dashboard Layout

@@ -110,16 +110,25 @@ bluewave.Homepage = function(parent, config) {
 
 
         dashboardItem.innerDiv.style.cursor = "pointer";
+        dashboardItem.innerDiv.style.textAlign = "center";
         dashboardItem.innerDiv.onclick = function(){
             me.onClick(dashboard);
         };
 
 
+        var icon = document.createElement("i");
+        icon.className = "fas fa-camera";
+        dashboardItem.innerDiv.appendChild(icon);
+
+
         var img = document.createElement("img");
-        img.src = "dashboard/thumbnail?name=" + className + "&_=" + t;
         img.className = "noselect";
         img.style.cursor = "pointer";
-        dashboardItem.innerDiv.appendChild(img);
+        img.onload = function() {
+            dashboardItem.innerDiv.innerHTML = "";
+            dashboardItem.innerDiv.appendChild(this);
+        };
+        img.src = "dashboard/thumbnail?name=" + className + "&_=" + t;
     };
 
 
