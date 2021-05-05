@@ -533,6 +533,7 @@ bluewave.Explorer = function(parent, config) {
                                             console.log(error);
                                         }
                                         else{
+                                            this.preview = canvas.toDataURL("image/png");
                                             createThumbnail(this, canvas);
                                         }
                                         dbView.hide();
@@ -739,6 +740,7 @@ bluewave.Explorer = function(parent, config) {
                         waitmask.show();
                         var el = chartEditor.getChart();
                         createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
                             createThumbnail(node, canvas);
                             updateTitle(node, node.config.chartTitle);
                             win.close();
@@ -809,6 +811,7 @@ bluewave.Explorer = function(parent, config) {
                         var el = sankeyEditor.getChart();
                         if (el.show) el.show();
                         createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
                             createThumbnail(node, canvas);
                             win.close();
                             waitmask.hide();
@@ -845,12 +848,14 @@ bluewave.Explorer = function(parent, config) {
         if (!layoutEditor){
             var win = createWindow({
                 title: "Edit Layout",
-                width: 1680,
-                height: 920,
+                width: 1425, //Up to 4 dashboard items at 250px width
+                height: 839,
                 resizable: true
             });
 
+
             layoutEditor = new bluewave.charts.Layout(win.getBody(), config);
+            layoutEditor.el.style.borderRadius = "0 0 5px 5px";
 
             layoutEditor.show = function(){
                 win.show();
@@ -956,7 +961,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   /** Inserts a PNG image into a node
    */
-    var createThumbnail = function(node, canvas){
+    var createThumbnail = function(node, obj){
 
         var el = node.childNodes[1];
         el.innerHTML = "";
@@ -969,30 +974,69 @@ bluewave.Explorer = function(parent, config) {
         div.style.height = "100%";
         el.appendChild(div);
         var rect = javaxt.dhtml.utils.getRect(div);
+        el.innerHTML = "";
         var padding = width-rect.width;
+        var maxWidth = width-padding;
+        var maxHeight = height-padding;
+        var width = 0;
+        var height = 0;
 
-
-
-        var base64image;
-        if (typeof canvas === "string"){
-            base64image = canvas;
-        }
-        else{ //instanceof HTMLCanvasElement?
-
-            var maxWidth = width-padding;
-            var maxHeight = height-padding;
-
-            resizeCanvas(canvas, maxWidth, maxHeight, true);
-            var type = "image/png";
-            base64image = canvas.toDataURL(type);
-
-            node.preview = base64image;
-        }
-
-        el.innerHTML = "<img class='noselect' src='" + base64image + "'/>";
-        el.childNodes[0].ondragstart = function(e){
-            e.preventDefault();
+        var setWidth = function(){
+            var ratio = maxWidth/width;
+            width = width*ratio;
+            height = height*ratio;
         };
+
+        var setHeight = function(){
+            var ratio = maxHeight/height;
+            width = width*ratio;
+            height = height*ratio;
+        };
+
+        var resize = function(canvas){
+            width = canvas.width;
+            height = canvas.height;
+
+            if (maxHeight<maxWidth){
+                setHeight();
+                if (width>maxWidth) setWidth();
+            }
+            else{
+                setWidth();
+                if (height>maxHeight) setHeight();
+            }
+
+
+            resizeCanvas(canvas, width, height, true);
+            var base64image = canvas.toDataURL("image/png");
+
+            var img = document.createElement('img');
+            img.className = "noselect";
+            img.onload = function() {
+                el.appendChild(this);
+            };
+            img.src = base64image;
+            img.ondragstart = function(e){
+                e.preventDefault();
+            };
+        };
+
+
+        if (typeof obj === "string"){ //base64 encoded image
+            var img = document.createElement('img');
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                canvas.width = this.width;
+                canvas.height = this.height;
+                var ctx = canvas.getContext("2d");
+                ctx.drawImage(this, 0, 0);
+                resize(canvas);
+            };
+            img.src = obj;
+        }
+        else{ //HTMLCanvasElement
+            resize(obj);
+        }
     };
 
 
