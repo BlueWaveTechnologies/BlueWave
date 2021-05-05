@@ -206,7 +206,7 @@ bluewave.NodeView = function(parent, config) {
 
 
 
-        if (link !== null) {
+        if (links !== null) {
             simulation.force("link").links(links);
             var link = svg.append("g")
             .attr("class", config.style.edge)
