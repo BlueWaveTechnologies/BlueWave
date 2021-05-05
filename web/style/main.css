@@ -277,14 +277,14 @@ body, textarea, input, select, td, th {
     clear: both;
 }
 
-.dashboard-layout div {
+.dashboard-layout .dashboard-item {
     background-color: #fff; /*#e7eff3;*/
     border: 1px solid #e0e0e0;
     box-sizing: border-box;
     float: left;
 }
 
-.dashboard-layout div:hover {
+.dashboard-layout .dashboard-item:hover {
     background-color: #fff;
     cursor: move;
     transition: box-shadow 0.2s;
