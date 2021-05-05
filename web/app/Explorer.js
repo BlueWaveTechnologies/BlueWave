@@ -216,7 +216,7 @@ bluewave.Explorer = function(parent, config) {
                 id: id,
                 name: name,
                 className: name,
-                thumbnail: thumbnail,
+                //thumbnail: thumbnail,
                 info: {
                     layout: drawflow.export().drawflow.Home.data,
                     nodes: {}
@@ -240,7 +240,20 @@ bluewave.Explorer = function(parent, config) {
             post("dashboard", JSON.stringify(dashboard),{
                 success: function(text) {
                     id = parseInt(text);
-                    waitmask.hide();
+                    if (thumbnail){
+                        saveThumbnail(id, function(request){
+                            waitmask.hide();
+                            if (request.status===200){
+
+                            }
+                            else{
+                                alert(request);
+                            }
+                        });
+                    }
+                    else{
+                        waitmask.hide();
+                    }
                 },
                 failure: function(request){
                     alert(request);
@@ -248,6 +261,34 @@ bluewave.Explorer = function(parent, config) {
                 }
             });
         });
+    };
+
+
+  //**************************************************************************
+  //** saveThumbnail
+  //**************************************************************************
+    var saveThumbnail = function(id, callback){
+
+      //Convert base64 encoded string into a binary object
+        var data = thumbnail;
+        var type = data.substring(data.indexOf(":")+1, data.indexOf(";"));
+        data = data.substring(("data:" + type + ";base64,").length);
+        var blob = base64ToBlob(data, type);
+
+      //Create form data
+        var formData = new FormData();
+        formData.append("image", blob);
+        formData.set("id", id);
+
+      //Send form data to the dashboard service to save thumbnail
+        var request = new XMLHttpRequest();
+        request.open('POST', 'dashboard/thumbnail', true);
+        request.onreadystatechange = function(){
+            if (request.readyState === 4) {
+                if (callback) callback.apply(me, [request]);
+            }
+        };
+        request.send(formData);
     };
 
 
@@ -845,12 +886,35 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editLayout = function(node){
 
+      //Create layoutEditor as needed
         if (!layoutEditor){
             var win = createWindow({
                 title: "Edit Layout",
                 width: 1425, //Up to 4 dashboard items at 250px width
                 height: 839,
-                resizable: true
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = layoutEditor.getConfig();
+                    var node = layoutEditor.getNode();
+                    var orgConfig = node.config;
+                    if (!orgConfig) orgConfig = {};
+                    if (isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        waitmask.show();
+                        var el = layoutEditor.getChart();
+                        if (el.show) el.show();
+                        createPreview(el, function(canvas){
+                            thumbnail = canvas.toDataURL("image/png");
+                            node.preview = thumbnail;
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
+                    }
+                }
             });
 
 
@@ -867,17 +931,28 @@ bluewave.Explorer = function(parent, config) {
         }
 
 
-      //Generate list of thumbnails
-        var thumbnails = {};
-        var inputs = node.inputs;
-        for (var inputID in inputs) {
-            if (inputs.hasOwnProperty(inputID)){
-                var inputNode = inputs[inputID];
-                thumbnails[inputID] = inputNode.preview;
+      //Add custom getNode() method to the layoutEditor to return current node
+        layoutEditor.getNode = function(){
+            return node;
+        };
+
+
+      //Generate list of inputs for the layoutEditor
+        var inputs = {};
+        for (var inputID in node.inputs) {
+            if (node.inputs.hasOwnProperty(inputID)){
+                var inputNode = node.inputs[inputID];
+                inputs[inputID] = {
+                    title: inputNode.config.chartTitle,
+                    image: inputNode.preview,
+                    type: inputNode.type
+                };
             }
         }
 
-        layoutEditor.update(thumbnails, node.config);
+
+      //Update and show layoutEditor
+        layoutEditor.update(inputs, node.config);
         layoutEditor.show();
     };
 
@@ -1322,6 +1397,7 @@ bluewave.Explorer = function(parent, config) {
     var isDirty = javaxt.dhtml.utils.isDirty;
     var setStyle = javaxt.dhtml.utils.setStyle;
     var resizeCanvas = bluewave.utils.resizeCanvas;
+    var base64ToBlob = bluewave.utils.base64ToBlob;
     var warn = bluewave.utils.warn;
     var post = javaxt.dhtml.utils.post;
     var get = bluewave.utils.get;
