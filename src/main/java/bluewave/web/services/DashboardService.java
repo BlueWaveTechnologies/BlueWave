@@ -105,7 +105,7 @@ public class DashboardService extends WebService {
     public ServiceResponse saveThumbnail(ServiceRequest request, Database database)
         throws ServletException, IOException {
 
-
+        Long id = null;
         javaxt.io.Image img = null;
         String name = null;
         String className = null;
@@ -119,32 +119,48 @@ public class DashboardService extends WebService {
                 img = new javaxt.io.Image(value.getInputStream());
             }
             else{
+                if (key.equals("id")) id = value.toLong();
                 if (key.equals("name")) name = value.toString();
                 if (key.equals("className")) className = value.toString();
             }
         }
 
 
-        if (img==null) return new ServiceResponse(400, "Image is required");
-        if (name==null) return new ServiceResponse(400, "Name is required");
-        if (className==null) return new ServiceResponse(400, "ClassName is required");
+        if (id==null){
+
+            if (img==null) return new ServiceResponse(400, "Image is required");
+            if (name==null) return new ServiceResponse(400, "Name is required");
+            if (className==null) return new ServiceResponse(400, "ClassName is required");
 
 
-        try{
-            Dashboard dashboard = getDashboard(className, database);
-            if (dashboard==null) return new ServiceResponse(400, "Dashboard does not exist");
+            try{
+                Dashboard dashboard = getDashboard(className, database);
+                if (dashboard==null) return new ServiceResponse(400, "Dashboard does not exist");
 
 
-            byte[] b = img.getByteArray(format);
-            dashboard.setName(name);
-            dashboard.setThumbnail(b);
-            dashboard.setClassName(className);
-            dashboard.save();
-            ws.notify("update",dashboard);
-            return new ServiceResponse(200);
+                byte[] b = img.getByteArray(format);
+                dashboard.setName(name);
+                dashboard.setThumbnail(b);
+                dashboard.setClassName(className);
+                dashboard.save();
+                ws.notify("update",dashboard);
+                return new ServiceResponse(200);
+            }
+            catch(Exception e){
+                return new ServiceResponse(e);
+            }
+
         }
-        catch(Exception e){
-            return new ServiceResponse(e);
+        else{
+            try{
+                Dashboard dashboard = Dashboard.get("id=", id);
+                if (img!=null) dashboard.setThumbnail(img.getByteArray(format));
+                dashboard.save();
+                return new ServiceResponse(200);
+            }
+            catch(Exception e){
+                return new ServiceResponse(e);
+            }
         }
     }
 
