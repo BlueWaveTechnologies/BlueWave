@@ -114,6 +114,7 @@ bluewave.NodeView = function(parent, config) {
 
         var width = me.el.offsetWidth;
         var height = me.el.offsetHeight;
+        var links;
 
         var maxVal = 0;
         for (var i=0; i<data.length; i++){
@@ -171,7 +172,9 @@ bluewave.NodeView = function(parent, config) {
          d.fy = nHeight;
 
 
-         getRelationshipOnClick(clickedId, data);
+         links = getRelationshipOnClick(clickedId, data, node);
+
+
         })
         .call(d3.drag() // call specific function when circle is dragged
             .on("start", function(d) {
@@ -194,11 +197,32 @@ bluewave.NodeView = function(parent, config) {
         // Features of the forces applied to the nodes:
         var simulation = d3.forceSimulation()
         .force("center", d3.forceCenter(width / 2, height / 2)) //Attraction to the center of the svg area
+        .force("link", d3.forceLink())
         .force("charge", d3.forceManyBody().strength(.1)) // Nodes are attracted one each other of value is > 0
         .force("collide", d3.forceCollide() // Force that avoids circle overlapping
             .strength(.2)
             .radius(function(d){ return (size(d[key])+3); })
             .iterations(1));
+
+
+
+        if (link !== null) {
+            simulation.force("link").links(links);
+            var link = svg.append("g")
+            .attr("class", config.style.edge)
+            .selectAll("line")
+            .data(links)
+            .enter().append("line")
+            .attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; })
+            .attr("stroke-width", function(d) {
+                return Math.sqrt(d.value);
+            });
+        }
+
+
 
         // Apply these forces to the nodes and update their positions.
         // Once the force algorithm is happy with positions ('alpha' value is low enough), simulations will stop.
@@ -206,7 +230,13 @@ bluewave.NodeView = function(parent, config) {
         .on("tick", function(d){
             node
               .attr("cx", function(d){ return d.x; })
-              .attr("cy", function(d){ return d.y; })
+              .attr("cy", function(d){ return d.y; });
+
+            link
+              .attr("x1", function(d) { return d.source.x; })
+              .attr("y1", function(d) { return d.source.y; })
+              .attr("x2", function(d) { return d.target.x; })
+              .attr("y2", function(d) { return d.target.y; });
         });
 
     };
@@ -268,12 +298,13 @@ bluewave.NodeView = function(parent, config) {
   //**************************************************************************
   //** getRelationshipOnClick
   //**************************************************************************
-    var getRelationshipOnClick = function(clickedId, data){
+    var getRelationshipOnClick = function(clickedId, data, node){
 
 
         var animate = false;
         var test = clickedId;
         var newData = data;
+        var newNode = node;
         var graph = fetch("graph/relationships?nodeType=" + clickedId)
         .then(function(response) {
             return response.json();
@@ -299,11 +330,13 @@ bluewave.NodeView = function(parent, config) {
                 relationshipArray[counter++] = link;
             }
 
-            var simulation = d3.forceSimulation();
-
             newData.links = relationshipArray;
-            svg.selectAll("newCircle")
-            .data(newData);
+
+            return relationshipArray;
+
+
+//            svg.selectAll("newCircle")
+//            .data(newData);
 
 //            simulation.force('link', d3.forceLink().links(relationshipArray));
 
