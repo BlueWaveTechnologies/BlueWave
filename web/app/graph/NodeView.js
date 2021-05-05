@@ -25,6 +25,7 @@ bluewave.NodeView = function(parent, config) {
     var svg; //d3
     var getColor; //d3 function
     var nodes = [];
+    var links;
     var waitmask;
     var form, tooltip;
 
@@ -114,7 +115,7 @@ bluewave.NodeView = function(parent, config) {
 
         var width = me.el.offsetWidth;
         var height = me.el.offsetHeight;
-        var links;
+
 
         var maxVal = 0;
         for (var i=0; i<data.length; i++){
@@ -206,7 +207,7 @@ bluewave.NodeView = function(parent, config) {
 
 
 
-        if (links !== null) {
+        if (links != null) {
             simulation.force("link").links(links);
             var link = svg.append("g")
             .attr("class", config.style.edge)
