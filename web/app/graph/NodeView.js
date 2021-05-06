@@ -175,6 +175,20 @@ bluewave.NodeView = function(parent, config) {
 
          links = getRelationshipOnClick(clickedId, data, node);
 
+         simulation.force("link").links(links);
+         var link = svg.append("g")
+         .attr("class", config.style.edge)
+         .selectAll("line")
+         .data(links)
+         .enter().append("line")
+         .attr("x1", function(d) { return d.source.x; })
+         .attr("y1", function(d) { return d.source.y; })
+         .attr("x2", function(d) { return d.target.x; })
+         .attr("y2", function(d) { return d.target.y; })
+         .attr("stroke-width", function(d) {
+             return Math.sqrt(d.value);
+         });
+
 
         })
         .call(d3.drag() // call specific function when circle is dragged
@@ -206,22 +220,23 @@ bluewave.NodeView = function(parent, config) {
             .iterations(1));
 
 
-
-        if (links != null) {
-            simulation.force("link").links(links);
-            var link = svg.append("g")
-            .attr("class", config.style.edge)
-            .selectAll("line")
-            .data(links)
-            .enter().append("line")
-            .attr("x1", function(d) { return d.source.x; })
-            .attr("y1", function(d) { return d.source.y; })
-            .attr("x2", function(d) { return d.target.x; })
-            .attr("y2", function(d) { return d.target.y; })
-            .attr("stroke-width", function(d) {
-                return Math.sqrt(d.value);
-            });
-        }
+//        var link;
+//
+//        if (links != null) {
+//            simulation.force("link").links(links);
+//            link = svg.append("g")
+//            .attr("class", config.style.edge)
+//            .selectAll("line")
+//            .data(links)
+//            .enter().append("line")
+//            .attr("x1", function(d) { return d.source.x; })
+//            .attr("y1", function(d) { return d.source.y; })
+//            .attr("x2", function(d) { return d.target.x; })
+//            .attr("y2", function(d) { return d.target.y; })
+//            .attr("stroke-width", function(d) {
+//                return Math.sqrt(d.value);
+//            });
+//        }
 
 
 
@@ -229,15 +244,15 @@ bluewave.NodeView = function(parent, config) {
         // Once the force algorithm is happy with positions ('alpha' value is low enough), simulations will stop.
         simulation.nodes(data)
         .on("tick", function(d){
+//            link
+//              .attr("x1", function(d) { return d.source.x; })
+//              .attr("y1", function(d) { return d.source.y; })
+//              .attr("x2", function(d) { return d.target.x; })
+//              .attr("y2", function(d) { return d.target.y; });
             node
               .attr("cx", function(d){ return d.x; })
               .attr("cy", function(d){ return d.y; });
 
-            link
-              .attr("x1", function(d) { return d.source.x; })
-              .attr("y1", function(d) { return d.source.y; })
-              .attr("x2", function(d) { return d.target.x; })
-              .attr("y2", function(d) { return d.target.y; });
         });
 
     };
@@ -299,18 +314,17 @@ bluewave.NodeView = function(parent, config) {
   //**************************************************************************
   //** getRelationshipOnClick
   //**************************************************************************
-    var getRelationshipOnClick = function(clickedId, data, node){
+    var getRelationshipOnClick = async function(clickedId, data, node){
 
 
         var animate = false;
         var test = clickedId;
         var newData = data;
         var newNode = node;
-        var graph = fetch("graph/relationships?nodeType=" + clickedId)
-        .then(function(response) {
-            return response.json();
-        }).then(function(json) {
-            var relData = JSON.parse(JSON.stringify(json));
+        var response = await fetch("graph/relationships?nodeType=" + clickedId);
+        var linkJson = await response.json();
+
+            var relData = JSON.parse(JSON.stringify(linkJson));
             var relationshipArray = [];
             var counter = 0;
             var sources = relData.source;
@@ -342,7 +356,7 @@ bluewave.NodeView = function(parent, config) {
 //            simulation.force('link', d3.forceLink().links(relationshipArray));
 
 
-        });
+
     };
 
   //**************************************************************************
