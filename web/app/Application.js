@@ -546,23 +546,28 @@ bluewave.Application = function(parent, config) {
         var panels = carousel.getPanels();
         var panel = panels[panels.length-1];
 
-        var cls = eval(className);
-        if (cls){
-            var instance = new cls(div, config);
-            instance.className = className;
-            instance.onUpdate = function(){
-                var app = getVisibleApp();
-                if (app==instance) me.setTitle(instance.getTitle());
-            };
+        try{
+            var cls = eval(className);
+            if (cls){
+                var instance = new cls(div, config);
+                instance.className = className;
+                instance.onUpdate = function(){
+                    var app = getVisibleApp();
+                    if (app==instance) me.setTitle(instance.getTitle());
+                };
 
-            views.push({
-                app: instance,
-                div: panel.div
-            });
+                views.push({
+                    app: instance,
+                    div: panel.div
+                });
 
-            return instance;
+                return instance;
+            }
+            else{
+                console.log("Cannot instantiate " + className);
+            }
         }
-        else{
+        catch(e){
             console.log("Cannot instantiate " + className);
         }
     };
