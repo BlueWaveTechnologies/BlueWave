@@ -1,6 +1,6 @@
-MATCH (a)-[r]->(b), (a)<-[s]-(c)
+MATCH (a)-[r]-(b)
 WHERE any(label IN labels(a) WHERE label = "{packLabel}")
-unwind labels(b) as labelsbrow
-unwind labels(c) as labelscrow
-WITH collect(distinct(labelscrow)) as cc, collect(distinct(labelsbrow)) as bb
-RETURN {source: cc, target: bb}
+unwind labels(startNode(r)) as sources
+unwind labels(endNode(r)) as targets
+WITH collect(distinct(sources)) as sourceLabels, collect(distinct(targets)) as targetLabels
+return {source: sourceLabels, target: targetLabels}

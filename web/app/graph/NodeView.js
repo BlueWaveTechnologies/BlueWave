@@ -156,10 +156,10 @@ bluewave.NodeView = function(parent, config) {
             tooltip.hide();
         })
         .on("click", function(d){
-        var nWidth = 960;
-        var nHeight = 500;
 
         var clickedId = d.node;
+        var nWidth = 960;
+        var nHeight = 500;
 
         var radius = Math.min(nWidth, nHeight)/2;
         var anglePerNode = Math.PI*2/ data.length;
@@ -169,38 +169,30 @@ bluewave.NodeView = function(parent, config) {
          data[i].fx = (radius-nodeSize) * Math.cos(anglePerNode*i) + nWidth;
          data[i].fy = (radius-nodeSize) * Math.sin(anglePerNode*i) + nHeight;
          }
+
          d.fx = nWidth;
          d.fy = nHeight;
 
-
-         links = getRelationshipOnClick(clickedId, data, node);
-         links.then(testLinks => {
+         links = getRelationshipOnClick(clickedId, data);
+         links.then(relatedLinks => {
             svg.selectAll("line").remove();
+            simulation.force("link").links(relatedLinks);
 
-
-             simulation.force("link").links(testLinks);
-
-
-             var link = svg.append("g")
-             .attr("class", config.style.edge)
-             .selectAll("line")
-             .data(testLinks)
-             .enter()
-             .append("line")
-             .attr("x1", function(d) { return d.source.x; })
-             .attr("y1", function(d) { return d.source.y; })
-             .attr("x2", function(d) { return d.target.x; })
-             .attr("y2", function(d) { return d.target.y; })
-             .attr("stroke-width", function(d) {
-                 return Math.sqrt(4);
-             });
-
-             simulation.alpha(1).restart();
-
-
+            var link = svg.append("g")
+            .attr("class", config.style.edge)
+            .selectAll("line")
+            .data(relatedLinks)
+            .enter()
+            .append("line")
+            .attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; })
+            .attr("stroke-width", function(d) {
+                return Math.sqrt(4); //change based on weight in future
+            });
+            simulation.alpha(1).restart();
          })
-
-
         })
         .call(d3.drag() // call specific function when circle is dragged
             .on("start", function(d) {
@@ -230,40 +222,13 @@ bluewave.NodeView = function(parent, config) {
             .radius(function(d){ return (size(d[key])+3); })
             .iterations(1));
 
-
-//        var link;
-//
-//        if (links != null) {
-//            simulation.force("link").links(links);
-//            link = svg.append("g")
-//            .attr("class", config.style.edge)
-//            .selectAll("line")
-//            .data(links)
-//            .enter().append("line")
-//            .attr("x1", function(d) { return d.source.x; })
-//            .attr("y1", function(d) { return d.source.y; })
-//            .attr("x2", function(d) { return d.target.x; })
-//            .attr("y2", function(d) { return d.target.y; })
-//            .attr("stroke-width", function(d) {
-//                return Math.sqrt(d.value);
-//            });
-//        }
-
-
-
         // Apply these forces to the nodes and update their positions.
         // Once the force algorithm is happy with positions ('alpha' value is low enough), simulations will stop.
         simulation.nodes(data)
         .on("tick", function(d){
-//            link
-//              .attr("x1", function(d) { return d.source.x; })
-//              .attr("y1", function(d) { return d.source.y; })
-//              .attr("x2", function(d) { return d.target.x; })
-//              .attr("y2", function(d) { return d.target.y; });
             node
               .attr("cx", function(d){ return d.x; })
               .attr("cy", function(d){ return d.y; });
-
         });
 
     };
@@ -325,13 +290,11 @@ bluewave.NodeView = function(parent, config) {
   //**************************************************************************
   //** getRelationshipOnClick
   //**************************************************************************
-    var getRelationshipOnClick = async function(clickedId, data, node){
+    var getRelationshipOnClick = async function(clickedId, data){
 
 
         var animate = false;
         var test = clickedId;
-        var newData = data;
-        var newNode = node;
         var response = await fetch("graph/relationships?nodeType=" + clickedId);
         var linkJson = await response.json();
 
@@ -356,19 +319,7 @@ bluewave.NodeView = function(parent, config) {
                 link.target = targets[i];
                 relationshipArray[counter++] = link;
             }
-
-            newData.links = relationshipArray;
-
             return relationshipArray;
-
-
-//            svg.selectAll("newCircle")
-//            .data(newData);
-
-//            simulation.force('link', d3.forceLink().links(relationshipArray));
-
-
-
     };
 
   //**************************************************************************
