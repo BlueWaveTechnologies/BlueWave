@@ -82,6 +82,7 @@ public class GraphService extends WebService {
                     String query = bluewave.queries.Index.getQuery("Nodes_And_Counts", "cypher");
                     session = graph.getSession();
                     Result rs = session.run(query);
+                    int id = 0;
                     while (rs.hasNext()){
                         Record r = rs.next();
                         List labels = r.get(0).asList();
@@ -92,6 +93,7 @@ public class GraphService extends WebService {
                         json.set("node", label);
                         json.set("count", count);
                         json.set("relations", relations);
+                        json.set("id", label);
                         arr.add(json);
                     }
                     session.close();

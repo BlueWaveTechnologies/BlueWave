@@ -174,20 +174,31 @@ bluewave.NodeView = function(parent, config) {
 
 
          links = getRelationshipOnClick(clickedId, data, node);
+         links.then(testLinks => {
+            svg.selectAll("line").remove();
 
-         simulation.force("link").links(links);
-         var link = svg.append("g")
-         .attr("class", config.style.edge)
-         .selectAll("line")
-         .data(links)
-         .enter().append("line")
-         .attr("x1", function(d) { return d.source.x; })
-         .attr("y1", function(d) { return d.source.y; })
-         .attr("x2", function(d) { return d.target.x; })
-         .attr("y2", function(d) { return d.target.y; })
-         .attr("stroke-width", function(d) {
-             return Math.sqrt(d.value);
-         });
+
+             simulation.force("link").links(testLinks);
+
+
+             var link = svg.append("g")
+             .attr("class", config.style.edge)
+             .selectAll("line")
+             .data(testLinks)
+             .enter()
+             .append("line")
+             .attr("x1", function(d) { return d.source.x; })
+             .attr("y1", function(d) { return d.source.y; })
+             .attr("x2", function(d) { return d.target.x; })
+             .attr("y2", function(d) { return d.target.y; })
+             .attr("stroke-width", function(d) {
+                 return Math.sqrt(4);
+             });
+
+             simulation.alpha(1).restart();
+
+
+         })
 
 
         })
@@ -212,7 +223,7 @@ bluewave.NodeView = function(parent, config) {
         // Features of the forces applied to the nodes:
         var simulation = d3.forceSimulation()
         .force("center", d3.forceCenter(width / 2, height / 2)) //Attraction to the center of the svg area
-        .force("link", d3.forceLink())
+        .force("link", d3.forceLink().id(function(d) { return d.id}))
         .force("charge", d3.forceManyBody().strength(.1)) // Nodes are attracted one each other of value is > 0
         .force("collide", d3.forceCollide() // Force that avoids circle overlapping
             .strength(.2)
@@ -333,6 +344,7 @@ bluewave.NodeView = function(parent, config) {
             for(i=0; i < sources.length; i++) {
                 var link={};
                 link.source = sources[i];
+
                 link.target = test;
                 relationshipArray[counter++] = link;
 
