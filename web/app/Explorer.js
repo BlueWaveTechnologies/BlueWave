@@ -1450,7 +1450,7 @@ bluewave.Explorer = function(parent, config) {
                         grid.load(rows, 1);
                     }
                 }
-                else if (node.type==="pieChart"){
+                else{
 
                     var data = [];
                     for (var key in node.inputs) {
@@ -1460,17 +1460,13 @@ bluewave.Explorer = function(parent, config) {
                         }
                     }
 
-                    var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
-                    pieChart.update(chartConfig, data[0]);
-                }
-                else{
-                    console.log(title, node.inputs);
-                    /*
-                        name: node.name,
-                        type: node.type,
-                        config: node.config,
-                        preview: node.preview
-                    */
+                    if (node.type==="pieChart"){
+                        var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
+                        pieChart.update(chartConfig, data);
+                    }
+                    else{
+                        console.log(node.type + " preview not implemented!");
+                    }
                 }
             }
         }
