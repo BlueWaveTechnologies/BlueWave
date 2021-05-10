@@ -1450,6 +1450,19 @@ bluewave.Explorer = function(parent, config) {
                         grid.load(rows, 1);
                     }
                 }
+                else if (node.type==="pieChart"){
+
+                    var data = [];
+                    for (var key in node.inputs) {
+                        if (node.inputs.hasOwnProperty(key)){
+                            var csv = node.inputs[key].csv;
+                            data.push(d3.csvParse(csv));
+                        }
+                    }
+
+                    var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
+                    pieChart.update(chartConfig, data[0]);
+                }
                 else{
                     console.log(title, node.inputs);
                     /*
