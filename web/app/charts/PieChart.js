@@ -65,6 +65,7 @@ bluewave.charts.PieChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
 
+        if (isArray(data)) data = data[0];
 
         let pieData = data.reduce((acc,curVal)=>{
             acc[curVal[chartConfig.pieKey]] = curVal[chartConfig.pieValue];
@@ -197,6 +198,7 @@ bluewave.charts.PieChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
+    var isArray = javaxt.dhtml.utils.isArray;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();
