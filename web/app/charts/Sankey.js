@@ -262,7 +262,24 @@ bluewave.charts.Sankey = function(parent, config) {
         button.hospital.enable();
     };
 
-
+  //**************************************************************************
+  //** getPreviousNodeValue
+  //**************************************************************************
+    var getPreviousNodeValue = function(previousNodeId){
+        var node = nodes[previousNodeId];
+        var inputs = node.inputs;
+        var quantity = 0;
+        for(var k in inputs) {
+            if(inputs.hasOwnProperty(k)) {
+                var v = quantities[k + "->" + previousNodeId];
+                quantity = quantity + v;
+            }
+        }
+        if(quantity == 0){
+            quantity = 1;
+        }
+        return quantity
+    }
 
   //**************************************************************************
   //** createDrawFlow
@@ -292,9 +309,9 @@ bluewave.charts.Sankey = function(parent, config) {
           //Update nodes
             var node = nodes[inputID];
             node.inputs[outputID] = nodes[outputID];
-
+            var value = getPreviousNodeValue(outputID);
           //Update quantities
-            quantities[outputID + "->" + inputID] = 1;
+            quantities[outputID + "->" + inputID] = value;
         });
 
 
