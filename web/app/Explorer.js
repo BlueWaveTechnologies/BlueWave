@@ -11,6 +11,7 @@ if(!bluewave) var bluewave={};
 bluewave.Explorer = function(parent, config) {
 
     var me = this;
+    var dashboardPanel, editPanel;
     var id, name, thumbnail;
     var toolbar;
     var tooltip, tooltipTimer, lastToolTipEvent;
@@ -38,27 +39,38 @@ bluewave.Explorer = function(parent, config) {
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
+        createToggleButton(div);
 
 
-      //Create canvas
-        var mainPanel = document.createElement("div");
-        mainPanel.className = "drawflow";
-        mainPanel.ondrop = drop;
-        mainPanel.ondragover = function(e){
+
+      //Create preview panel
+        dashboardPanel = document.createElement("div");
+        dashboardPanel.style.height = "100%";
+        div.appendChild(dashboardPanel);
+        addShowHide(dashboardPanel);
+        dashboardPanel.hide();
+
+
+      //Create editor
+        editPanel = document.createElement("div");
+        editPanel.className = "drawflow";
+        editPanel.ondrop = drop;
+        editPanel.ondragover = function(e){
             e.preventDefault();
         };
-        div.appendChild(mainPanel);
-        createDrawFlow(mainPanel);
+        div.appendChild(editPanel);
+        createDrawFlow(editPanel);
+        addShowHide(editPanel);
 
 
       //Add toolbar
-        createToolbar(mainPanel);
+        createToolbar(editPanel);
 
 
       //Add save button
         var btn = document.createElement("div");
         btn.className = "drawflow-save noselect";
-        mainPanel.appendChild(btn);
+        editPanel.appendChild(btn);
         btn.onclick = me.save;
 
 
@@ -73,6 +85,9 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
 
+      //Clear dashboard panel
+        dashboardPanel.innerHTML = "";
+
       //Reset class variables
         id = name = thumbnail = null;
         nodes = {};
@@ -81,9 +96,9 @@ bluewave.Explorer = function(parent, config) {
         drawflow.clear();
 
       //Reset toolbar buttons
-        for (var id in button) {
-            if (button.hasOwnProperty(id)){
-                button[id].disable();
+        for (var buttonName in button) {
+            if (button.hasOwnProperty(buttonName)){
+                button[buttonName].disable();
             }
         }
     };
@@ -122,18 +137,18 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update nodes
-        for (var id in dashboard.info.nodes) {
-            if (dashboard.info.nodes.hasOwnProperty(id)){
+        for (var nodeID in dashboard.info.nodes) {
+            if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
               //Get node (dom object)
-                var drawflowNode = drawflow.getNodeFromId(id);
+                var drawflowNode = drawflow.getNodeFromId(nodeID);
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
 
 
               //Add props to node
-                var props = dashboard.info.nodes[id];
+                var props = dashboard.info.nodes[nodeID];
                 for (var key in props) {
                     if (props.hasOwnProperty(key)){
                         var val = props[key];
@@ -156,13 +171,19 @@ bluewave.Explorer = function(parent, config) {
                 node.inputs = {};
                 for (var key in drawflowNode.inputs) {
                     if (drawflowNode.inputs.hasOwnProperty(key)){
-                        //node.inputs[outputID] = inputNode;
+                        var connections = drawflowNode.inputs[key].connections;
+                        for (var i in connections){
+                            var connection = connections[i];
+                            var inputID = connection.node;
+                            var inputNode = nodes[inputID];
+                            node.inputs[inputID] = inputNode;
+                        }
                     }
                 }
 
 
               //Update nodes variable
-                nodes[id] = node;
+                nodes[nodeID] = node;
 
 
               //Special case for data nodes
@@ -185,6 +206,17 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         }
+
+
+
+      //Fill in any missing node inputs
+        for (var nodeID in nodes){
+            var node = nodes[nodeID];
+            for (var inputID in node.inputs){
+                var inputNode = node.inputs[inputID];
+                if (!inputNode) node.inputs[inputID] = nodes[inputID];
+            }
+        }
     };
 
 
@@ -201,7 +233,7 @@ bluewave.Explorer = function(parent, config) {
                 id: id,
                 name: name,
                 className: name,
-                thumbnail: thumbnail,
+                //thumbnail: thumbnail,
                 info: {
                     layout: drawflow.export().drawflow.Home.data,
                     nodes: {}
@@ -225,7 +257,20 @@ bluewave.Explorer = function(parent, config) {
             post("dashboard", JSON.stringify(dashboard),{
                 success: function(text) {
                     id = parseInt(text);
-                    waitmask.hide();
+                    if (thumbnail){
+                        saveThumbnail(id, function(request){
+                            waitmask.hide();
+                            if (request.status===200){
+
+                            }
+                            else{
+                                alert(request);
+                            }
+                        });
+                    }
+                    else{
+                        waitmask.hide();
+                    }
                 },
                 failure: function(request){
                     alert(request);
@@ -233,6 +278,34 @@ bluewave.Explorer = function(parent, config) {
                 }
             });
         });
+    };
+
+
+  //**************************************************************************
+  //** saveThumbnail
+  //**************************************************************************
+    var saveThumbnail = function(id, callback){
+
+      //Convert base64 encoded string into a binary object
+        var data = thumbnail;
+        var type = data.substring(data.indexOf(":")+1, data.indexOf(";"));
+        data = data.substring(("data:" + type + ";base64,").length);
+        var blob = base64ToBlob(data, type);
+
+      //Create form data
+        var formData = new FormData();
+        formData.append("image", blob);
+        formData.set("id", id);
+
+      //Send form data to the dashboard service to save thumbnail
+        var request = new XMLHttpRequest();
+        request.open('POST', 'dashboard/thumbnail', true);
+        request.onreadystatechange = function(){
+            if (request.readyState === 4) {
+                if (callback) callback.apply(me, [request]);
+            }
+        };
+        request.send(formData);
     };
 
 
@@ -501,6 +574,8 @@ bluewave.Explorer = function(parent, config) {
 
                               //Update config
                                 this.config.query = query;
+                                if (grid) this.config.columns = grid.getConfig().columns;
+
 
                               //Update csv
                                 this.csv = null;
@@ -518,6 +593,7 @@ bluewave.Explorer = function(parent, config) {
                                             console.log(error);
                                         }
                                         else{
+                                            this.preview = canvas.toDataURL("image/png");
                                             createThumbnail(this, canvas);
                                         }
                                         dbView.hide();
@@ -724,8 +800,9 @@ bluewave.Explorer = function(parent, config) {
                         waitmask.show();
                         var el = chartEditor.getChart();
                         createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
                             createThumbnail(node, canvas);
-                            updateTitle(node);
+                            updateTitle(node, node.config.chartTitle);
                             win.close();
                             waitmask.hide();
                         }, this);
@@ -764,12 +841,11 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** updateTitle
   //**************************************************************************
-  /** Updates the Title of the Node based on what is in the chart config
+  /** Updates the title of a drawflow node
    */
-    var updateTitle = function(node) {
-        var chartTitle = chartEditor.getConfig().chartTitle;
-        if (chartTitle != null) {
-            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = chartTitle;
+    var updateTitle = function(node, title) {
+        if (title) {
+            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
         }
     };
 
@@ -783,7 +859,28 @@ bluewave.Explorer = function(parent, config) {
                 title: "Edit Sankey",
                 width: 1680,
                 height: 920,
-                resizable: true
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = sankeyEditor.getConfig();
+                    var node = sankeyEditor.getNode();
+                    var orgConfig = node.config;
+                    if (!orgConfig) orgConfig = {};
+                    if (isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        waitmask.show();
+                        var el = sankeyEditor.getChart();
+                        if (el.show) el.show();
+                        createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
+                    }
+                }
             });
 
 
@@ -798,6 +895,7 @@ bluewave.Explorer = function(parent, config) {
             };
         }
 
+        sankeyEditor.update(node.config, node);
         sankeyEditor.show();
     };
 
@@ -807,15 +905,40 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editLayout = function(node){
 
+      //Create layoutEditor as needed
         if (!layoutEditor){
             var win = createWindow({
                 title: "Edit Layout",
-                width: 1680,
-                height: 920,
-                resizable: true
+                width: 1425, //Up to 4 dashboard items at 250px width
+                height: 839,
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = layoutEditor.getConfig();
+                    var node = layoutEditor.getNode();
+                    var orgConfig = node.config;
+                    if (!orgConfig) orgConfig = {};
+                    if (isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        waitmask.show();
+                        var el = layoutEditor.getChart();
+                        if (el.show) el.show();
+                        createPreview(el, function(canvas){
+                            thumbnail = canvas.toDataURL("image/png");
+                            node.preview = thumbnail;
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
+                    }
+                }
             });
 
+
             layoutEditor = new bluewave.charts.Layout(win.getBody(), config);
+            layoutEditor.el.style.borderRadius = "0 0 5px 5px";
 
             layoutEditor.show = function(){
                 win.show();
@@ -827,14 +950,28 @@ bluewave.Explorer = function(parent, config) {
         }
 
 
-        var inputs = node.inputs;
-        for (var key in inputs) {
-            if (inputs.hasOwnProperty(key)){
+      //Add custom getNode() method to the layoutEditor to return current node
+        layoutEditor.getNode = function(){
+            return node;
+        };
 
+
+      //Generate list of inputs for the layoutEditor
+        var inputs = {};
+        for (var inputID in node.inputs) {
+            if (node.inputs.hasOwnProperty(inputID)){
+                var inputNode = node.inputs[inputID];
+                inputs[inputID] = {
+                    title: inputNode.config.chartTitle,
+                    image: inputNode.preview,
+                    type: inputNode.type
+                };
             }
         }
 
-        //layoutEditor.update(node.inputs);
+
+      //Update and show layoutEditor
+        layoutEditor.update(inputs, node.config);
         layoutEditor.show();
     };
 
@@ -918,7 +1055,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   /** Inserts a PNG image into a node
    */
-    var createThumbnail = function(node, canvas){
+    var createThumbnail = function(node, obj){
 
         var el = node.childNodes[1];
         el.innerHTML = "";
@@ -931,30 +1068,69 @@ bluewave.Explorer = function(parent, config) {
         div.style.height = "100%";
         el.appendChild(div);
         var rect = javaxt.dhtml.utils.getRect(div);
+        el.innerHTML = "";
         var padding = width-rect.width;
+        var maxWidth = width-padding;
+        var maxHeight = height-padding;
+        var width = 0;
+        var height = 0;
 
-
-
-        var base64image;
-        if (typeof canvas === "string"){
-            base64image = canvas;
-        }
-        else{ //instanceof HTMLCanvasElement?
-
-            var maxWidth = width-padding;
-            var maxHeight = height-padding;
-
-            resizeCanvas(canvas, maxWidth, maxHeight, true);
-            var type = "image/png";
-            base64image = canvas.toDataURL(type);
-
-            node.preview = base64image;
-        }
-
-        el.innerHTML = "<img class='noselect' src='" + base64image + "'/>";
-        el.childNodes[0].ondragstart = function(e){
-            e.preventDefault();
+        var setWidth = function(){
+            var ratio = maxWidth/width;
+            width = width*ratio;
+            height = height*ratio;
         };
+
+        var setHeight = function(){
+            var ratio = maxHeight/height;
+            width = width*ratio;
+            height = height*ratio;
+        };
+
+        var resize = function(canvas){
+            width = canvas.width;
+            height = canvas.height;
+
+            if (maxHeight<maxWidth){
+                setHeight();
+                if (width>maxWidth) setWidth();
+            }
+            else{
+                setWidth();
+                if (height>maxHeight) setHeight();
+            }
+
+
+            resizeCanvas(canvas, width, height, true);
+            var base64image = canvas.toDataURL("image/png");
+
+            var img = document.createElement('img');
+            img.className = "noselect";
+            img.onload = function() {
+                el.appendChild(this);
+            };
+            img.src = base64image;
+            img.ondragstart = function(e){
+                e.preventDefault();
+            };
+        };
+
+
+        if (typeof obj === "string"){ //base64 encoded image
+            var img = document.createElement('img');
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                canvas.width = this.width;
+                canvas.height = this.height;
+                var ctx = canvas.getContext("2d");
+                ctx.drawImage(this, 0, 0);
+                resize(canvas);
+            };
+            img.src = obj;
+        }
+        else{ //HTMLCanvasElement
+            resize(obj);
+        }
     };
 
 
@@ -963,7 +1139,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var getCSV = function(query, callback, scope){
 
-        var url = config.queryService + "job/";
+        var url = config.queryService;
         var payload = {
             query: query,
             format: "csv"
@@ -971,37 +1147,7 @@ bluewave.Explorer = function(parent, config) {
 
         post(url, JSON.stringify(payload), {
             success : function(text){
-
-              //Get jobID
-                var jobID = JSON.parse(text).job_id;
-
-
-              //Periodically check job status
-                var timer, interval=1000;
-                var checkStatus = function(){
-                    if (jobID){
-                        get(url + jobID, {
-                            success : function(text){
-                                if (text==="pending" || text==="running"){
-                                    timer = setTimeout(checkStatus, interval);
-                                }
-                                else{
-                                    clearTimeout(timer);
-                                    callback.apply(scope, [text]);
-                                }
-                            },
-                            failure: function(response){
-                                clearTimeout(timer);
-                                alert(response);
-                            }
-                        });
-                    }
-                    else{
-                        clearTimeout(timer);
-                    }
-                };
-                timer = setTimeout(checkStatus, interval);
-
+                callback.apply(scope, [text]);
             },
             failure: function(response){
                 alert(response);
@@ -1233,6 +1379,136 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** updateDashboard
+  //**************************************************************************
+    var updateDashboard = function(){
+
+
+      //Find layout node
+        var layoutNode;
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                if (node.type==="layout"){
+                    layoutNode = node;
+                    break;
+                }
+            }
+        };
+        if (!layoutNode) return;
+
+
+      //TODO: Check if layout is dirty
+        var isDirty = true;
+        if (!isDirty) return;
+        dashboardPanel.innerHTML = "";
+
+
+      //Render dashboard items
+        for (var key in layoutNode.config) {
+            if (layoutNode.config.hasOwnProperty(key)){
+                var rect = layoutNode.config[key];
+                var node = nodes[key];
+                var chartConfig = node.config;
+                if (!chartConfig) chartConfig = {};
+                var title = chartConfig.chartTitle;
+
+                var dashboardItem = createDashboardItem(dashboardPanel,{
+                    width: rect.w,
+                    height: rect.h,
+                    title: title,
+                    subtitle: ""
+                });
+
+                var div = dashboardItem.el;
+                div.style.position = "absolute";
+                div.style.top = rect.y + "px";
+                div.style.left = rect.x + "px";
+
+
+                if (node.type==="addData"){
+                    div.style.padding = "0px";
+
+                    var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
+                        columns: chartConfig.columns,
+                        style: config.style.table,
+                        url: config.queryService,
+                        payload: JSON.stringify({
+                            query: chartConfig.query,
+                            format: "csv"
+                        }),
+                        limit: 50,
+                        parseResponse: function(request){
+                            var rows = parseCSV(request.responseText);
+                            rows.shift(); //remove first row (csv header)
+                            return rows;
+                        }
+                    });
+
+
+                    if (node.csv){
+                        var rows = parseCSV(node.csv);
+                        rows.shift(); //remove first row (csv header)
+                        grid.load(rows, 1);
+                    }
+                }
+                else{
+
+                    var data = [];
+                    for (var key in node.inputs) {
+                        if (node.inputs.hasOwnProperty(key)){
+                            var csv = node.inputs[key].csv;
+                            data.push(d3.csvParse(csv));
+                        }
+                    }
+
+                    if (node.type==="pieChart"){
+                        var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
+                        pieChart.update(chartConfig, data);
+                    }
+                    else{
+                        console.log(node.type + " preview not implemented!");
+                    }
+                }
+            }
+        }
+
+    };
+
+
+  //**************************************************************************
+  //** createToggleButton
+  //**************************************************************************
+    var createToggleButton = function(parent){
+
+        var div = document.createElement("div");
+        div.style.position = "absolute";
+        div.style.top = "20px";
+        div.style.right = "20px";
+        div.style.zIndex = 2;
+        parent.appendChild(div);
+
+
+        var options = ["Edit","Preview"];
+        bluewave.utils.createToggleButton(div, {
+            options: options,
+            defaultValue: options[0],
+            onChange: function(val){
+                if (val==="Edit"){
+                    dashboardPanel.hide();
+                    editPanel.show();
+                }
+                else{
+                    editPanel.hide();
+                    dashboardPanel.show();
+                    updateDashboard();
+                }
+            }
+        });
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
@@ -1240,6 +1516,9 @@ bluewave.Explorer = function(parent, config) {
     var isDirty = javaxt.dhtml.utils.isDirty;
     var setStyle = javaxt.dhtml.utils.setStyle;
     var resizeCanvas = bluewave.utils.resizeCanvas;
+    var base64ToBlob = bluewave.utils.base64ToBlob;
+    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var parseCSV = bluewave.utils.parseCSV;
     var warn = bluewave.utils.warn;
     var post = javaxt.dhtml.utils.post;
     var get = bluewave.utils.get;
