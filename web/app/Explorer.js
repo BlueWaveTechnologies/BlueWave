@@ -11,6 +11,7 @@ if(!bluewave) var bluewave={};
 bluewave.Explorer = function(parent, config) {
 
     var me = this;
+    var dashboardPanel, editPanel;
     var id, name, thumbnail;
     var toolbar;
     var tooltip, tooltipTimer, lastToolTipEvent;
@@ -38,27 +39,38 @@ bluewave.Explorer = function(parent, config) {
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
+        createToggleButton(div);
 
 
-      //Create canvas
-        var mainPanel = document.createElement("div");
-        mainPanel.className = "drawflow";
-        mainPanel.ondrop = drop;
-        mainPanel.ondragover = function(e){
+
+      //Create preview panel
+        dashboardPanel = document.createElement("div");
+        dashboardPanel.style.height = "100%";
+        div.appendChild(dashboardPanel);
+        addShowHide(dashboardPanel);
+        dashboardPanel.hide();
+
+
+      //Create editor
+        editPanel = document.createElement("div");
+        editPanel.className = "drawflow";
+        editPanel.ondrop = drop;
+        editPanel.ondragover = function(e){
             e.preventDefault();
         };
-        div.appendChild(mainPanel);
-        createDrawFlow(mainPanel);
+        div.appendChild(editPanel);
+        createDrawFlow(editPanel);
+        addShowHide(editPanel);
 
 
       //Add toolbar
-        createToolbar(mainPanel);
+        createToolbar(editPanel);
 
 
       //Add save button
         var btn = document.createElement("div");
         btn.className = "drawflow-save noselect";
-        mainPanel.appendChild(btn);
+        editPanel.appendChild(btn);
         btn.onclick = me.save;
 
 
@@ -72,6 +84,9 @@ bluewave.Explorer = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+
+      //Clear dashboard panel
+        dashboardPanel.innerHTML = "";
 
       //Reset class variables
         id = name = thumbnail = null;
@@ -557,6 +572,8 @@ bluewave.Explorer = function(parent, config) {
 
                               //Update config
                                 this.config.query = query;
+                                if (grid) this.config.columns = grid.getConfig().columns;
+
 
                               //Update csv
                                 this.csv = null;
@@ -1120,7 +1137,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var getCSV = function(query, callback, scope){
 
-        var url = config.queryService + "job/";
+        var url = config.queryService;
         var payload = {
             query: query,
             format: "csv"
@@ -1128,37 +1145,7 @@ bluewave.Explorer = function(parent, config) {
 
         post(url, JSON.stringify(payload), {
             success : function(text){
-
-              //Get jobID
-                var jobID = JSON.parse(text).job_id;
-
-
-              //Periodically check job status
-                var timer, interval=1000;
-                var checkStatus = function(){
-                    if (jobID){
-                        get(url + jobID, {
-                            success : function(text){
-                                if (text==="pending" || text==="running"){
-                                    timer = setTimeout(checkStatus, interval);
-                                }
-                                else{
-                                    clearTimeout(timer);
-                                    callback.apply(scope, [text]);
-                                }
-                            },
-                            failure: function(response){
-                                clearTimeout(timer);
-                                alert(response);
-                            }
-                        });
-                    }
-                    else{
-                        clearTimeout(timer);
-                    }
-                };
-                timer = setTimeout(checkStatus, interval);
-
+                callback.apply(scope, [text]);
             },
             failure: function(response){
                 alert(response);
@@ -1390,6 +1377,127 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** updateDashboard
+  //**************************************************************************
+    var updateDashboard = function(){
+
+
+      //Find layout node
+        var layoutNode;
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                if (node.type==="layout"){
+                    layoutNode = node;
+                    break;
+                }
+            }
+        };
+        if (!layoutNode) return;
+
+
+      //TODO: Check if layout is dirty
+        var isDirty = true;
+        if (!isDirty) return;
+        dashboardPanel.innerHTML = "";
+
+
+      //Render dashboard items
+        for (var key in layoutNode.config) {
+            if (layoutNode.config.hasOwnProperty(key)){
+                var rect = layoutNode.config[key];
+                var node = nodes[key];
+                var chartConfig = node.config;
+                if (!chartConfig) chartConfig = {};
+                var title = chartConfig.chartTitle;
+
+                var dashboardItem = createDashboardItem(dashboardPanel,{
+                    width: rect.w,
+                    height: rect.h,
+                    title: title,
+                    subtitle: ""
+                });
+
+                var div = dashboardItem.el;
+                div.style.position = "absolute";
+                div.style.top = rect.y + "px";
+                div.style.left = rect.x + "px";
+
+
+                if (node.type==="addData"){
+                    div.style.padding = "0px";
+
+                    var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
+                        columns: chartConfig.columns,
+                        style: config.style.table,
+                        url: config.queryService,
+                        payload: JSON.stringify({
+                            query: chartConfig.query,
+                            format: "csv"
+                        }),
+                        limit: 50,
+                        parseResponse: function(request){
+                            var rows = parseCSV(request.responseText);
+                            rows.shift(); //remove first row (csv header)
+                            return rows;
+                        }
+                    });
+
+
+                    if (node.csv){
+                        var rows = parseCSV(node.csv);
+                        rows.shift(); //remove first row (csv header)
+                        grid.load(rows, 1);
+                    }
+                }
+                else{
+                    console.log(title, node.inputs);
+                    /*
+                        name: node.name,
+                        type: node.type,
+                        config: node.config,
+                        preview: node.preview
+                    */
+                }
+            }
+        }
+
+    };
+
+
+  //**************************************************************************
+  //** createToggleButton
+  //**************************************************************************
+    var createToggleButton = function(parent){
+
+        var div = document.createElement("div");
+        div.style.position = "absolute";
+        div.style.top = "20px";
+        div.style.right = "20px";
+        div.style.zIndex = 2;
+        parent.appendChild(div);
+
+
+        var options = ["Edit","Preview"];
+        bluewave.utils.createToggleButton(div, {
+            options: options,
+            defaultValue: options[0],
+            onChange: function(val){
+                if (val==="Edit"){
+                    dashboardPanel.hide();
+                    editPanel.show();
+                }
+                else{
+                    editPanel.hide();
+                    dashboardPanel.show();
+                    updateDashboard();
+                }
+            }
+        });
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
@@ -1398,6 +1506,8 @@ bluewave.Explorer = function(parent, config) {
     var setStyle = javaxt.dhtml.utils.setStyle;
     var resizeCanvas = bluewave.utils.resizeCanvas;
     var base64ToBlob = bluewave.utils.base64ToBlob;
+    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var parseCSV = bluewave.utils.parseCSV;
     var warn = bluewave.utils.warn;
     var post = javaxt.dhtml.utils.post;
     var get = bluewave.utils.get;

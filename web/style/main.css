@@ -702,7 +702,7 @@ li.tree-node:hover {
     background-color: #2ea44f;
     border-radius: 6px;
     position: absolute;
-    top: 20px;
+    bottom: 20px;
     right:  15px;
     box-shadow: 0 2px 6px 0px #b5b5b5;
     cursor: pointer;
