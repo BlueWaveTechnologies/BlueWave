@@ -330,6 +330,23 @@ li.tree-node:hover {
 /** Toolbar Icons
 /**************************************************************************/
 
+.toolbar-button-icon.fas {
+    color: #5a606d;
+    font-size: 16px;
+}
+
+.toolbar-button-icon.fas.fa-check-square {
+    color: green;
+}
+
+.toolbar-button-icon.fas.fa-trash {
+    color: #8c6c6c;
+}
+
+.toolbar-button-icon.fas.fa-copy {
+    color: #b59d71;
+}
+
 .toolbar-button-icon.fas.fa-plus-circle {
     color: #008000; /*green*/
 }
