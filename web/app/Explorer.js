@@ -11,16 +11,12 @@ if(!bluewave) var bluewave={};
 bluewave.Explorer = function(parent, config) {
 
     var me = this;
-    var dashboardPanel, editPanel;
-    var id, name, thumbnail;
-    var toolbar;
-    var tooltip, tooltipTimer, lastToolTipEvent;
+    var dashboardPanel, editPanel, toggleButton, mask, waitmask; //primary components
+    var id, name, thumbnail; //dashboard attributes
     var button = {};
-    var nodes = {};
-    var drawflow;
-    var dbView;
-    var chartEditor, sankeyEditor, layoutEditor, nameEditor;
-    var waitmask;
+    var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
+    var drawflow, nodes = {}; //drawflow
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor; //popup dialogs
 
 
   //**************************************************************************
@@ -39,8 +35,13 @@ bluewave.Explorer = function(parent, config) {
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
+
+      //Add toggle button
         createToggleButton(div);
 
+
+      //Add add mask
+        createMask(div);
 
 
       //Create preview panel
@@ -53,25 +54,10 @@ bluewave.Explorer = function(parent, config) {
 
       //Create editor
         editPanel = document.createElement("div");
-        editPanel.className = "drawflow";
-        editPanel.ondrop = drop;
-        editPanel.ondragover = function(e){
-            e.preventDefault();
-        };
-        div.appendChild(editPanel);
-        createDrawFlow(editPanel);
+        createEditPanel(editPanel);
         addShowHide(editPanel);
+        div.appendChild(editPanel);
 
-
-      //Add toolbar
-        createToolbar(editPanel);
-
-
-      //Add save button
-        var btn = document.createElement("div");
-        btn.className = "drawflow-save noselect";
-        editPanel.appendChild(btn);
-        btn.onclick = me.save;
 
 
         parent.appendChild(div);
@@ -107,8 +93,18 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(dashboard){
+    this.update = function(dashboard, readOnly){
         me.clear();
+
+
+        if (readOnly===true){
+            toggleButton.hide();
+            mask.show();
+        }
+        else{
+            toggleButton.show();
+            mask.hide();
+        }
 
 
       //Update class variables
@@ -136,7 +132,11 @@ bluewave.Explorer = function(parent, config) {
         });
 
 
+
+
       //Update nodes
+        var csvRequests = 0;
+        var hasLayout = false;
         for (var nodeID in dashboard.info.nodes) {
             if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
@@ -192,8 +192,10 @@ bluewave.Explorer = function(parent, config) {
 
                   //Update node with csv data
                     node.csv = null;
+                    csvRequests++;
                     getCSV(node.config.query, function(csv){
                         this.csv = csv;
+                        csvRequests--;
                     }, node);
 
 
@@ -203,6 +205,10 @@ bluewave.Explorer = function(parent, config) {
                             button[buttonName].enable();
                         }
                     }
+                }
+
+                if (node.type==="layout"){
+                    hasLayout = true;
                 }
             }
         }
@@ -216,6 +222,38 @@ bluewave.Explorer = function(parent, config) {
                 var inputNode = node.inputs[inputID];
                 if (!inputNode) node.inputs[inputID] = nodes[inputID];
             }
+        }
+
+
+        var onReady = function(){
+            if (readOnly && hasLayout){
+                toggleButton.setValue("Preview");
+            }
+            else{
+                toggleButton.setValue("Edit");
+                toggleButton.show();
+            }
+            mask.hide();
+        };
+
+
+        if (csvRequests>0){
+            var timer;
+
+            var checkRequests = function(){
+                if (csvRequests>0){
+                    timer = setTimeout(checkRequests, 100);
+                }
+                else{
+                    clearTimeout(timer);
+                    onReady.apply(me, []);
+                }
+            };
+
+            timer = setTimeout(checkRequests, 100);
+        }
+        else{
+            onReady.apply(me, []);
         }
     };
 
@@ -309,14 +347,38 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** createEditPanel
+  //**************************************************************************
+    var createEditPanel = function(parent){
 
-  //**************************************************************************
-  //** createToolbar
-  //**************************************************************************
-    var createToolbar = function(parent){
-        toolbar = document.createElement("div");
-        toolbar.className = "drawflow-toolbar";
-        parent.appendChild(toolbar);
+      //Create main table
+        var table = createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+
+
+      //Row 1
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.className = "panel-toolbar";
+        td.style.borderTop = "1px solid #cacaca";
+        tr.appendChild(td);
+        createToolbar(td);
+
+
+      //Row 2
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        tr.appendChild(td);
+
+
+      //Create drawflow
+        createDrawFlow(td);
+
 
 
       //Create tooltip
@@ -334,22 +396,71 @@ bluewave.Explorer = function(parent, config) {
 
 
 
-      //Create buttons
-        createButton("addData", "fas fa-database", "Data");
-        createButton("pieChart", "fas fa-chart-pie", "Pie Chart");
-        createButton("barChart", "fas fa-chart-bar", "Bar Chart");
-        createButton("lineChart", "fas fa-chart-line", "Line Chart");
-        createButton("map", "fas fa-map-marked-alt", "Map");
-        createButton("sankeyChart", "fas fa-project-diagram", "Sankey");
-        createButton("layout", "fas fa-border-all", "Layout");
+        parent.appendChild(table);
     };
+
+
+  //**************************************************************************
+  //** createToolbar
+  //**************************************************************************
+    var createToolbar = function(parent){
+        var toolbar = document.createElement('div');
+
+        var createButton = function(parent, btn){
+            var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
+            if (btn.style) btn.style = merge(btn.style, defaultStyle);
+            else btn.style = defaultStyle;
+            return bluewave.utils.createButton(parent, btn);
+        };
+
+      //Add button
+        var saveButton = createButton(toolbar, {
+            label: "Save",
+            icon: "fas fa-check-square"
+        });
+        saveButton.onClick = me.save;
+
+
+      //Edit button
+        var copyButton = createButton(toolbar, {
+            label: "Copy",
+            icon: "fas fa-copy"
+        });
+        copyButton.onClick = function(){
+
+        };
+
+
+      //Delete button
+        var deleteButton = createButton(toolbar, {
+            label: "Delete",
+            icon: "fas fa-trash"
+        });
+        deleteButton.onClick = function(){
+
+        };
+
+
+        parent.appendChild(toolbar);
+    };
+
 
 
   //**************************************************************************
   //** createDrawFlow
   //**************************************************************************
     var createDrawFlow = function(parent){
-        drawflow = new Drawflow(parent);
+
+        var div = document.createElement("div");
+        div.className = "drawflow";
+        div.ondrop = drop;
+        div.ondragover = function(e){
+            e.preventDefault();
+        };
+        parent.appendChild(div);
+
+
+        drawflow = new Drawflow(div);
         drawflow.reroute = true;
         drawflow.start();
         drawflow.on('connectionCreated', function(info) {
@@ -380,6 +491,20 @@ bluewave.Explorer = function(parent, config) {
         drawflow.on('nodeRemoved', function(nodeID) {
             delete nodes[nodeID+""];
         });
+
+
+
+      //Create menubar
+        var menubar = document.createElement("div");
+        menubar.className = "drawflow-toolbar";
+        div.appendChild(menubar);
+        createMenuButton("addData", "fas fa-database", "Data", menubar);
+        createMenuButton("pieChart", "fas fa-chart-pie", "Pie Chart", menubar);
+        createMenuButton("barChart", "fas fa-chart-bar", "Bar Chart", menubar);
+        createMenuButton("lineChart", "fas fa-chart-line", "Line Chart", menubar);
+        createMenuButton("map", "fas fa-map-marked-alt", "Map", menubar);
+        createMenuButton("sankeyChart", "fas fa-project-diagram", "Sankey", menubar);
+        createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
     };
 
 
@@ -1119,11 +1244,19 @@ bluewave.Explorer = function(parent, config) {
         if (typeof obj === "string"){ //base64 encoded image
             var img = document.createElement('img');
             img.onload = function() {
+                var img = this;
+                console.log(img.width, img.height);
+                if (img.width==0 || img.height==0){
+                    console.log(img.src);
+                    return;
+                }
+
+
                 var canvas = document.createElement('canvas');
-                canvas.width = this.width;
-                canvas.height = this.height;
+                canvas.width = img.width;
+                canvas.height = img.height;
                 var ctx = canvas.getContext("2d");
-                ctx.drawImage(this, 0, 0);
+                ctx.drawImage(img, 0, 0);
                 resize(canvas);
             };
             img.src = obj;
@@ -1157,13 +1290,13 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** createButton
+  //** createMenuButton
   //**************************************************************************
-    var createButton = function(nodeType, icon, title){
+    var createMenuButton = function(nodeType, icon, title, parent){
 
 
       //Create button
-        var btn = new javaxt.dhtml.Button(toolbar, {
+        var btn = new javaxt.dhtml.Button(parent, {
             display: "table",
             disabled: true,
             style: {
@@ -1483,14 +1616,14 @@ bluewave.Explorer = function(parent, config) {
 
         var div = document.createElement("div");
         div.style.position = "absolute";
-        div.style.top = "20px";
+        div.style.top = "60px";
         div.style.right = "20px";
         div.style.zIndex = 2;
         parent.appendChild(div);
 
 
         var options = ["Edit","Preview"];
-        bluewave.utils.createToggleButton(div, {
+        toggleButton = bluewave.utils.createToggleButton(div, {
             options: options,
             defaultValue: options[0],
             onChange: function(val){
@@ -1505,6 +1638,25 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         });
+        addShowHide(toggleButton);
+    };
+
+
+  //**************************************************************************
+  //** createMask
+  //**************************************************************************
+    var createMask = function(parent){
+        var div = document.createElement("div");
+        div.style.position = "absolute";
+        div.style.zIndex = 3;
+        div.style.top = "0px";
+        div.style.width = "100%";
+        div.style.height = "100%";
+        div.style.backgroundColor = "#f5f5f5"; //maybe put this in main.css?
+        addShowHide(div);
+        div.hide();
+        parent.appendChild(div);
+        mask = div;
     };
 
 
@@ -1512,6 +1664,8 @@ bluewave.Explorer = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var createTable = javaxt.dhtml.utils.createTable;
+    var createSpacer = bluewave.utils.createSpacer;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var isDirty = javaxt.dhtml.utils.isDirty;
     var setStyle = javaxt.dhtml.utils.setStyle;
