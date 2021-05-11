@@ -404,7 +404,7 @@ bluewave.Application = function(parent, config) {
                             success: function(dashboard){
                                 me.setTitle(dashboard.name);
                                 waitmask.hide();
-                                explorerPanel.update(dashboard);
+                                explorerPanel.update(dashboard, true);
                             },
                             failure: function(){
                                 waitmask.hide();
@@ -537,7 +537,7 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
   /** Used to add an app to the carousel and update the list of "views"
    *  @param className String used to represent a fully qualified class
-   *  name (e.g. "bluewave.fashboards.SupplyChain").
+   *  name (e.g. "bluewave.dashboards.SupplyChain").
    */
     var addPanel = function(className){
         var div = document.createElement('div');
