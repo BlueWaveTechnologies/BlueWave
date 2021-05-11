@@ -65,7 +65,7 @@ bluewave.charts.PieChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
 
-        if (isArray(data)) data = data[0];
+        //TODO: Make sure data is not an array of arrays
 
         let pieData = data.reduce((acc,curVal)=>{
             acc[curVal[chartConfig.pieKey]] = curVal[chartConfig.pieValue];
