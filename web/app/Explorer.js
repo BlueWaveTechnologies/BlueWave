@@ -93,6 +93,11 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
+  /** Used to render a dashboard
+   *  @param dashboard Json with dashboard info
+   *  @param readOnly Preferred dashboard state. If true, and a layout exists
+   *  then the edit view will be unavailable
+   */
     this.update = function(dashboard, readOnly){
         me.clear();
 
@@ -255,6 +260,28 @@ bluewave.Explorer = function(parent, config) {
         else{
             onReady.apply(me, []);
         }
+    };
+
+
+  //**************************************************************************
+  //** setReadOnly
+  //**************************************************************************
+    this.setReadOnly = function(readOnly){
+        if (readOnly===true){
+            //Not implemented
+        }
+        else{
+            toggleButton.setValue("Edit");
+            toggleButton.show();
+        }
+    };
+
+
+  //**************************************************************************
+  //** isReadOnly
+  //**************************************************************************
+    this.isReadOnly = function(){
+        return !toggleButton.isVisible();
     };
 
 
