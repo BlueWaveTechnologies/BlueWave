@@ -397,14 +397,13 @@ bluewave.Application = function(parent, config) {
                         dashboardPanel.hide();
                         backButton.hide();
                         nextButton.hide();
-                        if (!explorerPanel) explorerPanel = new bluewave.Explorer(body, config);
-                        explorerPanel.show();
+                        getExplorerPanel().show();
                         waitmask.show();
                         get("dashboard?id="+dashboard.id,{
                             success: function(dashboard){
-                                me.setTitle(dashboard.name);
                                 waitmask.hide();
                                 explorerPanel.update(dashboard, true);
+                                me.setTitle(explorerPanel.getTitle());
                             },
                             failure: function(){
                                 waitmask.hide();
@@ -674,6 +673,25 @@ bluewave.Application = function(parent, config) {
 
 
   //**************************************************************************
+  //** getExplorerPanel
+  //**************************************************************************
+    var getExplorerPanel = function(){
+        if (!explorerPanel){
+            explorerPanel = new bluewave.Explorer(body, config);
+            explorerPanel.onUpdate = function(){
+                me.setTitle(explorerPanel.getTitle());
+            };
+            explorerPanel.onDelete = function(){
+                explorerPanel.hide();
+                dashboardPanel.show();
+                raisePanel(bluewave.Homepage);
+            };
+        }
+        return explorerPanel;
+    };
+
+
+  //**************************************************************************
   //** showMenu
   //**************************************************************************
     var showMenu = function(menu, target){
@@ -716,8 +734,7 @@ bluewave.Application = function(parent, config) {
                 nextButton.hide();
                 if (adminPanel) adminPanel.hide();
                 me.setTitle(label);
-                if (!explorerPanel) explorerPanel = new bluewave.Explorer(body, config);
-                explorerPanel.show();
+                getExplorerPanel().show();
                 explorerPanel.update();
             }));
 
