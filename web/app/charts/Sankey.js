@@ -281,6 +281,42 @@ bluewave.charts.Sankey = function(parent, config) {
         return quantity
     }
 
+
+  //**************************************************************************
+  //** auditNodes
+  //**************************************************************************
+    var auditNodes = function(){
+        for (var key in nodes) {
+             var node = nodes[key];
+             var inputs = node.inputs;
+             var outputs = node.outputs;
+             var inputQuantity = 0;
+             var outputQuantity = 0;
+             for(var k in inputs) {
+                if(inputs.hasOwnProperty(k)) {
+                    var n = nodes[k];
+                    var v = quantities[k + "->" + key];
+                    inputQuantity = inputQuantity + v;
+                }
+
+            }
+            for(var k in outputs) {
+                if(outputs.hasOwnProperty(k)) {
+                    var n = nodes[k];
+                    var v = quantities[key + "->" + k];
+                    outputQuantity = outputQuantity + v;
+                }
+            }
+            if(node.type == "distributor" && inputQuantity != outputQuantity) {
+                node.style.color = "red";
+            } else {
+                node.style.color = "black";
+            }
+        }
+    }
+
+
+
   //**************************************************************************
   //** createDrawFlow
   //**************************************************************************
@@ -309,9 +345,12 @@ bluewave.charts.Sankey = function(parent, config) {
           //Update nodes
             var node = nodes[inputID];
             node.inputs[outputID] = nodes[outputID];
+            var nodeOut = nodes[outputID];
+            nodeOut.outputs[inputID] = nodes[inputID];
             var value = getPreviousNodeValue(outputID);
           //Update quantities
             quantities[outputID + "->" + inputID] = value;
+            auditNodes();
         });
 
 
@@ -355,6 +394,7 @@ bluewave.charts.Sankey = function(parent, config) {
                         var val = parseFloat(this.value);
                         div.innerHTML = val;
                         quantities[outputID + "->" + inputID] = val;
+                        auditNodes();
                     }
                 };
                 this.appendChild(input);
@@ -775,7 +815,6 @@ bluewave.charts.Sankey = function(parent, config) {
                 }
             }
         }
-
 
 
         svg.selectAll("*").remove();
