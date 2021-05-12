@@ -238,6 +238,13 @@ bluewave.Explorer = function(parent, config) {
                 toggleButton.setValue("Edit");
                 toggleButton.show();
             }
+
+            if (id){
+                button["save"].enable();
+                button["copy"].enable();
+                button["delete"].enable();
+            }
+
             mask.hide();
         };
 
@@ -260,6 +267,26 @@ bluewave.Explorer = function(parent, config) {
         else{
             onReady.apply(me, []);
         }
+    };
+
+
+  //**************************************************************************
+  //** onUpdate
+  //**************************************************************************
+    this.onUpdate = function(){};
+
+
+  //**************************************************************************
+  //** onDelete
+  //**************************************************************************
+    this.onDelete = function(){};
+
+
+  //**************************************************************************
+  //** getTitle
+  //**************************************************************************
+    this.getTitle = function(){
+        return name ? name : "Untitled";
     };
 
 
@@ -441,30 +468,52 @@ bluewave.Explorer = function(parent, config) {
         };
 
       //Add button
-        var saveButton = createButton(toolbar, {
+        button["save"] = createButton(toolbar, {
             label: "Save",
             icon: "fas fa-check-square"
         });
-        saveButton.onClick = me.save;
+        button["save"].onClick = me.save;
 
 
-      //Edit button
-        var copyButton = createButton(toolbar, {
+      //Copy button
+        button["copy"] = createButton(toolbar, {
             label: "Copy",
             icon: "fas fa-copy"
         });
-        copyButton.onClick = function(){
-
+        button["copy"].onClick = function(){
+            alert("Not implemented");
         };
 
 
       //Delete button
-        var deleteButton = createButton(toolbar, {
+        button["delete"] = createButton(toolbar, {
             label: "Delete",
             icon: "fas fa-trash"
         });
-        deleteButton.onClick = function(){
+        button["delete"].onClick = function(){
 
+            confirm("Are you sure you want to delete this dashboard?",{
+                leftButton: {label: "Yes", value: true},
+                rightButton: {label: "No", value: false},
+                callback: function(yes){
+                    if (yes){
+                        waitmask.show();
+                        del("dashboard/"+id, {
+                            success: function(){
+                                me.update();
+                                me.onDelete();
+                                waitmask.hide();
+                            },
+                            failure: function(request){
+                                alert(request);
+                                waitmask.hide();
+                            }
+                        });
+
+
+                    }
+                }
+            });
         };
 
 
@@ -1709,6 +1758,7 @@ bluewave.Explorer = function(parent, config) {
     var parseCSV = bluewave.utils.parseCSV;
     var warn = bluewave.utils.warn;
     var post = javaxt.dhtml.utils.post;
+    var del = javaxt.dhtml.utils.delete;
     var get = bluewave.utils.get;
 
 
