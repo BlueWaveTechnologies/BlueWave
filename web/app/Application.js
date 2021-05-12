@@ -665,6 +665,10 @@ bluewave.Application = function(parent, config) {
                 break;
             }
         }
+
+        if (explorerPanel && explorerPanel.isVisible()) return explorerPanel;
+        if (adminPanel && adminPanel.isVisible()) return adminPanel;
+
         return null;
     };
 
@@ -718,6 +722,11 @@ bluewave.Application = function(parent, config) {
             }));
 
 
+            div.appendChild(createMenuOption("Edit Dashboard", "edit", function(){
+                explorerPanel.setReadOnly(false);
+            }));
+
+
             div.appendChild(createMenuOption("Screenshot", "image", function(){
                 waitmask.show();
                 var delay = 1000;
@@ -768,16 +777,42 @@ bluewave.Application = function(parent, config) {
             mainMenu = div;
         }
 
-      //Update menu items as needed
-        var isHomepageVisible = (getVisibleApp() instanceof bluewave.Homepage);
+
+      //Update menu items
+        for (var i=0; i<mainMenu.childNodes.length; i++) mainMenu.childNodes[i].show();
+        var currApp = getVisibleApp();
+        var isHomepageVisible = (currApp instanceof bluewave.Homepage);
+        var isExplorerVisible = (currApp instanceof bluewave.Explorer);
+        var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
+
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
-            if (menuItem.label==="Dashboard Home" || menuItem.label==="Screenshot"){
-                if (isHomepageVisible){
+
+            if (menuItem.label==="Screenshot"){
+                if (isHomepageVisible || isExplorerVisible){
                     menuItem.hide();
                 }
-                else{
+            }
+
+            if (menuItem.label==="Dashboard Home" && isHomepageVisible){
+                menuItem.hide();
+            }
+
+            if (menuItem.label==="Edit Dashboard"){
+                if (isExplorerVisible && explorerPanel.isReadOnly()){
                     menuItem.show();
+                }
+                else{
+                    menuItem.hide();
+                }
+            }
+
+            if (isAdminVisible){
+                if (menuItem.label==="Dashboard Home"){
+                    menuItem.show();
+                }
+                else{
+                    menuItem.hide();
                 }
             }
         }
