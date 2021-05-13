@@ -281,7 +281,6 @@ bluewave.charts.Sankey = function(parent, config) {
         return quantity
     }
 
-
   //**************************************************************************
   //** auditNodes
   //**************************************************************************
@@ -313,8 +312,39 @@ bluewave.charts.Sankey = function(parent, config) {
                 node.style.color = "black";
             }
         }
+        auditLinkages();
     }
 
+  //**************************************************************************
+  //** auditLinkages
+  //**************************************************************************
+    var auditLinkages = function(){
+        var linkages = document.getElementsByClassName("connection");
+        for(var item of linkages) {
+            var classNames = item.classList;
+            var nodeList = [];
+            for(var name of classNames) {
+                if(name.includes("node")){
+                    nodeList.push(name);
+                }
+            }
+            var path = item.children[0];
+            checkLinkage(nodeList, path);
+        }
+    }
+
+  //**************************************************************************
+  //** checkLinkage
+  //**************************************************************************
+    var checkLinkage = function(nodeList, path){
+        nodeIn = nodes[nodeList[0].replace("node_in_node-", "")];
+        nodeOut = nodes[nodeList[1].replace("node_out_node-", "")];
+        if(nodeIn.style.color == "red" || nodeOut.style.color == "red"){
+            path.style.stroke = "red";
+        } else {
+            path.style.stroke = "#4ea9ff";
+        }
+    }
 
 
   //**************************************************************************
@@ -360,12 +390,14 @@ bluewave.charts.Sankey = function(parent, config) {
             var inputID = info.input_id+"";
             //console.log("Removed connection " + outputID + " to " + inputID);
             delete quantities[outputID + "->" + inputID];
+            auditNodes();
         });
 
 
       //Watch for node removals
         drawflow.on('nodeRemoved', function(nodeID) {
             delete nodes[nodeID+""];
+            auditNodes();
         });
 
 
