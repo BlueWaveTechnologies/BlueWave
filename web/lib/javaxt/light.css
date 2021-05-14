@@ -569,6 +569,10 @@ select:focus, textarea:focus, input:focus{
     background: rgba(23, 34, 42, 0.6)
 }
 
+.window-body {
+    padding: 7px;
+    vertical-align: top;
+}
 
 .alert-header { /* used in conjunction with window-header */
     border: 1px solid #c9af53;
@@ -579,6 +583,16 @@ select:focus, textarea:focus, input:focus{
     background-color: #ea985c;
 }
 
+.alert-body, .confirm-body {
+    padding: 10px 10px 15px 15px;
+    line-height: 18px;
+}
+
+.button-div {
+    padding: 0 12px 12px 12px;
+    text-align: right;
+    position: relative;
+}
 
 
 /**************************************************************************/
