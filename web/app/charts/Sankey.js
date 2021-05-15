@@ -30,6 +30,8 @@ bluewave.charts.Sankey = function(parent, config) {
     var nodeEditor;
     var svg, sankey;
     var currNode; //drawflow node from Explorer
+    var currModule;
+    var toggleButton;
 
 
   //**************************************************************************
@@ -84,6 +86,7 @@ bluewave.charts.Sankey = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         drawflow.clear();
+        drawflow.removeModule(currModule);
         svg.selectAll("*").remove();
         currNode = null;
         nodes = {};
@@ -102,15 +105,24 @@ bluewave.charts.Sankey = function(parent, config) {
         if (!sankeyConfig) sankeyConfig = {};
 
 
+        toggleButton.setValue("Edit");
+
+
+      //Set module
+        currModule = "sankey_" + new Date().getTime();
+        drawflow.addModule(currModule);
+        drawflow.changeModule(currModule);
+
+
       //Import layout
         if (sankeyConfig.layout){
-            drawflow.import({
-                drawflow: {
-                    Home: {
-                        data: sankeyConfig.layout
-                    }
-                }
-            });
+            var data = {
+                drawflow: {}
+            };
+            data.drawflow[currModule] = {
+                data : sankeyConfig.layout
+            };
+            drawflow.import(data);
         }
 
 
@@ -173,6 +185,32 @@ bluewave.charts.Sankey = function(parent, config) {
             }
         }
 
+
+
+      //Update paths and quantities
+        var connections = editPanel.getElementsByTagName("svg");
+        for (var i=0; i<connections.length; i++){
+            var connection = connections[i];
+            var classes = connection.className;
+            if (classes.baseVal) classes = classes.baseVal;
+            var inputID, outputID;
+            var arr = classes.split(" ");
+            for (var j=0; j<arr.length; j++){
+                var str = arr[j].trim();
+                var idx = str.indexOf("node_in_node");
+                if (idx===0) outputID = str.substring("node_in_node".length+1);
+                var idx = str.indexOf("node_out_node");
+                if (idx===0) inputID = str.substring("node_out_node".length+1);
+            }
+
+            var key = inputID + "->" + outputID;
+            var link = sankeyConfig.links[key];
+            quantities[key] = link.quantity;
+
+
+          //Update paths since they don't import correctly
+            connection.getElementsByTagName("path")[0].setAttribute("d", link.path);
+        }
     };
 
 
@@ -180,13 +218,16 @@ bluewave.charts.Sankey = function(parent, config) {
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
+
+      //Create basic config
         var sankeyConfig = {
-            layout: drawflow.export().drawflow.Home.data,
+            layout: drawflow.export().drawflow[currModule].data,
             nodes: {},
-            quantities: {}
+            links: {}
         };
 
 
+      //Update nodes
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
@@ -198,12 +239,30 @@ bluewave.charts.Sankey = function(parent, config) {
         };
 
 
-        for (var key in quantities) {
-            if (quantities.hasOwnProperty(key)){
-                var quantity = quantities[key];
-                sankeyConfig.quantities[key] = quantity;
+      //Update links
+        var connections = editPanel.getElementsByTagName("svg");
+        for (var i=0; i<connections.length; i++){
+            var connection = connections[i];
+            var classes = connection.className;
+            if (classes.baseVal) classes = classes.baseVal;
+            var inputID, outputID;
+            var arr = classes.split(" ");
+            for (var j=0; j<arr.length; j++){
+                var str = arr[j].trim();
+                var idx = str.indexOf("node_in_node_");
+                if (idx===0) outputID = str.substring("node_in_node_".length);
+                var idx = str.indexOf("node_out_node_");
+                if (idx===0) inputID = str.substring("node_out_node_".length);
             }
-        };
+            var path = connection.getElementsByTagName("path")[0];
+            if (path) path = path.getAttribute("d");
+            var key = inputID + "->" + outputID;
+
+            sankeyConfig.links[key] = {
+                path: path,
+                quantity: quantities[key]
+            };
+        }
 
 
         return sankeyConfig;
@@ -497,8 +556,11 @@ bluewave.charts.Sankey = function(parent, config) {
   //** createNode
   //**************************************************************************
     var createNode = function(node){
+
+      //Create content div for a drawflow node
+        var nodeID = new Date().getTime();
         var div = document.createElement("div");
-        div.id = "_"+new Date().getTime();
+        div.id = "drawflow_node_"+nodeID;
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
@@ -517,7 +579,8 @@ bluewave.charts.Sankey = function(parent, config) {
         div.appendChild(body);
 
 
-        var nodeID = drawflow.addNode(
+      //Create drawflow node
+        var tempID = drawflow.addNode(
             node.type,
             node.inputs,
             node.outputs,
@@ -528,12 +591,28 @@ bluewave.charts.Sankey = function(parent, config) {
             div.outerHTML
         );
 
+
+      //Get content div after it's been added to drawflow and add custom attributes
         div = document.getElementById(div.id);
         div.name = node.name;
         div.type = node.type;
         div.inputs = {};
         div.outputs = {};
         nodes[nodeID+""] = div;
+
+
+      //Update node id in the drawflow data
+        var data = drawflow.drawflow.drawflow[currModule].data;
+        var info = data[tempID];
+        info.id = nodeID;
+        data[nodeID+""] = info;
+        delete data[tempID];
+        var contentNode = div.parentNode;
+        var drawflowNode = contentNode.parentNode;
+        drawflowNode.id = "node_"+nodeID;
+
+
+      //Return content div
         return div;
     };
 
@@ -879,7 +958,7 @@ bluewave.charts.Sankey = function(parent, config) {
 
 
         var options = ["Edit","Preview"];
-        var toggle = bluewave.utils.createToggleButton(div, {
+        toggleButton = bluewave.utils.createToggleButton(div, {
             options: options,
             defaultValue: options[0],
             onChange: function(val){
