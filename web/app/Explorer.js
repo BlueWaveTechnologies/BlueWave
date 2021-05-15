@@ -675,6 +675,12 @@ bluewave.Explorer = function(parent, config) {
         i.className = icon;
 
 
+        button["save"].enable();
+        if (id){
+            button["copy"].enable();
+            button["delete"].enable();
+        }
+
 
       //Create node
         switch (nodeType) {
