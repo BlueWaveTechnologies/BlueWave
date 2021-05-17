@@ -1109,7 +1109,12 @@ bluewave.Explorer = function(parent, config) {
             };
         }
 
-        sankeyEditor.update(node.config, node);
+      //Add custom getNode() method to the layoutEditor to return current node
+        sankeyEditor.getNode = function(){
+            return node;
+        };
+
+        sankeyEditor.update(node.config);
         sankeyEditor.show();
     };
 
