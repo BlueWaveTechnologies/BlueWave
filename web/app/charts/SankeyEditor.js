@@ -348,7 +348,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         for (var key in nodes) {
              var node = nodes[key];
              var inputs = node.inputs;
-             var outputs = node.outputs;
+             var outputs = getOutputs(key);
              var inputQuantity = 0;
              var outputQuantity = 0;
              for(var k in inputs) {
@@ -359,20 +359,55 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
 
             }
-            for(var k in outputs) {
-                if(outputs.hasOwnProperty(k)) {
-                    var n = nodes[k];
-                    var v = quantities[key + "->" + k];
-                    outputQuantity = outputQuantity + v;
-                }
+            for(i = 0; i < outputs.length; i++) {
+                var k = outputs[i];
+                var n = nodes[k];
+                var v = quantities[key + "->" + k];
+                outputQuantity = outputQuantity + v;
             }
-            if(node.type == "distributor" && inputQuantity != outputQuantity) {
+            var data = drawflow.drawflow.drawflow[currModule].data;
+            var value = data[key];
+            if(checkInputsAndOutputs(value) && inputQuantity != outputQuantity) {
                 node.style.color = "red";
             } else {
                 node.style.color = "black";
             }
         }
         auditLinkages();
+    }
+
+  //**************************************************************************
+  //** getOutputs
+  //**************************************************************************
+    var getOutputs = function(value) {
+        var outputs = [];
+        for (var key in nodes) {
+            var n = nodes[key];
+            var inputs = n.inputs;
+            for(var k in inputs) {
+                if(value === k) {
+                    outputs.push(key);
+                }
+            }
+        }
+        return outputs;
+    }
+
+  //**************************************************************************
+  //** checkInputsAndOutputs
+  //**************************************************************************
+    var checkInputsAndOutputs = function (data) {
+            if(Object.keys(data.inputs).length === 0) {
+                console.log(data);
+                console.log("No Inputs");
+                return false;
+            }
+            if(Object.keys(data.outputs).length === 0) {
+                console.log(data);
+                console.log("No Outputs");
+                return false;
+            }
+        return true;
     }
 
   //**************************************************************************
@@ -439,8 +474,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
           //Update nodes
             var node = nodes[inputID];
             node.inputs[outputID] = nodes[outputID];
-            var nodeOut = nodes[outputID];
-            nodeOut.outputs[inputID] = nodes[inputID];
             var value = getPreviousNodeValue(outputID);
           //Update quantities
             quantities[outputID + "->" + inputID] = value;
