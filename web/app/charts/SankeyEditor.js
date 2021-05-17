@@ -397,12 +397,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** checkLinkage
   //**************************************************************************
     var checkLinkage = function(nodeList, path){
-        nodeIn = nodes[nodeList[0].replace("node_in_node-", "")];
-        nodeOut = nodes[nodeList[1].replace("node_out_node-", "")];
-        if(nodeIn.style.color == "red" || nodeOut.style.color == "red"){
-            path.style.stroke = "red";
-        } else {
-            path.style.stroke = "#4ea9ff";
+        nodeIn = nodes[nodeList[0].replace("node_in_node_", "")];
+        nodeOut = nodes[nodeList[1].replace("node_out_node_", "")];
+        if(typeof nodeIn !== 'undefined' || typeof nodeOut !== 'undefined'){
+            if(nodeIn.style.color == "red" || nodeOut.style.color == "red"){
+                path.style.stroke = "red";
+            } else {
+                path.style.stroke = "#4ea9ff";
+            }
         }
     }
 
