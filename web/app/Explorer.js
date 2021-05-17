@@ -1098,7 +1098,7 @@ bluewave.Explorer = function(parent, config) {
             });
 
 
-            sankeyEditor = new bluewave.charts.Sankey(win.getBody(), config);
+            sankeyEditor = new bluewave.charts.SankeyEditor(win.getBody(), config);
 
             sankeyEditor.show = function(){
                 win.show();
@@ -1678,6 +1678,40 @@ bluewave.Explorer = function(parent, config) {
                         rows.shift(); //remove first row (csv header)
                         grid.load(rows, 1);
                     }
+                }
+                else if (node.type==="sankeyChart"){
+                    var data = {
+                        nodes: [],
+                        links: []
+                    };
+
+                    var sankeyConfig = chartConfig;
+                    for (var nodeID in sankeyConfig.nodes) {
+                        if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
+                            var node = sankeyConfig.nodes[nodeID];
+                            data.nodes.push({
+                                name: node.name,
+                                group: node.type
+                            });
+                        }
+                    }
+
+                    for (var key in sankeyConfig.links) {
+                        if (sankeyConfig.links.hasOwnProperty(key)){
+                            var link = sankeyConfig.links[key];
+                            var idx = key.indexOf("->");
+                            var source = key.substring(0,idx);
+                            var target = key.substring(idx+2);
+                            data.links.push({
+                                source: sankeyConfig.nodes[source].name,
+                                target: sankeyConfig.nodes[target].name,
+                                value: link.quantity
+                            });
+                        }
+                    }
+
+                    var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,{});
+                    sankeyChart.update(data);
                 }
                 else{
 
