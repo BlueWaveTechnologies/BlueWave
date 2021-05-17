@@ -208,6 +208,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
           //Update svg paths (drawflow doesn't import correctly)
             connection.getElementsByTagName("path")[0].setAttribute("d", link.path);
+            auditLinkages();
         }
     };
 
@@ -398,13 +399,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var checkInputsAndOutputs = function (data) {
             if(Object.keys(data.inputs).length === 0) {
-                console.log(data);
-                console.log("No Inputs");
                 return false;
             }
             if(Object.keys(data.outputs).length === 0) {
-                console.log(data);
-                console.log("No Outputs");
                 return false;
             }
         return true;
@@ -415,6 +412,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var auditLinkages = function(){
         var linkages = editPanel.getElementsByClassName("connection");
+        console.log(linkages);
         for(var item of linkages) {
             var classNames = item.classList;
             var nodeList = [];
