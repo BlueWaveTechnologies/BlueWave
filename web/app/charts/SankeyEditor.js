@@ -379,7 +379,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** auditLinkages
   //**************************************************************************
     var auditLinkages = function(){
-        var linkages = document.getElementsByClassName("connection");
+        var linkages = editPanel.getElementsByClassName("connection");
         for(var item of linkages) {
             var classNames = item.classList;
             var nodeList = [];
@@ -397,8 +397,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** checkLinkage
   //**************************************************************************
     var checkLinkage = function(nodeList, path){
-        nodeIn = nodes[nodeList[0].replace("node_in_node_", "")];
-        nodeOut = nodes[nodeList[1].replace("node_out_node_", "")];
+        var inputID = nodeList[0].substring("node_in_node".length+1);
+        var outputID = nodeList[1].substring("node_out_node".length+1);
+        nodeIn = nodes[inputID];
+        nodeOut = nodes[outputID];
         if(typeof nodeIn !== 'undefined' || typeof nodeOut !== 'undefined'){
             if(nodeIn.style.color == "red" || nodeOut.style.color == "red"){
                 path.style.stroke = "red";
