@@ -2,33 +2,30 @@ if(!bluewave) var bluewave={};
 if(!bluewave.charts) bluewave.charts={};
 
 //******************************************************************************
-//**  Sankey
+//**  SankeyEditor
 //******************************************************************************
 /**
  *   Panel used to create Sankey charts
  *
  ******************************************************************************/
 
-bluewave.charts.Sankey = function(parent, config) {
+bluewave.charts.SankeyEditor = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        style: {
-
-        }
+        margin: { top: 10, right: 10, bottom: 10, left: 10 }
     };
 
-    var editPanel, previewPanel;
+    var editPanel, previewPanel, waitmask; //primary components
     var toolbar;
     var tooltip, tooltipTimer, lastToolTipEvent;
     var button = {};
     var nodes = {};
     var quantities = {};
     var drawflow, currModule;
-    var waitmask;
     var button = {};
     var nodeEditor;
-    var svg, sankey;
+    var sankeyChart;
     var toggleButton;
 
 
@@ -37,6 +34,7 @@ bluewave.charts.Sankey = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        config = merge(config, defaultConfig);
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
@@ -86,7 +84,7 @@ bluewave.charts.Sankey = function(parent, config) {
     this.clear = function(){
         drawflow.clear();
         drawflow.removeModule(currModule);
-        svg.selectAll("*").remove();
+        sankeyChart.clear();
         nodes = {};
         quantities = {};
     };
@@ -95,12 +93,13 @@ bluewave.charts.Sankey = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(sankeyConfig, node){
+    this.update = function(sankeyConfig){
         me.clear();
 
         if (!sankeyConfig) sankeyConfig = {};
 
 
+      //Update toggle button
         toggleButton.setValue("Edit");
 
 
@@ -241,6 +240,7 @@ bluewave.charts.Sankey = function(parent, config) {
                 var node = nodes[key];
                 sankeyConfig.nodes[key] = {
                     name: node.name,
+                    type: node.type,
                     notes: node.notes
                 };
             }
@@ -766,38 +766,19 @@ bluewave.charts.Sankey = function(parent, config) {
   //** createSankey
   //**************************************************************************
     var createSankey = function(parent){
-        var width = 1000;
-        var height = 642;
-        var margin = { top: 10, right: 10, bottom: 10, left: 10 };
 
+        var panel = createDashboardItem(parent,{
+            width: "1000px",
+            height: "644px",
+            title: "Untitled",
+            settings: false
+        });
 
-        var div = document.createElement("div");
+        var div = panel.el;
         div.className = "dashboard-item";
         div.style.float = "none";
-        parent.appendChild(div);
 
-
-        svg = d3
-        .select(div)
-        .append("svg")
-        .attr("width", width)
-        .attr("height", height)
-          .append("g")
-          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-
-      //Update width and height for the sankey
-        width = width - margin.left - margin.right,
-        height = height - margin.top - margin.bottom;
-
-        sankey = d3
-          .sankey()
-          .nodeId((d) => d.name)
-          .nodeWidth(20)
-          .nodePadding(20)
-          .iterations([6])
-          .size([width, height]);
-
+        sankeyChart = new bluewave.charts.SankeyChart(panel.innerDiv,{});
     };
 
 
@@ -841,108 +822,7 @@ bluewave.charts.Sankey = function(parent, config) {
         }
 
 
-
-        svg.selectAll("*").remove();
-
-        let graph = sankey(data);
-        var size = sankey.size();
-        var width = size[0];
-
-        var formatNumber = d3.format(",.0f"); // zero decimal places
-
-
-      //Add the nodes
-        var node = svg
-          .append("g")
-          .selectAll(".node")
-          .data(graph.nodes)
-          .enter()
-          .append("g")
-          .attr("class", "sankey-node");
-
-
-      //Add the rectangles for the nodes
-        node
-          .append("rect")
-          .attr("x", function (d) {
-            return d.x0;
-          })
-          .attr("y", function (d) {
-            return d.y0;
-          })
-          .attr("height", function (d) {
-            return d.y1 - d.y0;
-          })
-          .attr("width", sankey.nodeWidth())
-          .style("fill", function (d) {
-            return (d.color = getColor(d.name.replace(/ .*/, "")));
-          })
-          .style("stroke", function (d) {
-            return d3.rgb(d.color).darker(2);
-          })
-          .append("title")
-          .text(function (d) {
-            return d.name + "\n" + formatNumber(d.value);
-          });
-
-
-
-
-      //Add the links
-        var link = svg
-          .append("g")
-          .selectAll(".link")
-          .data(graph.links)
-          .enter()
-          .append("path")
-          .attr("class", "sankey-link")
-          .attr("d", d3.sankeyLinkHorizontal())
-          .attr("stroke-width", function (d) {
-            return d.width;
-          })
-          .style("stroke-opacity", function (d) {
-            return (d.opacity=0.3);
-          })
-          .style("stroke", function (d) {
-            return d.source.color;
-          })
-          .on('mouseover', function(d){
-            d3.select(this).style("stroke-opacity", 0.6);
-          })
-          .on('mouseout', function(d){
-            d3.select(this).style("stroke-opacity", d.opacity);
-          });
-
-
-
-      //Add link labels
-        link.append("title").text(function (d) {
-          return d.source.name + " → " + d.target.name + "\n" + formatNumber(d.value);
-        });
-
-
-
-      //Add node labels
-        node
-          .append("text")
-          .attr("x", function (d) {
-            return d.x0 - 6;
-          })
-          .attr("y", function (d) {
-            return (d.y1 + d.y0) / 2;
-          })
-          .attr("dy", "0.35em")
-          .attr("text-anchor", "end")
-          .text(function (d) {
-            return d.name;
-          })
-          .filter(function (d) {
-            return d.x0 < width / 2;
-          })
-          .attr("x", function (d) {
-            return d.x1 + 6;
-          })
-          .attr("text-anchor", "start");
+        sankeyChart.update(data);
     };
 
 
@@ -975,6 +855,8 @@ bluewave.charts.Sankey = function(parent, config) {
                 }
             }
         });
+
+        addShowHide(toggleButton);
     };
 
 
@@ -982,9 +864,8 @@ bluewave.charts.Sankey = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
-    var isDirty = javaxt.dhtml.utils.isDirty;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
+    var createDashboardItem = bluewave.utils.createDashboardItem;
 
     init();
 };
