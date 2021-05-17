@@ -24,13 +24,11 @@ bluewave.charts.Sankey = function(parent, config) {
     var button = {};
     var nodes = {};
     var quantities = {};
-    var drawflow;
+    var drawflow, currModule;
     var waitmask;
     var button = {};
     var nodeEditor;
     var svg, sankey;
-    var currNode; //drawflow node from Explorer
-    var currModule;
     var toggleButton;
 
 
@@ -55,6 +53,7 @@ bluewave.charts.Sankey = function(parent, config) {
       //Create preview panel
         previewPanel = document.createElement("div");
         previewPanel.style.height = "100%";
+        previewPanel.style.textAlign = "center";
         div.appendChild(previewPanel);
         addShowHide(previewPanel);
         createSankey(previewPanel);
@@ -88,7 +87,6 @@ bluewave.charts.Sankey = function(parent, config) {
         drawflow.clear();
         drawflow.removeModule(currModule);
         svg.selectAll("*").remove();
-        currNode = null;
         nodes = {};
         quantities = {};
     };
@@ -99,8 +97,6 @@ bluewave.charts.Sankey = function(parent, config) {
   //**************************************************************************
     this.update = function(sankeyConfig, node){
         me.clear();
-        currNode = node;
-        console.log(sankeyConfig);
 
         if (!sankeyConfig) sankeyConfig = {};
 
@@ -205,10 +201,13 @@ bluewave.charts.Sankey = function(parent, config) {
 
             var key = inputID + "->" + outputID;
             var link = sankeyConfig.links[key];
+
+
+          //Update quantities
             quantities[key] = link.quantity;
 
 
-          //Update paths since they don't import correctly
+          //Update svg paths (drawflow doesn't import correctly)
             connection.getElementsByTagName("path")[0].setAttribute("d", link.path);
         }
     };
@@ -225,6 +224,15 @@ bluewave.charts.Sankey = function(parent, config) {
             nodes: {},
             links: {}
         };
+
+
+      //Update layout (html in the layout is not synced with the dom)
+        for (var key in sankeyConfig.layout) {
+            if (sankeyConfig.layout.hasOwnProperty(key)){
+                var node = sankeyConfig.layout[key];
+                node.html = nodes[key].parentNode.innerHTML;
+            }
+        }
 
 
       //Update nodes
@@ -249,10 +257,10 @@ bluewave.charts.Sankey = function(parent, config) {
             var arr = classes.split(" ");
             for (var j=0; j<arr.length; j++){
                 var str = arr[j].trim();
-                var idx = str.indexOf("node_in_node_");
-                if (idx===0) outputID = str.substring("node_in_node_".length);
-                var idx = str.indexOf("node_out_node_");
-                if (idx===0) inputID = str.substring("node_out_node_".length);
+                var idx = str.indexOf("node_in_node");
+                if (idx===0) outputID = str.substring("node_in_node".length+1);
+                var idx = str.indexOf("node_out_node");
+                if (idx===0) inputID = str.substring("node_out_node".length+1);
             }
             var path = connection.getElementsByTagName("path")[0];
             if (path) path = path.getAttribute("d");
@@ -270,17 +278,10 @@ bluewave.charts.Sankey = function(parent, config) {
 
 
   //**************************************************************************
-  //** getNode
-  //**************************************************************************
-    this.getNode = function(){
-        return currNode;
-    };
-
-
-  //**************************************************************************
   //** getChart
   //**************************************************************************
     this.getChart = function(){
+        if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
     };
 
@@ -772,6 +773,7 @@ bluewave.charts.Sankey = function(parent, config) {
 
         var div = document.createElement("div");
         div.className = "dashboard-item";
+        div.style.float = "none";
         parent.appendChild(div);
 
 
