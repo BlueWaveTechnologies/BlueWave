@@ -24,8 +24,7 @@ bluewave.ChartEditor = function(parent, config) {
     var inputData = [];
     var svg;
     var previewArea;
-    var pieChart;
-    var plotArea;
+    var pieChart, lineChart, barChart;
     var mapArea;
     var mapLayer;
     var optionsDiv;
@@ -59,9 +58,6 @@ bluewave.ChartEditor = function(parent, config) {
         mapProjectionValue:null,
         mapType:null
     };
-    var xAxis;
-    var yAxis;
-    var axisWidth, axisHeight;
     var margin = {
         top: 15,
         right: 5,
@@ -212,7 +208,8 @@ bluewave.ChartEditor = function(parent, config) {
         optionsDiv.innerHTML = "";
 
         if (pieChart) pieChart.clear();
-        if (plotArea) plotArea.selectAll("*").remove();
+        if (lineChart) lineChart.clear();
+        if (barChart) barChart.clear();
         if (mapArea) mapArea.selectAll("*").remove();
         if (mapLayer) mapLayer.selectAll("circle").remove();
     };
@@ -454,27 +451,20 @@ bluewave.ChartEditor = function(parent, config) {
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
 
-        var plotHeight = height - margin.top - margin.bottom;
-        var plotWidth = width - margin.left - margin.right;
-
-        axisHeight = height - margin.top - margin.bottom;
-        axisWidth = width - margin.left - margin.right;
-
         svg = d3.select(previewArea).append("svg");
         svg.attr("width", width);
         svg.attr("height", height);
 
-        plotArea = svg.append("g");
-        plotArea
-            .attr("width", plotWidth)
-            .attr("height", plotHeight)
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + (margin.top) + ")"
-            );
-
 
         pieChart = new bluewave.charts.PieChart(svg, {
+            margin: margin
+        });
+
+        lineChart = new bluewave.charts.LineChart(svg, {
+            margin: margin
+        });
+
+        barChart = new bluewave.charts.BarChart(svg, {
             margin: margin
         });
 
@@ -593,106 +583,9 @@ bluewave.ChartEditor = function(parent, config) {
   //** createLinePreview
   //**************************************************************************
     var createLinePreview = function(){
-         // Setup:
-        // Check that axis exist and are populated
-        let xKey;
-        let yKey;
-        let xKey2;
-        let yKey2;
-        let group;
-
-        if(chartConfig.xAxis===null || chartConfig.yAxis===null){
-            return;
-        }else{
-            xKey = chartConfig.xAxis;
-            yKey = chartConfig.yAxis;
-            group = chartConfig.group;
-        }
-
-        if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-            xKey2 = chartConfig.xAxis2;
-            yKey2 = chartConfig.yAxis2;
-        }
-
-        var data = inputData[0];
-        var data2 = inputData[1];
-        var data1 = data;
-
-        if(data2!==null && data2!==undefined && xKey2 && yKey2){
-            data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-        }
-
-
-        // Remove previous data from chart
-        if (plotArea) plotArea.selectAll("*").remove();
-        let x;
-        let y;
-
-        if(group!==null&&group!==undefined){
-            let groupData = d3.nest()
-                    .key(function(d){return d[group];})
-                    .entries(data);
-            displayAxis(xKey,yKey,data);
-            x = this.x;
-            y = this.y;
-
-            plotArea
-                .selectAll(".line")
-                .data(groupData)
-                .enter()
-                .append("path")
-                .attr("fill", "none")
-                .attr("stroke", "steelblue")
-                .attr("stroke-width", 1.5)
-                .attr(
-                    "d",function(d){
-                    return d3
-                        .line()
-                        .x(function (d) {
-                            return x(d[xKey]);
-                        })
-                        .y(function (d) {
-                            return y(parseFloat(d[yKey]));
-                        })(d.values);
-                    }
-                );
-
-        }else{
-            let xType = typeOfAxisValue();
-
-            var sumData = d3.nest()
-                .key(function(d){return d[xKey];})
-                .rollup(function(d){
-                    return d3.sum(d,function(g){
-                        return g[yKey];
-                    })
-            }).entries(data);
-
-            displayAxis("key","value",sumData);
-            x = this.x;
-            y = this.y;
-            let keyType = typeOfAxisValue(sumData[0].key);
-
-            plotArea
-                .append("path")
-                .datum(sumData)
-                .attr("fill", "none")
-                .attr("stroke", "steelblue")
-                .attr("stroke-width", 1.5)
-                .attr(
-                    "d",d3.line()
-                    .x(function(d){
-                        if(keyType==="date"){
-                            return x(new Date(d.key));
-                        }else{
-                            return x(d.key);
-                        }
-                    })
-                    .y(function(d){
-                        return y(d["value"]);
-                        })
-                );
-        }
+        onRender(previewArea, function(){
+            lineChart.update(chartConfig, inputData);
+        });
     };
 
 
@@ -700,114 +593,9 @@ bluewave.ChartEditor = function(parent, config) {
   //** createBarPreview
   //**************************************************************************
     var createBarPreview = function(){
-        let xKey;
-        let yKey;
-        let xKey2;
-        let yKey2;
-        if(chartConfig.xAxis===null || chartConfig.yAxis===null){
-            return;
-        }else{
-            xKey = chartConfig.xAxis;
-            yKey = chartConfig.yAxis;
-        }
-
-        if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-            xKey2 = chartConfig.xAxis2;
-            yKey2 = chartConfig.yAxis2;
-        }
-
-        var data = inputData[0];
-        var data2 = inputData[1];
-        var data1 = data;
-
-        if(data2!==null && data2!==undefined && xKey2 && yKey2){
-            data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-        }
-
-        var sumData = d3.nest()
-            .key(function(d){return d[xKey];})
-            .rollup(function(d){
-                return d3.sum(d,function(g){
-                    return g[yKey];
-                });
-        }).entries(data);
-
-        if(plotArea) plotArea.selectAll("*").remove();
-
-        let height = parseInt(plotArea.attr("height"));
-        let width = parseInt(plotArea.attr("width"));
-
-        displayAxis("key","value",sumData);
-        let x = this.x;
-        let y = this.y;
-
-        if (y.bandwidth || x.bandwidth) {
-            plotArea
-                .selectAll("mybar")
-                .data(sumData)
-                .enter()
-                .append("rect")
-                .attr("x", function (d) {
-                    return x.bandwidth ? x(d["key"]) : 0;
-                })
-                .attr("y", function (d) {
-                    return y(d["value"]);
-                })
-                .attr("height", function (d) {
-
-
-                    return y.bandwidth
-                        ? y.bandwidth()
-                        : height - y(d["value"]);
-                })
-                .attr("width", function (d) {
-                    return x.bandwidth ? x.bandwidth() : x(d["key"]);
-                })
-                .attr("fill", "#69b3a2");
-        } else {
-            if (this.timeAxis === "x") {
-                plotArea
-                    .selectAll("mybar")
-                    .data(sumData)
-                    .enter()
-                    .append("rect")
-                    .attr("x", function (d) {
-                        return x(d["key"]) - width/data.length / 2;
-//                        return x(d[xKey]) - width/data.length / 2;
-                    })
-                    .attr("y", function (d) {
-                        return y(d["value"]);
-//                        return y(d[yKey]);
-                    })
-                    .attr("height", function (d) {
-                        return height - y(d["value"]);
-//                        return height - y(d[yKey]);
-                    })
-                    .attr("width", function (d) {
-                        return width/sumData.length-5;
-                    })
-                    .attr("fill", "#69b3a2");
-            } else if (this.timeAxis === "y") {
-                plotArea
-                    .selectAll("mybar")
-                    .data(data)
-                    .enter()
-                    .append("rect")
-                    .attr("x", function (d) {
-                        return 0;
-                    })
-                    .attr("y", function (d) {
-                        return y(d[yKey]) - height/data.length / 2;
-                    })
-                    .attr("height", function (d) {
-                        return height/data.length-5;
-                    })
-                    .attr("width", function (d) {
-                        return x(d[xKey]);
-                    })
-                    .attr("fill", "#69b3a2");
-            }
-        }
+        onRender(previewArea, function(){
+            barChart.update(chartConfig, inputData);
+        });
     };
 
 
@@ -967,160 +755,6 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** displayAxis
-  //**************************************************************************
-    var displayAxis = function(xKey,yKey,chartData){
-        let axisTemp = createAxisScale(xKey,'x',chartData);
-        this.x = axisTemp.scale;
-        this.xBand = axisTemp.band;
-
-        axisTemp = createAxisScale(yKey,'y',chartData);
-        this.y = axisTemp.scale;
-        this.yBand = axisTemp.band;
-
-
-        if (xAxis) xAxis.selectAll("*").remove();
-        if (yAxis) yAxis.selectAll("*").remove();
-
-        xAxis = plotArea
-            .append("g")
-            .attr("transform", "translate(0," + axisHeight + ")")
-            .call(d3.axisBottom(this.x))
-            .selectAll("text")
-            .attr("transform", "translate(-10,0)rotate(-45)")
-            .style("text-anchor", "end");
-
-        yAxis = plotArea
-            .append("g")
-            .call(d3.axisLeft(this.y));
-    };
-
-
-  //**************************************************************************
-  //** typeOfAxisValue
-  //**************************************************************************
-     var typeOfAxisValue = function(value) {
-        let dataType;
-
-        const validNumberRegex = /^[\+\-]?\d*\.?\d+(?:[Ee][\+\-]?\d+)?$/;
-        switch (typeof value) {
-            case "string":
-                if(value.match(validNumberRegex)){
-                    dataType =  "number";
-                }else if (Date.parse(value)){
-                    dataType =  "date";
-                }else{
-                    dataType = "string";
-                }
-                break;
-            case "number":
-                dataType = "number";
-                break;
-            case "object":
-                dataType = "date";
-                break;
-            default:
-                break;
-        }
-        return dataType;
-    };
-
-
-  //**************************************************************************
-  //** createAxisScale
-  //**************************************************************************
-    var createAxisScale = function(key,axisName,chartData){
-        let scale;
-        let band;
-        let type = typeOfAxisValue(chartData[0][key]);
-        let max = 0;
-        let timeRange;
-        let axisRange;
-        let axisRangePadded;
-        if(axisName === "x"){
-            axisRange = [0,axisWidth];
-            axisRangePadded = [10,axisWidth-10];
-        }else{
-            axisRange = [axisHeight,0];
-            axisRangePadded = [axisHeight-10,10];
-        }
-
-        switch (type) {
-            case "string":
-                scale = d3
-                .scaleBand()
-                .domain(
-                    chartData.map(function (d) {
-                        return d[key];
-                    })
-                )
-                .range(axisRange)
-                .padding(0.2);
-                break;
-            case "date":
-
-                timeRange = [new Date(chartData[0][key]),new Date(chartData[chartData.length-1][key])];
-                chartData.map((val) => {
-                    val[key] = new Date(val[key]);
-                    return val;
-                });
-
-                scale = d3
-                    .scaleTime()
-                    .domain(timeRange)
-                    .rangeRound(axisRangePadded);
-
-                band = d3
-                    .scaleBand()
-                    .domain(d3.timeDay.range(...scale.domain()))
-                    .rangeRound(axisRangePadded)
-                    .padding(0.2);
-
-                this.timeAxis = axisName;
-                break;
-            default:
-
-                chartData.forEach((val) => {
-                    let curVal = parseFloat(val[key]);
-                    if (curVal > max) {
-                        max = curVal;
-                    }
-                });
-
-                scale = d3
-                    .scaleLinear()
-                    .domain([0, max])
-                    .range(axisRange);
-                break;
-        }
-        return {
-            scale,
-            band
-        };
-    };
-
-
-  //**************************************************************************
-  //** mergeToAxis
-  //**************************************************************************
-    const mergeToAxis = (data1,data2,xKey1,xKey2,newXKey,yKey1,yKey2,newYKey)=>{
-        let mergedArray = [];
-        data1.forEach(val=>{
-          let updatedVal = {...val,[newXKey]:val[xKey1],[newYKey]:val[yKey1]};
-          mergedArray.push(updatedVal);
-        });
-        if(data2===null || data2 === undefined){
-          return mergedArray;
-        }
-        data2.forEach(val=>{
-          let updatedVal = {...val,[newXKey]:val[xKey2],[newYKey]:val[yKey2]}
-          mergedArray.push(updatedVal);
-        });
-        return mergedArray;
-    };
-
-
-  //**************************************************************************
   //** Fake Data for Testing
   //**************************************************************************
     let mapData = [
@@ -1152,7 +786,6 @@ bluewave.ChartEditor = function(parent, config) {
     var round = javaxt.dhtml.utils.round;
     var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();
 };
