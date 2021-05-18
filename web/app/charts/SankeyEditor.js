@@ -340,7 +340,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             quantity = 1;
         }
         return quantity
-    }
+    };
+
 
   //**************************************************************************
   //** auditNodes
@@ -375,7 +376,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         }
         auditLinkages();
-    }
+    };
+
 
   //**************************************************************************
   //** getOutputs
@@ -392,7 +394,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         }
         return outputs;
-    }
+    };
+
 
   //**************************************************************************
   //** checkInputsAndOutputs
@@ -405,14 +408,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 return false;
             }
         return true;
-    }
+    };
+
 
   //**************************************************************************
   //** auditLinkages
   //**************************************************************************
     var auditLinkages = function(){
         var linkages = editPanel.getElementsByClassName("connection");
-        console.log(linkages);
         for(var item of linkages) {
             var classNames = item.classList;
             var nodeList = [];
@@ -424,7 +427,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             var path = item.children[0];
             checkLinkage(nodeList, path);
         }
-    }
+    };
+
 
   //**************************************************************************
   //** checkLinkage
@@ -432,16 +436,17 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var checkLinkage = function(nodeList, path){
         var inputID = nodeList[0].substring("node_in_node".length+1);
         var outputID = nodeList[1].substring("node_out_node".length+1);
-        nodeIn = nodes[inputID];
-        nodeOut = nodes[outputID];
+        var nodeIn = nodes[inputID];
+        var nodeOut = nodes[outputID];
         if(typeof nodeIn !== 'undefined' || typeof nodeOut !== 'undefined'){
-            if(nodeIn.style.color == "red" || nodeOut.style.color == "red"){
+            if (nodeIn.style.color == "red" || nodeOut.style.color == "red"){
                 path.style.stroke = "red";
-            } else {
-                path.style.stroke = "#4ea9ff";
+            }
+            else {
+                path.style.stroke = "";
             }
         }
-    }
+    };
 
 
   //**************************************************************************
