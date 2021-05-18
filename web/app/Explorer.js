@@ -1339,12 +1339,6 @@ bluewave.Explorer = function(parent, config) {
             var img = document.createElement('img');
             img.onload = function() {
                 var img = this;
-                console.log(img.width, img.height);
-                if (img.width==0 || img.height==0){
-                    console.log(img.src);
-                    return;
-                }
-
 
                 var canvas = document.createElement('canvas');
                 canvas.width = img.width;
@@ -1636,6 +1630,7 @@ bluewave.Explorer = function(parent, config) {
             if (layoutNode.config.hasOwnProperty(key)){
                 var rect = layoutNode.config[key];
                 var node = nodes[key];
+                if (!node) continue;
                 var chartConfig = node.config;
                 if (!chartConfig) chartConfig = {};
                 var title = chartConfig.chartTitle;
@@ -1726,6 +1721,14 @@ bluewave.Explorer = function(parent, config) {
                     if (node.type==="pieChart"){
                         var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
                         pieChart.update(chartConfig, data);
+                    }
+                    else if (node.type==="barChart"){
+                        var barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
+                        barChart.update(chartConfig, data);
+                    }
+                    else if (node.type==="lineChart"){
+                        var lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
+                        lineChart.update(chartConfig, data);
                     }
                     else{
                         console.log(node.type + " preview not implemented!");
