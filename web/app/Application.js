@@ -397,14 +397,13 @@ bluewave.Application = function(parent, config) {
                         dashboardPanel.hide();
                         backButton.hide();
                         nextButton.hide();
-                        if (!explorerPanel) explorerPanel = new bluewave.Explorer(body, config);
-                        explorerPanel.show();
+                        getExplorerPanel().show();
                         waitmask.show();
                         get("dashboard?id="+dashboard.id,{
                             success: function(dashboard){
-                                me.setTitle(dashboard.name);
                                 waitmask.hide();
-                                explorerPanel.update(dashboard);
+                                explorerPanel.update(dashboard, true);
+                                me.setTitle(explorerPanel.getTitle());
                             },
                             failure: function(){
                                 waitmask.hide();
@@ -537,7 +536,7 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
   /** Used to add an app to the carousel and update the list of "views"
    *  @param className String used to represent a fully qualified class
-   *  name (e.g. "bluewave.fashboards.SupplyChain").
+   *  name (e.g. "bluewave.dashboards.SupplyChain").
    */
     var addPanel = function(className){
         var div = document.createElement('div');
@@ -665,7 +664,30 @@ bluewave.Application = function(parent, config) {
                 break;
             }
         }
+
+        if (explorerPanel && explorerPanel.isVisible()) return explorerPanel;
+        if (adminPanel && adminPanel.isVisible()) return adminPanel;
+
         return null;
+    };
+
+
+  //**************************************************************************
+  //** getExplorerPanel
+  //**************************************************************************
+    var getExplorerPanel = function(){
+        if (!explorerPanel){
+            explorerPanel = new bluewave.Explorer(body, config);
+            explorerPanel.onUpdate = function(){
+                me.setTitle(explorerPanel.getTitle());
+            };
+            explorerPanel.onDelete = function(){
+                explorerPanel.hide();
+                dashboardPanel.show();
+                raisePanel(bluewave.Homepage);
+            };
+        }
+        return explorerPanel;
     };
 
 
@@ -712,8 +734,13 @@ bluewave.Application = function(parent, config) {
                 nextButton.hide();
                 if (adminPanel) adminPanel.hide();
                 me.setTitle(label);
-                if (!explorerPanel) explorerPanel = new bluewave.Explorer(body, config);
-                explorerPanel.show();
+                getExplorerPanel().show();
+                explorerPanel.update();
+            }));
+
+
+            div.appendChild(createMenuOption("Edit Dashboard", "edit", function(){
+                explorerPanel.setReadOnly(false);
             }));
 
 
@@ -767,16 +794,42 @@ bluewave.Application = function(parent, config) {
             mainMenu = div;
         }
 
-      //Update menu items as needed
-        var isHomepageVisible = (getVisibleApp() instanceof bluewave.Homepage);
+
+      //Update menu items
+        for (var i=0; i<mainMenu.childNodes.length; i++) mainMenu.childNodes[i].show();
+        var currApp = getVisibleApp();
+        var isHomepageVisible = (currApp instanceof bluewave.Homepage);
+        var isExplorerVisible = (currApp instanceof bluewave.Explorer);
+        var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
+
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
-            if (menuItem.label==="Dashboard Home" || menuItem.label==="Screenshot"){
-                if (isHomepageVisible){
+
+            if (menuItem.label==="Screenshot"){
+                if (isHomepageVisible || isExplorerVisible){
                     menuItem.hide();
                 }
-                else{
+            }
+
+            if (menuItem.label==="Dashboard Home" && isHomepageVisible){
+                menuItem.hide();
+            }
+
+            if (menuItem.label==="Edit Dashboard"){
+                if (isExplorerVisible && explorerPanel.isReadOnly()){
                     menuItem.show();
+                }
+                else{
+                    menuItem.hide();
+                }
+            }
+
+            if (isAdminVisible){
+                if (menuItem.label==="Dashboard Home"){
+                    menuItem.show();
+                }
+                else{
+                    menuItem.hide();
                 }
             }
         }
