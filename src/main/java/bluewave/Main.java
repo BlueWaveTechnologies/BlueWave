@@ -5,12 +5,23 @@ import bluewave.web.Config;
 import bluewave.web.WebApp;
 
 import java.util.*;
+import java.net.InetSocketAddress;
+
 import javaxt.json.*;
 import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
+
 import org.neo4j.driver.*;
 
 
+//******************************************************************************
+//**  Main
+//******************************************************************************
+/**
+ *  Command line interface used to start the web server or to run specialized
+ *  functions (e.g. import, addUser, etc).
+ *
+ ******************************************************************************/
 
 public class Main {
 
@@ -28,7 +39,7 @@ public class Main {
         javaxt.io.File jarFile = new javaxt.io.File(jar.getFile());
 
 
-//      Get config file
+      //Get config file
         javaxt.io.File configFile = (args.containsKey("-config")) ?
             Config.getFile(args.get("-config"), jarFile) :
             new javaxt.io.File(jar.getFile().getParentFile(), "config.json");
@@ -65,7 +76,10 @@ public class Main {
             }
             else{
                 JSONObject webConfig = Config.get("webserver").toJSONObject();
-                new WebApp(webConfig).start();
+                ArrayList<InetSocketAddress> addresses = new ArrayList<>();
+                Integer port = webConfig.get("port").toInteger();
+                addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
+                new javaxt.http.Server(addresses, 250, new WebApp(webConfig)).start();
             }
         }
     }
