@@ -1,6 +1,5 @@
 package bluewave.web;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.*;
 
 import javaxt.express.*;
@@ -9,12 +8,22 @@ import javaxt.io.Jar;
 import javaxt.json.*;
 import static javaxt.utils.Console.*;
 
+import bluewave.utils.NotificationService;
+
+//******************************************************************************
+//**  WebApp
+//******************************************************************************
+/**
+ *   HttpServlet used to process http and websocket requests.
+ *
+ ******************************************************************************/
+
 public class WebApp extends HttpServlet {
 
     private javaxt.io.Directory web;
     private FileManager fileManager;
     private WebServices ws;
-    private ArrayList<InetSocketAddress> addresses;
+    private Logger logger;
     private String appName;
     private String appStyle;
 
@@ -63,6 +72,10 @@ public class WebApp extends HttpServlet {
         }
 
 
+      //Start the notification service
+        NotificationService.start();
+
+
       //Instantiate file manager
         fileManager = new FileManager(web);
 
@@ -73,12 +86,6 @@ public class WebApp extends HttpServlet {
 
       //Instantiate authenticator
         setAuthenticator(new Authenticator());
-
-
-      //Generate list of socket addresses to bind to
-        addresses = new ArrayList<>();
-        Integer port = config.get("port").toInteger();
-        addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
 
 
       //Get branding
@@ -96,18 +103,19 @@ public class WebApp extends HttpServlet {
         }
         if (appName==null) appName = "BlueWave";
         if (appStyle==null) appStyle = "";
-    }
 
 
-  //**************************************************************************
-  //** start
-  //**************************************************************************
-  /** Used to start the web server
-   */
-    public void start(){
-        int threads = 50;
-        javaxt.http.Server server = new javaxt.http.Server(addresses, threads, this);
-        server.start();
+      //Get logging info
+        if (config.has("logDir")){
+            String logDir = config.get("logDir").toString();
+            javaxt.io.Directory dir = new javaxt.io.Directory(logDir);
+            if (!dir.exists()) dir.create();
+            if (dir.exists()){
+                logger = new Logger(dir.toFile());
+                new Thread(logger).start();
+            }
+            else console.log("Invalid \"logDir\" defined in config file");
+        }
     }
 
 
@@ -132,6 +140,12 @@ public class WebApp extends HttpServlet {
 
       //Get credentials
         String[] credentials = request.getCredentials();
+
+
+      //Log the request
+        String requestHeaders = getRequestHeaders(request);
+        if (logger!=null) logger.log(requestHeaders);
+        NotificationService.notify("WebRequest", requestHeaders);
 
 
       //Generate response
@@ -222,6 +236,7 @@ public class WebApp extends HttpServlet {
         }
     }
 
+
   //**************************************************************************
   //** sendFile
   //**************************************************************************
@@ -253,5 +268,45 @@ public class WebApp extends HttpServlet {
 
 
         fileManager.sendFile(request, response);
+    }
+
+
+  //**************************************************************************
+  //** getRequestHeaders
+  //**************************************************************************
+  /** Used to convert http request headers and metadata into a string. Updates
+   *  the "Authorization" header to hide passwords.
+   */
+    private String getRequestHeaders(HttpServletRequest request) {
+
+        String clientIP = request.getRemoteAddr();
+        if (clientIP.startsWith("/") && clientIP.length()>1) clientIP = clientIP.substring(1);
+
+        StringBuilder str = new StringBuilder();
+        str.append("New Request From: " + clientIP + "\r\n");
+        str.append(request.getMethod() + ": " + request.getURL() + "\r\n");
+        str.append("TimeStamp: " + logger.getDate() + "\r\n");
+        str.append("\r\n");
+
+        java.util.Enumeration<String> headers = request.getHeaderNames();
+        while (headers.hasMoreElements()){
+            String key = headers.nextElement();
+            String val = request.getHeader(key);
+
+            if (key.equals("Authorization")){
+                java.security.Principal user = request.getUserPrincipal();
+                if (user!=null){
+                    val = "[" + request.getUserPrincipal().getName() + "]";
+                }
+            }
+
+            str.append(key);
+            str.append(": ");
+            str.append(val);
+            str.append("\r\n");
+        }
+        str.append("\r\n"); //extra carriage return for the logger
+
+        return str.toString();
     }
 }
