@@ -204,7 +204,7 @@ public class WebServices extends WebService {
         }
         else if (service.equals("graph")){
             ws = graphService;
-        }    
+        }
         else{
             serviceRequest = new ServiceRequest(request);
             ws = this;
@@ -327,20 +327,25 @@ public class WebServices extends WebService {
 
 
       //Create web socket
-        new WebSocketListener(request, response){
-            private Long id;
-            public void onConnect(){
-                id = webSocketID.incrementAndGet();
-                synchronized(listeners){
-                    listeners.put(id, this);
+        if (service.equals("report")){
+            reportService.createWebSocket(request, response);
+        }
+        else{
+            new WebSocketListener(request, response){
+                private Long id;
+                public void onConnect(){
+                    id = webSocketID.incrementAndGet();
+                    synchronized(listeners){
+                        listeners.put(id, this);
+                    }
                 }
-            }
-            public void onDisconnect(int statusCode, String reason){
-                synchronized(listeners){
-                    listeners.remove(id);
+                public void onDisconnect(int statusCode, String reason){
+                    synchronized(listeners){
+                        listeners.remove(id);
+                    }
                 }
-            }
-        };
+            };
+        }
     }
 
 
