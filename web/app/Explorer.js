@@ -1087,6 +1087,7 @@ bluewave.Explorer = function(parent, config) {
                         createPreview(el, function(canvas){
                             node.preview = canvas.toDataURL("image/png");
                             createThumbnail(node, canvas);
+                            updateTitle(node, node.config.chartTitle);
                             win.close();
                             waitmask.hide();
                         }, this);
@@ -1113,8 +1114,8 @@ bluewave.Explorer = function(parent, config) {
         sankeyEditor.getNode = function(){
             return node;
         };
-
-        sankeyEditor.update(node.config);
+        console.log(node.config);
+        sankeyEditor.update(node.config, node);
         sankeyEditor.show();
     };
 
