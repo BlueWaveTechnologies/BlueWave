@@ -839,6 +839,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             if (node.notes) form.setValue("notes", node.notes);
         }
 
+        var nameField = nodeEditor.form.findField("name");
+        if (nameField.resetColor) nameField.resetColor();
         nodeEditor.show();
     };
 
