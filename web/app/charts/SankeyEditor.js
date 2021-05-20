@@ -746,7 +746,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var editNode = function(node){
         if (!nodeEditor){
-
+            var currentNode;
             nodeEditor = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Node",
                 width: 400,
@@ -757,7 +757,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             });
 
 
-            var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
+            var form = nodeEditor.form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
                 style: config.style.form,
                 items: [
                     {
@@ -770,14 +770,45 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         label: "Notes",
                         type: "textarea"
                     }
-                ]
+                ],
+                 buttons: [
+                     {
+                         name: "Cancel",
+                         onclick: function(){
+                            cancel();
+                            nodeEditor.close();
+                         }
+                     },
+                     {
+                         name: "Submit",
+                         onclick: function(){
+                            var inputs = form.getData();
+                            var name = inputs.name;
+                            if (name) name = name.trim();
+                            if (name==null || name==="") {
+                                warn("Name is required", form.findField("name"));
+                                return;
+                            }
+                             waitmask.show();
+                             checkName(name, currentNode,  function(isValid){
+                                waitmask.hide();
+                                if (!isValid){
+                                    warn("Name is not unique", form.findField("name"));
+                                }else{
+                                    submit();
+                                }
+                             });
+                         }
+                     }
+                 ]
             });
 
-            nodeEditor.update = function(data){
+            nodeEditor.update = function(data, node){
                 form.clear();
                 if (!data) return;
                 if (data.name) form.setValue("name", data.name);
                 if (data.notes) form.setValue("notes", data.notes);
+                currentNode = node;
             };
             nodeEditor.getData = function(){
                 return form.getData();
@@ -788,8 +819,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         nodeEditor.update({
             name: node.name,
             notes: node.notes
-        });
-        nodeEditor.onClose = function(){
+        }, node);
+        var submit = function(){
+            nodeEditor.close();
             var data = nodeEditor.getData();
             node.name = data.name;
             node.notes = data.notes;
@@ -801,10 +833,35 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         };
 
+        var cancel = function(){
+            var form = nodeEditor.form;
+            if (node.name) form.setValue("name", node.name);
+            if (node.notes) form.setValue("notes", node.notes);
+        }
 
         nodeEditor.show();
     };
 
+  //**************************************************************************
+  //** checkName
+  //**************************************************************************
+    var checkName = function(name, currentNode, callback){
+       console.log(currentNode);
+       for (var key in nodes) {
+            var isValid = true;
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                var nodeName = node.name;
+                if(node !== currentNode){
+                    if(name.toLowerCase() === nodeName.toLowerCase()){
+                        isValid = false;
+                        break;
+                    }
+                }
+            }
+        }
+        callback.apply(me, [isValid]);
+    };
 
   //**************************************************************************
   //** createButton
@@ -1018,6 +1075,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createDashboardItem = bluewave.utils.createDashboardItem;
+    var warn = bluewave.utils.warn;
+
 
     init();
 };

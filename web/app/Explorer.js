@@ -1114,7 +1114,6 @@ bluewave.Explorer = function(parent, config) {
         sankeyEditor.getNode = function(){
             return node;
         };
-        console.log(node.config);
         sankeyEditor.update(node.config, node);
         sankeyEditor.show();
     };
