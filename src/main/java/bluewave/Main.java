@@ -1,7 +1,6 @@
 package bluewave;
 import bluewave.app.User;
 import bluewave.graph.Neo4J;
-import bluewave.web.Config;
 import bluewave.web.WebApp;
 
 import java.util.*;

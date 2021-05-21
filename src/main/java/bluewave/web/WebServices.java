@@ -1,4 +1,5 @@
 package bluewave.web;
+import bluewave.Config;
 import bluewave.web.services.ReportService;
 import bluewave.web.services.QueryService;
 import bluewave.web.services.DashboardService;

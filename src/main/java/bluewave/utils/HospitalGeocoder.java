@@ -1,5 +1,5 @@
 package bluewave.utils;
-import bluewave.web.Config;
+import bluewave.Config;
 
 //java includes
 import java.util.*;

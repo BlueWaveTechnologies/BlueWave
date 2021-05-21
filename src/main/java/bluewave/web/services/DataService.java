@@ -94,7 +94,7 @@ public class DataService extends WebService {
                 str = str.trim();
                 if (str.toUpperCase().startsWith("MATCH")){
                     sql = str;
-                    graph = bluewave.web.Config.getGraph();
+                    graph = bluewave.Config.getGraph();
                     break;
                 }
             }
