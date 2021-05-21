@@ -50,8 +50,12 @@ public class ReportService extends WebService {
         activeUsers = new ConcurrentHashMap<>();
         try{
             for (User user : User.find("active=", true)){
-                //console.log(user.getID());
-                //activeUsers.put(user.getID(), lastEvent);
+                JSONObject info = user.getInfo();
+                if (info!=null){
+                    Long lastEvent = info.get("lastEvent").toLong();
+                    if (lastEvent!=null) activeUsers.put(user.getID(), lastEvent);
+                    if (lastEvent!=null) console.log(user.getID(), lastEvent);
+                }
             }
         }
         catch(Exception e){}
@@ -60,20 +64,34 @@ public class ReportService extends WebService {
 
       //Create timer task to periodically save user activity
         long interval = 2*60*1000; //2 minutes
-        long delay = 30*1000; //30 seconds
         java.util.Timer timer = new java.util.Timer();
         timer.scheduleAtFixedRate( new java.util.TimerTask(){
             public void run(){
-                javaxt.utils.Date currDate = new javaxt.utils.Date();
+                long currTime = System.currentTimeMillis();
                 synchronized(activeUsers){
                     Iterator<Long> it = activeUsers.keySet().iterator();
                     while (it.hasNext()){
                         long userID = it.next();
                         long lastEvent = activeUsers.get(userID);
+                        if (currTime-lastEvent<interval){
+                            try{
+                                User user = new User(userID);
+                                JSONObject info = user.getInfo();
+                                if (info==null){
+                                    info = new JSONObject();
+                                    user.setInfo(info);
+                                }
+                                info.set("lastEvent", lastEvent);
+                                user.save();
+                            }
+                            catch(Exception e){
+                                e.printStackTrace();
+                            }
+                        }
                     }
                 }
             }
-        }, delay, interval);
+        }, 0, interval);
 
 
 
