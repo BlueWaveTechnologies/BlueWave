@@ -70,7 +70,8 @@ bluewave.UserAdmin = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-
+        userList.clear();
+        userStats.clear();
     };
 
 
@@ -78,7 +79,12 @@ bluewave.UserAdmin = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
-
+        get("report/activeUsers", {
+            success: function(activeUsers){
+                userList.update(activeUsers);
+                userStats.update(activeUsers);
+            }
+        });
     };
 
 
@@ -96,6 +102,7 @@ bluewave.UserAdmin = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var get = bluewave.utils.get;
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
