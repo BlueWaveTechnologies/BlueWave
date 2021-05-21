@@ -18,6 +18,7 @@ bluewave.UserList = function(parent, config) {
     var addButton, editButton, deleteButton;
     var lastRefresh;
     var filter = {};
+    var activeUsers = {};
 
 
   //**************************************************************************
@@ -62,7 +63,17 @@ bluewave.UserList = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+        if (userEditor) userEditor.hide();
         if (grid) grid.clear();
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(_activeUsers){
+        activeUsers = _activeUsers;
+        grid.update();
     };
 
 
@@ -70,12 +81,12 @@ bluewave.UserList = function(parent, config) {
   //** updateActivity
   //**************************************************************************
     this.updateActivity = function(userID){
+        var currTime = new Date().getTime();
+        activeUsers[userID+""] = currTime;
         grid.forEachRow(function (row) {
             if (row.record.id===userID){
-                lastRefresh = new Date().getTime();
-                row.record.lastEvent = new Date().getTime();
+                lastRefresh = currTime;
                 row.update(row, row.record);
-
                 return true;
             }
         });
@@ -136,7 +147,7 @@ bluewave.UserList = function(parent, config) {
             hidden: false
         });
         refreshButton.onClick = function(){
-            grid.refresh();
+            grid.update();
         };
 
 
@@ -176,7 +187,8 @@ bluewave.UserList = function(parent, config) {
                 {header: 'Name', width:'100%', field:'contactID'},
                 {header: 'Username', width:'150', field:'username'},
                 {header: 'Role', width:'240', field:'accessLevel'},
-                {header: 'Active', width:'75', field:'active'}
+                {header: 'Enabled', width:'75', field:'active'},
+                {header: 'Last Active', width:'125', align:'left'}
             ],
             update: function(row, user){
 
@@ -209,12 +221,28 @@ bluewave.UserList = function(parent, config) {
                 var span = document.createElement("span");
                 span.innerHTML = name;
                 div.appendChild(span);
-                var lastEvent = user.lastEvent;
+                var lastEvent = activeUsers[user.id+""];
                 if (lastEvent){
                     var startTime = lastEvent;
                     var endTime = lastEvent+config.maxIdleTime;
                     fadeOut(statusIcon, "#00c34e", "#cccccc", startTime, endTime, lastRefresh);
+
+                  //TODO: add moment.js to the libs so we don't have to do this...
+                    var d = new Date(lastEvent);
+                    var m = d.getMinutes(); m = (m<9 ? "0"+m : m+"");
+                    var h = d.getHours();
+                    if (h==0) h = "12:" + m + " am";
+                    else if (h==12) h = "12:" + m + " pm";
+                    else{
+                        if (h>12) h = h-12 + ":" + m + " pm";
+                        else h += ":" + m + " am";
+                    }
+                    var month = "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec".split(",");
+                    var str = month[d.getMonth()] +" "+d.getDate() + " " + h;
+
+                    row.set('Last Active', str);
                 }
+
 
 
                 row.set('Name', div);
@@ -226,7 +254,7 @@ bluewave.UserList = function(parent, config) {
                 if (role==2) role = "Browser";
                 if (role==1) role = "Custom";
                 row.set('Role', role);
-                row.set('Active', user.active+"");
+                row.set('Enabled', user.active+"");
             }
         });
 
@@ -250,8 +278,6 @@ bluewave.UserList = function(parent, config) {
             grid.load();
         };
 
-
-        grid.update();
     };
 
 
@@ -351,13 +377,29 @@ bluewave.UserList = function(parent, config) {
 
         if (currTime >= endTime){
             div.style.backgroundColor = endColor;
+
+            var inactiveUsers = [];
+            for (var key in activeUsers) {
+                if (activeUsers.hasOwnProperty(key)){
+                    var lastUpdate = activeUsers[key];
+                    if (lastUpdate===startTime){
+                        inactiveUsers.push(key);
+                    }
+                }
+            }
+
+            for (var i in inactiveUsers){
+                var userID = inactiveUsers[i];
+                delete activeUsers[userID];
+            }
+
             return;
         }
 
         var ellapsedTime = currTime-startTime;
         var totalRunTime = endTime-startTime;
         var percentComplete = ellapsedTime/totalRunTime;
-        console.log(percentComplete);
+        //console.log(percentComplete);
 
 
         div.style.backgroundColor = chroma.mix(startColor, endColor, percentComplete);
