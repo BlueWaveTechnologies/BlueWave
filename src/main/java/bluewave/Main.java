@@ -6,6 +6,7 @@ import bluewave.web.WebApp;
 import java.util.*;
 import java.net.InetSocketAddress;
 
+import javaxt.sql.*;
 import javaxt.json.*;
 import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
@@ -49,6 +50,15 @@ public class Main {
         }
 
 
+      //Run update scripts as needed
+        if (args.containsKey("-updateSchema")){
+            String updates = new javaxt.io.File(args.get("-updateSchema")).getText();
+            updateSchema(updates, configFile);
+            System.out.println("Successfully updated schema!");
+            return;
+        }
+
+
 
       //Initialize config
         Config.init(configFile, jar);
@@ -80,6 +90,78 @@ public class Main {
                 addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
                 new javaxt.http.Server(addresses, 250, new WebApp(webConfig)).start();
             }
+        }
+    }
+
+
+  //**************************************************************************
+  //** updateSchema
+  //**************************************************************************
+    private static void updateSchema(String updates, javaxt.io.File configFile) throws Exception {
+
+
+      //Get database config
+        JSONObject json = new JSONObject(configFile.getText());
+        JSONObject dbConfig = json.get("database").toJSONObject();
+
+
+      //Update path to the database (H2 only)
+        if (dbConfig.has("path")){
+            Config.updateFile("path", dbConfig, configFile);
+            String path = dbConfig.get("path").toString().replace("\\", "/");
+            dbConfig.set("host", path);
+            dbConfig.remove("path");
+        }
+
+
+        javaxt.express.Config config = new javaxt.express.Config();
+        config.init(json);
+        Database database = config.getDatabase();
+
+
+
+      //Split updates into individual statements
+        ArrayList<String> statements = new ArrayList<String>();
+        for (String s : updates.split(";")){
+
+            StringBuffer str = new StringBuffer();
+            for (String i : s.split("\r\n")){
+                if (!i.trim().startsWith("--") && !i.trim().startsWith("COMMENT ")){
+                    str.append(i + "\r\n");
+                }
+            }
+
+            String cmd = str.toString().trim();
+            if (cmd.length()>0){
+                statements.add(rtrim(str.toString()) + ";");
+            }
+        }
+
+
+
+      //Execute statements
+        Connection conn = null;
+        try{
+            conn = database.getConnection();
+
+            java.sql.Statement stmt = conn.getConnection().createStatement();
+            for (String cmd : statements){
+                System.out.println(cmd);
+                try{
+                    stmt.execute(cmd);
+                }
+                catch(java.sql.SQLException e){
+
+                    throw e;
+                }
+            }
+            stmt.close();
+
+            conn.close();
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            throw e;
         }
     }
 
@@ -209,5 +291,17 @@ public class Main {
         else{
             console.log("Unsupported test: " + test);
         }
+    }
+
+
+  //**************************************************************************
+  //** rtrim
+  //**************************************************************************
+    private static String rtrim(String s) {
+        int i = s.length()-1;
+        while (i >= 0 && Character.isWhitespace(s.charAt(i))) {
+            i--;
+        }
+        return s.substring(0,i+1);
     }
 }
