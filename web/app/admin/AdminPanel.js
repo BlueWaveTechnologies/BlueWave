@@ -47,6 +47,11 @@ bluewave.AdminPanel = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         userAdmin.clear();
+
+        if (ws){
+            ws.stop();
+            ws = null;
+        }
     };
 
 
@@ -54,6 +59,8 @@ bluewave.AdminPanel = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
+        
+        userAdmin.update();
 
 
       //Create web socket listener
