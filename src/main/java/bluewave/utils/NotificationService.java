@@ -14,9 +14,9 @@ public class NotificationService {
     public static void notify(String event, String data){
         if (events==null) return;
 
-
+        long timestamp = System.nanoTime();
         synchronized(events){
-            events.add(new Object[]{event, data});
+            events.add(new Object[]{event, data, timestamp});
             events.notify();
         }
     }
@@ -65,12 +65,12 @@ public class NotificationService {
         }
     }
 
-    
+
   //**************************************************************************
   //** Listener Class
   //**************************************************************************
     public static class Listener {
-        public void processEvent(String event, String data){}
+        public void processEvent(String event, String data, long timestamp){}
     }
 
 
@@ -104,11 +104,12 @@ public class NotificationService {
                     Object[] arr = (Object[]) obj;
                     String event = (String) arr[0];
                     String data = (String) arr[1];
+                    Long timestamp = (Long) arr[2];
 
 
                     for (Listener listener : listeners){
                         try{
-                            listener.processEvent(event, data);
+                            listener.processEvent(event, data, timestamp);
                         }
                         catch(Exception e){
                         }
