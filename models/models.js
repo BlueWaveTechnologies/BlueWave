@@ -30,7 +30,8 @@ var models = {
             {name: 'accessLevel', type: 'int'},
             {name: 'active',      type: 'boolean'},
             {name: 'contact',     type: 'Contact'},
-            {name: 'auth',        type: 'json'}
+            {name: 'auth',        type: 'json'},
+            {name: 'info',        type: 'json'}
         ],
         constraints: [
             {name: 'username',      required: true,  length: 255,  unique: true},
