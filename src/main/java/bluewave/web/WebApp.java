@@ -173,6 +173,8 @@ public class WebApp extends HttpServlet {
             }
         }
         else if (service.equals("logoff") || service.equalsIgnoreCase("logout")){
+            String username = (credentials!=null) ? credentials[0] : null;
+            NotificationService.notify("LogOff", username);
             response.setStatus(401, "Access Denied");
             Boolean prompt = new javaxt.utils.Value(request.getParameter("prompt")).toBoolean(); //<--Hack for Firefox
             if (prompt!=null && prompt==true){
