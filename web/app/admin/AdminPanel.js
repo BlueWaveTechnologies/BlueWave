@@ -59,7 +59,7 @@ bluewave.AdminPanel = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
-        
+
         userAdmin.update();
 
 
@@ -74,7 +74,7 @@ bluewave.AdminPanel = function(parent, config) {
                 //var store = config.dataStores[model];
 
                 if (op=="activity"){
-                    console.log(msg);
+                    //console.log(msg);
                     if (userAdmin) userAdmin.updateActivity(id);
                 }
 
