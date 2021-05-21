@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import javaxt.express.ServiceRequest;
 import javaxt.express.ServiceResponse;
 import javaxt.express.WebService;
-import javaxt.express.utils.*;
 import javaxt.http.servlet.HttpServletRequest;
 import javaxt.http.servlet.HttpServletResponse;
 import javaxt.http.servlet.ServletException;
@@ -32,6 +31,7 @@ import javaxt.sql.*;
 
 public class ReportService extends WebService {
 
+    private ConcurrentHashMap<Long, Long> activeUsers;
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
 
@@ -46,6 +46,38 @@ public class ReportService extends WebService {
         listeners = new ConcurrentHashMap<>();
 
 
+      //Initialize activeUsers
+        activeUsers = new ConcurrentHashMap<>();
+        try{
+            for (User user : User.find("active=", true)){
+                //console.log(user.getID());
+                //activeUsers.put(user.getID(), lastEvent);
+            }
+        }
+        catch(Exception e){}
+
+
+
+      //Create timer task to periodically save user activity
+        long interval = 2*60*1000; //2 minutes
+        long delay = 30*1000; //30 seconds
+        java.util.Timer timer = new java.util.Timer();
+        timer.scheduleAtFixedRate( new java.util.TimerTask(){
+            public void run(){
+                javaxt.utils.Date currDate = new javaxt.utils.Date();
+                synchronized(activeUsers){
+                    Iterator<Long> it = activeUsers.keySet().iterator();
+                    while (it.hasNext()){
+                        long userID = it.next();
+                        long lastEvent = activeUsers.get(userID);
+                    }
+                }
+            }
+        }, delay, interval);
+
+
+
+
       //Add listener to the NotificationService to get WebRequests
         ReportService me = this;
         NotificationService.addListener(new Listener(){
@@ -57,6 +89,14 @@ public class ReportService extends WebService {
                         try{
                             username = username.substring(1, username.length()-1);
                             User user = User.get("username=",username);
+
+                          //Update activeUsers
+                            synchronized(activeUsers){
+                                activeUsers.put(user.getID(), System.currentTimeMillis());
+                                activeUsers.notify();
+                            }
+
+                          //Notify socket listeners
                             String action = "activity";
                             me.notify(action+","+user.getClass().getSimpleName()+","+user.getID());
                         }
@@ -66,6 +106,25 @@ public class ReportService extends WebService {
                 }
             }
         });
+    }
+
+
+  //**************************************************************************
+  //** getActiveUsers
+  //**************************************************************************
+    public ServiceResponse getActiveUsers(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        JSONObject json = new JSONObject();
+        synchronized(activeUsers){
+            Iterator<Long> it = activeUsers.keySet().iterator();
+            while (it.hasNext()){
+                long userID = it.next();
+                long lastEvent = activeUsers.get(userID);
+                json.set(userID+"", lastEvent);
+            }
+        }
+        return new ServiceResponse(json);
     }
 
 
@@ -99,7 +158,6 @@ public class ReportService extends WebService {
             while(it.hasNext()){
                 Long id = it.next();
                 WebSocketListener ws = listeners.get(id);
-                console.log(msg);
                 ws.send(msg);
             }
         }
