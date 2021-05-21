@@ -262,7 +262,7 @@ public class Main {
                     System.out.println("Nodes/Links:");
                     Result rs = session.run("MATCH (n) RETURN distinct labels(n)");
                     while (rs.hasNext()){
-                        Record r = rs.next();
+                        org.neo4j.driver.Record r = rs.next();
                         List labels = r.get(0).asList();
                         String label = labels.get(0).toString();
                         System.out.println(" -" + label);
@@ -271,11 +271,11 @@ public class Main {
                 else{
                     Result rs = session.run(query);
                     while (rs.hasNext()){
-                        Record r = rs.next();
+                        org.neo4j.driver.Record r = rs.next();
                         Iterator<String> it = r.keys().iterator();
                         while (it.hasNext()){
                             String key = it.next();
-                            Value val = r.get(key);
+                            org.neo4j.driver.Value val = r.get(key);
                             console.log(key, val);
                         }
                     }
