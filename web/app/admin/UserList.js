@@ -11,9 +11,14 @@ if(!bluewave) var bluewave={};
 bluewave.UserList = function(parent, config) {
 
     var me = this;
+    var defaultConfig = {
+        maxIdleTime: 5*60*1000 //5 minutes
+    };
     var grid, userEditor;
     var addButton, editButton, deleteButton;
+    var lastRefresh;
     var filter = {};
+    var activeUsers = {};
 
 
   //**************************************************************************
@@ -21,6 +26,7 @@ bluewave.UserList = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        config = merge(config, defaultConfig);
         if (!config.style) config.style = javaxt.dhtml.style.default;
 
 
@@ -50,6 +56,41 @@ bluewave.UserList = function(parent, config) {
 
         parent.appendChild(table);
         me.el = table;
+    };
+
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        if (userEditor) userEditor.hide();
+        if (grid) grid.clear();
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(_activeUsers){
+        activeUsers = _activeUsers;
+        grid.update();
+    };
+
+
+  //**************************************************************************
+  //** updateActivity
+  //**************************************************************************
+    this.updateActivity = function(userID, op){
+        var currTime = new Date().getTime();
+        if (op==="logoff") delete activeUsers[userID+""];
+        else activeUsers[userID+""] = currTime;
+        grid.forEachRow(function (row) {
+            if (row.record.id===userID){
+                lastRefresh = currTime;
+                row.update(row, row.record);
+                return true;
+            }
+        });
     };
 
 
@@ -107,7 +148,7 @@ bluewave.UserList = function(parent, config) {
             hidden: false
         });
         refreshButton.onClick = function(){
-            grid.refresh();
+            grid.update();
         };
 
 
@@ -125,15 +166,34 @@ bluewave.UserList = function(parent, config) {
             style: config.style.table,
             url: "users",
             filter: filter,
-            parseResponse: parseResponse,
+            getResponse: function(url, payload, callback){
+                get(url, {
+                    payload: payload,
+                    success: function(json){
+                        callback.apply(grid, [{
+                           status: 200,
+                           rows: json
+                        }]);
+                    },
+                    failure: function(request){
+                        callback.apply(grid, [request]);
+                    }
+                });
+            },
+            parseResponse: function(obj){
+                return obj.rows;
+            },
             columns: [
                 {header: 'ID', hidden:true, field:'id'},
                 {header: 'Name', width:'100%', field:'contactID'},
                 {header: 'Username', width:'150', field:'username'},
                 {header: 'Role', width:'240', field:'accessLevel'},
-                {header: 'Active', width:'75', field:'active'}
+                {header: 'Enabled', width:'75', field:'active'},
+                {header: 'Last Active', width:'125', align:'left'}
             ],
             update: function(row, user){
+
+              //Get name
                 var name;
                 if (user.fullName){
                     name = user.fullName;
@@ -149,9 +209,44 @@ bluewave.UserList = function(parent, config) {
                         name = lastName;
                     }
                 }
-
                 if (!name) name = user.username;
-                row.set('Name', name);
+
+
+
+              //Render name with status icon
+                var div = document.createElement("div");
+                div.style.height = "100%";
+                var statusIcon = document.createElement("div");
+                statusIcon.className = "user-status";
+                div.appendChild(statusIcon);
+                var span = document.createElement("span");
+                span.innerHTML = name;
+                div.appendChild(span);
+                var lastEvent = activeUsers[user.id+""];
+                if (lastEvent){
+                    var startTime = lastEvent;
+                    var endTime = lastEvent+config.maxIdleTime;
+                    fadeOut(statusIcon, "#00c34e", "#cccccc", startTime, endTime, lastRefresh);
+
+                  //TODO: add moment.js to the libs so we don't have to do this...
+                    var d = new Date(lastEvent);
+                    var m = d.getMinutes(); m = (m<9 ? "0"+m : m+"");
+                    var h = d.getHours();
+                    if (h==0) h = "12:" + m + " am";
+                    else if (h==12) h = "12:" + m + " pm";
+                    else{
+                        if (h>12) h = h-12 + ":" + m + " pm";
+                        else h += ":" + m + " am";
+                    }
+                    var month = "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec".split(",");
+                    var str = month[d.getMonth()] +" "+d.getDate() + " " + h;
+
+                    row.set('Last Active', str);
+                }
+
+
+
+                row.set('Name', div);
                 row.set('Username', user.username);
                 var role = user.accessLevel;
                 if (role==5) role = "Administrator";
@@ -160,7 +255,7 @@ bluewave.UserList = function(parent, config) {
                 if (role==2) role = "Browser";
                 if (role==1) role = "Custom";
                 row.set('Role', role);
-                row.set('Active', user.active+"");
+                row.set('Enabled', user.active+"");
             }
         });
 
@@ -179,12 +274,11 @@ bluewave.UserList = function(parent, config) {
 
 
         grid.update = function(){
+            lastRefresh = new Date().getTime();
             grid.clear();
             grid.load();
         };
 
-
-        grid.update();
     };
 
 
@@ -273,44 +367,63 @@ bluewave.UserList = function(parent, config) {
 
 
   //**************************************************************************
+  //** fadeOut
+  //**************************************************************************
+    var fadeOut = function(div, startColor, endColor, startTime, endTime, refreshID){
+
+        if (refreshID!==lastRefresh) return;
+
+
+        var currTime = new Date().getTime();
+
+        if (currTime >= endTime){
+            div.style.backgroundColor = endColor;
+
+            var inactiveUsers = [];
+            for (var key in activeUsers) {
+                if (activeUsers.hasOwnProperty(key)){
+                    var lastUpdate = activeUsers[key];
+                    if (lastUpdate===startTime){
+                        inactiveUsers.push(key);
+                    }
+                }
+            }
+
+            for (var i in inactiveUsers){
+                var userID = inactiveUsers[i];
+                delete activeUsers[userID];
+            }
+
+            return;
+        }
+
+        var ellapsedTime = currTime-startTime;
+        var totalRunTime = endTime-startTime;
+        var percentComplete = ellapsedTime/totalRunTime;
+        //console.log(percentComplete);
+
+
+        div.style.backgroundColor = chroma.mix(startColor, endColor, percentComplete);
+
+
+        setTimeout(function(){
+            fadeOut(div, startColor, endColor, startTime, endTime, refreshID);
+        }, 1000);
+
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
+    var merge = javaxt.dhtml.utils.merge;
     var get = bluewave.utils.get;
     var save = javaxt.dhtml.utils.post;
     var del = javaxt.dhtml.utils.delete;
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
-
-
     var createSpacer = bluewave.utils.createSpacer;
-    var parseResponse = function(request){
 
-        var response;
-        if ((typeof(request) === 'string' || request instanceof String)){
-            response = JSON.parse(request);
-        }
-        else{
-            response = JSON.parse(request.responseText);
-        }
-
-
-        var rows = response.rows;
-        var cols = {};
-        for (var i=0; i<response.cols.length; i++){
-            cols[response.cols[i]] = i;
-        }
-        for (var i=0; i<rows.length; i++){
-            var row = rows[i];
-            var obj = {};
-            for (var col in cols) {
-                if (cols.hasOwnProperty(col)){
-                    obj[col] = row[cols[col]];
-                }
-            }
-            rows[i] = obj;
-        }
-        return rows;
-    };
 
 
     init();

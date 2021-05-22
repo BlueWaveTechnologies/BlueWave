@@ -20,6 +20,7 @@ public class User extends javaxt.sql.Model
     private Boolean active;
     private Contact contact;
     private JSONObject auth;
+    private JSONObject info;
 
 
   //**************************************************************************
@@ -34,6 +35,7 @@ public class User extends javaxt.sql.Model
             put("active", "active");
             put("contact", "contact_id");
             put("auth", "auth");
+            put("info", "info");
 
         }});
 
@@ -78,6 +80,7 @@ public class User extends javaxt.sql.Model
             this.active = getValue(rs, "active").toBoolean();
             Long contactID = getValue(rs, "contact_id").toLong();
             this.auth = new JSONObject(getValue(rs, "auth").toString());
+            this.info = new JSONObject(getValue(rs, "info").toString());
 
 
 
@@ -115,9 +118,10 @@ public class User extends javaxt.sql.Model
             catch(Exception e){}
         }
         this.auth = json.get("auth").toJSONObject();
+        this.info = json.get("info").toJSONObject();
     }
 
-
+    
     public String getName(){
         return username;
     }
@@ -168,6 +172,14 @@ public class User extends javaxt.sql.Model
 
     public void setAuth(JSONObject auth){
         this.auth = auth;
+    }
+
+    public JSONObject getInfo(){
+        return info;
+    }
+
+    public void setInfo(JSONObject info){
+        this.info = info;
     }
 
 

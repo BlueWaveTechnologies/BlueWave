@@ -788,6 +788,7 @@ bluewave.Application = function(parent, config) {
                 if (explorerPanel) explorerPanel.hide();
                 me.setTitle(label);
                 if (!adminPanel) adminPanel = new bluewave.AdminPanel(body, config);
+                adminPanel.update();
                 adminPanel.show();
             }));
 
@@ -899,6 +900,14 @@ bluewave.Application = function(parent, config) {
         }
         views = [];
         carousel.clear();
+
+
+      //Delete admin panel
+        if (adminPanel){
+            adminPanel.clear();
+            destroy(adminPanel);
+            adminPanel = null;
+        }
 
 
       //Clear datastores
