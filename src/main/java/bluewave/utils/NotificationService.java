@@ -14,7 +14,7 @@ public class NotificationService {
     public static void notify(String event, String data){
         if (events==null) return;
 
-        long timestamp = System.nanoTime();
+        long timestamp = DateUtils.getCurrentTime();
         synchronized(events){
             events.add(new Object[]{event, data, timestamp});
             events.notify();
