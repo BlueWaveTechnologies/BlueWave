@@ -73,9 +73,9 @@ bluewave.AdminPanel = function(parent, config) {
                 var id = parseInt(arr[2]);
                 //var store = config.dataStores[model];
 
-                if (op=="activity"){
-                    //console.log(msg);
-                    if (userAdmin) userAdmin.updateActivity(id);
+
+                if (op=="webrequest" || op=="logoff"){
+                    if (userAdmin) userAdmin.updateActivity(id, op);
                 }
 
 
