@@ -1,6 +1,7 @@
 package bluewave.web.services;
 
 import bluewave.app.User;
+import bluewave.utils.DateUtils;
 import bluewave.utils.NotificationService;
 import bluewave.utils.NotificationService.Listener;
 
@@ -53,8 +54,7 @@ public class ReportService extends WebService {
                 JSONObject info = user.getInfo();
                 if (info!=null){
                     Long lastEvent = info.get("lastEvent").toLong();
-                    if (lastEvent!=null) activeUsers.put(user.getID(), lastEvent);
-                    if (lastEvent!=null) console.log(user.getID(), lastEvent);
+                    if (lastEvent!=null) activeUsers.put(user.getID(), lastEvent*1000000);
                 }
             }
         }
@@ -81,7 +81,7 @@ public class ReportService extends WebService {
                                     info = new JSONObject();
                                     user.setInfo(info);
                                 }
-                                info.set("lastEvent", lastEvent);
+                                info.set("lastEvent", DateUtils.getMilliseconds(lastEvent));
                                 user.save();
                             }
                             catch(Exception e){
@@ -99,29 +99,102 @@ public class ReportService extends WebService {
       //Add listener to the NotificationService to get WebRequests
         ReportService me = this;
         NotificationService.addListener(new Listener(){
-            public void processEvent(String event, String requestHeaders){
+            public void processEvent(String event, String info, long timestamp){
+
                 if (event.equals("WebRequest")){
-                    WebRequest request = new WebRequest(requestHeaders);
+                    WebRequest request = new WebRequest(info);
                     String username = request.getValue("Authorization");
                     if (username!=null){
                         try{
-                            username = username.substring(1, username.length()-1);
+
+                          //Get userID
+                            if (username.startsWith("[") && username.endsWith("]")){
+                                username = username.substring(1, username.length()-1);
+                            }
+                            else{
+                                return;
+                            }
+
+
                             User user = User.get("username=",username);
+                            if (user==null) return;
+                            long userID = user.getID();
+                            boolean updateUser = false;
+
 
                           //Update activeUsers
                             synchronized(activeUsers){
-                                activeUsers.put(user.getID(), System.currentTimeMillis());
+                                Long t = activeUsers.get(userID);
+                                if (t==null) t = 0L;
+                                if (t>=timestamp) return;
+                                if (t==0) updateUser = true;
+                                activeUsers.put(userID, timestamp);
                                 activeUsers.notify();
                             }
 
+                          //Update user metadata if this is the first web request
+                            if (updateUser){
+                                JSONObject json = user.getInfo();
+                                if (json==null){
+                                    json = new JSONObject();
+                                    user.setInfo(json);
+                                }
+                                json.set("lastEvent", DateUtils.getMilliseconds(timestamp));
+                                user.save();
+                            }
+
+
                           //Notify socket listeners
-                            String action = "activity";
-                            me.notify(action+","+user.getClass().getSimpleName()+","+user.getID());
+                            String action = event.toLowerCase();
+                            me.notify(action+","+user.getClass().getSimpleName()+","+userID);
                         }
                         catch(Exception e){
+                            e.printStackTrace();
                         }
                     }
                 }
+                else if (event.equals("LogOff")){
+                    String username = info;
+                    if (username!=null){
+                        try{
+
+                          //Get userID
+                            User user = User.get("username=",username);
+                            if (user==null) return;
+                            long userID = user.getID();
+
+                          //Update activeUsers
+                            synchronized(activeUsers){
+                                Long t = activeUsers.get(userID);
+                                if (t==null) t = 0L;
+                                if (t>=timestamp) return;
+                                activeUsers.put(userID, timestamp);
+                                activeUsers.notify();
+                            }
+
+
+                          //Update user metadata on logoff
+
+                            JSONObject json = user.getInfo();
+                            if (json==null){
+                                json = new JSONObject();
+                                user.setInfo(json);
+                            }
+                            json.set("lastEvent", DateUtils.getMilliseconds(timestamp));
+                            user.save();
+
+
+                          //Notify socket listeners
+                            String action = event.toLowerCase();
+                            me.notify(action+","+user.getClass().getSimpleName()+","+userID);
+                        }
+                        catch(Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+
             }
         });
     }
@@ -138,7 +211,7 @@ public class ReportService extends WebService {
             Iterator<Long> it = activeUsers.keySet().iterator();
             while (it.hasNext()){
                 long userID = it.next();
-                long lastEvent = activeUsers.get(userID);
+                long lastEvent = DateUtils.getMilliseconds(activeUsers.get(userID));
                 json.set(userID+"", lastEvent);
             }
         }
