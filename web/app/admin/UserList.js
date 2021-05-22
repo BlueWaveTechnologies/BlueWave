@@ -80,9 +80,10 @@ bluewave.UserList = function(parent, config) {
   //**************************************************************************
   //** updateActivity
   //**************************************************************************
-    this.updateActivity = function(userID){
+    this.updateActivity = function(userID, op){
         var currTime = new Date().getTime();
-        activeUsers[userID+""] = currTime;
+        if (op==="logoff") delete activeUsers[userID+""];
+        else activeUsers[userID+""] = currTime;
         grid.forEachRow(function (row) {
             if (row.record.id===userID){
                 lastRefresh = currTime;

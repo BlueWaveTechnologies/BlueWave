@@ -60,9 +60,9 @@ bluewave.UserAdmin = function(parent, config) {
   //**************************************************************************
   //** updateActivity
   //**************************************************************************
-    this.updateActivity = function(userID){
-        userList.updateActivity(userID);
-        userStats.updateActivity(userID);
+    this.updateActivity = function(userID, op){
+        userList.updateActivity(userID, op);
+        userStats.updateActivity(userID, op);
     };
 
 

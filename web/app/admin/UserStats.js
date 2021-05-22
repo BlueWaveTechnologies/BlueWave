@@ -71,11 +71,12 @@ bluewave.UserStats = function(parent, config) {
   //**************************************************************************
   //** updateActivity
   //**************************************************************************
-    this.updateActivity = function(userID){
+    this.updateActivity = function(userID, op){
         var currTime = getCurrentTime();
         var numRequests = requestsPerMinute[currTime];
         requestsPerMinute[currTime] = !numRequests ? 1 : numRequests+1;
-        activeUsers[userID+""] = new Date().getTime();
+        if (op==="logoff") delete activeUsers[userID+""];
+        else activeUsers[userID+""] = new Date().getTime();
     };
 
 
@@ -272,6 +273,10 @@ bluewave.UserStats = function(parent, config) {
             };
 
 
+          //Create function to colorize categorical data
+            var getColor = d3.scaleOrdinal(d3.schemeCategory10);
+
+
           //Create render function used to update the chart
             var render = function(){
                 var g = pieChart;
@@ -386,7 +391,6 @@ bluewave.UserStats = function(parent, config) {
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();
 };
