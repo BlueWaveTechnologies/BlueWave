@@ -17,6 +17,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     };
 
     var editPanel, previewPanel, waitmask; //primary components
+    var dashboardItem;
     var toolbar;
     var tooltip, tooltipTimer, lastToolTipEvent;
     var button = {};
@@ -57,7 +58,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         createSankey(previewPanel);
         previewPanel.hide();
 
-
       //Create editor
         editPanel = document.createElement("div");
         editPanel.className = "drawflow";
@@ -84,6 +84,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     this.clear = function(){
         drawflow.clear();
         drawflow.removeModule(currModule);
+        setTitle("Untitled");
         sankeyChart.clear();
         nodes = {};
         quantities = {};
@@ -97,6 +98,11 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         me.clear();
 
         if (!sankeyConfig) sankeyConfig = {};
+        //console.log(sankeyConfig);
+
+
+      //Update title
+        setTitle(sankeyConfig.chartTitle);
 
 
       //Update toggle button
@@ -131,7 +137,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
 
-
               //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
@@ -141,12 +146,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     }
                 }
 
-
-
               //Add event listeners
                 addEventListeners(node);
-
-
 
               //Add inputs
                 node.inputs = {};
@@ -170,7 +171,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         }
 
 
-
       //Fill in any missing node inputs
         for (var nodeID in nodes){
             var node = nodes[nodeID];
@@ -179,7 +179,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 if (!inputNode) node.inputs[inputID] = nodes[inputID];
             }
         }
-
 
 
       //Update paths and quantities
@@ -208,6 +207,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
           //Update svg paths (drawflow doesn't import correctly)
             connection.getElementsByTagName("path")[0].setAttribute("d", link.path);
+            auditLinkages();
         }
     };
 
@@ -221,7 +221,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         var sankeyConfig = {
             layout: drawflow.export().drawflow[currModule].data,
             nodes: {},
-            links: {}
+            links: {},
+            chartTitle: getTitle()
         };
 
 
@@ -287,6 +288,25 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** setTitle
+  //**************************************************************************
+    var setTitle = function(title){
+        if (!title) title = "Untitled";
+        dashboardItem.title.innerHTML = title;
+    };
+
+
+  //**************************************************************************
+  //** getTitle
+  //**************************************************************************
+    var getTitle = function(){
+        var title = dashboardItem.title.innerHTML;
+        if (!title) return null;
+        else return title;
+    };
+
+
+  //**************************************************************************
   //** createToolbar
   //**************************************************************************
     var createToolbar = function(parent){
@@ -323,6 +343,131 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** getPreviousNodeValue
+  //**************************************************************************
+    var getPreviousNodeValue = function(previousNodeId){
+        var node = nodes[previousNodeId];
+        var inputs = node.inputs;
+        var quantity = 0;
+        for(var k in inputs) {
+            if(inputs.hasOwnProperty(k)) {
+                var v = quantities[k + "->" + previousNodeId];
+                quantity = quantity + v;
+            }
+        }
+        if(quantity == 0){
+            quantity = 1;
+        }
+        return quantity
+    };
+
+
+  //**************************************************************************
+  //** auditNodes
+  //**************************************************************************
+    var auditNodes = function(){
+        for (var key in nodes) {
+             var node = nodes[key];
+             var inputs = node.inputs;
+             var outputs = getOutputs(key);
+             var inputQuantity = 0;
+             var outputQuantity = 0;
+             for(var k in inputs) {
+                if(inputs.hasOwnProperty(k)) {
+                    var n = nodes[k];
+                    var v = quantities[k + "->" + key];
+                    inputQuantity = inputQuantity + v;
+                }
+
+            }
+            for(i = 0; i < outputs.length; i++) {
+                var k = outputs[i];
+                var n = nodes[k];
+                var v = quantities[key + "->" + k];
+                outputQuantity = outputQuantity + v;
+            }
+            var data = drawflow.drawflow.drawflow[currModule].data;
+            var value = data[key];
+            if(checkInputsAndOutputs(value) && inputQuantity != outputQuantity) {
+                node.style.color = "red";
+            } else {
+                node.style.color = "black";
+            }
+        }
+        auditLinkages();
+    };
+
+
+  //**************************************************************************
+  //** getOutputs
+  //**************************************************************************
+    var getOutputs = function(value) {
+        var outputs = [];
+        for (var key in nodes) {
+            var n = nodes[key];
+            var inputs = n.inputs;
+            for(var k in inputs) {
+                if(value === k) {
+                    outputs.push(key);
+                }
+            }
+        }
+        return outputs;
+    };
+
+
+  //**************************************************************************
+  //** checkInputsAndOutputs
+  //**************************************************************************
+    var checkInputsAndOutputs = function (data) {
+            if(Object.keys(data.inputs).length === 0) {
+                return false;
+            }
+            if(Object.keys(data.outputs).length === 0) {
+                return false;
+            }
+        return true;
+    };
+
+
+  //**************************************************************************
+  //** auditLinkages
+  //**************************************************************************
+    var auditLinkages = function(){
+        var linkages = editPanel.getElementsByClassName("connection");
+        for(var item of linkages) {
+            var classNames = item.classList;
+            var nodeList = [];
+            for(var name of classNames) {
+                if(name.includes("node")){
+                    nodeList.push(name);
+                }
+            }
+            var path = item.children[0];
+            checkLinkage(nodeList, path);
+        }
+    };
+
+
+  //**************************************************************************
+  //** checkLinkage
+  //**************************************************************************
+    var checkLinkage = function(nodeList, path){
+        var inputID = nodeList[0].substring("node_in_node".length+1);
+        var outputID = nodeList[1].substring("node_out_node".length+1);
+        var nodeIn = nodes[inputID];
+        var nodeOut = nodes[outputID];
+        if(typeof nodeIn !== 'undefined' || typeof nodeOut !== 'undefined'){
+            if (nodeIn.style.color == "red" || nodeOut.style.color == "red"){
+                path.style.stroke = "red";
+            }
+            else {
+                path.style.stroke = "";
+            }
+        }
+    };
+
 
   //**************************************************************************
   //** createDrawFlow
@@ -352,9 +497,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
           //Update nodes
             var node = nodes[inputID];
             node.inputs[outputID] = nodes[outputID];
-
+            var value = getPreviousNodeValue(outputID);
           //Update quantities
-            quantities[outputID + "->" + inputID] = 1;
+            quantities[outputID + "->" + inputID] = value;
+            auditNodes();
         });
 
 
@@ -364,12 +510,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             var inputID = info.input_id+"";
             //console.log("Removed connection " + outputID + " to " + inputID);
             delete quantities[outputID + "->" + inputID];
+            auditNodes();
         });
 
 
       //Watch for node removals
         drawflow.on('nodeRemoved', function(nodeID) {
             delete nodes[nodeID+""];
+            auditNodes();
         });
 
 
@@ -398,6 +546,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         var val = parseFloat(this.value);
                         div.innerHTML = val;
                         quantities[outputID + "->" + inputID] = val;
+                        auditNodes();
                     }
                 };
                 this.appendChild(input);
@@ -498,6 +647,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
                 var type = node.type;
+                console.log(node.name, node.type);
                 if (type===nodeType){
                     id++;
                 }
@@ -647,39 +797,103 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         label: "Notes",
                         type: "textarea"
                     }
+                ],
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
+                            cancel();
+                            nodeEditor.close();
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
+                            var inputs = form.getData();
+                            var name = inputs.name;
+                            if (name) name = name.trim();
+                            if (name==null || name==="") {
+                                warn("Name is required", nameField);
+                                return;
+                            }
+                            waitmask.show();
+                            checkName(name, nodeEditor.node, function(isValid){
+                                waitmask.hide();
+                                if (!isValid){
+                                    warn("Name is not unique", nameField);
+                                }
+                                else{
+                                    submit();
+                                }
+                            });
+                        }
+                    }
                 ]
             });
 
-            nodeEditor.update = function(data){
-                form.clear();
-                if (!data) return;
-                if (data.name) form.setValue("name", data.name);
-                if (data.notes) form.setValue("notes", data.notes);
+            var nameField = form.findField("name");
+
+
+            var submit = function(){
+                nodeEditor.close();
+                var node = nodeEditor.node;
+                if (!node) return;
+                var data = form.getData();
+                node.name = data.name;
+                node.notes = data.notes;
+                if (node.name){
+                    node.name = node.name.trim();
+                    if (node.name.length>0){
+                        node.childNodes[0].getElementsByTagName("span")[0].innerHTML = node.name;
+                    }
+                }
             };
-            nodeEditor.getData = function(){
-                return form.getData();
+
+
+            var cancel = function(){
+                var node = nodeEditor.node;
+                if (node){
+                    if (node.name) form.setValue("name", node.name);
+                    if (node.notes) form.setValue("notes", node.notes);
+                }
+            };
+
+
+            nodeEditor.update = function(node){
+                form.clear();
+                if (nameField.resetColor) nameField.resetColor();
+                nodeEditor.node = node;
+                if (node){
+                    if (node.name) form.setValue("name", node.name);
+                    if (node.notes) form.setValue("notes", node.notes);
+                }
             };
         }
 
 
-        nodeEditor.update({
-            name: node.name,
-            notes: node.notes
-        });
-        nodeEditor.onClose = function(){
-            var data = nodeEditor.getData();
-            node.name = data.name;
-            node.notes = data.notes;
-            if (node.name){
-                node.name = node.name.trim();
-                if (node.name.length>0){
-                    node.childNodes[0].getElementsByTagName("span")[0].innerHTML = node.name;
+        nodeEditor.update(node);
+        nodeEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** checkName
+  //**************************************************************************
+    var checkName = function(name, currentNode, callback){
+       for (var key in nodes) {
+            var isValid = true;
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                var nodeName = node.name;
+                if(node !== currentNode){
+                    if(name.toLowerCase() === nodeName.toLowerCase()){
+                        isValid = false;
+                        break;
+                    }
                 }
             }
-        };
-
-
-        nodeEditor.show();
+        }
+        callback.apply(me, [isValid]);
     };
 
 
@@ -767,18 +981,44 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var createSankey = function(parent){
 
-        var panel = createDashboardItem(parent,{
+        dashboardItem = createDashboardItem(parent,{
             width: "1000px",
             height: "644px",
             title: "Untitled",
             settings: false
         });
-
-        var div = panel.el;
+        var div = dashboardItem.el;
         div.className = "dashboard-item";
         div.style.float = "none";
 
-        sankeyChart = new bluewave.charts.SankeyChart(panel.innerDiv,{});
+        dashboardItem.title.onclick = function(e){
+            if (this.childNodes[0].nodeType===1) return;
+            e.stopPropagation();
+            var currText = this.innerHTML;
+            this.innerHTML = "";
+            var input = document.createElement("input");
+            input.className = "form-input";
+            input.type = "text";
+            input.value = currText;
+            input.onkeydown = function(event){
+                var key = event.keyCode;
+                    if (key === 13) {
+                        setTitle(this.value);
+                    }
+            };
+            this.appendChild(input);
+            input.focus();
+        };
+
+        document.body.addEventListener('click', function(e) {
+            var input = dashboardItem.title.childNodes[0];
+            var className = e.target.className;
+            if (input.nodeType === 1 && className != "form-input") {
+                setTitle(input.value);
+            };
+        });
+
+        sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv, {});
     };
 
 
@@ -866,6 +1106,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createDashboardItem = bluewave.utils.createDashboardItem;
+    var warn = bluewave.utils.warn;
+
 
     init();
 };

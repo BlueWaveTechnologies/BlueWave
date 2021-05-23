@@ -1081,6 +1081,7 @@ bluewave.Explorer = function(parent, config) {
                     if (!orgConfig) orgConfig = {};
                     if (isDirty(chartConfig, orgConfig)){
                         node.config = chartConfig;
+                        updateTitle(node, node.config.chartTitle);
                         waitmask.show();
                         var el = sankeyEditor.getChart();
                         if (el.show) el.show();
