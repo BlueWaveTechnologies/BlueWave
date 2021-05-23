@@ -11,45 +11,47 @@ if(!bluewave) var bluewave={};
 bluewave.AdminPanel = function(parent, config) {
 
     var me = this;
-    var mainPanel;
+    var defaultConfig = {
+
+    };
+    var userAdmin;
+    var ws;
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
 
+      //Parse config
+        config = merge(config, defaultConfig);
         if (!config.style) config.style = javaxt.dhtml.style.default;
 
-      //Create main table
-        var table = createTable();
-        var tbody = table.firstChild;
-        var tr, td;
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-
-      //Create nav
-        td = document.createElement("td");
-        td.style.height = "100%";
-        tr.appendChild(td);
-        //createNav(td);
+      //Create main panel
+        var mainPanel = document.createElement("div");
+        //mainPanel.style.borderTop = "1px solid #cccccc";
+        mainPanel.style.width = "100%";
+        mainPanel.style.height = "100%";
+        parent.appendChild(mainPanel);
 
 
-      //Create body
-        td = document.createElement("td");
-        td.style.width = "100%";
-        td.style.height = "100%";
-        tr.appendChild(td);
-        mainPanel = td;
+        userAdmin = new bluewave.UserAdmin(mainPanel, config);
 
-        new bluewave.UserList(mainPanel, config);
+        me.el = mainPanel;
+        addShowHide(me.el);
+    };
 
 
-        //table.style.borderTop = "1px solid #cccccc";
-        parent.appendChild(table);
-        me.el = table;
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        userAdmin.clear();
 
-        addShowHide(me);
+        if (ws){
+            ws.stop();
+            ws = null;
+        }
     };
 
 
@@ -58,24 +60,35 @@ bluewave.AdminPanel = function(parent, config) {
   //**************************************************************************
     this.update = function(){
 
-    };
+        userAdmin.update();
 
 
-  //**************************************************************************
-  //** createNav
-  //**************************************************************************
-    var createNav = function(parent){
-        var div = document.createElement("div");
-        div.style.width = "250px";
-        parent.appendChild(div);
-        //TODO: Add elements
+      //Create web socket listener
+        if (!ws) ws = new javaxt.dhtml.WebSocket({
+            url: "report",
+            onMessage: function(msg){
+                var arr = msg.split(",");
+                var op = arr[0];
+                var model = arr[1];
+                var id = parseInt(arr[2]);
+                //var store = config.dataStores[model];
+
+
+                if (op=="webrequest" || op=="logoff"){
+                    if (userAdmin) userAdmin.updateActivity(id, op);
+                }
+
+
+            }
+        });
+
     };
 
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
-    var createTable = javaxt.dhtml.utils.createTable;
+    var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();

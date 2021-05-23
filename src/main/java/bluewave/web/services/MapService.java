@@ -1,5 +1,5 @@
 package bluewave.web.services;
-import bluewave.web.Config;
+import bluewave.Config;
 import bluewave.utils.SpatialIndex;
 
 import java.io.IOException;

@@ -1591,6 +1591,8 @@ bluewave.Explorer = function(parent, config) {
         }
 
         nameEditor.clear();
+        var nameField = nameEditor.findField("name");
+        if (nameField.resetColor) nameField.resetColor();
         if (name) nameEditor.setValue("name", name);
         nameEditor.setValue("private", true);
 

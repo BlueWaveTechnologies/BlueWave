@@ -1,4 +1,4 @@
-package bluewave.web;
+package bluewave;
 import javaxt.express.utils.DbUtils;
 import static javaxt.utils.Console.console;
 import javaxt.json.*;

@@ -20,6 +20,7 @@ CREATE TABLE APPLICATION.USER (
     ACTIVE boolean NOT NULL DEFAULT true,
     CONTACT_ID bigint,
     AUTH jsonb,
+    INFO jsonb,
     CONSTRAINT PK_USER PRIMARY KEY (ID)
 );
 
