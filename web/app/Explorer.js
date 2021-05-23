@@ -1081,13 +1081,13 @@ bluewave.Explorer = function(parent, config) {
                     if (!orgConfig) orgConfig = {};
                     if (isDirty(chartConfig, orgConfig)){
                         node.config = chartConfig;
+                        updateTitle(node, node.config.chartTitle);
                         waitmask.show();
                         var el = sankeyEditor.getChart();
                         if (el.show) el.show();
                         createPreview(el, function(canvas){
                             node.preview = canvas.toDataURL("image/png");
                             createThumbnail(node, canvas);
-                            updateTitle(node, node.config.chartTitle);
                             win.close();
                             waitmask.hide();
                         }, this);
@@ -1114,7 +1114,8 @@ bluewave.Explorer = function(parent, config) {
         sankeyEditor.getNode = function(){
             return node;
         };
-        sankeyEditor.update(node.config, node);
+
+        sankeyEditor.update(node.config);
         sankeyEditor.show();
     };
 

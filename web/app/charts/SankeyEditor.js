@@ -24,8 +24,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var nodes = {};
     var quantities = {};
     var drawflow, currModule;
-    var currentTitle;
-    var currentNode;
     var button = {};
     var nodeEditor;
     var sankeyChart;
@@ -84,10 +82,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        currentTitle = "";
         drawflow.clear();
         drawflow.removeModule(currModule);
-        dashboardItem.title.innerHTML = "Untitled";
+        setTitle("Untitled");
         sankeyChart.clear();
         nodes = {};
         quantities = {};
@@ -97,21 +94,26 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(sankeyConfig, node){
+    this.update = function(sankeyConfig){
         me.clear();
 
-        currentNode = node;
-
         if (!sankeyConfig) sankeyConfig = {};
-        currentTitle = sankeyConfig.chartTitle;
-        dashboardItem.title.innerHTML = currentTitle;
-      //Update toggle buttont
+        //console.log(sankeyConfig);
+
+
+      //Update title
+        setTitle(sankeyConfig.chartTitle);
+
+
+      //Update toggle button
         toggleButton.setValue("Edit");
+
 
       //Set module
         currModule = "sankey_" + new Date().getTime();
         drawflow.addModule(currModule);
         drawflow.changeModule(currModule);
+
 
       //Import layout
         if (sankeyConfig.layout){
@@ -123,6 +125,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             };
             drawflow.import(data);
         }
+
 
       //Update nodes
         for (var nodeID in sankeyConfig.nodes) {
@@ -167,6 +170,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         }
 
+
       //Fill in any missing node inputs
         for (var nodeID in nodes){
             var node = nodes[nodeID];
@@ -175,6 +179,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 if (!inputNode) node.inputs[inputID] = nodes[inputID];
             }
         }
+
 
       //Update paths and quantities
         var connections = editPanel.getElementsByTagName("svg");
@@ -217,7 +222,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             layout: drawflow.export().drawflow[currModule].data,
             nodes: {},
             links: {},
-            chartTitle: currentTitle
+            chartTitle: getTitle()
         };
 
 
@@ -272,12 +277,32 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         return sankeyConfig;
     };
 
+
   //**************************************************************************
   //** getChart
   //**************************************************************************
     this.getChart = function(){
         if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
+    };
+
+
+  //**************************************************************************
+  //** setTitle
+  //**************************************************************************
+    var setTitle = function(title){
+        if (!title) title = "Untitled";
+        dashboardItem.title.innerHTML = title;
+    };
+
+
+  //**************************************************************************
+  //** getTitle
+  //**************************************************************************
+    var getTitle = function(){
+        var title = dashboardItem.title.innerHTML;
+        if (!title) return null;
+        else return title;
     };
 
 
@@ -316,6 +341,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         button.distributor.enable();
         button.hospital.enable();
     };
+
 
   //**************************************************************************
   //** getPreviousNodeValue
@@ -621,6 +647,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
                 var type = node.type;
+                console.log(node.name, node.type);
                 if (type===nodeType){
                     id++;
                 }
@@ -746,7 +773,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var editNode = function(node){
         if (!nodeEditor){
-            var currentNode;
+
             nodeEditor = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Node",
                 width: 400,
@@ -757,7 +784,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             });
 
 
-            var form = nodeEditor.form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
+            var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
                 style: config.style.form,
                 items: [
                     {
@@ -771,84 +798,88 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         type: "textarea"
                     }
                 ],
-                 buttons: [
-                     {
-                         name: "Cancel",
-                         onclick: function(){
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
                             cancel();
                             nodeEditor.close();
-                         }
-                     },
-                     {
-                         name: "Submit",
-                         onclick: function(){
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
                             var inputs = form.getData();
                             var name = inputs.name;
                             if (name) name = name.trim();
                             if (name==null || name==="") {
-                                warn("Name is required", form.findField("name"));
+                                warn("Name is required", nameField);
                                 return;
                             }
-                             waitmask.show();
-                             checkName(name, currentNode,  function(isValid){
+                            waitmask.show();
+                            checkName(name, nodeEditor.node, function(isValid){
                                 waitmask.hide();
                                 if (!isValid){
-                                    warn("Name is not unique", form.findField("name"));
-                                }else{
+                                    warn("Name is not unique", nameField);
+                                }
+                                else{
                                     submit();
                                 }
-                             });
-                         }
-                     }
-                 ]
+                            });
+                        }
+                    }
+                ]
             });
 
-            nodeEditor.update = function(data, node){
-                form.clear();
-                if (!data) return;
-                if (data.name) form.setValue("name", data.name);
-                if (data.notes) form.setValue("notes", data.notes);
-                currentNode = node;
-            };
-            nodeEditor.getData = function(){
-                return form.getData();
-            };
-        }
+            var nameField = form.findField("name");
 
 
-        nodeEditor.update({
-            name: node.name,
-            notes: node.notes
-        }, node);
-        var submit = function(){
-            nodeEditor.close();
-            var data = nodeEditor.getData();
-            node.name = data.name;
-            node.notes = data.notes;
-            if (node.name){
-                node.name = node.name.trim();
-                if (node.name.length>0){
-                    node.childNodes[0].getElementsByTagName("span")[0].innerHTML = node.name;
+            var submit = function(){
+                nodeEditor.close();
+                var node = nodeEditor.node;
+                if (!node) return;
+                var data = form.getData();
+                node.name = data.name;
+                node.notes = data.notes;
+                if (node.name){
+                    node.name = node.name.trim();
+                    if (node.name.length>0){
+                        node.childNodes[0].getElementsByTagName("span")[0].innerHTML = node.name;
+                    }
                 }
-            }
-        };
+            };
 
-        var cancel = function(){
-            var form = nodeEditor.form;
-            if (node.name) form.setValue("name", node.name);
-            if (node.notes) form.setValue("notes", node.notes);
+
+            var cancel = function(){
+                var node = nodeEditor.node;
+                if (node){
+                    if (node.name) form.setValue("name", node.name);
+                    if (node.notes) form.setValue("notes", node.notes);
+                }
+            };
+
+
+            nodeEditor.update = function(node){
+                form.clear();
+                if (nameField.resetColor) nameField.resetColor();
+                nodeEditor.node = node;
+                if (node){
+                    if (node.name) form.setValue("name", node.name);
+                    if (node.notes) form.setValue("notes", node.notes);
+                }
+            };
         }
 
-        var nameField = nodeEditor.form.findField("name");
-        if (nameField.resetColor) nameField.resetColor();
+
+        nodeEditor.update(node);
         nodeEditor.show();
     };
+
 
   //**************************************************************************
   //** checkName
   //**************************************************************************
     var checkName = function(name, currentNode, callback){
-       console.log(currentNode);
        for (var key in nodes) {
             var isValid = true;
             if (nodes.hasOwnProperty(key)){
@@ -864,6 +895,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         }
         callback.apply(me, [isValid]);
     };
+
 
   //**************************************************************************
   //** createButton
@@ -949,18 +981,17 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var createSankey = function(parent){
 
-        var panel = createDashboardItem(parent,{
+        dashboardItem = createDashboardItem(parent,{
             width: "1000px",
             height: "644px",
             title: "Untitled",
             settings: false
         });
-        dashboardItem = panel;
-        var div = panel.el;
+        var div = dashboardItem.el;
         div.className = "dashboard-item";
         div.style.float = "none";
 
-        panel.title.onclick = function(e){
+        dashboardItem.title.onclick = function(e){
             if (this.childNodes[0].nodeType===1) return;
             e.stopPropagation();
             var currText = this.innerHTML;
@@ -971,9 +1002,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             input.value = currText;
             input.onkeydown = function(event){
                 var key = event.keyCode;
-                    if(key == 13) {
-                        panel.title.innerHTML = this.value;
-                        currentTitle = this.value;
+                    if (key === 13) {
+                        setTitle(this.value);
                     }
             };
             this.appendChild(input);
@@ -981,15 +1011,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         };
 
         document.body.addEventListener('click', function(e) {
-            var input = panel.title.childNodes[0];
+            var input = dashboardItem.title.childNodes[0];
             var className = e.target.className;
-            if(input.nodeType === 1 && className != "form-input") {
-                panel.title.innerHTML = input.value;
-                currentTitle = input.value;
+            if (input.nodeType === 1 && className != "form-input") {
+                setTitle(input.value);
             };
         });
 
-        sankeyChart = new bluewave.charts.SankeyChart(panel.innerDiv, {});
+        sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv, {});
     };
 
 
