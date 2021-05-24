@@ -206,6 +206,9 @@ public class ReportService extends WebService {
     public ServiceResponse getActiveUsers(ServiceRequest request, Database database)
         throws ServletException, IOException {
 
+        if (!authorized(request.getRequest())) return new ServiceResponse(403, "Not Authorized");
+
+
         JSONObject json = new JSONObject();
         synchronized(activeUsers){
             Iterator<Long> it = activeUsers.keySet().iterator();
@@ -223,6 +226,9 @@ public class ReportService extends WebService {
   //** createWebSocket
   //**************************************************************************
     public void createWebSocket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        if (!authorized(request)) throw new IOException("Not Authorized");
+
         new WebSocketListener(request, response){
             private Long id;
             public void onConnect(){
@@ -237,6 +243,18 @@ public class ReportService extends WebService {
                 }
             }
         };
+    }
+
+
+  //**************************************************************************
+  //** authorized
+  //**************************************************************************
+  /** Returns true if the user associated with the request is either an
+   *  Administrator or Advanced User
+   */
+    private boolean authorized(HttpServletRequest request){
+        bluewave.app.User user = (bluewave.app.User) request.getUserPrincipal();
+        return (user.getAccessLevel()>3);
     }
 
 
