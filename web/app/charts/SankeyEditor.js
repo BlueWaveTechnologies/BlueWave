@@ -794,9 +794,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** editNode
+  //** getNodeEditor
   //**************************************************************************
-    var editNode = function(node){
+    this.getNodeEditor = function(){
         if (!nodeEditor){
 
             nodeEditor = new javaxt.dhtml.Window(document.body, {
@@ -894,10 +894,17 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
             };
         }
+        return nodeEditor;
+    };
 
 
-        nodeEditor.update(node);
-        nodeEditor.show();
+  //**************************************************************************
+  //** editNode
+  //**************************************************************************
+    var editNode = function(node){
+        var editor = me.getNodeEditor();
+        editor.update(node);
+        editor.show();
     };
 
 
@@ -905,8 +912,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** checkName
   //**************************************************************************
     var checkName = function(name, currentNode, callback){
-       for (var key in nodes) {
-            var isValid = true;
+        var isValid = true;
+        for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
                 var nodeName = node.name;
