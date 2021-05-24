@@ -285,10 +285,21 @@ public class WebApp extends HttpServlet {
         String clientIP = request.getRemoteAddr();
         if (clientIP.startsWith("/") && clientIP.length()>1) clientIP = clientIP.substring(1);
 
+        
+        javaxt.utils.Date date = null;
+        if (logger==null){
+            date = new javaxt.utils.Date();
+            date.setTimeZone("UTC");
+        }
+        else{
+            date = logger.getDate();
+        }
+
+
         StringBuilder str = new StringBuilder();
         str.append("New Request From: " + clientIP + "\r\n");
         str.append(request.getMethod() + ": " + request.getURL() + "\r\n");
-        str.append("TimeStamp: " + logger.getDate() + "\r\n");
+        str.append("TimeStamp: " + date + "\r\n");
         str.append("\r\n");
 
         java.util.Enumeration<String> headers = request.getHeaderNames();
