@@ -42,11 +42,12 @@ javaxt.dhtml.style.default = {
     },
 
 
-    combobox : { //style is also used by URLField
+    combobox : {
         input: "form-input form-input-with-button",
         button: "form-button form-input-button pulldown-button-icon",
         menu: "form-input-menu",
-        option: "form-input-menu-item"
+        option: "form-input-menu-item",
+        newOption: "form-input-menu-item form-input-menu-item-new"
     },
 
 

@@ -399,6 +399,9 @@ select:focus, textarea:focus, input:focus{
 .form-input-menu-item:focused {
     background-color: aliceblue;
 }
+.form-input-menu-item-new { /* For a "new" menu option in a combobox menu. Used in conjuction with form-input-menu-item */
+    border-top: 1px solid #ccc;
+}
 
 
 /**************************************************************************/
