@@ -17,6 +17,7 @@ bluewave.Explorer = function(parent, config) {
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
     var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor; //popup dialogs
+    var supplyChainEditor;
 
 
   //**************************************************************************
@@ -122,6 +123,7 @@ bluewave.Explorer = function(parent, config) {
       //Enable default buttons
         button.addData.enable();
         button.sankeyChart.enable();
+        button.supplyChain.enable();
 
 
         if (!dashboard.info) return;
@@ -579,7 +581,8 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("barChart", "fas fa-chart-bar", "Bar Chart", menubar);
         createMenuButton("lineChart", "fas fa-chart-line", "Line Chart", menubar);
         createMenuButton("map", "fas fa-map-marked-alt", "Map", menubar);
-        createMenuButton("sankeyChart", "fas fa-project-diagram", "Sankey", menubar);
+        createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
+        createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
     };
 
@@ -714,6 +717,7 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
             case "sankeyChart":
+            case "supplyChain":
 
                 var node = createNode({
                     name: title,
@@ -857,9 +861,15 @@ bluewave.Explorer = function(parent, config) {
                 break;
             case "sankeyChart":
 
-
                 node.ondblclick = function(){
                     editSankey(this);
+                };
+
+                break;
+            case "supplyChain":
+
+                node.ondblclick = function(){
+                    editSupplyChain(this);
                 };
 
                 break;
@@ -1117,6 +1127,62 @@ bluewave.Explorer = function(parent, config) {
 
         sankeyEditor.update(node.config);
         sankeyEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** editSupplyChain
+  //**************************************************************************
+    var editSupplyChain = function(node){
+        if (!supplyChainEditor){
+            var win = createWindow({
+                title: "Edit Supply Chain",
+                width: 1680,
+                height: 920,
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = supplyChainEditor.getConfig();
+                    var node = supplyChainEditor.getNode();
+                    var orgConfig = node.config;
+                    if (!orgConfig) orgConfig = {};
+                    if (isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        updateTitle(node, node.config.chartTitle);
+                        waitmask.show();
+                        var el = supplyChainEditor.getChart();
+                        if (el.show) el.show();
+                        createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
+                    }
+                }
+            });
+
+
+            supplyChainEditor = new bluewave.charts.SupplyChainEditor(win.getBody(), config);
+
+            supplyChainEditor.show = function(){
+                win.show();
+            };
+
+            supplyChainEditor.hide = function(){
+                win.hide();
+            };
+        }
+
+      //Add custom getNode() method to the layoutEditor to return current node
+        supplyChainEditor.getNode = function(){
+            return node;
+        };
+
+        supplyChainEditor.update(node.config);
+        supplyChainEditor.show();
     };
 
 
@@ -1677,7 +1743,7 @@ bluewave.Explorer = function(parent, config) {
                         grid.load(rows, 1);
                     }
                 }
-                else if (node.type==="sankeyChart"){
+                else if (node.type==="sankeyChart" || node.type==="supplyChain"){
                     var data = {
                         nodes: [],
                         links: []
