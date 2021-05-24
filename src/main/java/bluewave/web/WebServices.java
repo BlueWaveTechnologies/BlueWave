@@ -1,12 +1,7 @@
 package bluewave.web;
 import bluewave.Config;
-import bluewave.web.services.ReportService;
-import bluewave.web.services.QueryService;
-import bluewave.web.services.DashboardService;
-import bluewave.web.services.GraphService;
-import bluewave.web.services.MapService;
-import bluewave.web.services.DataService;
 import bluewave.graph.Neo4J;
+import bluewave.web.services.*;
 
 import javaxt.express.*;
 import javaxt.http.servlet.HttpServletRequest;
@@ -32,6 +27,7 @@ public class WebServices extends WebService {
     private DataService dataService;
     private QueryService queryService;
     private GraphService graphService;
+    private SupplyChainService supplyChainService;
 
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
@@ -62,6 +58,7 @@ public class WebServices extends WebService {
         dataService = new DataService(new javaxt.io.Directory(web + "data"));
         queryService = new QueryService(graph, Config.get("webserver").toJSONObject());
         graphService = new GraphService(graph);
+        supplyChainService = new SupplyChainService(graph);
 
 
 
@@ -205,6 +202,9 @@ public class WebServices extends WebService {
         }
         else if (service.equals("graph")){
             ws = graphService;
+        }
+        else if (service.equals("supplychain")){
+            ws = supplyChainService;
         }
         else{
             serviceRequest = new ServiceRequest(request);
