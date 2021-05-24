@@ -82,7 +82,7 @@ public class WebApp extends HttpServlet {
 
 
       //Instantiate web services
-        ws = new WebServices(web);
+        ws = new WebServices(web, config);
 
 
       //Instantiate authenticator
@@ -285,7 +285,7 @@ public class WebApp extends HttpServlet {
         String clientIP = request.getRemoteAddr();
         if (clientIP.startsWith("/") && clientIP.length()>1) clientIP = clientIP.substring(1);
 
-        
+
         javaxt.utils.Date date = null;
         if (logger==null){
             date = new javaxt.utils.Date();

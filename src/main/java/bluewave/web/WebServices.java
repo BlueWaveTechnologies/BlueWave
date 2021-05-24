@@ -7,6 +7,7 @@ import javaxt.express.*;
 import javaxt.http.servlet.HttpServletRequest;
 import javaxt.http.servlet.HttpServletResponse;
 import javaxt.http.servlet.ServletException;
+import javaxt.json.JSONObject;
 import javaxt.io.Jar;
 import javaxt.sql.*;
 
@@ -36,7 +37,7 @@ public class WebServices extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public WebServices(javaxt.io.Directory web) throws Exception {
+    public WebServices(javaxt.io.Directory web, JSONObject webConfig) throws Exception {
 
       //Register models that this service will support
         for (Class c : new Jar(this).getClasses()){
@@ -56,8 +57,8 @@ public class WebServices extends WebService {
         mapService = new MapService();
         reportService = new ReportService();
         dataService = new DataService(new javaxt.io.Directory(web + "data"));
-        queryService = new QueryService(graph, Config.get("webserver").toJSONObject());
-        graphService = new GraphService(graph);
+        queryService = new QueryService(graph, webConfig);
+        graphService = new GraphService(graph, webConfig);
         supplyChainService = new SupplyChainService(graph);
 
 

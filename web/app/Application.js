@@ -695,6 +695,16 @@ bluewave.Application = function(parent, config) {
   //** showMenu
   //**************************************************************************
     var showMenu = function(menu, target){
+
+        var numVisibleItems = 0;
+        for (var i=0; i<mainMenu.childNodes.length; i++){
+            var menuItem = mainMenu.childNodes[i];
+            if (menuItem.isVisible()) numVisibleItems++;
+        }
+        if (numVisibleItems===0){
+            return;
+        }
+
         var callout = getCallout();
         var innerDiv = callout.getInnerDiv();
         while (innerDiv.firstChild) {
@@ -798,11 +808,13 @@ bluewave.Application = function(parent, config) {
 
       //Update menu items
         for (var i=0; i<mainMenu.childNodes.length; i++) mainMenu.childNodes[i].show();
+
+
+      //Show/hide menu items based on current app
         var currApp = getVisibleApp();
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
-
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
 
@@ -834,6 +846,23 @@ bluewave.Application = function(parent, config) {
                 }
             }
         }
+
+
+
+      //Hide menu items based on user access
+        for (var i=0; i<mainMenu.childNodes.length; i++){
+            var menuItem = mainMenu.childNodes[i];
+            if (menuItem.label==="Create Dashboard"){
+                if (currUser.accessLevel<=3) menuItem.hide();
+            }
+            if (menuItem.label==="Edit Dashboard"){
+                if (currUser.accessLevel<=3) menuItem.hide();
+            }
+            if (menuItem.label==="System Administration"){
+                if (currUser.accessLevel<5) menuItem.hide();
+            }
+        }
+
 
         return mainMenu;
     };

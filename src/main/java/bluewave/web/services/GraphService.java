@@ -3,6 +3,7 @@ import bluewave.graph.fdp.Edge;
 import bluewave.graph.fdp.Vertex;
 import bluewave.graph.fdp.ForceDirectedGraph;
 import bluewave.graph.Neo4J;
+import bluewave.utils.NotificationService;
 import bluewave.utils.SpatialIndex;
 
 import com.google.gson.Gson;
@@ -54,10 +55,20 @@ public class GraphService extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public GraphService(Neo4J graph){
+    public GraphService(Neo4J graph, JSONObject webConfig){
         this.graph = graph;
         this.cache = new ConcurrentHashMap<>();
-        this.cacheDir = new javaxt.io.Directory("/temp/bluewave");
+
+      //Set path to the cacheDir directory
+        if (webConfig.has("jobDir")){
+            cacheDir = new javaxt.io.Directory(webConfig.get("jobDir").toString());
+            cacheDir = new javaxt.io.Directory(cacheDir+"graph");
+            if (!cacheDir.exists()) cacheDir.create();
+            if (!cacheDir.exists()) cacheDir = null;
+        }
+        if (cacheDir==null){
+            throw new IllegalArgumentException("Invalid \"jobDir\"");
+        }
     }
 
 
