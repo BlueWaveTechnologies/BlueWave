@@ -64,7 +64,7 @@ bluewave.UserStats = function(parent, config) {
 
         parent.appendChild(table);
         me.el = table;
-        addShowHide(me.el);
+        addShowHide(me);
     };
 
 

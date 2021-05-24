@@ -38,7 +38,7 @@ bluewave.AdminPanel = function(parent, config) {
         userAdmin = new bluewave.UserAdmin(mainPanel, config);
 
         me.el = mainPanel;
-        addShowHide(me.el);
+        addShowHide(me);
     };
 
 

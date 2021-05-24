@@ -53,7 +53,7 @@ bluewave.UserAdmin = function(parent, config) {
 
         parent.appendChild(table);
         me.el = table;
-        addShowHide(me.el);
+        addShowHide(me);
     };
 
 
