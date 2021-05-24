@@ -13,7 +13,21 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: { top: 10, right: 10, bottom: 10, left: 10 }
+        margin: { top: 10, right: 10, bottom: 10, left: 10 },
+        nodes: {
+            input: {
+                icon: "fas fa-sign-out-alt",
+                label: "Input"
+            },
+            output: {
+                icon: "fas fa-sign-in-alt",
+                label: "Output"
+            },
+            distributor: {
+                icon: "fas fa-random",
+                label: "Distributor"
+            }
+        }
     };
 
     var editPanel, previewPanel, waitmask; //primary components
@@ -35,7 +49,18 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        config = merge(config, defaultConfig);
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, config);
+
+
+      //Merge clone with default config
+        merge(clone, defaultConfig);
+        config = clone;
+
+
+      //Update config as needed
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
@@ -331,15 +356,15 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
       //Create buttons
-        createButton("factory", "fas fa-industry", "Factory");
-        createButton("distributor", "fas fa-store-alt", "Distributor");
-        createButton("hospital", "fas fa-hospital-user", "Hospital");
+        createButton("input", config.nodes.input.icon, config.nodes.input.label);
+        createButton("distributor", config.nodes.distributor.icon, config.nodes.distributor.label);
+        createButton("output", config.nodes.output.icon, config.nodes.output.label);
 
 
       //Enable addData button
-        button.factory.enable();
+        button.input.enable();
         button.distributor.enable();
-        button.hospital.enable();
+        button.output.enable();
     };
 
 
@@ -666,10 +691,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         var numOutputs = 0;
 
         switch (nodeType) {
-            case "factory":
+            case "input":
                 numOutputs = 1;
                 break;
-            case "hospital":
+            case "output":
                 numInputs = 1;
                 break;
             default:
