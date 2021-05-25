@@ -37,7 +37,16 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-        config = merge(config, defaultConfig);
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, config);
+
+
+      //Merge clone with default config
+        merge(clone, defaultConfig);
+        config = clone;
+        
 
       //Update config as needed
         if (!config.style) config.style = javaxt.dhtml.style.default;
