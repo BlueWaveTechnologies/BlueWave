@@ -134,6 +134,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         type: "text"
                     },
                     {
+                        name: "fei",
+                        label: "FEI",
+                        type: "text"
+                    },
+                    {
                         name: "notes",
                         label: "Notes",
                         type: "textarea"
@@ -165,6 +170,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 return;
                             }
                             waitmask.show();
+
+                            var node = nodeEditor.node;
+                            node.name = companyName;
+
                             checkName(companyName, nodeEditor.node, function(isValid){
                                 waitmask.hide();
                                 if (!isValid){
@@ -173,10 +182,12 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 else{
 
                                     nodeEditor.close();
-                                    var node = nodeEditor.node;
+
                                     if (node){
-                                        node.name = companyName;
+                                        node.city = data.city;
+                                        node.country = data.country;
                                         node.notes = data.notes;
+                                        node.fei = data.fei;
                                         node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                     }
                                 }
@@ -187,9 +198,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             });
 
 
+
             var cityField = form.findField("city");
             var countryField = form.findField("country");
-
+            var feiField = form.findField("fei");
+            form.disableField("fei");
 
 
             form.onChange = function(field){
@@ -201,6 +214,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         form.disableField("city");
                         form.disableField("country");
                         var company = value.company;
+                        feiField.setValue(company.registration_number);
                         cityField.setValue(company.city);
                         if (company.iso_country_code==='US'){
                             countryField.setValue(company.state_code);
@@ -210,6 +224,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         }
                     }
                     else{
+                        feiField.setValue("");
                         form.enableField("city");
                         form.enableField("country");
                         if (name.trim().length>0){
@@ -231,12 +246,35 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
             nodeEditor.update = function(node){
+                nodeEditor.node = node;
                 form.clear();
                 if (companyList.resetColor) companyList.resetColor();
-                nodeEditor.node = node;
                 if (node){
-                    if (node.name) form.setValue("name", node.name);
+                    if (node.name){
+                        companyList.add(node.name, {
+                            id: node.nodeID,
+                            company: {
+                                name: node.name,
+                                city: node.city,
+                                iso_country_code: node.country,
+                                fei: node.fei
+                            }
+                        });
+                        form.setValue("company", node.name);
+                    }
+                    if (node.city) form.setValue("city", node.city);
+                    if (node.country) form.setValue("country", node.country);
+                    if (node.fei) form.setValue("fei", node.fei);
                     if (node.notes) form.setValue("notes", node.notes);
+
+                    if (node.fei){
+                        form.disableField("city");
+                        form.disableField("country");
+                    }
+                    else{
+                        form.enableField("city");
+                        form.enableField("country")
+                    }
                 }
             };
         }
@@ -251,20 +289,24 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var checkName = function(name, currentNode, callback){
         var isValid = true;
 
+        if (!name) name = "";
+
         var currentNodeID = currentNode.id;
         var idx = currentNodeID.indexOf("drawflow_node");
         if (idx===0) currentNodeID = currentNodeID.substring("drawflow_node".length+1);
 
 
         var sankeyConfig = sankeyEditor.getConfig();
-        var nodes = sankeyConfig.nodes;
+        var nodes = sankeyEditor.getNodes(); //sankeyConfig.nodes;
+        console.log(nodes);
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
                 var nodeID = key;
                 var nodeName = node.name;
                 if (nodeID !== currentNodeID){
-                    if(name.toLowerCase() === nodeName.toLowerCase()){
+                    console.log(name, nodeName);
+                    if (name.toLowerCase() === nodeName.toLowerCase()){
                         isValid = false;
                         break;
                     }
