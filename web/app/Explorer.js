@@ -565,9 +565,15 @@ bluewave.Explorer = function(parent, config) {
             node.ondblclick();
         });
         drawflow.on('nodeRemoved', function(nodeID) {
+            removeInputs(nodes, nodeID);
             delete nodes[nodeID+""];
         });
-
+        drawflow.on('connectionRemoved', function(info) {
+            var outputID = info.output_id+"";
+            var inputID = info.input_id+"";
+            var node = nodes[inputID];
+            delete node.inputs[outputID+""];
+        });
 
 
       //Create menubar
@@ -1119,6 +1125,22 @@ bluewave.Explorer = function(parent, config) {
         sankeyEditor.show();
     };
 
+  //**************************************************************************
+  //** removeInputs
+  //**************************************************************************
+    var removeInputs = function(nodes, nodeID){
+        for(var key in nodes){
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                for(var inputID in node.inputs){
+                    if(inputID === nodeID){
+                        delete node.inputs[nodeID+""];
+                        console.log("removed");
+                    }
+                }
+            }
+        }
+    }
 
   //**************************************************************************
   //** editLayout
