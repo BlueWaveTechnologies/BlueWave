@@ -46,7 +46,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
       //Merge clone with default config
         merge(clone, defaultConfig);
         config = clone;
-        
+
 
       //Update config as needed
         if (!config.style) config.style = javaxt.dhtml.style.default;
@@ -213,17 +213,19 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             var feiField = form.findField("fei");
             form.disableField("fei");
 
-
+            var lastSearch = 0;
             form.onChange = function(field){
                 if (field.label==="Company"){
                     var name = field.getText();
                     var value = field.getValue();
 
                     if (value){ //user either selected an item in the list or typed in an exact match
-                        form.disableField("city");
-                        form.disableField("country");
                         var company = value.company;
-                        feiField.setValue(company.registration_number);
+                        if (company.registration_number){
+                            form.disableField("city");
+                            form.disableField("country");
+                            feiField.setValue(company.registration_number);
+                        }
                         cityField.setValue(company.city);
                         if (company.iso_country_code==='US'){
                             countryField.setValue(company.state_code);
@@ -237,17 +239,42 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         form.enableField("city");
                         form.enableField("country");
                         if (name.trim().length>0){
-                            companyList.removeAll();
-                            bluewave.utils.get("SupplyChain/Companies?name="+name+"&limit=5",{
-                                success: function(arr){
-                                    for (var i=0; i<arr.length; i++){
-                                        var result = arr[i];
-                                        var company = result.company;
-                                        companyList.add(company.name, result);
+
+                            (function (name) {
+
+                                bluewave.utils.get("SupplyChain/Companies?name="+name+"&limit=5",{
+                                    success: function(arr){
+
+                                        var currTime = new Date().getTime();
+                                        if (currTime<lastSearch) return;
+                                        lastSearch = currTime;
+
+                                        companyList.removeAll();
+                                        if (arr.length===0){
+                                            companyList.add(name, {
+                                                company: {
+                                                    name: name
+                                                }
+                                            });
+                                            companyList.setValue(name);
+                                            form.enableField("city");
+                                            form.enableField("country");
+                                            //companyList.hideMenu();
+                                        }
+                                        else{
+                                            for (var i=0; i<arr.length; i++){
+                                                var result = arr[i];
+                                                var company = result.company;
+                                                companyList.add(company.name, result);
+                                            }
+                                            companyList.showMenu();
+                                        }
                                     }
-                                    companyList.showMenu();
-                                }
-                            });
+                                });
+                            })(name);
+
+
+
                         }
                     }
                 }
@@ -260,7 +287,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 if (companyList.resetColor) companyList.resetColor();
                 if (node){
                     if (node.name){
-                        companyList.add(node.name, {
+                        var name = node.name;
+                        var info = {
                             id: node.nodeID,
                             company: {
                                 name: node.name,
@@ -268,7 +296,13 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 iso_country_code: node.country,
                                 fei: node.fei
                             }
-                        });
+                        };
+                        if (isNaN(info.id)) delete info.id;
+                        for (var key in info.company) {
+                            if (!info.company[key]) delete info.company[key];
+                        }
+
+                        companyList.add(name, info);
                         form.setValue("company", node.name);
                     }
                     if (node.city) form.setValue("city", node.city);
@@ -282,7 +316,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     }
                     else{
                         form.enableField("city");
-                        form.enableField("country")
+                        form.enableField("country");
                     }
                 }
             };
@@ -305,9 +339,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         if (idx===0) currentNodeID = currentNodeID.substring("drawflow_node".length+1);
 
 
-        var sankeyConfig = sankeyEditor.getConfig();
-        var nodes = sankeyEditor.getNodes(); //sankeyConfig.nodes;
-        console.log(nodes);
+        var nodes = sankeyEditor.getNodes();
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
