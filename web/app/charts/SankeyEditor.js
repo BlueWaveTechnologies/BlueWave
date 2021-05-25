@@ -238,6 +238,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** getNodes
+  //**************************************************************************
+    this.getNodes = function(){
+        return nodes;
+    };
+
+
+  //**************************************************************************
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
@@ -269,6 +277,21 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     type: node.type,
                     notes: node.notes
                 };
+
+                for (var k in node) {
+                    if (node.hasOwnProperty(k)){
+                        var val = node[k];
+                        if (typeof val === "string"){
+                            sankeyConfig.nodes[key][k] = val;
+                        }
+                        else {
+                            //boolean or numeric value?
+                        }
+                    }
+                }
+
+
+
             }
         };
 
