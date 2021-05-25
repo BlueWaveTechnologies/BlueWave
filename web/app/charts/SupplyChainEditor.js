@@ -16,11 +16,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         nodes: {
             input: {
                 icon: "fas fa-industry",
-                label: "Factory"
+                label: "Manufacturer"
             },
             output: {
                 icon: "fas fa-hospital-user",
-                label: "Hospital"
+                label: "End User"
             },
             distributor: {
                 icon: "fas fa-store-alt",
