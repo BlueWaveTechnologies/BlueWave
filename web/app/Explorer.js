@@ -1105,6 +1105,7 @@ bluewave.Explorer = function(parent, config) {
                     else{
                         win.close();
                     }
+                    button.layout.enable();
                 }
             });
 
@@ -1161,6 +1162,7 @@ bluewave.Explorer = function(parent, config) {
                     else{
                         win.close();
                     }
+                    button.layout.enable();
                 }
             });
 
