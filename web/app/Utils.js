@@ -464,6 +464,66 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** createSlider
+  //**************************************************************************
+  /** Creates a custom form input using a text field
+   */
+    createSlider: function(inputName, form){
+
+      //Add row under the given input
+        var input = form.findField(inputName);
+        var row = input.row.cloneNode(true);
+        var cols = row.childNodes;
+        for (var i=0; i<cols.length; i++){
+            cols[i].innerHTML = "";
+        }
+        input.row.parentNode.insertBefore(row, input.row.nextSibling);
+
+
+      //Add slider to the last column of the new row
+        var slider = document.createElement("input");
+        cols[2].appendChild(slider);
+        slider.type = "range";
+        slider.className = "dashboard-slider";
+        slider.setAttribute("min", 1);
+        slider.setAttribute("max", 20);
+        slider.onchange = function(){
+            var val = (this.value-1)*5;
+            input.setValue(val);
+        };
+
+        var isNumber = javaxt.dhtml.utils.isNumber;
+        var round = javaxt.dhtml.utils.round;
+
+
+        var setValue = input.setValue;
+        input.setValue = function(val){
+            val = parseFloat(val);
+            setValue(val + "%");
+            slider.value = round(val/5)+1;
+        };
+
+        var getValue = input.getValue;
+        input.getValue = function(){
+            var val = parseFloat(getValue());
+            if (isNumber(val)) return round(val, 0);
+            else return 0;
+        };
+
+        input.row.getElementsByTagName("input")[0].addEventListener('input', function(e) {
+            var val = parseFloat(this.value);
+            if (isNumber(val)){
+                if (val<0 || val>95){
+                    if (val<0) val = 0;
+                    else val = 95;
+                }
+                input.setValue(val);
+            }
+        });
+    },
+
+
+  //**************************************************************************
   //** updateExtents
   //**************************************************************************
   /** Adds 2 transparent points to the given map layer. Used to circumvent a
