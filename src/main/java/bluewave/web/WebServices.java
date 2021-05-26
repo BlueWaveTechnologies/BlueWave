@@ -212,11 +212,14 @@ public class WebServices extends WebService {
             ws = this;
 
           //Special case for dashboard/thumbnail requests
-            if (service.equals("dashboard")){
+            if (service.startsWith("dashboard")){
+                ws = dashboardService;
                 String p = serviceRequest.getPath(1).toString();
                 if (p!=null && p.equalsIgnoreCase("thumbnail")){
                     serviceRequest = new ServiceRequest(service, request);
-                    ws = dashboardService;
+                }
+                else{
+                    serviceRequest = new ServiceRequest(request);
                 }
             }
         }
@@ -245,7 +248,7 @@ public class WebServices extends WebService {
                 if (op.equals("get") || op.equals("list")){
 
                   //Allow users to see themselves
-                    where.append("id=" + user.getID());
+                    //where.append("id=" + user.getID());
                 }
                 else{
 
