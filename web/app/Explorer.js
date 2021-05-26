@@ -1135,7 +1135,6 @@ bluewave.Explorer = function(parent, config) {
                 for(var inputID in node.inputs){
                     if(inputID === nodeID){
                         delete node.inputs[nodeID+""];
-                        console.log("removed");
                     }
                 }
             }
@@ -1623,6 +1622,19 @@ bluewave.Explorer = function(parent, config) {
         nameEditor.show();
     };
 
+  //**************************************************************************
+  //** checkConnection
+  //**************************************************************************
+    var checkConnection = function(layoutNode, node){
+        var connected = false;
+        for(var inputID in layoutNode.inputs){
+            tempNode = nodes[inputID];
+            if(tempNode === node){
+                connected = true;
+            }
+        }
+        return connected;
+    }
 
   //**************************************************************************
   //** updateDashboard
@@ -1655,6 +1667,8 @@ bluewave.Explorer = function(parent, config) {
             if (layoutNode.config.hasOwnProperty(key)){
                 var rect = layoutNode.config[key];
                 var node = nodes[key];
+                var connected = checkConnection(layoutNode, node);
+                if (!connected) continue;
                 if (!node) continue;
                 var chartConfig = node.config;
                 if (!chartConfig) chartConfig = {};
