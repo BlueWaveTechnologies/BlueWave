@@ -100,12 +100,23 @@ bluewave.Explorer = function(parent, config) {
    *  then the edit view will be unavailable
    */
     this.update = function(dashboard, readOnly){
+
+      //Show mask
+        mask.show();
+
+
+      //Reset panels and class variables
         me.clear();
 
 
+      //Ensure that the chartEditor is visible (albeit hidden by the mask).
+      //Otherwise, the thumbnail previews might not generate correctly
+        toggleButton.setValue("Edit");
+
+
+      //Show/hide the toggleButton as needed
         if (readOnly===true){
             toggleButton.hide();
-            mask.show();
         }
         else{
             toggleButton.show();
@@ -126,6 +137,7 @@ bluewave.Explorer = function(parent, config) {
         button.supplyChain.enable();
 
 
+      //Return early if the dashboard is missing config info
         if (!dashboard.info) return;
 
 
@@ -1866,6 +1878,7 @@ bluewave.Explorer = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
     var createSpacer = bluewave.utils.createSpacer;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
