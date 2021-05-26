@@ -105,11 +105,16 @@ var models = {
     DashboardUser: {
         fields: [
             {name: 'user',        type: 'User'},
-            {name: 'dashboard',   type: 'Dashboard'}
+            {name: 'dashboard',   type: 'Dashboard'},
+            {name: 'readOnly',    type: 'boolean'}
         ],
         constraints: [
             {name: 'user',          required: true, onDelete: 'cascade'},
-            {name: 'dashboard',     required: true, onDelete: 'cascade'}
+            {name: 'dashboard',     required: true, onDelete: 'cascade'},
+            {name: 'readOnly',      required: true}
+        ],
+        defaults: [
+            {name: 'readOnly',      value: true}
         ]
     },
 

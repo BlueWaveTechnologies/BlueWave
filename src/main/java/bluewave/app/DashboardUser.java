@@ -15,6 +15,7 @@ public class DashboardUser extends javaxt.sql.Model {
 
     private User user;
     private Dashboard dashboard;
+    private Boolean readOnly;
 
 
   //**************************************************************************
@@ -25,6 +26,7 @@ public class DashboardUser extends javaxt.sql.Model {
             
             put("user", "user_id");
             put("dashboard", "dashboard_id");
+            put("readOnly", "read_only");
 
         }});
         
@@ -65,6 +67,7 @@ public class DashboardUser extends javaxt.sql.Model {
             this.id = getValue(rs, "id").toLong();
             Long userID = getValue(rs, "user_id").toLong();
             Long dashboardID = getValue(rs, "dashboard_id").toLong();
+            this.readOnly = getValue(rs, "read_only").toBoolean();
 
 
 
@@ -110,6 +113,7 @@ public class DashboardUser extends javaxt.sql.Model {
             }
             catch(Exception e){}
         }
+        this.readOnly = json.get("readOnly").toBoolean();
     }
 
 
@@ -127,6 +131,14 @@ public class DashboardUser extends javaxt.sql.Model {
 
     public void setDashboard(Dashboard dashboard){
         this.dashboard = dashboard;
+    }
+
+    public Boolean getReadOnly(){
+        return readOnly;
+    }
+
+    public void setReadOnly(Boolean readOnly){
+        this.readOnly = readOnly;
     }
     
     
