@@ -28,6 +28,7 @@ public class WebServices extends WebService {
     private DataService dataService;
     private QueryService queryService;
     private GraphService graphService;
+    private ImportService importService;
     private SupplyChainService supplyChainService;
 
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
@@ -59,6 +60,7 @@ public class WebServices extends WebService {
         dataService = new DataService(new javaxt.io.Directory(web + "data"));
         queryService = new QueryService(graph, webConfig);
         graphService = new GraphService(graph, webConfig);
+        importService = new ImportService(graph, webConfig);
         supplyChainService = new SupplyChainService(graph);
 
 
@@ -203,6 +205,9 @@ public class WebServices extends WebService {
         }
         else if (service.equals("graph")){
             ws = graphService;
+        }
+        else if (service.equals("import")){
+            ws = importService;
         }
         else if (service.equals("supplychain")){
             ws = supplyChainService;
