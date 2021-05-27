@@ -63,6 +63,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
 
+        if (!data) return;
 
         if (chartConfig){
             if (chartConfig.margin) config.margin = chartConfig.margin;
