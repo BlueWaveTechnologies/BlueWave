@@ -124,33 +124,99 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             };
 
 
+            var facilityList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
+                style: config.style.combobox,
+                addNewOption: false,
+                addNewOptionText: "Add Facility...",
+                scrollbar: true
+            });
+
+
+            var productList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
+                style: config.style.combobox,
+                addNewOption: false,
+                addNewOptionText: "Add Product...",
+                scrollbar: true
+            });
+
+
             var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
                 style: config.style.form,
                 items: [
                     {
-                        name: "company",
-                        label: "Company",
-                        type: companyList
+                        group: "Company",
+                        items: [
+                            {
+                                name: "company",
+                                label: "Name",
+                                type: companyList
+                            }
+                        ]
                     },
                     {
-                        name: "city",
-                        label: "City",
-                        type: "text"
+                        group: "Facility",
+                        items: [
+                            {
+                                name: "facility",
+                                label: "Name",
+                                type: facilityList
+                            },
+                            {
+                                name: "city",
+                                label: "City",
+                                type: "text"
+                            },
+                            {
+                                name: "country",
+                                label: "State/Country",
+                                type: "text"
+                            },
+                            {
+                                name: "fei",
+                                label: "FEI",
+                                type: "text"
+                            }
+                        ]
                     },
                     {
-                        name: "country",
-                        label: "State/Country",
-                        type: "text"
+                        group: "Product",
+                        items: [
+                            {
+                                name: "product",
+                                label: "Name",
+                                type: productList
+                            },
+                            {
+                                name: "productType",
+                                label: "Type",
+                                type: "text"
+                            },
+                            {
+                                name: "inventory",
+                                label: "Inventory",
+                                type: "text"
+                            },
+                            {
+                                name: "capacity",
+                                label: "Capacity",
+                                type: "text"
+                            },
+                            {
+                                name: "leadTime",
+                                label: "Lead Time",
+                                type: "text"
+                            }
+                        ]
                     },
                     {
-                        name: "fei",
-                        label: "FEI",
-                        type: "text"
-                    },
-                    {
-                        name: "notes",
-                        label: "Notes",
-                        type: "textarea"
+                        group: "Notes",
+                        items: [
+                            {
+                                name: "notes",
+                                label: "",
+                                type: "textarea"
+                            }
+                        ]
                     }
                 ],
                 buttons: [
@@ -165,41 +231,65 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         name: "Submit",
                         onclick: function(){
                             var data = form.getData();
+                            var company = data.company;
+                            var facility = data.facility;
+                            var product = data.product;
+
 
                             var companyName = null;
-                            try{
-                                companyName = data.company.company.name;
-                                if (companyName) companyName = companyName.trim();
-                            }
-                            catch(e){}
-
-
+                            try{companyName = company.name.trim(); } catch(e){}
                             if (companyName==null || companyName==="") {
-                                warn("Company is required", companyList);
-                                return;
-                            }
-                            waitmask.show();
-
-                            var node = nodeEditor.node;
-                            node.name = companyName;
-
-                            checkName(companyName, nodeEditor.node, function(isValid){
-                                waitmask.hide();
-                                if (!isValid){
-                                    warn("Name is not unique", companyList);
+                                try{companyName = companyList.getText().trim(); } catch(e){}
+                                if (companyName==null || companyName==="") {
+                                    warn("Company is required", companyList);
+                                    return;
                                 }
                                 else{
-
-                                    nodeEditor.close();
-
-                                    if (node){
-                                        node.city = data.city;
-                                        node.country = data.country;
-                                        node.notes = data.notes;
-                                        node.fei = data.fei;
-                                        node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
-                                    }
+                                    company = data.company = {
+                                        name: companyName
+                                    };
                                 }
+                            }
+
+
+                            var facilityName = null;
+                            try{facilityName = facility.name.trim(); } catch(e){}
+                            if (facilityName==null || facilityName==="") {
+                                try{facilityName = facilityList.getText().trim(); } catch(e){}
+                                if (facilityName==null || facilityName==="") {
+                                    warn("Facility is required", facilityList);
+                                    return;
+                                }
+                                else{
+                                    facility = data.facility = {
+                                        name: facilityName
+                                    };
+                                }
+                            }
+
+
+                            var productName = null;
+                            try{productName = product.name.trim(); } catch(e){}
+                            if (productName==null || productName==="") {
+                                try{productName = productList.getText().trim(); } catch(e){}
+                                if (productName==null || productName==="") {
+                                    warn("Product is required", productList);
+                                    return;
+                                }
+                                else{
+                                    product = data.product = {
+                                        name: productName
+                                    };
+                                }
+                            }
+
+                            save(data, function(){
+
+                                var node = nodeEditor.node;
+                                node.name = companyName;
+
+                                node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
+                                nodeEditor.close();
                             });
                         }
                     }
@@ -210,39 +300,48 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
             var cityField = form.findField("city");
             var countryField = form.findField("country");
+            var productTypeField = form.findField("productType");
             var feiField = form.findField("fei");
             form.disableField("fei");
 
             var lastSearch = 0;
             form.onChange = function(field){
-                if (field.label==="Company"){
+                if (field.name==="company"){
                     var name = field.getText();
                     var value = field.getValue();
-
+console.log(name, value);
                     if (value){ //user either selected an item in the list or typed in an exact match
-                        var company = value.company;
-                        if (company.registration_number){
-                            form.disableField("city");
-                            form.disableField("country");
-                            feiField.setValue(company.registration_number);
-                        }
-                        cityField.setValue(company.city);
-                        if (company.iso_country_code==='US'){
-                            countryField.setValue(company.state_code);
+                        var company = value;
+
+                      //Update facility list
+                        facilityList.clear();
+                        var filter;
+                        if (company.owner_operator_number){
+                            filter = "owner_operator_number="+company.owner_operator_number;
                         }
                         else{
-                            countryField.setValue(company.iso_country_code);
+                            if (!isNaN(company.id)) filter = "companyID=" + company.id;
+                        }
+
+                        if (filter){
+                            get("SupplyChain/Facilities?"+filter,{
+                                success: function(arr){
+                                    for (var i=0; i<arr.length; i++){
+                                        var facility = arr[i];
+                                        var facilityName = facility.name;
+                                        if (!facilityName) facilityName = "Facility " + facility.id;
+                                        facilityList.add(facilityName, facility);
+                                    }
+                                }
+                            });
                         }
                     }
                     else{
-                        feiField.setValue("");
-                        form.enableField("city");
-                        form.enableField("country");
-                        if (name.trim().length>0){
 
+                        if (name.trim().length>0){
                             (function (name) {
 
-                                bluewave.utils.get("SupplyChain/Companies?name="+name+"&limit=5",{
+                                get("SupplyChain/Companies?name="+encodeURIComponent(name)+"&limit=50",{
                                     success: function(arr){
 
                                         var currTime = new Date().getTime();
@@ -251,31 +350,154 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                                         companyList.removeAll();
                                         if (arr.length===0){
-                                            companyList.add(name, {
-                                                company: {
-                                                    name: name
-                                                }
-                                            });
-                                            companyList.setValue(name);
+                                            companyList.hideMenu();
                                             form.enableField("city");
                                             form.enableField("country");
-                                            //companyList.hideMenu();
                                         }
                                         else{
+
+                                          //Create a unique list of companies
+                                            var uniqueCompanies = {};
                                             for (var i=0; i<arr.length; i++){
-                                                var result = arr[i];
-                                                var company = result.company;
-                                                companyList.add(company.name, result);
+                                                var company = arr[i];
+                                                var companyName = company.name.trim();
+
+                                              //Update company name as needed
+                                                if (companyName.lastIndexOf(")")===companyName.length-1){
+                                                    var idx = companyName.lastIndexOf("(");
+                                                    if (idx>0) companyName = companyName.substring(0, idx).trim();
+                                                }
+                                                company.name = companyName;
+
+                                              //Create unique key for the company using either the node ID or
+                                              //the owner_operator_number (R&L)
+                                                var key = company.owner_operator_number;
+                                                if (isNaN(key)) key = -i;
+                                                key +="";
+
+                                                var _company = uniqueCompanies[key];
+                                                if (!_company){
+                                                    _company = company;
+                                                    uniqueCompanies[key] = company;
+                                                }
+
+                                                if (companyName.length<_company.name.length){
+                                                    uniqueCompanies[key] = company;
+                                                }
                                             }
+
+
+                                          //Sort company names alphabetically
+                                            var companyNames = [];
+                                            for (var key in uniqueCompanies) {
+                                                if (uniqueCompanies.hasOwnProperty(key)){
+                                                    var company = uniqueCompanies[key];
+                                                    companyNames.push(company.name);
+                                                }
+                                            }
+                                            companyNames.sort();
+
+
+
+                                          //Update dropdown
+                                            for (var i=0; i<companyNames.length; i++){
+                                                var companyName = companyNames[i];
+                                                for (var key in uniqueCompanies) {
+                                                    if (uniqueCompanies.hasOwnProperty(key)){
+                                                        var company = uniqueCompanies[key];
+                                                        if (company.name === companyName){
+                                                            companyList.add(company.name, company);
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+
+
                                             companyList.showMenu();
                                         }
                                     }
                                 });
                             })(name);
-
-
-
                         }
+                    }
+                }
+                else if (field.name==="facility"){
+                    var name = field.getText();
+                    var value = field.getValue();
+console.log(name, value);
+                    if (value){ //user either selected an item in the list or typed in an exact match
+                        var facility = value;
+
+                        if (facility.fei_number){
+                            form.disableField("city");
+                            form.disableField("country");
+                            feiField.setValue(facility.fei_number);
+                        }
+                        cityField.setValue(facility.city);
+                        if (facility.iso_country_code==='US'){
+                            countryField.setValue(facility.state_code);
+                        }
+                        else{
+                            countryField.setValue(facility.iso_country_code);
+                        }
+
+
+                      //Update product fields
+                        productList.clear();
+                        productTypeField.setValue("");
+                        var filter = "facilityID=" + facility.id;
+                        if (facility.fei_number) filter = "fei="+facility.fei_number;
+                        get("SupplyChain/Products?"+filter,{
+                            success: function(arr){
+                                for (var i=0; i<arr.length; i++){
+                                    var product = arr[i];
+                                    var productName = product.name;
+                                    var proprietaryName = product.proprietary_name;
+                                    if (typeof proprietaryName === "string"){
+                                        if (proprietaryName.indexOf("[")===0 && proprietaryName.lastIndexOf("]")===proprietaryName.length-1){
+                                            proprietaryName = proprietaryName.substring(1,proprietaryName.length-1);
+                                            if (proprietaryName.indexOf(",")===-1){
+                                                productName = proprietaryName;
+                                            }
+                                            else{
+                                                var names = proprietaryName.split(",");
+                                                productName = names[0];
+                                            }
+                                        }
+                                    }
+
+                                    var productType = product.device_name;
+                                    if (!productName) productName = productType;
+                                    productList.add(productName, product);
+
+                                }
+                            }
+                        });
+                    }
+                    else{
+                        feiField.setValue("");
+                        form.enableField("city");
+                        form.enableField("country");
+
+                    }
+                }
+                else if (field.name==="product"){
+                    var name = field.getText();
+                    var value = field.getValue();
+
+                    if (value){ //user either selected an item in the list or typed in an exact match
+                        var product = value;
+
+                        var productType = product.device_name;
+                        if (productType){
+                            if (product.product_code) productType += " (" + product.product_code + ")";
+                            productTypeField.setValue(productType);
+                        }
+                    }
+                    else{
+
                     }
                 }
             };
@@ -285,18 +507,19 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 nodeEditor.node = node;
                 form.clear();
                 if (companyList.resetColor) companyList.resetColor();
+                if (facilityList.resetColor) facilityList.resetColor();
+                if (productList.resetColor) productList.resetColor();
                 if (node){
                     if (node.name){
                         var name = node.name;
                         var info = {
                             id: node.nodeID,
-                            company: {
-                                name: node.name,
-                                city: node.city,
-                                iso_country_code: node.country,
-                                fei: node.fei
-                            }
+                            name: node.name,
+                            city: node.city,
+                            iso_country_code: node.country,
+                            fei: node.fei
                         };
+
                         if (isNaN(info.id)) delete info.id;
                         for (var key in info.company) {
                             if (!info.company[key]) delete info.company[key];
@@ -323,6 +546,81 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         }
 
         return nodeEditor;
+    };
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    var save = function(data, callback){
+        waitmask.show();
+
+
+        var company = {
+            id: data.company.id,
+            name: data.company.name,
+            sourceID: data.company.sourceID
+        };
+
+        if (data.company.owner_operator_number){
+            delete company.id;
+            company.sourceID = data.company.owner_operator_number;
+        }
+
+        post("SupplyChain/Company", JSON.stringify(company), {
+            success: function(companyID){
+
+
+                var facility = {
+                    id: data.facility.id,
+                    name: data.facility.name,
+                    sourceID: data.facility.sourceID,
+                    companyID: companyID
+                };
+
+                if (data.facility.fei_number){
+                    delete facility.id;
+                    facility.sourceID = data.facility.fei_number;
+                }
+
+
+                post("SupplyChain/Facility", JSON.stringify(facility), {
+                    success: function(facilityID){
+
+
+                        var product = {
+                            id: data.product.id,
+                            name: data.product.name,
+                            sourceID: data.product.sourceID,
+                            facilityID: facilityID
+                        };
+
+                        post("SupplyChain/Product", JSON.stringify(product), {
+                            success: function(productID){
+
+                                waitmask.hide();
+
+                            },
+                            failure: function(request){
+                                waitmask.hide();
+                                alert(request);
+                            }
+                        });
+
+                    },
+                    failure: function(request){
+                        waitmask.hide();
+                        alert(request);
+                    }
+                });
+
+
+            },
+            failure: function(request){
+                waitmask.hide();
+                alert(request);
+            }
+        });
     };
 
 
@@ -363,6 +661,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var warn = bluewave.utils.warn;
+    var get = bluewave.utils.get;
+    var post = javaxt.dhtml.utils.post;
 
     init();
 };
