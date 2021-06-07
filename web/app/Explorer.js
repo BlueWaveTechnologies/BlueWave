@@ -16,7 +16,7 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor; //popup dialogs
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, mapEditor; //popup dialogs
 
 
   //**************************************************************************
@@ -743,6 +743,21 @@ bluewave.Explorer = function(parent, config) {
                 addEventListeners(node);
 
                 break;
+
+            case "map":
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 0
+                });
+
+                addEventListeners(node);
+
+                break;
             default:
 
                 var node = createNode({
@@ -867,6 +882,14 @@ bluewave.Explorer = function(parent, config) {
 
                 node.ondblclick = function(){
                     editLayout(this);
+                };
+
+                break;
+
+            case "map":
+
+                node.ondblclick = function(){
+                    editMap(this);
                 };
 
                 break;
@@ -1063,6 +1086,68 @@ bluewave.Explorer = function(parent, config) {
         }
     };
 
+  //**************************************************************************
+  //** editMap
+  //**************************************************************************
+    var editMap = function(node){
+        if(!mapEditor){
+            var win = createWindow({
+                title: "Edit Map",
+                width: 1680,
+                height: 920,
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = mapEditor.getConfig();
+                    var node = mapEditor.getNode();
+                    var orgConfig = node.config;
+                    if(!orgConfig) orgConfig = {};
+                    if(isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        updateTitle(node, node.config.chartTitle);
+                        waitmask.show();
+                        var el = mapEditor.getChart();
+                        if(el.show) el.show();
+                        createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        win.close();
+                    }
+                }
+            });
+
+            mapEditor = new bluewave.charts.MapEditor(win.getBody(), config);
+
+            mapEditor.show = function(){
+                win.show();
+            };
+
+            mapEditor.hide = function(){
+                win.hide();
+            }
+        }
+
+        //Add custom getNode() method to the mapEditor to return current node
+        mapEditor.getNode = function(){
+            return node;
+        };
+
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                data.push(csv);
+            }
+        }
+        mapEditor.update(node.config, data);
+        mapEditor.show();
+
+    }
 
   //**************************************************************************
   //** editSankey
