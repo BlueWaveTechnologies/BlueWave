@@ -187,11 +187,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 type: productList
                             },
                             {
-                                name: "productType",
-                                label: "Type",
-                                type: "text"
-                            },
-                            {
                                 name: "inventory",
                                 label: "Inventory",
                                 type: "text"
@@ -300,9 +295,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
             var cityField = form.findField("city");
             var countryField = form.findField("country");
-            var productTypeField = form.findField("productType");
             var feiField = form.findField("fei");
             form.disableField("fei");
+
+
 
             var lastSearch = 0;
             form.onChange = function(field){
@@ -446,33 +442,68 @@ console.log(name, value);
 
                       //Update product fields
                         productList.clear();
-                        productTypeField.setValue("");
                         var filter = "facilityID=" + facility.id;
                         if (facility.fei_number) filter = "fei="+facility.fei_number;
                         get("SupplyChain/Products?"+filter,{
                             success: function(arr){
+
+                              //Generate list of products
+                                var products = {};
                                 for (var i=0; i<arr.length; i++){
                                     var product = arr[i];
+                                    var productID = product.id;
                                     var productName = product.name;
+                                    var productType = product.device_name;
+                                    var productCode = product.product_code;
                                     var proprietaryName = product.proprietary_name;
+
                                     if (typeof proprietaryName === "string"){
                                         if (proprietaryName.indexOf("[")===0 && proprietaryName.lastIndexOf("]")===proprietaryName.length-1){
                                             proprietaryName = proprietaryName.substring(1,proprietaryName.length-1);
                                             if (proprietaryName.indexOf(",")===-1){
-                                                productName = proprietaryName;
+                                                //productName = proprietaryName;
                                             }
                                             else{
                                                 var names = proprietaryName.split(",");
-                                                productName = names[0];
+                                                //productName = names[0];
                                             }
                                         }
                                     }
 
-                                    var productType = product.device_name;
-                                    if (!productName) productName = productType;
-                                    productList.add(productName, product);
 
+
+                                    if (!productName) productName = productType;
+                                    products[productName] = {
+                                        id: productID,
+                                        name: productName,
+                                        code: productCode,
+                                        regulation_number: product.regulation_number
+                                    };
                                 }
+
+
+                              //Sort product names alphabetically
+                                var productNames = [];
+                                for (var key in products) {
+                                    if (products.hasOwnProperty(key)){
+                                        var product = products[key];
+                                        productNames.push(product.name);
+                                    }
+                                }
+                                productNames.sort();
+
+
+                              //Update dropdown
+                                for (var i=0; i<productNames.length; i++){
+                                    var productName = productNames[i];
+                                    var product = products[productName];
+                                    if (product.code) productName += " (" + product.code + ")";
+                                    productList.add(productName, product);
+                                }
+
+
+                                productList.showMenu();
+
                             }
                         });
                     }
@@ -490,11 +521,7 @@ console.log(name, value);
                     if (value){ //user either selected an item in the list or typed in an exact match
                         var product = value;
 
-                        var productType = product.device_name;
-                        if (productType){
-                            if (product.product_code) productType += " (" + product.product_code + ")";
-                            productTypeField.setValue(productType);
-                        }
+
                     }
                     else{
 
@@ -591,9 +618,15 @@ console.log(name, value);
                         var product = {
                             id: data.product.id,
                             name: data.product.name,
-                            sourceID: data.product.sourceID,
+                            code: data.product.code,
                             facilityID: facilityID
                         };
+
+
+                        if (data.product.regulation_number){
+                            delete product.id;
+                            product.sourceID = data.facility.regulation_number;
+                        }
 
                         post("SupplyChain/Product", JSON.stringify(product), {
                             success: function(productID){
