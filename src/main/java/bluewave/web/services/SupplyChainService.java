@@ -41,6 +41,48 @@ public class SupplyChainService extends WebService {
 
 
   //**************************************************************************
+  //** getCompany
+  //**************************************************************************
+    public ServiceResponse getCompany(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        Long companyID = request.getParameter("companyID").toLong();
+
+        Session session = null;
+        try {
+            session = graph.getSession();
+
+            JSONObject company = new JSONObject();
+
+
+            String query = "MATCH (c:company)\n" +
+            "OPTIONAL MATCH (c)-[:source]->(o)-[:has]->(a:registrationlisting_registration_owner_operator_contact_address) \n" +
+            "WHERE id(c)=" + companyID + "\n" +
+            "RETURN properties(c) as company, properties(o) as owner_operator, properties(a) as address";
+            Result rs = session.run(query);
+            if (rs.hasNext()){
+                Record record = rs.next();
+                company = getCompany(record);
+                if (company.isEmpty()){
+                    Value val = record.get("company");
+                    if (!val.isNull()){
+                        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                        company = new JSONObject(gson.toJson(val.asMap()));
+                    }
+                }
+            }
+            session.close();
+
+            return new ServiceResponse(company);
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
   //** getCompanies
   //**************************************************************************
   /** Returns a list of companies that start with a given name. Searches both
@@ -64,31 +106,24 @@ public class SupplyChainService extends WebService {
 
 
             HashMap<Long, JSONObject> companies = new HashMap<>();
-            List<String> sourceIDs = new ArrayList<>();
+
 
           //Find companies in the company data
             try{
-                String query = "MATCH (n:company)\n" +
-                "WHERE n.name STARTS WITH '" + name + "'\n" +
-                "RETURN ID(n) as id, properties(n) as company " +
-                //"ORDER BY n.name\n" +
+                String query = "MATCH (c:company)\n" +
+                "WHERE toLower(c.name) STARTS WITH toLower(\"" + name + "\")\n" +
+                "RETURN ID(c) as id, properties(c) as company " +
                 "LIMIT " + limit;
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
                     long nodeID = record.get("id").asLong();
                     JSONObject json = new JSONObject();
-
-
                     Value val = record.get("company");
                     if (!val.isNull()){
                         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
                         json = new JSONObject(gson.toJson(val.asMap()));
                     }
-
-                    Long sourceID = json.get("sourceID").toLong();
-                    if (sourceID!=null) sourceIDs.add("'" + sourceID + "'");
-
                     json.set("id", nodeID);
                     companies.put(nodeID, json);
                 }
@@ -102,61 +137,23 @@ public class SupplyChainService extends WebService {
           //Find companies in the Registration & Listing data
             try {
                 String query =
-                "MATCH (n:registrationlisting_registration)-[:has]-(registrationlisting_registration_owner_operator)-[:has]-(registrationlisting_registration_owner_operator_contact_address)\n" +
-                "WHERE n.name STARTS WITH '" + name + "'\n" +
-                (sourceIDs.isEmpty() ? "" : "AND NOT(n.owner_operator_number IN[" + String.join(", ", sourceIDs) + "])\n") +
-                "RETURN distinct(id(n)) as id, \n" + //distinct() only reduces the number of duplicates
-                "properties(n) as registrationlisting_registration,\n" +
-                "registrationlisting_registration_owner_operator.owner_operator_number as owner_operator_number, \n" +
-                "registrationlisting_registration_owner_operator.firm_name as firm_name, \n" +
-                "registrationlisting_registration_owner_operator_contact_address.owner_operator_number as owner_operator_number2,\n" +
-                "registrationlisting_registration_owner_operator_contact_address.firm_name as firm_name2\n" +
+                "MATCH (o:registrationlisting_registration_owner_operator)-[:has]->(a:registrationlisting_registration_owner_operator_contact_address)\n" +
+                "WHERE toLower(o.firm_name) STARTS WITH toLower(\"" + name + "\")\n" +
+                "RETURN id(o) as id, properties(o) as owner_operator, properties(a) as address\n" +
                 "LIMIT " + (limit-companies.size());
 
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
                     long nodeID = record.get("id").asLong();
-                    JSONObject json = new JSONObject();
-
-
-                    Value val = record.get("registrationlisting_registration");
-                    if (!val.isNull()){
-                        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                        json = new JSONObject(gson.toJson(val.asMap()));
-                    }
-
-                    Long ownerOperatorID = null;
-                    val = record.get("owner_operator_number");
-                    if (!val.isNull()) ownerOperatorID = new javaxt.utils.Value(val.asObject()).toLong();
-
-                    if (ownerOperatorID==null){
-                        val = record.get("owner_operator_number2");
-                        if (!val.isNull()) ownerOperatorID = new javaxt.utils.Value(val.asObject()).toLong();
-                    }
-
-
-                    String firmName = null;
-                    val = record.get("firm_name");
-                    if (!val.isNull()) firmName = val.asString();
-
-                    if (firmName==null){
-                        val = record.get("firm_name2");
-                        if (!val.isNull()) firmName = val.asString();
-                    }
-
-                    json.set("id", nodeID);
-                    if (firmName!=null) json.set("name", firmName);
-                    if (ownerOperatorID!=null) json.set("owner_operator_number", ownerOperatorID);
-                    if (!companies.containsKey(nodeID)) companies.put(nodeID, json);
+                    JSONObject company = getCompany(record);
+                    if (!companies.containsKey(nodeID)) companies.put(nodeID, company);
                 }
             }
             catch (Exception e) {
                 if (session != null) session.close();
                 return new ServiceResponse(e);
             }
-
-
 
 
           //Close session
@@ -203,6 +200,41 @@ public class SupplyChainService extends WebService {
 
 
   //**************************************************************************
+  //** getCompany
+  //**************************************************************************
+  /** Returns company info from the owner_operator and address nodes in the
+   *  registrationlisting
+   */
+    private JSONObject getCompany(Record record){
+        JSONObject company = new JSONObject();
+
+        Value val = record.get("owner_operator");
+        if (!val.isNull()){
+            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+            company = new JSONObject(gson.toJson(val.asMap()));
+        }
+
+        String companyName = company.get("firm_name").toString();
+        if (companyName!=null){
+            company.set("name", companyName);
+            company.remove("firm_name");
+        }
+
+        val = record.get("address");
+        if (!val.isNull()){
+            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+            JSONObject address = new JSONObject(gson.toJson(val.asMap()));
+            Iterator<String> it = address.keySet().iterator();
+            while (it.hasNext()){
+                String key = it.next();
+                company.set(key, address.get(key));
+            }
+        }
+        return company;
+    }
+
+
+  //**************************************************************************
   //** saveCompany
   //**************************************************************************
     public ServiceResponse saveCompany(ServiceRequest request, Database database)
@@ -223,6 +255,14 @@ public class SupplyChainService extends WebService {
         Long sourceID = json.get("sourceID").toLong(); //owner_operator_number
 
 
+      //Validate inputs
+        if (companyName!=null) companyName = companyName.trim();
+        if (companyName==null || companyName.isEmpty()){
+            if (sourceID==null){
+                throw new ServletException(400, "Company name is required");
+            }
+        }
+
 
       //Create or update company
         Session session = null;
@@ -232,19 +272,29 @@ public class SupplyChainService extends WebService {
 
             if (companyID==null){
 
-                List<String> properties = new ArrayList<>();
-                properties.add("name: '" + companyName + "'");
-                if (sourceID!=null) properties.add("sourceID: '" + sourceID + "'");
-
-
-                String query = "CREATE (a:company {" + String.join(", ", properties) + "}) RETURN id(a)";
-                Result result = session.run(query);
-                if (result.hasNext()) {
-                    companyID = result.single().get(0).asLong();
+              //Create new company node
+                String query;
+                if (sourceID==null){
+                    List<String> properties = new ArrayList<>();
+                    properties.add("name: '" + companyName + "'");
+                    query = "CREATE (a:company {" + String.join(", ", properties) + "}) RETURN id(a)";
+                }
+                else{
+                    query = "CREATE (a:company) RETURN id(a)";
                 }
 
+                Result result = session.run(query);
+                if (result.hasNext()) companyID = result.single().get(0).asLong();
+
+
+              //Link company node to registrationlisting_registration_owner_operator
                 if (sourceID!=null){
-                    //link company node to registrationlisting_registration_owner_operator?
+                    session.run(
+                    "MATCH (c),(o:registrationlisting_registration_owner_operator {owner_operator_number:\"" + sourceID + "\"}) " +
+                    "WHERE id(c)=" + companyID + " MERGE(c)-[:source]->(o)"
+                    );
+                    //To confirm link, run something like this:
+                    //MATCH (n:company) WHERE id(n)=12438225 MATCH (n)-[r]-(p) RETURN id(n), labels(n), type(r), labels(p)
                 }
 
             }
@@ -291,8 +341,7 @@ public class SupplyChainService extends WebService {
 
                 }
                 else{
-                    //update registrationlisting and company?
-                    throw new Exception("Not Implemented");
+                    //Do nothing. Ignore any updates. We don't want to modify the source data in the R&L
                 }
             }
 
@@ -321,17 +370,20 @@ public class SupplyChainService extends WebService {
 
         if (companyID!=null){
 
-                JSONArray facilities = new JSONArray();
+
                 HashSet<Long> facilityIDs = new HashSet<>();
 
 
                 String query =
-                "MATCH (company)-[:has]-(facility)\n" +
-                "WHERE facility.companyID = " + companyID + "\n" +
-                "RETURN id(facility) as id, properties(facility) as facility, company.sourceID as owner_operator_number";
+                "MATCH (c:company)-[r:has]->(f:facility)\n" + // {companyID:\"" + companyID + "\"}
+                "WHERE id(c) = " + companyID + "\n" +
+                "RETURN id(f) as id, properties(f) as facility, c.sourceID as owner_operator_number";
 
                 Session session = null;
                 try{
+
+                    LinkedHashMap<Long, JSONObject> facilities = new LinkedHashMap<>();
+
                     session = graph.getSession();
                     Result rs = session.run(query);
                     while (rs.hasNext()){
@@ -355,7 +407,16 @@ public class SupplyChainService extends WebService {
 
 
                         facility.set("id", nodeID);
-                        facilities.add(facility);
+                        facilities.put(nodeID, facility);
+                    }
+
+
+                    JSONArray arr = new JSONArray();
+                    Iterator<Long> it = facilities.keySet().iterator();
+                    while (it.hasNext()){
+                        long nodeID = it.next();
+                        JSONObject facility = facilities.get(nodeID);
+                        arr.add(facility);
                     }
 
 
@@ -364,14 +425,14 @@ public class SupplyChainService extends WebService {
                         JSONObject facility = otherFacilities.get(i).toJSONObject();
                         Long fei = facility.get("fei_number").toLong();
                         if (!facilityIDs.contains(fei)){
-                            facilities.add(facility);
+                            arr.add(facility);
                         }
                     }
 
 
                     session.close();
 
-                    return new ServiceResponse(facilities);
+                    return new ServiceResponse(arr);
                 }
                 catch (Exception e) {
                     if (session != null) session.close();
@@ -410,27 +471,37 @@ public class SupplyChainService extends WebService {
     private JSONArray getFacilities(Long ownerOperatorID, Session session) throws Exception {
         JSONArray arr = new JSONArray();
         if (ownerOperatorID!=null){
-            String query =
-            "MATCH (n:registrationlisting_registration_owner_operator)-[:has]-(registrationlisting_registration_owner_operator_contact_address)\n" +
-            "WHERE n.owner_operator_number='" + ownerOperatorID + "' " +
-            "or registrationlisting_registration_owner_operator_contact_address.owner_operator_number='" + ownerOperatorID + "'\n" +
-            "RETURN id(registrationlisting_registration_owner_operator_contact_address) as id, " +
-            "properties(registrationlisting_registration_owner_operator_contact_address) as facility";
+            LinkedHashMap<Long, JSONObject> facilities = new LinkedHashMap<>();
+
+            String query = "MATCH (registration:registrationlisting_registration)-[:has]->"+
+            "(n:registrationlisting_registration_owner_operator {owner_operator_number: '" + ownerOperatorID + "'})\n" +
+            "RETURN id(registration) as id, properties(registration) as facility";
+
 
             Result rs = session.run(query);
             while (rs.hasNext()){
                 Record record = rs.next();
-                JSONObject json = new JSONObject();
+                long nodeID = record.get("id").asLong();
+                JSONObject facility = new JSONObject();
 
 
                 Value val = record.get("facility");
                 if (!val.isNull()){
                     Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                    json = new JSONObject(gson.toJson(val.asMap()));
+                    facility = new JSONObject(gson.toJson(val.asMap()));
                 }
 
-                arr.add(json);
+                facilities.put(nodeID, facility);
             }
+
+
+            Iterator<Long> it = facilities.keySet().iterator();
+            while (it.hasNext()){
+                long nodeID = it.next();
+                JSONObject facility = facilities.get(nodeID);
+                arr.add(facility);
+            }
+
         }
         return arr;
     }
@@ -458,6 +529,13 @@ public class SupplyChainService extends WebService {
         Long sourceID = json.get("sourceID").toLong(); //fei_number
 
 
+      //Validate inputs
+        if (facilityName!=null) facilityName = facilityName.trim();
+        if (facilityName==null || facilityName.isEmpty()){
+            if (sourceID==null) throw new ServletException(400, "Facility name is required");
+        }
+        if (companyID==null) throw new ServletException(400, "CompanyID is required");
+
 
       //Create or update facility
         Session session = null;
@@ -467,14 +545,17 @@ public class SupplyChainService extends WebService {
 
             if (facilityID==null){
 
-                List<String> properties = new ArrayList<>();
-                properties.add("name: '" + facilityName + "'");
-                properties.add("companyID: '" + companyID + "'");
-                if (sourceID!=null) properties.add("sourceID: '" + sourceID + "'");
+              //Create new facility node
+                String query;
+                if (sourceID==null){
+                    List<String> properties = new ArrayList<>();
+                    properties.add("name: '" + facilityName + "'");
+                    query = "CREATE (a:facility {" + String.join(", ", properties) + "}) RETURN id(a)";
+                }
+                else{
+                    query = "CREATE (a:facility) RETURN id(a)";
+                }
 
-
-              //Create facility
-                String query = "CREATE (a:facility {" + String.join(", ", properties) + "}) RETURN id(a)";
                 Result result = session.run(query);
                 if (result.hasNext()) {
                     facilityID = result.single().get(0).asLong();
@@ -482,12 +563,18 @@ public class SupplyChainService extends WebService {
 
 
               //Link facility to company
-                query = "MATCH (r), (s) WHERE id(r) =" + companyID + " AND id(s) = " + facilityID + " MERGE(r)-[:has]->(s)";
+                query = "MATCH (c),(f) WHERE id(c)=" + companyID + " AND id(f) = " + facilityID + " MERGE(c)-[:has]->(f)";
                 session.run(query);
 
 
+              //link facility node to registrationlisting
                 if (sourceID!=null){
-                    //link facility node to registrationlisting?
+                    session.run(
+                    "MATCH (f),(n:registrationlisting_registration {fei_number:\"" + sourceID + "\"}) " +
+                    "WHERE id(f)=" + facilityID + " MERGE(f)-[:source]->(n)"
+                    );
+                    //To confirm link, run something like this:
+                    //MATCH (n:facility) WHERE id(n)=12438225 MATCH (n)-[r]-(p) RETURN id(n), labels(n), type(r), labels(p)
                 }
 
             }
@@ -535,8 +622,7 @@ public class SupplyChainService extends WebService {
 
                 }
                 else{
-                    //update registrationlisting and facility?
-                    throw new Exception("Not Implemented");
+
                 }
             }
 
@@ -570,9 +656,9 @@ public class SupplyChainService extends WebService {
             HashSet<String> productCodes = new HashSet<>();
 
             String query =
-            "MATCH (n:facility)-[:has]-(product)\n" +
-            "WHERE n.facilityID = " + facilityID + "\n" +
-            "RETURN id(product) as id, n.sourceID as fei, properties(n) as product";
+            "MATCH (f:facility)-[r:has]->(p:product)\n" +
+            "WHERE p.facilityID = " + facilityID + "\n" +
+            "RETURN id(p) as id, properties(p) as product, f.sourceID as fei";
 
             Session session = null;
             try{
@@ -692,13 +778,11 @@ public class SupplyChainService extends WebService {
         JSONArray arr = new JSONArray();
         if (fei!=null){
             String query =
-            //"MATCH (registrationlisting_registration)<-[:has]-(registrationlisting)-[:has]->(registrationlisting_product)-[:has]->(registrationlisting_product_openfda)\n" +
-            //"WHERE registrationlisting_registration.fei_number = '" + fei + "'\n" +
-            "MATCH (n:registrationlisting_registration {fei_number:\"" + fei + "\"})<-[:has]-(registrationlisting)-[:has]->(registrationlisting_product)-[:has]->(registrationlisting_product_openfda)\n" +
-            "RETURN id(registrationlisting_product) as id," +
-            "properties(registrationlisting) as registration, " +
-            "properties(registrationlisting_product) as product, " +
-            "properties(registrationlisting_product_openfda) as product_description";
+            "MATCH (:registrationlisting_registration {fei_number:\"" + fei + "\"})<-[:has]-(r:registrationlisting)-[:has]->(p:registrationlisting_product)-[:has]->(o:registrationlisting_product_openfda)\n" +
+            "RETURN id(p) as id," +
+            "properties(r) as registration, " +
+            "properties(p) as product, " +
+            "properties(o) as product_description";
 
 
             Result rs = session.run(query);
@@ -762,7 +846,13 @@ public class SupplyChainService extends WebService {
         String productName = json.get("name").toString();
         String productCode = json.get("code").toString();
         Long facilityID = json.get("facilityID").toLong();
+        Long sourceID = json.get("sourceID").toLong(); //regulation_number
 
+
+      //Validate inputs
+        if (productName!=null) productName = productName.trim();
+        if (productName==null || productName.isEmpty()) throw new ServletException(400, "Product name is required");
+        if (facilityID==null) throw new ServletException(400, "Facility is required");
 
 
       //Create or update product
@@ -773,8 +863,9 @@ public class SupplyChainService extends WebService {
             if (productID==null){
                 List<String> properties = new ArrayList<>();
                 properties.add("name: '" + productName + "'");
-                properties.add("code: '" + productCode + "'");
                 properties.add("facilityID: '" + facilityID + "'");
+                if (productCode!=null) properties.add("code: '" + productCode + "'");
+
 
 
               //Create facility
@@ -785,13 +876,16 @@ public class SupplyChainService extends WebService {
                 }
 
 
-              //Link facility to company
+              //Link facility to product
                 query = "MATCH (r), (s) WHERE id(r) =" + facilityID + " AND id(s) = " + productID + " MERGE(r)-[:has]->(s)";
                 session.run(query);
 
 
-              //Link to OpenFDA
-
+              //Link product to OpenFDA node
+                if (sourceID!=null){
+                    query = "MATCH (r), (s) WHERE id(r) =" + productID + " AND s.regulation_number ='" + sourceID + "' MERGE(r)-[:has]->(s)";
+                    session.run(query);
+                }
             }
 
             session.close();
