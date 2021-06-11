@@ -692,8 +692,9 @@ public class SupplyChainService extends WebService {
         JSONArray arr = new JSONArray();
         if (fei!=null){
             String query =
-            "MATCH (registrationlisting_registration)<-[:has]-(registrationlisting)-[:has]->(registrationlisting_product)-[:has]->(registrationlisting_product_openfda)\n" +
-            "WHERE registrationlisting_registration.fei_number = '" + fei + "'\n" +
+            //"MATCH (registrationlisting_registration)<-[:has]-(registrationlisting)-[:has]->(registrationlisting_product)-[:has]->(registrationlisting_product_openfda)\n" +
+            //"WHERE registrationlisting_registration.fei_number = '" + fei + "'\n" +
+            "MATCH (n:registrationlisting_registration {fei_number:\"" + fei + "\"})<-[:has]-(registrationlisting)-[:has]->(registrationlisting_product)-[:has]->(registrationlisting_product_openfda)\n" +
             "RETURN id(registrationlisting_product) as id," +
             "properties(registrationlisting) as registration, " +
             "properties(registrationlisting_product) as product, " +
