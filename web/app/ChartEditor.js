@@ -490,7 +490,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var createMapPreview = function(){
         if(!politicalBoundries){
-            getData("worldGeoJson", function(data) {
+            getData("countries", function(data) {
                 politicalBoundries = data;
                 displayMap();
             });
