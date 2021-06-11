@@ -1,6 +1,6 @@
 if(!bluewave) var bluewave={};
 if(!bluewave.data) bluewave.data={};
-bluewave.data.worldGeoJson = {
+bluewave.data.countries = {
   "type": "FeatureCollection",
   "features": [
     {
