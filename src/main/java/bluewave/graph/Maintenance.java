@@ -22,6 +22,31 @@ public class Maintenance {
 
 
   //**************************************************************************
+  //** createIndex
+  //**************************************************************************
+  /** Used to create an index for a property on a node
+   */
+    public static void createIndex(String nodeName, String columnName, Neo4J graph) throws Exception {
+
+        String indexName = "idx_" + nodeName + "_" + columnName;
+        Session session = null;
+        try{
+            session = graph.getSession();
+            String cmd = "CREATE INDEX " + indexName + " IF NOT EXISTS FOR (n:" + nodeName + ") ON (";
+            cmd += "n." + columnName;
+            cmd += ")";
+            session.run(cmd);
+            session.close();
+            console.log("Successfully created index: " + indexName);
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+            throw e;
+        }
+    }
+
+
+  //**************************************************************************
   //** deleteNodes
   //**************************************************************************
   /** Used to delete nodes from the graph
