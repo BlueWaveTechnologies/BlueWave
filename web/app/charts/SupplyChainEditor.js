@@ -98,7 +98,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
             nodeEditor = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Node",
-                width: 475,
+                width: 550,
                 valign: "top",
                 modal: true,
                 resizable: false,
@@ -132,12 +132,37 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             });
 
 
+            var countryList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
+                style: config.style.combobox
+            });
+
+
             var productList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
                 style: config.style.combobox,
                 addNewOption: false,
                 addNewOptionText: "Add Product...",
                 scrollbar: true
             });
+
+
+            var states = [];
+            getData("states", function(data) {
+                var arr = data.objects.states.geometries;
+                for (var i=0; i<arr.length; i++){
+                    var state = arr[i];
+                    states.push(state.properties);
+                }
+            });
+
+            var countries = [];
+            getData("countries", function(data) {
+                var arr = data.features;
+                for (var i=0; i<arr.length; i++){
+                    var country = arr[i];
+                    countries.push(country.properties);
+                }
+            });
+
 
 
             var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
@@ -169,7 +194,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             {
                                 name: "country",
                                 label: "State/Country",
-                                type: "text"
+                                type: countryList
                             },
                             {
                                 name: "fei",
@@ -294,7 +319,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
             var cityField = form.findField("city");
-            var countryField = form.findField("country");
             var feiField = form.findField("fei");
             form.disableField("fei");
 
@@ -305,7 +329,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 if (field.name==="company"){
                     var name = field.getText();
                     var value = field.getValue();
-console.log(name, value);
+
                     if (value){ //user either selected an item in the list or typed in an exact match
                         var company = value;
 
@@ -328,6 +352,7 @@ console.log(name, value);
                                         if (!facilityName) facilityName = "Facility " + facility.id;
                                         facilityList.add(facilityName, facility);
                                     }
+                                    if (arr.length==1) facilityList.setValue(facilityName);
                                 }
                             });
                         }
@@ -422,7 +447,7 @@ console.log(name, value);
                 else if (field.name==="facility"){
                     var name = field.getText();
                     var value = field.getValue();
-console.log(name, value);
+
                     if (value){ //user either selected an item in the list or typed in an exact match
                         var facility = value;
 
@@ -433,10 +458,20 @@ console.log(name, value);
                         }
                         cityField.setValue(facility.city);
                         if (facility.iso_country_code==='US'){
-                            countryField.setValue(facility.state_code);
+                            countryList.removeAll();
+                            for (var i=0; i<states.length; i++){
+                                var state = states[i];
+                                countryList.add(state.name, state.code);
+                            }
+                            countryList.setValue(facility.state_code);
                         }
                         else{
-                            countryField.setValue(facility.iso_country_code);
+                            countryList.removeAll();
+                            for (var i=0; i<countries.length; i++){
+                                var country = countries[i];
+                                countryList.add(country.name, country.code);
+                            }
+                            countryList.setValue(facility.iso_country_code);
                         }
 
 
@@ -500,9 +535,8 @@ console.log(name, value);
                                     if (product.code) productName += " (" + product.code + ")";
                                     productList.add(productName, product);
                                 }
+                                if (productNames.length==1) productList.setValue(productName);
 
-
-                                productList.showMenu();
 
                             }
                         });
@@ -610,6 +644,8 @@ console.log(name, value);
                     facility.sourceID = data.facility.fei_number;
                 }
 
+                //if (facility.iso_country_code==='US'){
+
 
                 post("SupplyChain/Facility", JSON.stringify(facility), {
                     success: function(facilityID){
@@ -632,6 +668,7 @@ console.log(name, value);
                             success: function(productID){
 
                                 waitmask.hide();
+                                if (callback) callback.apply(me, [companyID, facilityID, productID]);
 
                             },
                             failure: function(request){
@@ -696,6 +733,7 @@ console.log(name, value);
     var warn = bluewave.utils.warn;
     var get = bluewave.utils.get;
     var post = javaxt.dhtml.utils.post;
+    var getData = bluewave.utils.getData;
 
     init();
 };
