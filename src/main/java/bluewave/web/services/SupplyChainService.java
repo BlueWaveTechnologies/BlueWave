@@ -667,17 +667,17 @@ public class SupplyChainService extends WebService {
         throws ServletException, IOException {
 
         Long facilityID = request.getParameter("facilityID").toLong();
-        Long fei = request.getParameter("fei").toLong();
-
         if (facilityID!=null){
 
             JSONArray products = new JSONArray();
             HashSet<String> productCodes = new HashSet<>();
+            Long fei = null;
 
             String query =
             "MATCH (f:facility)-[r:has]->(p:product)\n" +
-            "WHERE p.facilityID = " + facilityID + "\n" +
-            "RETURN id(p) as id, properties(p) as product, f.sourceID as fei";
+            "WHERE id(f) = " + facilityID + "\n" +
+            "OPTIONAL MATCH (f)-[:source]->(n)\n" +
+            "RETURN id(p) as id, properties(p) as product, n.fei_number as fei";
 
             Session session = null;
             try{
@@ -704,7 +704,6 @@ public class SupplyChainService extends WebService {
 
 
                     product.set("id", nodeID);
-
                     products.add(product);
                 }
 
@@ -730,6 +729,8 @@ public class SupplyChainService extends WebService {
             }
         }
         else{
+
+            Long fei = request.getParameter("fei").toLong();
             if (fei!=null){
 
                 Session session = null;
@@ -882,7 +883,6 @@ public class SupplyChainService extends WebService {
             if (productID==null){
                 List<String> properties = new ArrayList<>();
                 properties.add("name: '" + productName + "'");
-                properties.add("facilityID: '" + facilityID + "'");
                 if (productCode!=null) properties.add("code: '" + productCode + "'");
 
 
