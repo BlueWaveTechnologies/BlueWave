@@ -46,7 +46,8 @@ public class SupplyChainService extends WebService {
     public ServiceResponse getCompany(ServiceRequest request, Database database)
         throws ServletException, IOException {
 
-        Long companyID = request.getParameter("companyID").toLong();
+        Long companyID = request.getParameter("id").toLong();
+        if (companyID==null) return new ServiceResponse(400, "ID is required");
 
         Session session = null;
         try {
@@ -54,11 +55,11 @@ public class SupplyChainService extends WebService {
 
             JSONObject company = new JSONObject();
 
-
             String query = "MATCH (c:company)\n" +
-            "OPTIONAL MATCH (c)-[:source]->(o)-[:has]->(a:registrationlisting_registration_owner_operator_contact_address) \n" +
             "WHERE id(c)=" + companyID + "\n" +
+            "OPTIONAL MATCH (c)-[:source]->(o)-[:has]->(a:registrationlisting_registration_owner_operator_contact_address) \n" +
             "RETURN properties(c) as company, properties(o) as owner_operator, properties(a) as address";
+
             Result rs = session.run(query);
             if (rs.hasNext()){
                 Record record = rs.next();
@@ -73,6 +74,8 @@ public class SupplyChainService extends WebService {
             }
             session.close();
 
+            if (company.isEmpty()) return new ServiceResponse(404);
+            company.set("id", companyID);
             return new ServiceResponse(company);
         }
         catch (Exception e) {
@@ -366,8 +369,6 @@ public class SupplyChainService extends WebService {
         throws ServletException, IOException {
 
         Long companyID = request.getParameter("companyID").toLong();
-        Long ownerOperatorID = request.getParameter("owner_operator_number").toLong();
-
         if (companyID!=null){
 
 
@@ -375,39 +376,56 @@ public class SupplyChainService extends WebService {
 
 
                 String query =
-                "MATCH (c:company)-[r:has]->(f:facility)\n" + // {companyID:\"" + companyID + "\"}
+                "MATCH (c:company)-[r:has]->(f:facility)\n" +
                 "WHERE id(c) = " + companyID + "\n" +
-                "RETURN id(f) as id, properties(f) as facility, c.sourceID as owner_operator_number";
+                "OPTIONAL MATCH (f)-[:source]->(n)\n" +
+                "OPTIONAL MATCH (c)-[:source]->(o)\n" +
+                "RETURN id(f) as id, " +
+                "properties(f) as facility, " +
+                "properties(n) as registration, " +
+                "o.owner_operator_number as owner_operator_number";
+
 
                 Session session = null;
                 try{
 
                     LinkedHashMap<Long, JSONObject> facilities = new LinkedHashMap<>();
+                    Long ownerOperatorID = null;
 
                     session = graph.getSession();
                     Result rs = session.run(query);
                     while (rs.hasNext()){
                         Record record = rs.next();
-                        long nodeID = record.get("id").asLong();
+                        long facilityID = record.get("id").asLong();
                         JSONObject facility = new JSONObject();
 
 
-                        Value val = record.get("facility");
+                        Value val = record.get("registration");
                         if (!val.isNull()){
                             Gson gson = new GsonBuilder().disableHtmlEscaping().create();
                             facility = new JSONObject(gson.toJson(val.asMap()));
                         }
 
-                        Long fei = facility.get("sourceID").toLong();
+                        if (facility.isEmpty()){
+                            val = record.get("facility");
+                            if (!val.isNull()){
+                                Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                                facility = new JSONObject(gson.toJson(val.asMap()));
+                            }
+                        }
+
+
+                        Long fei = facility.get("fei_number").toLong();
                         if (fei!=null) facilityIDs.add(fei);
+
 
 
                         val = record.get("owner_operator_number");
                         if (!val.isNull()) ownerOperatorID = new javaxt.utils.Value(val.asObject()).toLong();
 
 
-                        facility.set("id", nodeID);
-                        facilities.put(nodeID, facility);
+                        facility.set("id", facilityID);
+                        facilities.put(facilityID, facility);
                     }
 
 
@@ -441,6 +459,7 @@ public class SupplyChainService extends WebService {
         }
         else{
 
+            Long ownerOperatorID = request.getParameter("owner_operator_number").toLong();
             if (ownerOperatorID!=null){
 
                 Session session = null;
@@ -877,7 +896,7 @@ public class SupplyChainService extends WebService {
 
 
               //Link facility to product
-                query = "MATCH (r), (s) WHERE id(r) =" + facilityID + " AND id(s) = " + productID + " MERGE(r)-[:has]->(s)";
+                query = "MATCH (f),(p) WHERE id(f) =" + facilityID + " AND id(p) = " + productID + " MERGE(f)-[:has]->(p)";
                 session.run(query);
 
 
