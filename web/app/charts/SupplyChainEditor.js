@@ -390,32 +390,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                     if (value){ //user either selected an item in the list or typed in an exact match
                         var facility = value;
-
-                        if (facility.fei_number){
-                            form.disableField("city");
-                            form.disableField("country");
-                            feiField.setValue(facility.fei_number);
-                        }
-                        cityField.setValue(facility.city);
-                        if (facility.iso_country_code==='US'){
-                            countryList.removeAll();
-                            for (var i=0; i<states.length; i++){
-                                var state = states[i];
-                                countryList.add(state.name, state.code);
-                            }
-                            countryList.setValue(facility.state_code);
-                        }
-                        else{
-                            countryList.removeAll();
-                            for (var i=0; i<countries.length; i++){
-                                var country = countries[i];
-                                countryList.add(country.name, country.code);
-                            }
-                            countryList.setValue(facility.iso_country_code);
-                        }
-
-
-                      //Update product list
+                        updateFacility(facility);
                         updateProducts(facility);
                     }
                     else{
@@ -442,6 +417,32 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
 
+            var updateFacility = function(facility){
+                if (facility.fei_number){
+                    form.disableField("city");
+                    form.disableField("country");
+                    feiField.setValue(facility.fei_number);
+                }
+                cityField.setValue(facility.city);
+                if (facility.iso_country_code==='US'){
+                    countryList.removeAll();
+                    for (var i=0; i<states.length; i++){
+                        var state = states[i];
+                        countryList.add(state.name, state.code);
+                    }
+                    countryList.setValue(facility.state_code);
+                }
+                else{
+                    countryList.removeAll();
+                    for (var i=0; i<countries.length; i++){
+                        var country = countries[i];
+                        countryList.add(country.name, country.code);
+                    }
+                    countryList.setValue(facility.iso_country_code);
+                }
+            };
+
+
             nodeEditor.update = function(node){
                 nodeEditor.node = node;
                 form.clear();
@@ -466,8 +467,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 for (var i=0; i<options.length; i++){
                                     var option = options[i];
                                     if (option.value.id===node.facilityID){
-                                        facilityList.setValue(option.text, true);
                                         facility = option.value;
+                                        facilityList.setValue(option.text, true);
+                                        updateFacility(facility);
                                         break;
                                     }
                                 }
@@ -537,8 +539,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         productList.clear();
         if (!facility) return;
 
-        var filter = "facilityID=" + facility.id;
-        if (facility.fei_number) filter = "fei="+facility.fei_number;
+        var filter = "";
+        if (!isNaN(facility.id)){
+            filter = "facilityID=" + facility.id;
+        }
+        else{
+            if (facility.fei_number) filter = "fei="+facility.fei_number;
+        }
+
         get("SupplyChain/Products?"+filter,{
             success: function(arr){
 
@@ -684,38 +692,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 alert(request);
             }
         });
-    };
-
-
-  //**************************************************************************
-  //** checkName
-  //**************************************************************************
-    var checkName = function(name, currentNode, callback){
-        var isValid = true;
-
-        if (!name) name = "";
-
-        var currentNodeID = currentNode.id;
-        var idx = currentNodeID.indexOf("drawflow_node");
-        if (idx===0) currentNodeID = currentNodeID.substring("drawflow_node".length+1);
-
-
-        var nodes = sankeyEditor.getNodes();
-        for (var key in nodes) {
-            if (nodes.hasOwnProperty(key)){
-                var node = nodes[key];
-                var nodeID = key;
-                var nodeName = node.name;
-                if (nodeID !== currentNodeID){
-                    console.log(name, nodeName);
-                    if (name.toLowerCase() === nodeName.toLowerCase()){
-                        isValid = false;
-                        break;
-                    }
-                }
-            }
-        }
-        callback.apply(me, [isValid]);
     };
 
 
