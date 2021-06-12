@@ -31,6 +31,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var sankeyEditor;
     var nodeEditor;
     var waitmask;
+    var companyList, facilityList, productList;
 
 
   //**************************************************************************
@@ -106,44 +107,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             });
 
 
+            companyList = createCombobox();
+            facilityList = createCombobox();
+            productList = createCombobox();
 
-            var companyList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
-                style: config.style.combobox,
-                addNewOption: false,
-                addNewOptionText: "Add Company...",
-                scrollbar: true
-            });
-
-
-            companyList.onAddNewOption = function(){
-                console.log("Add New Company!");
-            };
-
-            companyList.onMenuContext = function(text, value, el){
-
-            };
-
-
-            var facilityList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
-                style: config.style.combobox,
-                addNewOption: false,
-                addNewOptionText: "Add Facility...",
-                scrollbar: true
-            });
-
-
-            var countryList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
-                style: config.style.combobox
-            });
-
-
-            var productList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
-                style: config.style.combobox,
-                addNewOption: false,
-                addNewOptionText: "Add Product...",
-                scrollbar: true
-            });
-
+            var countryList = createCombobox();
 
             var states = [];
             getData("states", function(data) {
@@ -265,9 +233,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                     return;
                                 }
                                 else{
-                                    company = data.company = {
-                                        name: companyName
-                                    };
+                                    data.company.name = companyName;
                                 }
                             }
 
@@ -281,9 +247,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                     return;
                                 }
                                 else{
-                                    facility = data.facility = {
-                                        name: facilityName
-                                    };
+                                    data.facility.name = facilityName;
                                 }
                             }
 
@@ -297,16 +261,17 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                     return;
                                 }
                                 else{
-                                    product = data.product = {
-                                        name: productName
-                                    };
+                                    data.product.name = productName;
                                 }
                             }
 
-                            save(data, function(){
+                            save(data, function(companyID, facilityID, productID){
 
                                 var node = nodeEditor.node;
                                 node.name = companyName;
+                                node.companyID = companyID;
+                                node.facilityID = facilityID;
+                                node.productID = productID;
 
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 nodeEditor.close();
@@ -332,30 +297,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                     if (value){ //user either selected an item in the list or typed in an exact match
                         var company = value;
-
-                      //Update facility list
-                        facilityList.clear();
-                        var filter;
-                        if (company.owner_operator_number){
-                            filter = "owner_operator_number="+company.owner_operator_number;
-                        }
-                        else{
-                            if (!isNaN(company.id)) filter = "companyID=" + company.id;
-                        }
-
-                        if (filter){
-                            get("SupplyChain/Facilities?"+filter,{
-                                success: function(arr){
-                                    for (var i=0; i<arr.length; i++){
-                                        var facility = arr[i];
-                                        var facilityName = facility.name;
-                                        if (!facilityName) facilityName = "Facility " + facility.id;
-                                        facilityList.add(facilityName, facility);
-                                    }
-                                    if (arr.length==1) facilityList.setValue(facilityName);
-                                }
-                            });
-                        }
+                        updateFacilities(company);
                     }
                     else{
 
@@ -434,8 +376,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                                 }
                                             }
 
-
-
                                             companyList.showMenu();
                                         }
                                     }
@@ -475,71 +415,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         }
 
 
-                      //Update product fields
-                        productList.clear();
-                        var filter = "facilityID=" + facility.id;
-                        if (facility.fei_number) filter = "fei="+facility.fei_number;
-                        get("SupplyChain/Products?"+filter,{
-                            success: function(arr){
-
-                              //Generate list of products
-                                var products = {};
-                                for (var i=0; i<arr.length; i++){
-                                    var product = arr[i];
-                                    var productID = product.id;
-                                    var productName = product.name;
-                                    var productType = product.device_name;
-                                    var productCode = product.product_code;
-                                    var proprietaryName = product.proprietary_name;
-
-                                    if (typeof proprietaryName === "string"){
-                                        if (proprietaryName.indexOf("[")===0 && proprietaryName.lastIndexOf("]")===proprietaryName.length-1){
-                                            proprietaryName = proprietaryName.substring(1,proprietaryName.length-1);
-                                            if (proprietaryName.indexOf(",")===-1){
-                                                //productName = proprietaryName;
-                                            }
-                                            else{
-                                                var names = proprietaryName.split(",");
-                                                //productName = names[0];
-                                            }
-                                        }
-                                    }
-
-
-
-                                    if (!productName) productName = productType;
-                                    products[productName] = {
-                                        id: productID,
-                                        name: productName,
-                                        code: productCode,
-                                        regulation_number: product.regulation_number
-                                    };
-                                }
-
-
-                              //Sort product names alphabetically
-                                var productNames = [];
-                                for (var key in products) {
-                                    if (products.hasOwnProperty(key)){
-                                        var product = products[key];
-                                        productNames.push(product.name);
-                                    }
-                                }
-                                productNames.sort();
-
-
-                              //Update dropdown
-                                for (var i=0; i<productNames.length; i++){
-                                    var productName = productNames[i];
-                                    var product = products[productName];
-                                    if (product.code) productName += " (" + product.code + ")";
-                                    productList.add(productName, product);
-                                }
-                                if (productNames.length==1) productList.setValue(productName);
-
-
-                            }
-                        });
+                      //Update product list
+                        updateProducts(facility);
                     }
                     else{
                         feiField.setValue("");
@@ -564,49 +441,165 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             };
 
 
+
             nodeEditor.update = function(node){
                 nodeEditor.node = node;
                 form.clear();
+                companyList.clear();
+                facilityList.clear();
+                productList.clear();
                 if (companyList.resetColor) companyList.resetColor();
                 if (facilityList.resetColor) facilityList.resetColor();
                 if (productList.resetColor) productList.resetColor();
                 if (node){
-                    if (node.name){
-                        var name = node.name;
-                        var info = {
-                            id: node.nodeID,
-                            name: node.name,
-                            city: node.city,
-                            iso_country_code: node.country,
-                            fei: node.fei
-                        };
+                    get("SupplyChain/Company?id="+node.companyID,{
+                        success: function(company){
+                            companyList.clear();
+                            companyList.add(company.name, company);
+                            companyList.setValue(company.name, true);
 
-                        if (isNaN(info.id)) delete info.id;
-                        for (var key in info.company) {
-                            if (!info.company[key]) delete info.company[key];
+                            updateFacilities(company, function(){
+
+                                var facility;
+                                node.facilityID = parseFloat(node.facilityID);
+                                var options = facilityList.getOptions();
+                                for (var i=0; i<options.length; i++){
+                                    var option = options[i];
+                                    if (option.value.id===node.facilityID){
+                                        facilityList.setValue(option.text, true);
+                                        facility = option.value;
+                                        break;
+                                    }
+                                }
+
+
+                                updateProducts(facility, function(){
+                                    var product;
+                                    node.productID = parseFloat(node.productID);
+                                    var options = productList.getOptions();
+                                    for (var i=0; i<options.length; i++){
+                                        var option = options[i];
+                                        if (option.value.id===node.productID){
+                                            productList.setValue(option.text);
+                                            product = option.value;
+                                            break;
+                                        }
+                                    }
+                                });
+                            });
                         }
-
-                        companyList.add(name, info);
-                        form.setValue("company", node.name);
-                    }
-                    if (node.city) form.setValue("city", node.city);
-                    if (node.country) form.setValue("country", node.country);
-                    if (node.fei) form.setValue("fei", node.fei);
-                    if (node.notes) form.setValue("notes", node.notes);
-
-                    if (node.fei){
-                        form.disableField("city");
-                        form.disableField("country");
-                    }
-                    else{
-                        form.enableField("city");
-                        form.enableField("country");
-                    }
+                    });
                 }
             };
         }
 
         return nodeEditor;
+    };
+
+
+  //**************************************************************************
+  //** updateFacilities
+  //**************************************************************************
+    var updateFacilities = function(company, callback){
+        facilityList.clear();
+
+        var filter = "";
+        if (!isNaN(company.id)){
+            filter = "companyID=" + company.id;
+        }
+        else{
+            if (company.owner_operator_number){
+                filter = "owner_operator_number="+company.owner_operator_number;
+            }
+        }
+
+        if (filter){
+            get("SupplyChain/Facilities?"+filter,{
+                success: function(arr){
+                    for (var i=0; i<arr.length; i++){
+                        var facility = arr[i];
+                        var facilityName = facility.name;
+                        if (!facilityName) facilityName = "Facility " + facility.id;
+                        facilityList.add(facilityName, facility);
+                    }
+                    if (arr.length===1) facilityList.setValue(facilityName);
+                    if (callback) callback.apply(me, []);
+                }
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** updateProducts
+  //**************************************************************************
+    var updateProducts = function(facility, callback){
+        productList.clear();
+        if (!facility) return;
+
+        var filter = "facilityID=" + facility.id;
+        if (facility.fei_number) filter = "fei="+facility.fei_number;
+        get("SupplyChain/Products?"+filter,{
+            success: function(arr){
+
+              //Generate list of products
+                var products = {};
+                for (var i=0; i<arr.length; i++){
+                    var product = arr[i];
+                    var productID = product.id;
+                    var productName = product.name;
+                    var productType = product.device_name;
+                    var productCode = product.product_code;
+                    var proprietaryName = product.proprietary_name;
+
+                    if (typeof proprietaryName === "string"){
+                        if (proprietaryName.indexOf("[")===0 && proprietaryName.lastIndexOf("]")===proprietaryName.length-1){
+                            proprietaryName = proprietaryName.substring(1,proprietaryName.length-1);
+                            if (proprietaryName.indexOf(",")===-1){
+                                //productName = proprietaryName;
+                            }
+                            else{
+                                var names = proprietaryName.split(",");
+                                //productName = names[0];
+                            }
+                        }
+                    }
+
+
+
+                    if (!productName) productName = productType;
+                    products[productName] = {
+                        id: productID,
+                        name: productName,
+                        code: productCode,
+                        regulation_number: product.regulation_number
+                    };
+                }
+
+
+              //Sort product names alphabetically
+                var productNames = [];
+                for (var key in products) {
+                    if (products.hasOwnProperty(key)){
+                        var product = products[key];
+                        productNames.push(product.name);
+                    }
+                }
+                productNames.sort();
+
+
+              //Update dropdown
+                for (var i=0; i<productNames.length; i++){
+                    var productName = productNames[i];
+                    var product = products[productName];
+                    if (product.code) productName += " (" + product.code + ")";
+                    productList.add(productName, product);
+                }
+                if (productNames.length===1) productList.setValue(productName);
+                if (callback) callback.apply(me, []);
+
+            }
+        });
     };
 
 
@@ -723,6 +716,17 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             }
         }
         callback.apply(me, [isValid]);
+    };
+
+
+  //**************************************************************************
+  //** createCombobox
+  //**************************************************************************
+    var createCombobox = function(){
+        return new javaxt.dhtml.ComboBox(document.createElement("div"), {
+            style: config.style.combobox,
+            scrollbar: true
+        });
     };
 
 
