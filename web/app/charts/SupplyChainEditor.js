@@ -31,7 +31,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var sankeyEditor;
     var nodeEditor;
     var waitmask;
-    var companyList, facilityList, productList;
+    var companyList, facilityList, productList, productTypes;
 
 
   //**************************************************************************
@@ -110,6 +110,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             companyList = createCombobox();
             facilityList = createCombobox();
             productList = createCombobox();
+            productTypes = createCombobox();
 
             var countryList = createCombobox();
 
@@ -175,7 +176,12 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         group: "Product",
                         items: [
                             {
-                                name: "product",
+                                name: "productType",
+                                label: "Type",
+                                type: productTypes
+                            },
+                            {
+                                name: "productName",
                                 label: "Name",
                                 type: productList
                             },
@@ -400,16 +406,45 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                     }
                 }
-                else if (field.name==="product"){
+                else if (field.name==="productType"){
                     var name = field.getText();
                     var value = field.getValue();
 
                     if (value){ //user either selected an item in the list or typed in an exact match
-                        var product = value;
-
-
+                        productList.clear();
+                        var products = value;
+                        for (var i=0; i<products.length; i++){
+                            var product = products[i];
+                            var productName = product.name;
+                            productList.add(productName, productName);
+                        }
+                        if (products.length==1) productList.setValue(productName);
                     }
                     else{
+
+                        if (name.trim().length>0){
+                            (function (name) {
+
+                                get("SupplyChain/Products?name="+encodeURIComponent(name)+"&limit=50",{
+                                    success: function(arr){
+
+                                        var currTime = new Date().getTime();
+                                        if (currTime<lastSearch) return;
+                                        lastSearch = currTime;
+
+
+                                        for (var i=0; i<arr.length; i++){
+                                            var product = arr[i];
+                                            var productCode = product.product_code;
+                                            var productType = product.device_name;
+                                            var text = productCode + " - " + productType;
+                                            productTypes.add(text, []);
+                                        }
+
+                                    }
+                                });
+                            })(name);
+                        }
 
                     }
                 }
@@ -537,6 +572,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //**************************************************************************
     var updateProducts = function(facility, callback){
         productList.clear();
+        productTypes.clear();
         if (!facility) return;
 
         var filter = "";
@@ -550,7 +586,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         get("SupplyChain/Products?"+filter,{
             success: function(arr){
 
-              //Generate list of products
+              //Group products by product code
                 var products = {};
                 for (var i=0; i<arr.length; i++){
                     var product = arr[i];
@@ -558,54 +594,37 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     var productName = product.name;
                     var productType = product.device_name;
                     var productCode = product.product_code;
-                    var proprietaryName = product.proprietary_name;
 
-                    if (typeof proprietaryName === "string"){
-                        if (proprietaryName.indexOf("[")===0 && proprietaryName.lastIndexOf("]")===proprietaryName.length-1){
-                            proprietaryName = proprietaryName.substring(1,proprietaryName.length-1);
-                            if (proprietaryName.indexOf(",")===-1){
-                                //productName = proprietaryName;
-                            }
-                            else{
-                                var names = proprietaryName.split(",");
-                                //productName = names[0];
-                            }
-                        }
-                    }
-
-
-
-                    if (!productName) productName = productType;
-                    products[productName] = {
+                    product = {
                         id: productID,
                         name: productName,
+                        type: productType,
                         code: productCode,
                         regulation_number: product.regulation_number
                     };
+
+
+                    var key = productCode;
+                    var val = products[key];
+                    if (!val) {
+                        val = [];
+                        products[key] = val;
+                    }
+                    val.push(product);
                 }
 
 
-              //Sort product names alphabetically
-                var productNames = [];
+              //Populate list of productTypes
                 for (var key in products) {
                     if (products.hasOwnProperty(key)){
-                        var product = products[key];
-                        productNames.push(product.name);
+                        var arr = products[key];
+                        var text = key + " - " + arr[0].type;
+                        productTypes.add(text, arr);
                     }
                 }
-                productNames.sort();
 
-
-              //Update dropdown
-                for (var i=0; i<productNames.length; i++){
-                    var productName = productNames[i];
-                    var product = products[productName];
-                    if (product.code) productName += " (" + product.code + ")";
-                    productList.add(productName, product);
-                }
-                if (productNames.length===1) productList.setValue(productName);
+                if (arr.length===1) productList.setValue(text);
                 if (callback) callback.apply(me, []);
-
             }
         });
     };
@@ -625,7 +644,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         };
 
         if (data.company.owner_operator_number){
-            delete company.id;
             company.sourceID = data.company.owner_operator_number;
         }
 
