@@ -16,6 +16,12 @@ if(!bluewave.charts) bluewave.charts={};
         style: {
         }
     };
+    var margin = {
+        top: 15,
+        right: 5,
+        bottom: 65,
+        left: 82
+    };
     var chartConfig = {};
     var svg;
     var panel;
@@ -27,10 +33,13 @@ if(!bluewave.charts) bluewave.charts={};
     var inputData = [];
     var mapInputs = {
         projection:null,
-        mapType:null
+        mapType:null,
+        value:null
     };
     var mapProjection;
     var politicalBoundries;
+    var counties;
+    var states;
     var projectionOptions;
 
 
@@ -58,10 +67,6 @@ if(!bluewave.charts) bluewave.charts={};
             }
         ];
 
-        config = merge(config, defaultConfig);
-        if(!config.style) config.style = javaxt.dhtml.style.default;
-        if(!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
-
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -73,12 +78,12 @@ if(!bluewave.charts) bluewave.charts={};
         td = document.createElement("td");
         tr.appendChild(td);
         let div = document.createElement("div");
-        div.className = "map-editor-options";
+        div.className = "chart-editor-options";
         td.appendChild(div);
         optionsDiv = div;
 
         td = document.createElement("td");
-        td.className = "map-editor-preview";
+        td.className = "chart-editor-preview";
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
@@ -130,6 +135,10 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     this.update = function(mapConfig, inputs){
         me.clear();
+        for (var i=0; i<inputs.length; i++){
+            var input = inputs[i];
+            if (input!=null) inputs[i] = d3.csvParse(input);
+        }
         if(mapConfig !== null && mapConfig !== undefined){
             Object.keys(mapConfig).forEach(val=>{
                 chartConfig[val] = mapConfig[val]? mapConfig[val]:null;
@@ -137,7 +146,6 @@ if(!bluewave.charts) bluewave.charts={};
             panel.title.innerHTML = mapConfig.chartTitle;
             }
         inputData = inputs;
-
         createDropDown(optionsDiv);
         createOptions();
     }
@@ -182,7 +190,9 @@ if(!bluewave.charts) bluewave.charts={};
             createMapPreview();
         };
 
-        dropdownItem(tr,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
+        dropdownItem(tbody,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
+        dropdownItem(tbody,"mapData","Map Data",checkInputs,mapInputs,"value");
+
     };
 
   //**************************************************************************
@@ -218,6 +228,7 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapPreview
   //**************************************************************************
     var createMapPreview = function(){
+        //TODO Rewrite to use real inputs.
         if(!politicalBoundries){
             getData("worldGeoJson", function(data) {
                 politicalBoundries = data;
@@ -227,6 +238,45 @@ if(!bluewave.charts) bluewave.charts={};
             displayMap();
         }
     };
+
+
+  //**************************************************************************
+  //** checkInputs
+  //**************************************************************************
+    var checkInputs = function(){
+        var value = chartConfig.mapData;
+        if(!counties){
+            getData("counties-albers-10m.json", function(data) {
+                counties = data;
+                counties = extractColumn(counties.objects.counties.geometries, "id");
+            });
+        };
+        if(!states){
+            getData("states-albers-10m.json", function(data) {
+                states = data;
+                states = extractColumn(states.objects.states.geometries, "properties");
+                states = extractColumn(states, "code");
+            });
+        };
+
+        setTimeout(function() {
+            var legalValue = true;
+            var loopData = inputData[0];
+            for(var i = 0; i < loopData.length; i++){
+                var val = loopData[i];
+                legalValue = counties.includes(val[value]);
+                if(legalValue) {
+                    legalValue = states.includes(val[value]);
+                };
+                if(!legalValue){
+                    break;
+                };
+            }
+            createMapPreview();
+        }, 500);
+    };
+
+
 
   //**************************************************************************
   //** displayMap
@@ -250,6 +300,7 @@ if(!bluewave.charts) bluewave.charts={};
                 .range(d3.schemeBlues[7]);
 
         let tempData = d3.map();
+        //TODO Replace with actual inputs
         choroplethData.forEach(val=>{
           tempData.set(val.code,+val.pop)  ;
         });
@@ -314,10 +365,11 @@ if(!bluewave.charts) bluewave.charts={};
    */
     var createOptions = function() {
         var data = inputData[0];
-        var data2 = inputData[1];
-
         let dataOptions = Object.keys(data[0]);
-        let dataOptions2 = data2?Object.keys(data2[0]):null;
+        mapInputs.value.clear();
+        dataOptions.forEach((val)=>{
+            mapInputs.value.add(val, val);
+        });
         mapProjection.clear();
         projectionOptions.forEach((val)=>{
             mapProjection.add(val.name,val.projection);
@@ -360,8 +412,10 @@ if(!bluewave.charts) bluewave.charts={};
         svg = d3.select(previewArea).append("svg");
         svg.attr("width", width);
         svg.attr("height", height);
-        mapArea = svg.append("g");
-        mapLayer = svg.append("g");
+
+        mapArea = new bluewave.charts.MapChart(svg, {
+            margin: margin
+        });
   }
 
   //**************************************************************************
@@ -387,6 +441,35 @@ if(!bluewave.charts) bluewave.charts={};
     this.getChart = function(){
         return previewArea;
     };
+
+
+  //**************************************************************************
+  //** Fake Data for Testing
+  //**************************************************************************
+    let mapData = [
+        {lat:-122.490402,long:37.786453,label:"work"},
+        {lat:5.389809,long:37.72728,label:"home"}
+    ];
+
+    let choroplethData = [
+        {name: "Togo", code: "TGO", pop: "6238572"},
+        {name: "Sao Tome and Principe", code: "STP", pop: "152622"},
+        {name: "Tunisia", code: "TUN", pop: "10104685"},
+        {name: "Turkey", code: "TUR", pop: "72969723"},
+        {name: "Tuvalu", code: "TUV", pop: "10441"},
+        {name: "Turkmenistan", code: "TKM", pop: "4833266"},
+        {name: "United Republic of Tanzania", code: "TZA", pop: "38477873"},
+        {name: "Uganda", code: "UGA", pop: "28947181"},
+        {name: "United Kingdom", code: "GBR", pop: "60244834"},
+        {name: "Ukraine", code: "UKR", pop: "46917544"},
+        {name: "United States", code: "USA", pop: "299846449"}
+    ];
+  //**************************************************************************
+  //** extractColumn
+  //**************************************************************************
+    function extractColumn(arr, column) {
+      return arr.map(x => x[column])
+    }
 
   //**************************************************************************
   //** Utils
