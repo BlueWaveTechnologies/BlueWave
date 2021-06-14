@@ -65,11 +65,7 @@ public class SupplyChainService extends WebService {
                 Record record = rs.next();
                 company = getCompany(record);
                 if (company.isEmpty()){
-                    Value val = record.get("company");
-                    if (!val.isNull()){
-                        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                        company = new JSONObject(gson.toJson(val.asMap()));
-                    }
+                    company = getJson(record.get("company"));
                 }
             }
             session.close();
@@ -108,10 +104,10 @@ public class SupplyChainService extends WebService {
             session = graph.getSession();
 
 
-            HashMap<Long, JSONObject> companies = new HashMap<>();
+            TreeMap<String, JSONObject> companies = new TreeMap<>();
 
 
-          //Find companies in the company data
+          //Find companies in the company nodes
             try{
                 String query = "MATCH (c:company)\n" +
                 "WHERE toLower(c.name) STARTS WITH toLower(\"" + name + "\")\n" +
@@ -120,15 +116,10 @@ public class SupplyChainService extends WebService {
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
-                    long nodeID = record.get("id").asLong();
-                    JSONObject json = new JSONObject();
-                    Value val = record.get("company");
-                    if (!val.isNull()){
-                        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                        json = new JSONObject(gson.toJson(val.asMap()));
-                    }
-                    json.set("id", nodeID);
-                    companies.put(nodeID, json);
+                    long companyID = record.get("id").asLong();
+                    JSONObject company = getJson(record.get("company"));
+                    company.set("id", companyID);
+                    companies.put(company.get("name").toString(), company);
                 }
             }
             catch (Exception e) {
@@ -142,15 +133,14 @@ public class SupplyChainService extends WebService {
                 String query =
                 "MATCH (o:registrationlisting_registration_owner_operator)-[:has]->(a:registrationlisting_registration_owner_operator_contact_address)\n" +
                 "WHERE toLower(o.firm_name) STARTS WITH toLower(\"" + name + "\")\n" +
-                "RETURN id(o) as id, properties(o) as owner_operator, properties(a) as address\n" +
+                "RETURN properties(o) as owner_operator, properties(a) as address\n" +
                 "LIMIT " + (limit-companies.size());
 
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
-                    long nodeID = record.get("id").asLong();
                     JSONObject company = getCompany(record);
-                    if (!companies.containsKey(nodeID)) companies.put(nodeID, company);
+                    companies.put(company.get("name").toString(), company);
                 }
             }
             catch (Exception e) {
@@ -164,28 +154,14 @@ public class SupplyChainService extends WebService {
 
 
 
-          //Sort companies by company name
-            TreeMap<String, JSONObject> sortedCompanies = new TreeMap<>();
-            Iterator<Long> it = companies.keySet().iterator();
-            while (it.hasNext()){
-                long nodeID = it.next();
-                JSONObject json = companies.get(nodeID);
-                String key = json.get("name").toString();
-                if (key==null) key = "";
-                key += "_" + nodeID;
-                sortedCompanies.put(key, json);
-            }
-
-
-
           //Create json output
             StringBuilder str = new StringBuilder("[");
-            Iterator<String> i2 = sortedCompanies.keySet().iterator();
-            while (i2.hasNext()){
-                String key = i2.next();
-                JSONObject json = sortedCompanies.get(key);
+            Iterator<String> it = companies.keySet().iterator();
+            while (it.hasNext()){
+                String key = it.next();
+                JSONObject json = companies.get(key);
                 str.append(json.toString());
-                if (i2.hasNext()) str.append(",");
+                if (it.hasNext()) str.append(",");
             }
             str.append("]");
 
@@ -209,13 +185,8 @@ public class SupplyChainService extends WebService {
    *  registrationlisting
    */
     private JSONObject getCompany(Record record){
-        JSONObject company = new JSONObject();
 
-        Value val = record.get("owner_operator");
-        if (!val.isNull()){
-            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-            company = new JSONObject(gson.toJson(val.asMap()));
-        }
+        JSONObject company = getJson(record.get("owner_operator"));
 
         String companyName = company.get("firm_name").toString();
         if (companyName!=null){
@@ -223,16 +194,13 @@ public class SupplyChainService extends WebService {
             company.remove("firm_name");
         }
 
-        val = record.get("address");
-        if (!val.isNull()){
-            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-            JSONObject address = new JSONObject(gson.toJson(val.asMap()));
-            Iterator<String> it = address.keySet().iterator();
-            while (it.hasNext()){
-                String key = it.next();
-                company.set(key, address.get(key));
-            }
+        JSONObject address = getJson(record.get("address"));
+        Iterator<String> it = address.keySet().iterator();
+        while (it.hasNext()){
+            String key = it.next();
+            company.set(key, address.get(key));
         }
+
         return company;
     }
 
@@ -313,19 +281,16 @@ public class SupplyChainService extends WebService {
                     Result rs = session.run(query);
                     if (rs.hasNext()){
                         Record record = rs.next();
-                        Value val = record.get("company");
-                        if (!val.isNull()){
-                            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                            JSONObject company = new JSONObject(gson.toJson(val.asMap()));
-                            String name = company.get("name").toString();
-                            if (companyName!=null){
-                                companyName = companyName.trim();
-                                if (!companyName.equals(name)){
-                                    updates.put("name", companyName);
-                                }
+                        JSONObject company = getJson(record.get("company"));
+                        String name = company.get("name").toString();
+                        if (companyName!=null){
+                            companyName = companyName.trim();
+                            if (!companyName.equals(name)){
+                                updates.put("name", companyName);
                             }
                         }
                     }
+
 
                     if (!updates.isEmpty()){
                         StringBuilder stmt = new StringBuilder();
@@ -336,10 +301,7 @@ public class SupplyChainService extends WebService {
                             Object val = updates.get(key);
                             stmt.append("SET n." + key + " = '" + val + "'\n");
                         }
-                        Result result = session.run(query);
-                        if (result.hasNext()) {
-                            companyID = result.single().get(0).asLong();
-                        }
+                        session.run(query);
                     }
 
                 }
@@ -397,21 +359,9 @@ public class SupplyChainService extends WebService {
                     while (rs.hasNext()){
                         Record record = rs.next();
                         long facilityID = record.get("id").asLong();
-                        JSONObject facility = new JSONObject();
-
-
-                        Value val = record.get("registration");
-                        if (!val.isNull()){
-                            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                            facility = new JSONObject(gson.toJson(val.asMap()));
-                        }
-
+                        JSONObject facility = getJson(record.get("registration"));
                         if (facility.isEmpty()){
-                            val = record.get("facility");
-                            if (!val.isNull()){
-                                Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                                facility = new JSONObject(gson.toJson(val.asMap()));
-                            }
+                            facility = getJson(record.get("facility"));
                         }
 
 
@@ -419,8 +369,7 @@ public class SupplyChainService extends WebService {
                         if (fei!=null) facilityIDs.add(fei);
 
 
-
-                        val = record.get("owner_operator_number");
+                        Value val = record.get("owner_operator_number");
                         if (!val.isNull()) ownerOperatorID = new javaxt.utils.Value(val.asObject()).toLong();
 
 
@@ -501,15 +450,7 @@ public class SupplyChainService extends WebService {
             while (rs.hasNext()){
                 Record record = rs.next();
                 long nodeID = record.get("id").asLong();
-                JSONObject facility = new JSONObject();
-
-
-                Value val = record.get("facility");
-                if (!val.isNull()){
-                    Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                    facility = new JSONObject(gson.toJson(val.asMap()));
-                }
-
+                JSONObject facility = getJson(record.get("facility"));
                 facilities.put(nodeID, facility);
             }
 
@@ -586,7 +527,7 @@ public class SupplyChainService extends WebService {
                 session.run(query);
 
 
-              //link facility node to registrationlisting
+              //Link facility node to the registrationlisting_registration node
                 if (sourceID!=null){
                     session.run(
                     "MATCH (f),(n:registrationlisting_registration {fei_number:\"" + sourceID + "\"}) " +
@@ -610,16 +551,12 @@ public class SupplyChainService extends WebService {
                     Result rs = session.run(query);
                     if (rs.hasNext()){
                         Record record = rs.next();
-                        Value val = record.get("facility");
-                        if (!val.isNull()){
-                            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                            JSONObject company = new JSONObject(gson.toJson(val.asMap()));
-                            String name = company.get("name").toString();
-                            if (facilityName!=null){
-                                facilityName = facilityName.trim();
-                                if (!facilityName.equals(name)){
-                                    updates.put("name", facilityName);
-                                }
+                        JSONObject facility = getJson(record.get("facility"));
+                        String name = facility.get("name").toString();
+                        if (facilityName!=null){
+                            facilityName = facilityName.trim();
+                            if (!facilityName.equals(name)){
+                                updates.put("name", facilityName);
                             }
                         }
                     }
@@ -660,8 +597,8 @@ public class SupplyChainService extends WebService {
   //**************************************************************************
   //** getProducts
   //**************************************************************************
-  /** Returns a list of products associated with a given facility. Searches
-   *  both "product" nodes and "registrationlisting" nodes
+  /** Returns a unique list of product codes associated with a given facility.
+   *  Searches both "product" nodes and "registrationlisting" nodes.
    */
     public ServiceResponse getProducts(ServiceRequest request, Database database)
         throws ServletException, IOException {
@@ -674,10 +611,14 @@ public class SupplyChainService extends WebService {
             Long fei = null;
 
             String query =
-            "MATCH (f:facility)-[r:has]->(p:product)\n" +
+            "MATCH (f:facility)-[:has]->(p:product)\n" +
             "WHERE id(f) = " + facilityID + "\n" +
-            "OPTIONAL MATCH (f)-[:source]->(n)\n" +
-            "RETURN id(p) as id, properties(p) as product, n.fei_number as fei";
+            "OPTIONAL MATCH (f)-[:source]->(n)\n" + //link to registration
+            "OPTIONAL MATCH (p)-[:has]->(o)\n" + //link to openFDA
+            "RETURN id(p) as id, " +
+            "properties(p) as product, " +
+            "properties(o) as product_description, " +
+            "n.fei_number as fei";
 
             Session session = null;
             try{
@@ -685,25 +626,21 @@ public class SupplyChainService extends WebService {
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
-                    long nodeID = record.get("id").asLong();
-                    JSONObject product = new JSONObject();
 
 
-                    Value val = record.get("product");
-                    if (!val.isNull()){
-                        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                        product = new JSONObject(gson.toJson(val.asMap()));
-                    }
+                    long productID = record.get("id").asLong();
+                    JSONObject product = getJson(record.get("product"));
+                    product.set("id", productID);
+
 
                     String productCode = product.get("code").toString();
                     if (productCode!=null) productCodes.add(productCode);
 
 
-                    val = record.get("fei");
+                    Value val = record.get("fei");
                     if (!val.isNull()) fei = new javaxt.utils.Value(val.asObject()).toLong();
 
 
-                    product.set("id", nodeID);
                     products.add(product);
                 }
 
@@ -758,24 +695,44 @@ public class SupplyChainService extends WebService {
 
                 Session session = null;
                 try{
-                    String query = "MATCH (n:registrationlisting_product_openfda)\n" +
-                    "WHERE n.device_name CONTAINS '" + name + "'\n" +
-                    "RETURN ID(n) as id, properties(n) as product " +
-                    //"ORDER BY n.name\n" +
+                    session = graph.getSession();
+
+                    TreeMap<String, JSONObject> uniqueProducts = new TreeMap<>();
+
+                    String query = "MATCH (p:registrationlisting_product)-[:has]->(n:registrationlisting_product_openfda)\n" +
+                    "WHERE toLower(n.device_name) CONTAINS toLower('" + name + "')\n" +
+                    "RETURN distinct(n.regulation_number) as id, properties(n) as product, p.product_code as product_code \n" +
                     "LIMIT " + limit;
                     Result rs = session.run(query);
                     while (rs.hasNext()){
                         Record record = rs.next();
+                        JSONObject product = getJson(record.get("product"));
+                        String productCode = null;
+                        Value val = record.get("product_code");
+                        if (!val.isNull()) productCode = val.asString();
+                        product.set("product_code", productCode);
+                        product.remove("k_number");
 
-                        Value val = record.get("product");
-                        if (!val.isNull()){
-                            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                            JSONObject json = new JSONObject(gson.toJson(val.asMap()));
-                            products.add(json);
-                        }
+
+
+                        name = product.get("device_name").toString();
+                        if (productCode==null) productCode = "ZZZ";
+                        if (name==null) name = "ZZZ";
+                        String key = name + "-" + productCode;
+                        uniqueProducts.put(key, product);
                     }
 
                     session.close();
+
+
+
+                    Iterator<String> it = uniqueProducts.keySet().iterator();
+                    while (it.hasNext()){
+                        JSONObject product = uniqueProducts.get(it.next());
+                        products.add(product);
+                    }
+
+
                     return new ServiceResponse(products);
                 }
                 catch (Exception e) {
@@ -790,57 +747,92 @@ public class SupplyChainService extends WebService {
   //**************************************************************************
   //** getProducts
   //**************************************************************************
-  /** Returns products associated with a facility in registrationlisting
+  /** Returns a list of products associated with a facility in registrationlisting
    *  @param fei Facility Establishment Number. FDA-assigned unique id for a
    *  facility
    */
     private JSONArray getProducts(Long fei, Session session) throws Exception {
         JSONArray arr = new JSONArray();
         if (fei!=null){
+
             String query =
             "MATCH (:registrationlisting_registration {fei_number:\"" + fei + "\"})<-[:has]-(r:registrationlisting)-[:has]->(p:registrationlisting_product)-[:has]->(o:registrationlisting_product_openfda)\n" +
-            "RETURN id(p) as id," +
-            "properties(r) as registration, " +
-            "properties(p) as product, " +
-            "properties(o) as product_description";
+            "RETURN " +
+            "r.proprietary_name as proprietary_name, " +
+            "p.product_code as product_code, " +
+            "properties(o) as product";
 
+
+            ArrayList<JSONObject> products = new ArrayList<>();
+            HashSet<String> productCodes = new HashSet<>();
 
             Result rs = session.run(query);
             while (rs.hasNext()){
                 Record record = rs.next();
-                JSONObject json = new JSONObject();
 
 
-                Value val = record.get("product");
-                if (!val.isNull()){
-                    Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                    json = new JSONObject(gson.toJson(val.asMap()));
+                JSONObject product = getJson(record.get("product"));
+                String productCode = null;
+                Value val = record.get("product_code");
+                if (!val.isNull()) productCode = val.asString();
+                product.set("product_code", productCode);
+
+
+
+                val = record.get("proprietary_name");
+                if (val==null){
+                    if (!productCodes.contains(productCode)) products.add(product);
                 }
+                else{
+                    JSONArray names = new JSONArray();
+                    String str = val.asString();
+                    if (str.startsWith("[") && str.endsWith("]")){
+                        try{
+                            names = new JSONArray(val.asString());
+                        }
+                        catch(Exception e){
+                            names = new JSONArray();
+                            for (String s : str.substring(1, str.length()-1).split(",")){
+                                names.add(s);
+                            }
+                        }
+                    }
 
-                val = record.get("product_description");
-                if (!val.isNull()){
-                    Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                    JSONObject productInfo = new JSONObject(gson.toJson(val.asMap()));
-                    Iterator<String> it = productInfo.keySet().iterator();
-                    while (it.hasNext()){
-                        String key = it.next();
-                        json.set(key, productInfo.get(key));
+
+                    if (names.isEmpty()){
+                        if (!productCodes.contains(productCode)) products.add(product);
+                    }
+                    else{
+                        for (int i=0; i<names.length(); i++){
+                            JSONObject p = new JSONObject(product.toString());
+                            p.set("name", names.get(i));
+                            products.add(p);
+                        }
                     }
                 }
 
-                val = record.get("registration");
-                if (!val.isNull()){
-                    Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                    JSONObject productInfo = new JSONObject(gson.toJson(val.asMap()));
-                    Iterator<String> it = productInfo.keySet().iterator();
-                    while (it.hasNext()){
-                        String key = it.next();
-                        json.set(key, productInfo.get(key));
-                    }
-                }
-
-                arr.add(json);
+                productCodes.add(productCode);
             }
+
+
+
+            TreeMap<String, JSONObject> uniqueProducts = new TreeMap<>();
+            for (int i=0; i<products.size(); i++){
+                JSONObject product = products.get(i);
+                String code = product.get("product_code").toString();
+                String name = product.get("name").toString();
+                if (code==null) code = "ZZZ";
+                if (name==null) name = "ZZZ";
+                String key = name + "-" + code;
+                uniqueProducts.put(key, product);
+            }
+
+            Iterator<String> it = uniqueProducts.keySet().iterator();
+            while (it.hasNext()){
+                JSONObject product = uniqueProducts.get(it.next());
+                arr.add(product);
+            }
+
         }
         return arr;
     }
@@ -933,5 +925,18 @@ public class SupplyChainService extends WebService {
     public ServiceResponse saveNetwork(ServiceRequest request, Database database)
         throws ServletException, IOException {
         return new ServiceResponse(501, "Not Implemented");
+    }
+
+
+  //**************************************************************************
+  //** getJson
+  //**************************************************************************
+    private static JSONObject getJson(Value val){
+        JSONObject json = new JSONObject();
+        if (!val.isNull()){
+            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+            json = new JSONObject(gson.toJson(val.asMap()));
+        }
+        return json;
     }
 }
