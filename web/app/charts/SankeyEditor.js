@@ -13,7 +13,29 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: { top: 10, right: 10, bottom: 10, left: 10 }
+        margin: { top: 10, right: 10, bottom: 10, left: 10 },
+        nodes: {
+            input: {
+                icon: "fas fa-sign-out-alt",
+                label: "Input"
+            },
+            output: {
+                icon: "fas fa-sign-in-alt",
+                label: "Output"
+            },
+            distributor: {
+                icon: "fas fa-random",
+                label: "Distributor"
+            }
+        },
+        sankey: {
+            style: {
+                links: {
+                    color: "#ccc",
+                    opacity: 0.3
+                }
+            }
+        }
     };
 
     var editPanel, previewPanel, waitmask; //primary components
@@ -28,6 +50,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var nodeEditor;
     var sankeyChart;
     var toggleButton;
+    var styleEditor;
 
 
   //**************************************************************************
@@ -35,7 +58,18 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        config = merge(config, defaultConfig);
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, config);
+
+
+      //Merge clone with default config
+        merge(clone, defaultConfig);
+        config = clone;
+
+
+      //Update config as needed
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
@@ -98,11 +132,20 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         me.clear();
 
         if (!sankeyConfig) sankeyConfig = {};
-        //console.log(sankeyConfig);
+
+
+      //Clone the config so we don't modify the original config object
+        sankeyConfig = JSON.parse(JSON.stringify(sankeyConfig));
 
 
       //Update title
         setTitle(sankeyConfig.chartTitle);
+
+
+      //Update style
+        if (!sankeyConfig.style) sankeyConfig.style = {};
+        config.sankey.style = merge(sankeyConfig.style, defaultConfig.sankey.style);
+
 
 
       //Update toggle button
@@ -213,6 +256,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** getNodes
+  //**************************************************************************
+    this.getNodes = function(){
+        return nodes;
+    };
+
+
+  //**************************************************************************
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
@@ -222,7 +273,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             layout: drawflow.export().drawflow[currModule].data,
             nodes: {},
             links: {},
-            chartTitle: getTitle()
+            chartTitle: getTitle(),
+            style: config.sankey.style
         };
 
 
@@ -244,6 +296,34 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     type: node.type,
                     notes: node.notes
                 };
+
+                for (var k in node) {
+                    if (node.hasOwnProperty(k)){
+                        var val = node[k];
+                        var addVal = false;
+                        if (typeof val === "string"){
+                            addVal = true;
+                        }
+                        else {
+                            //boolean or numeric value?
+                            if (isNaN(val)){
+                                if (val===true || val===false){
+                                    addVal = true;
+                                }
+                            }
+                            else{
+                                addVal = true;
+                            }
+                        }
+
+                        if (addVal){
+                            sankeyConfig.nodes[key][k] = val;
+                        }
+                    }
+                }
+
+
+
             }
         };
 
@@ -331,15 +411,15 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
       //Create buttons
-        createButton("factory", "fas fa-industry", "Factory");
-        createButton("distributor", "fas fa-store-alt", "Distributor");
-        createButton("hospital", "fas fa-hospital-user", "Hospital");
+        createButton("input", config.nodes.input.icon, config.nodes.input.label);
+        createButton("distributor", config.nodes.distributor.icon, config.nodes.distributor.label);
+        createButton("output", config.nodes.output.icon, config.nodes.output.label);
 
 
       //Enable addData button
-        button.factory.enable();
+        button.input.enable();
         button.distributor.enable();
-        button.hospital.enable();
+        button.output.enable();
     };
 
 
@@ -666,10 +746,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         var numOutputs = 0;
 
         switch (nodeType) {
-            case "factory":
+            case "input":
                 numOutputs = 1;
                 break;
-            case "hospital":
+            case "output":
                 numInputs = 1;
                 break;
             default:
@@ -769,9 +849,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** editNode
+  //** getNodeEditor
   //**************************************************************************
-    var editNode = function(node){
+    this.getNodeEditor = function(){
         if (!nodeEditor){
 
             nodeEditor = new javaxt.dhtml.Window(document.body, {
@@ -869,10 +949,17 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
             };
         }
+        return nodeEditor;
+    };
 
 
-        nodeEditor.update(node);
-        nodeEditor.show();
+  //**************************************************************************
+  //** editNode
+  //**************************************************************************
+    var editNode = function(node){
+        var editor = me.getNodeEditor();
+        editor.update(node);
+        editor.show();
     };
 
 
@@ -880,8 +967,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** checkName
   //**************************************************************************
     var checkName = function(name, currentNode, callback){
-       for (var key in nodes) {
-            var isValid = true;
+        var isValid = true;
+        for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
                 var nodeName = node.name;
@@ -985,7 +1072,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             width: "1000px",
             height: "644px",
             title: "Untitled",
-            settings: false
+            settings: true
         });
         var div = dashboardItem.el;
         div.className = "dashboard-item";
@@ -1018,7 +1105,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             };
         });
 
-        sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv, {});
+
+        dashboardItem.settings.onclick = function(){
+            editStyle();
+        };
+
+        sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv, config.sankey);
     };
 
 
@@ -1062,7 +1154,81 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         }
 
 
-        sankeyChart.update(data);
+        sankeyChart.update(config.sankey.style, data);
+    };
+
+
+  //**************************************************************************
+  //** editStyle
+  //**************************************************************************
+    var editStyle = function(){
+
+      //Create styleEditor as needed
+        if (!styleEditor){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Style",
+                width: 400,
+                valign: "top",
+                modal: false,
+                resizable: false,
+                style: config.style.window
+            });
+
+
+            var linkColor = new javaxt.dhtml.ComboBox(document.createElement("div"),{
+                style: config.style.combobox
+            });
+            linkColor.add("Solid color", "#ccc");
+            linkColor.add("Source color", "source");
+
+
+            var form = new javaxt.dhtml.Form(win.getBody(), {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Links",
+                        items: [
+                            {
+                                name: "linkColor",
+                                label: "Color",
+                                type: linkColor
+                            },
+                            {
+                                name: "linkOpacity",
+                                label: "Opacity",
+                                type: "text"
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+          //Update cutout field (add slider) and set initial value
+            createSlider("linkOpacity", form, "%");
+
+
+            styleEditor = form;
+            styleEditor.show = function(){
+                win.show();
+                form.resize();
+            };
+        }
+
+        var sankeyStyle = config.sankey.style;
+
+
+        styleEditor.onChange = function(){};
+        styleEditor.findField("linkColor").setValue(sankeyStyle.links.color);
+        styleEditor.findField("linkOpacity").setValue(sankeyStyle.links.opacity*100);
+        styleEditor.onChange = function(){
+            var settings = styleEditor.getData();
+            sankeyStyle.links.color = settings.linkColor;
+            sankeyStyle.links.opacity = settings.linkOpacity/100;
+            updateSankey();
+        };
+
+        styleEditor.show();
     };
 
 
@@ -1106,6 +1272,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createDashboardItem = bluewave.utils.createDashboardItem;
+    var createSlider = bluewave.utils.createSlider;
     var warn = bluewave.utils.warn;
 
 

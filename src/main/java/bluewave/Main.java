@@ -76,6 +76,9 @@ public class Main {
             bluewave.graph.Maintenance.deleteNodes(args.get("-delete"), graph);
             graph.close();
         }
+        else if (args.containsKey("-createIndex")){
+            createIndex(args);
+        }
         else if (args.containsKey("-test")){
             test(args);
         }
@@ -235,6 +238,26 @@ public class Main {
         else if (fileType.equals("json")){
             String target = args.get("-target");
             bluewave.graph.Import.importJSON(file, nodeType, target, graph);
+        }
+        graph.close();
+    }
+
+
+  //**************************************************************************
+  //** createIndex
+  //**************************************************************************
+    private static void createIndex(HashMap<String, String> args) throws Exception {
+
+        String[] arr = args.get("-createIndex").split("\\.");
+        String nodeName = arr[0];
+        String field = arr[1];
+
+        Neo4J graph = Config.getGraph();
+        try{
+            bluewave.graph.Maintenance.createIndex(nodeName, field, graph);
+        }
+        catch(Exception e){
+            e.printStackTrace();
         }
         graph.close();
     }

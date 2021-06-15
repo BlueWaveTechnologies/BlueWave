@@ -14,7 +14,7 @@ if(!bluewave) var bluewave={};
  *   Update - chart information and config is passed in.
  *   createDropDown - initializes chart Type specific dropdowns
  *   createOptions - adds chart input options from updated Data
- *      pie, bar,line chart creation.
+ *      pie, bar,line, map chart creation.
  ******************************************************************************/
 
 bluewave.ChartEditor = function(parent, config) {
@@ -400,6 +400,100 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** createMapPreview
+  //**************************************************************************
+    var createMapPreview = function(){
+        if(!politicalBoundries){
+            getData("countries", function(data) {
+                politicalBoundries = data;
+                displayMap();
+            });
+        }else{
+            displayMap();
+        }
+    };
+
+
+  //**************************************************************************
+  //** displayMap
+  //**************************************************************************
+    var displayMap = function(){
+        // TODO:
+        // Add option to center
+        // Add scaling to defaults
+        if(chartConfig.mapProjectionValue === null){
+            return;
+        }
+        if (mapArea) mapArea.selectAll("*").remove();
+        var width = previewArea.offsetWidth;
+        var height = previewArea.offsetHeight;
+
+        var projection = chartConfig.mapProjectionValue
+                .translate([width/2,height/2])
+
+        var colorScale = d3.scaleThreshold()
+                .domain([100000, 1000000, 10000000, 30000000, 100000000, 500000000])
+                .range(d3.schemeBlues[7]);
+
+        let tempData = d3.map();
+        choroplethData.forEach(val=>{
+          tempData.set(val.code,+val.pop)  ;
+        });
+
+        // Draw the map
+        mapArea
+            .selectAll("path")
+            .data(politicalBoundries.features)
+            .enter().append("path")
+                .attr("fill", function(d){
+                    if(chartConfig.mapType==="choropleth"){
+                        d.total = tempData.get(d.id)||0;
+                        return colorScale(d.total);
+                    }else{
+                        return colorScale(0);
+                    }
+                })
+                .attr("d", d3.geoPath()
+                    .projection(projection)
+                )
+                .style("stroke", "#fff");
+
+        mapLayer.selectAll('circle').remove();
+
+        if(chartConfig.mapType === "circles"){
+            let filteredData = data.filter(val=>{
+                let lat = parseFloat(val.lat);
+                let lon = parseFloat(val.lon);
+                let isValidProjection = projection([lat,lon])
+                if(!isValidProjection[0] || !isValidProjection[1]){
+                    return false
+                }else{
+                    return true
+                }
+
+            });
+            //Draw Circle Points on the Map
+            mapLayer.selectAll("circle")
+                    .data(filteredData)
+                    .enter()
+                    .append("circle")
+                    .attr("cx", function (d) {
+                        let lat = parseFloat(d.lat);
+                        let lon = parseFloat(d.lon);
+                        return projection([lat,lon])[0];
+                    })
+                    .attr("cy", function (d) {
+                        let lat = parseFloat(d.lat);
+                        let lon = parseFloat(d.lon);
+                        return projection([lat,lon])[1];
+                    })
+                    .attr("r", "2px")
+                    .attr("fill", "red");
+        }
+    };
+
+
+  //**************************************************************************
   //** createLinePreview
   //**************************************************************************
     var createLinePreview = function(){
@@ -518,70 +612,36 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** createSlider
+  //** Fake Data for Testing
   //**************************************************************************
-  /** Creates a custom form input using a text field
-   */
-    var createSlider = function(inputName, form){
+    let mapData = [
+        {lat:-122.490402,long:37.786453,label:"work"},
+        {lat:5.389809,long:37.72728,label:"home"}
+    ];
 
-      //Add row under the given input
-        var input = form.findField(inputName);
-        var row = input.row.cloneNode(true);
-        var cols = row.childNodes;
-        for (var i=0; i<cols.length; i++){
-            cols[i].innerHTML = "";
-        }
-        input.row.parentNode.insertBefore(row, input.row.nextSibling);
+    let choroplethData = [
+        {name: "Togo", code: "TGO", pop: "6238572"},
+        {name: "Sao Tome and Principe", code: "STP", pop: "152622"},
+        {name: "Tunisia", code: "TUN", pop: "10104685"},
+        {name: "Turkey", code: "TUR", pop: "72969723"},
+        {name: "Tuvalu", code: "TUV", pop: "10441"},
+        {name: "Turkmenistan", code: "TKM", pop: "4833266"},
+        {name: "United Republic of Tanzania", code: "TZA", pop: "38477873"},
+        {name: "Uganda", code: "UGA", pop: "28947181"},
+        {name: "United Kingdom", code: "GBR", pop: "60244834"},
+        {name: "Ukraine", code: "UKR", pop: "46917544"},
+        {name: "United States", code: "USA", pop: "299846449"}
+    ];
 
-
-      //Add slider to the last column of the new row
-        var slider = document.createElement("input");
-        cols[2].appendChild(slider);
-        slider.type = "range";
-        slider.className = "dashboard-slider";
-        slider.setAttribute("min", 1);
-        slider.setAttribute("max", 20);
-        slider.onchange = function(){
-            var val = (this.value-1)*5;
-            input.setValue(val);
-        };
-
-
-        var setValue = input.setValue;
-        input.setValue = function(val){
-            val = parseFloat(val);
-            setValue(val + "%");
-            slider.value = round(val/5)+1;
-        };
-
-        var getValue = input.getValue;
-        input.getValue = function(){
-            var val = parseFloat(getValue());
-            if (isNumber(val)) return round(val, 0);
-            else return 0;
-        };
-
-        input.row.getElementsByTagName("input")[0].addEventListener('input', function(e) {
-            var val = parseFloat(this.value);
-            if (isNumber(val)){
-                if (val<0 || val>95){
-                    if (val<0) val = 0;
-                    else val = 95;
-                }
-                input.setValue(val);
-            }
-        });
-    };
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
-    var isNumber = javaxt.dhtml.utils.isNumber;
-    var round = javaxt.dhtml.utils.round;
     var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
+    var createSlider = bluewave.utils.createSlider;
 
     init();
 };

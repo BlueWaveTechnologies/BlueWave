@@ -285,8 +285,8 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
               "translate(" + margin.left + "," + margin.top + ")");
 
 
+        getData("states", function(mapData) {
 
-        d3.json("data/states-albers-10m.json").then(function(mapData) {
 
           //Render country polygon
             svg.append("path")

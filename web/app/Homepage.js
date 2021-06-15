@@ -99,7 +99,6 @@ bluewave.Homepage = function(parent, config) {
   //**************************************************************************
     var add = function(dashboard){
         var title = dashboard.name;
-        var className = dashboard.className;
 
 
         var dashboardItem = createDashboardItem(mainDiv, {
@@ -128,7 +127,7 @@ bluewave.Homepage = function(parent, config) {
             dashboardItem.innerDiv.innerHTML = "";
             dashboardItem.innerDiv.appendChild(this);
         };
-        img.src = "dashboard/thumbnail?name=" + className + "&_=" + t;
+        img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
     };
 
 

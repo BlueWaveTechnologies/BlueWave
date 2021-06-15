@@ -17,6 +17,7 @@ bluewave.Explorer = function(parent, config) {
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
     var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, mapEditor; //popup dialogs
+    var supplyChainEditor;
 
 
   //**************************************************************************
@@ -99,12 +100,23 @@ bluewave.Explorer = function(parent, config) {
    *  then the edit view will be unavailable
    */
     this.update = function(dashboard, readOnly){
+
+      //Show mask
+        mask.show();
+
+
+      //Reset panels and class variables
         me.clear();
 
 
+      //Ensure that the chartEditor is visible (albeit hidden by the mask).
+      //Otherwise, the thumbnail previews might not generate correctly
+        toggleButton.setValue("Edit");
+
+
+      //Show/hide the toggleButton as needed
         if (readOnly===true){
             toggleButton.hide();
-            mask.show();
         }
         else{
             toggleButton.show();
@@ -122,8 +134,10 @@ bluewave.Explorer = function(parent, config) {
       //Enable default buttons
         button.addData.enable();
         button.sankeyChart.enable();
+        button.supplyChain.enable();
 
 
+      //Return early if the dashboard is missing config info
         if (!dashboard.info) return;
 
 
@@ -565,9 +579,15 @@ bluewave.Explorer = function(parent, config) {
             node.ondblclick();
         });
         drawflow.on('nodeRemoved', function(nodeID) {
+            removeInputs(nodes, nodeID);
             delete nodes[nodeID+""];
         });
-
+        drawflow.on('connectionRemoved', function(info) {
+            var outputID = info.output_id+"";
+            var inputID = info.input_id+"";
+            var node = nodes[inputID];
+            delete node.inputs[outputID+""];
+        });
 
 
       //Create menubar
@@ -579,7 +599,8 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("barChart", "fas fa-chart-bar", "Bar Chart", menubar);
         createMenuButton("lineChart", "fas fa-chart-line", "Line Chart", menubar);
         createMenuButton("map", "fas fa-map-marked-alt", "Map", menubar);
-        createMenuButton("sankeyChart", "fas fa-project-diagram", "Sankey", menubar);
+        createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
+        createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
     };
 
@@ -714,6 +735,7 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
             case "sankeyChart":
+            case "supplyChain":
 
                 var node = createNode({
                     name: title,
@@ -730,21 +752,6 @@ bluewave.Explorer = function(parent, config) {
                 break;
             case "layout":
 
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 0
-                });
-
-                addEventListeners(node);
-
-                break;
-
-            case "map":
                 var node = createNode({
                     name: title,
                     type: nodeType,
@@ -872,9 +879,15 @@ bluewave.Explorer = function(parent, config) {
                 break;
             case "sankeyChart":
 
-
                 node.ondblclick = function(){
                     editSankey(this);
+                };
+
+                break;
+            case "supplyChain":
+
+                node.ondblclick = function(){
+                    editSupplyChain(this);
                 };
 
                 break;
