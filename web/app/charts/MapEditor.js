@@ -228,9 +228,9 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapPreview
   //**************************************************************************
     var createMapPreview = function(){
-        //TODO Rewrite to use real inputs.
+        //TODO Rewrite for actual data
         if(!politicalBoundries){
-            getData("worldGeoJson", function(data) {
+            getData("countries", function(data) {
                 politicalBoundries = data;
                 displayMap();
             });
@@ -271,8 +271,9 @@ if(!bluewave.charts) bluewave.charts={};
                 if(!legalValue){
                     break;
                 };
+                createMapPreview
             }
-            createMapPreview();
+            alert("Your chosen field is not Map Data");
         }, 500);
     };
 
@@ -300,7 +301,6 @@ if(!bluewave.charts) bluewave.charts={};
                 .range(d3.schemeBlues[7]);
 
         let tempData = d3.map();
-        //TODO Replace with actual inputs
         choroplethData.forEach(val=>{
           tempData.set(val.code,+val.pop)  ;
         });
