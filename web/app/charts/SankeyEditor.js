@@ -300,11 +300,24 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 for (var k in node) {
                     if (node.hasOwnProperty(k)){
                         var val = node[k];
+                        var addVal = false;
                         if (typeof val === "string"){
-                            sankeyConfig.nodes[key][k] = val;
+                            addVal = true;
                         }
                         else {
                             //boolean or numeric value?
+                            if (isNaN(val)){
+                                if (val===true || val===false){
+                                    addVal = true;
+                                }
+                            }
+                            else{
+                                addVal = true;
+                            }
+                        }
+
+                        if (addVal){
+                            sankeyConfig.nodes[key][k] = val;
                         }
                     }
                 }
