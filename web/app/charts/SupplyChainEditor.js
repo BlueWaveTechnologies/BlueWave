@@ -92,6 +92,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** onSave
+  //**************************************************************************
+  /** Called whenever nodes are created/updated in the graph
+   */
+    this.onSave = function(){};
+
+
+  //**************************************************************************
   //** getNodeEditor
   //**************************************************************************
     var getNodeEditor = function(){
@@ -225,52 +233,69 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         name: "Submit",
                         onclick: function(){
                             var data = form.getData();
-                            var company = data.company;
-                            var facility = data.facility;
-                            var product = data.product;
 
 
+                          //Validate company
                             var companyName = null;
-                            try{companyName = company.name.trim(); } catch(e){}
+                            try{companyName = data.company.name.trim(); } catch(e){}
                             if (companyName==null || companyName==="") {
                                 try{companyName = companyList.getText().trim(); } catch(e){}
                                 if (companyName==null || companyName==="") {
                                     warn("Company is required", companyList);
                                     return;
                                 }
-                                else{
-                                    data.company.name = companyName;
-                                }
                             }
+                            if (!data.company) data.company = {};
+                            data.company.name = companyName;
 
 
+
+                          //Validate facility
                             var facilityName = null;
-                            try{facilityName = facility.name.trim(); } catch(e){}
+                            try{facilityName = data.facility.name.trim(); } catch(e){}
                             if (facilityName==null || facilityName==="") {
                                 try{facilityName = facilityList.getText().trim(); } catch(e){}
                                 if (facilityName==null || facilityName==="") {
                                     warn("Facility is required", facilityList);
                                     return;
                                 }
-                                else{
-                                    data.facility.name = facilityName;
-                                }
+                            }
+                            if (!data.facility) data.facility = {};
+                            data.facility.name = facilityName;
+                            data.facility.city = cityField.getValue();
+
+                            var country = countryList.getValue();
+                            if (country){
+                                data.facility.state = countryList.getValue().state;
+                                data.facility.country = countryList.getValue().country;
+                            }
+                            else{
+                                warn("State/Country is required", facilityList);
+                                return;
                             }
 
 
+                          //Validate product
                             var productName = null;
-                            try{productName = product.name.trim(); } catch(e){}
+                            try{productName = productList.getText().trim(); } catch(e){}
                             if (productName==null || productName==="") {
-                                try{productName = productList.getText().trim(); } catch(e){}
-                                if (productName==null || productName==="") {
-                                    warn("Product is required", productList);
-                                    return;
-                                }
-                                else{
-                                    data.product.name = productName;
-                                }
+                                warn("Product is required", productList);
+                                return;
                             }
 
+                            var productType = productTypes.getValue();
+                            if (productType){
+                                data.product = productType[0];
+                            }
+                            else{
+                                data.product = {};
+                                data.product.name = productName;
+                                data.product.type = productTypes.getText();
+                            }
+
+
+
+                          //Save data
                             save(data, function(companyID, facilityID, productID){
 
                                 var node = nodeEditor.node;
@@ -281,6 +306,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 nodeEditor.close();
+                                me.onSave();
                             });
                         }
                     }
@@ -418,7 +444,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             var productName = product.name;
                             productList.add(productName, productName);
                         }
-                        if (products.length==1) productList.setValue(productName);
+                        if (products.length===1) productList.setValue(productName);
                     }
                     else{
 
@@ -448,6 +474,52 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                     }
                 }
+                else if (field.name==="productName"){
+                    var name = field.getText();
+                    var value = field.getValue();
+                    if (value){
+                        var products = productTypes.getValue();
+                        for (var i=0; i<products.length; i++){
+                            var product = products[i];
+                            if (product.name === name){
+                                if (product.inventory) form.setValue("inventory", product.inventory);
+                                if (product.capacity) form.setValue("capacity", product.capacity);
+                                if (product.leadTime) form.setValue("leadTime", product.leadTime);
+                                break;
+                            }
+                        }
+                    }
+                }
+                else if (field.name==="country"){
+                    var name = field.getText();
+                    var value = field.getValue();
+                    if (value){ //user either selected an item in the list or typed in an exact match
+
+                    }
+                    else{
+                        countryList.removeAll();
+                        for (var i=0; i<states.length; i++){
+                            var state = states[i];
+                            if (state.name.indexOf(name)===0 || state.code.indexOf(name)===0){
+                                countryList.add(state.name, {
+                                    state: state.code,
+                                    country: 'US'
+                                });
+                            }
+                        }
+
+                        for (var i=0; i<countries.length; i++){
+                            var country = countries[i];
+                            var countryCode = country.code;
+                            if (!countryCode) countryCode = "";
+                            if (country.name.indexOf(name)===0 || countryCode.indexOf(name)===0){
+                                countryList.add(country.name, {
+                                    country: countryCode
+                                });
+                            }
+                        }
+                    }
+                }
             };
 
 
@@ -459,22 +531,44 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     feiField.setValue(facility.fei_number);
                 }
                 cityField.setValue(facility.city);
-                if (facility.iso_country_code==='US'){
-                    countryList.removeAll();
+
+                countryList.removeAll();
+                var countryCode = facility.country;
+                if (!countryCode) countryCode = facility.iso_country_code;
+
+
+                var val;
+                if (countryCode==='US'){
+
+                    var stateCode = facility.state;
+                    if (!stateCode) stateCode = facility.state_code;
+
+
                     for (var i=0; i<states.length; i++){
                         var state = states[i];
-                        countryList.add(state.name, state.code);
+
+                        countryList.add(state.name, {
+                            state: state.code,
+                            country: 'US'
+                        });
+
+                        if (state.code===stateCode){
+                            val = state.name;
+                        }
                     }
-                    countryList.setValue(facility.state_code);
                 }
                 else{
-                    countryList.removeAll();
                     for (var i=0; i<countries.length; i++){
                         var country = countries[i];
-                        countryList.add(country.name, country.code);
+                        countryList.add(country.name, {country: country.code});
+
+                        if (country.code===countryCode){
+                            val = country.name;
+                        }
                     }
-                    countryList.setValue(facility.iso_country_code);
                 }
+
+                countryList.setValue(val);
             };
 
 
@@ -511,15 +605,18 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
                                 updateProducts(facility, function(){
-                                    var product;
                                     node.productID = parseFloat(node.productID);
-                                    var options = productList.getOptions();
+                                    var options = productTypes.getOptions();
                                     for (var i=0; i<options.length; i++){
                                         var option = options[i];
-                                        if (option.value.id===node.productID){
-                                            productList.setValue(option.text);
-                                            product = option.value;
-                                            break;
+                                        var products = option.value;
+                                        for (var j=0; j<products.length; j++){
+                                            var product = products[j];
+                                            if (product.id===node.productID){
+                                                productTypes.setValue(option.text);
+                                                productList.setValue(product.name);
+                                                break;
+                                            }
                                         }
                                     }
                                 });
@@ -592,19 +689,23 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     var product = arr[i];
                     var productID = product.id;
                     var productName = product.name;
-                    var productType = product.device_name;
-                    var productCode = product.product_code;
+                    var productType = product.type ? product.type : product.device_name;
+                    var productCode = product.code ? product.code : product.product_code;
 
                     product = {
                         id: productID,
                         name: productName,
                         type: productType,
                         code: productCode,
-                        regulation_number: product.regulation_number
+                        inventory: product.inventory,
+                        capacity: product.capacity,
+                        leadTime: product.leadTime
                     };
 
 
                     var key = productCode;
+                    if (!key) key = productType;
+                    if (!key) key = "N/A";
                     var val = products[key];
                     if (!val) {
                         val = [];
@@ -618,12 +719,22 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 for (var key in products) {
                     if (products.hasOwnProperty(key)){
                         var arr = products[key];
-                        var text = key + " - " + arr[0].type;
+                        var type = arr[0].type;
+                        var text;
+                        if (key && type){
+                            text = key + " - " + type;
+                        }
+                        else{
+                            if (key) text = key;
+                            else{
+                                if(type) text = type;
+                                else text = "N/A";
+                            }
+                        }
                         productTypes.add(text, arr);
                     }
                 }
-
-                if (arr.length===1) productList.setValue(text);
+                if (productTypes.getOptions().length===1) productTypes.setValue(text);
                 if (callback) callback.apply(me, []);
             }
         });
@@ -640,12 +751,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         var company = {
             id: data.company.id,
             name: data.company.name,
-            sourceID: data.company.sourceID
+            sourceID: data.company.owner_operator_number
         };
 
-        if (data.company.owner_operator_number){
-            company.sourceID = data.company.owner_operator_number;
-        }
 
         post("SupplyChain/Company", JSON.stringify(company), {
             success: function(companyID){
@@ -654,16 +762,12 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 var facility = {
                     id: data.facility.id,
                     name: data.facility.name,
-                    sourceID: data.facility.sourceID,
-                    companyID: companyID
+                    city: data.facility.city,
+                    state: data.facility.state,
+                    country: data.facility.country,
+                    companyID: companyID,
+                    sourceID: data.facility.fei_number
                 };
-
-                if (data.facility.fei_number){
-                    delete facility.id;
-                    facility.sourceID = data.facility.fei_number;
-                }
-
-                //if (facility.iso_country_code==='US'){
 
 
                 post("SupplyChain/Facility", JSON.stringify(facility), {
@@ -673,15 +777,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         var product = {
                             id: data.product.id,
                             name: data.product.name,
+                            type: data.product.type,
                             code: data.product.code,
+                            inventory: data.inventory,
+                            capacity: data.capacity,
+                            leadTime: data.leadTime,
                             facilityID: facilityID
                         };
 
-
-                        if (data.product.regulation_number){
-                            delete product.id;
-                            product.sourceID = data.facility.regulation_number;
-                        }
 
                         post("SupplyChain/Product", JSON.stringify(product), {
                             success: function(productID){
