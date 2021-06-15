@@ -722,7 +722,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         var type = arr[0].type;
                         var text;
                         if (key && type){
-                            text = key + " - " + type;
+                            if (key===type) text = key;
+                            else text = key + " - " + type;
                         }
                         else{
                             if (key) text = key;
