@@ -1169,6 +1169,7 @@ bluewave.Explorer = function(parent, config) {
                             createThumbnail(node, canvas);
                             win.close();
                             waitmask.hide();
+                            me.save();
                         }, this);
                     }
                     else{
@@ -1187,6 +1188,14 @@ bluewave.Explorer = function(parent, config) {
 
             supplyChainEditor.hide = function(){
                 win.hide();
+            };
+
+          //Automatically update dashboard whenever the graph is updated in the supplyChainEditor
+            supplyChainEditor.onSave = function(){
+                var chartConfig = supplyChainEditor.getConfig();
+                var node = supplyChainEditor.getNode();
+                node.config = chartConfig;
+                me.save();
             };
         }
 
