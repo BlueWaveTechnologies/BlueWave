@@ -27,8 +27,9 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
   //Local variables
     private String[] credentials;
     private User user;
-
-
+    private String authenticationScheme;
+    
+    
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -36,8 +37,8 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
    */
     public Authenticator(){
     }
-
-
+    
+    
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -47,11 +48,12 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
     public Authenticator(HttpServletRequest request){
         String authorization = request.getHeader("Authorization");
         if (authorization!=null){
-            String authenticationScheme = authorization.substring(0, authorization.indexOf(" "));
-            if (authenticationScheme.equalsIgnoreCase(this.getAuthType())){
+            int idx = authorization.indexOf(" ");
+            authenticationScheme = authorization.substring(0, idx).toUpperCase();
+            if (authenticationScheme.equals("BASIC")){
 
               //Parse credentials
-                String credentials = decode(authorization.substring(authorization.indexOf(" ")+1));
+                String credentials = decode(authorization.substring(idx+1));
                 String username = credentials.substring(0, credentials.indexOf(":")).toLowerCase();
                 String password = credentials.substring(credentials.indexOf(":")+1);
                 this.credentials = new String[]{username, password};
@@ -118,6 +120,47 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
                     this.user = user;
                 }
 
+            }
+            else if (authenticationScheme.equals("NTLM")){
+                byte[] msg = javaxt.utils.Base64.decode(authorization.substring(idx+1));                
+                int off = 0, length, offset;
+                if (msg[8] == 3) {
+                    off = 30;
+                    length = msg[off+17]*256 + msg[off+16];
+                    offset = msg[off+19]*256 + msg[off+8];
+                    //String computerName = new String(msg, offset, length);
+                    //System.out.println("computerName: " + computerName);
+                
+
+                  //Get domain name
+                    length = msg[off+1]*256 + msg[off];
+                    offset = msg[off+3]*256 + msg[off+2];
+                    String str = new String(msg, offset, length);
+                    StringBuilder domainName = new StringBuilder();
+                    for (int i=0; i<str.length(); i++){
+                        int c = str.charAt(i);
+                        if (c!=0) domainName.append((char) c);
+                    }   
+                    if (domainName.length()==0) domainName = null;
+
+
+                  //Get username
+                    length = msg[off+9]*256 + msg[off+8];
+                    offset = msg[off+11]*256 + msg[off+10];                                
+                    str = new String(msg, offset, length);
+                    StringBuilder username = new StringBuilder();
+                    for (int i=0; i<str.length(); i++){
+                        int c = str.charAt(i);
+                        if (c!=0) username.append((char) c);
+                    }  
+                    if (username.length()==0) username = null;
+
+
+                    if (domainName!=null){
+                        credentials = new String[]{username.toString(), null};
+                        user = getUser(username.toString());
+                    }
+                }
             }
         }
     }
@@ -195,10 +238,58 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
    *  case, we use "BASIC" authentication.
    */
     public String getAuthType(){
-        return BASIC_AUTH;
+        return authenticationScheme;
     }
 
 
+    private static String NTLM_TYPE_2;
+    static{
+        byte z = 0;
+
+        
+        byte[] msg1 = {
+            (byte) 'N', (byte) 'T', (byte) 'L', (byte) 'M', //ntlm
+            (byte) 'S', (byte) 'S', (byte) 'P', //ssp
+            z, (byte) 2, //type 2
+            z, z, z, z, z, z, z, (byte) 40, z, z, z,
+            (byte) 1, (byte) 130, 
+            (byte) 8, //super important!
+            z, z, (byte) 2, (byte) 2,
+            (byte) 2, z, z, z, z, z, z, z, z, z, z, z, z 
+        };        
+        
+        NTLM_TYPE_2 = javaxt.utils.Base64.encode(msg1).trim();
+    }
+
+    
+  //**************************************************************************
+  //** sendNTLMResponse
+  //**************************************************************************
+  /** Returns true if an NTLM response was returned to the client 
+   */    
+    public static boolean sendNTLMResponse(HttpServletRequest request, HttpServletResponse response){            
+        String authorization = request.getHeader("Authorization");
+        if (authorization==null){            
+            response.setStatus(response.SC_UNAUTHORIZED);
+            response.setHeader("WWW-Authenticate", "NTLM");                    
+            response.setContentLength(0);
+            return true; 
+        }
+        else{
+            byte[] msg = javaxt.utils.Base64.decode(authorization.substring(5));                
+            if (msg[8] == 1) {
+
+              //Send NTLM type2 response
+                response.setStatus(response.SC_UNAUTHORIZED);
+                response.setHeader("WWW-Authenticate", "NTLM " + NTLM_TYPE_2);  
+                response.setContentLength(0);
+                return true; 
+            }
+        }
+        return false;
+    }
+    
+    
     private String decode(String credentials){
         try{
             return new String(javaxt.utils.Base64.decode(credentials));
