@@ -28,6 +28,7 @@ public class WebApp extends HttpServlet {
     private String appName;
     private String appStyle;
 
+    private boolean ntlm;    
 
   //**************************************************************************
   //** Constructor
@@ -86,8 +87,10 @@ public class WebApp extends HttpServlet {
 
 
       //Instantiate authenticator
-        setAuthenticator(new Authenticator());
-
+        String auth = config.get("auth").toString();
+        ntlm = (auth!=null && auth.equalsIgnoreCase("NTLM"));
+        setAuthenticator(new Authenticator());     
+        
 
       //Get branding
         if (config.has("branding")){
@@ -119,7 +122,7 @@ public class WebApp extends HttpServlet {
         }
     }
 
-
+    
   //**************************************************************************
   //** processRequest
   //**************************************************************************
@@ -128,7 +131,7 @@ public class WebApp extends HttpServlet {
     public void processRequest(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
 
-
+                
       //Get path from url, excluding servlet path and leading "/" character
         String path = request.getPathInfo();
         if (path!=null) path = path.substring(1);
@@ -138,7 +141,7 @@ public class WebApp extends HttpServlet {
         String service = path==null ? "" : path.toLowerCase();
         if (service.contains("/")) service = service.substring(0, service.indexOf("/"));
 
-
+        
       //Get credentials
         String[] credentials = request.getCredentials();
 
@@ -148,15 +151,38 @@ public class WebApp extends HttpServlet {
         if (logger!=null) logger.log(requestHeaders);
         NotificationService.notify("WebRequest", requestHeaders);
 
+        
 
+      //Send NTLM response as needed
+        boolean ntlm = this.ntlm;            
+        if (ntlm){
+            String ua = request.getHeader("user-agent");
+            if (ua!=null){
+                if (ua.contains("MSIE ") || ua.contains("Trident/") || ua.contains("Edge/") || ua.contains("Edg/")){
+                    if (Authenticator.sendNTLMResponse(request, response)) return;
+                }
+                else{
+                    ntlm = false;
+                }
+            }                          
+        }  
+
+
+        
       //Generate response
         if (service.equals("login")){
             if (credentials==null){
-                response.setStatus(401, "Access Denied");
-                response.setHeader("WWW-Authenticate", "Basic realm=\"Access Denied\""); //<--Prompt the user for thier credentials
-                response.setHeader("Cache-Control", "no-cache, no-transform");
-                response.setContentType("text/plain");
-                response.write("Unauthorized");
+                if (ntlm){
+                    response.setStatus(401, "Access Denied");
+                    response.setHeader("WWW-Authenticate", "NTLM");
+                }
+                else{
+                    response.setStatus(401, "Access Denied");
+                    response.setHeader("WWW-Authenticate", "Basic realm=\"Access Denied\""); //<--Prompt the user for thier credentials
+                    response.setHeader("Cache-Control", "no-cache, no-transform");
+                    response.setContentType("text/plain");
+                    response.write("Unauthorized");                    
+                }
             }
             else{
                 try{
@@ -175,15 +201,22 @@ public class WebApp extends HttpServlet {
         else if (service.equals("logoff") || service.equalsIgnoreCase("logout")){
             String username = (credentials!=null) ? credentials[0] : null;
             NotificationService.notify("LogOff", username);
-            response.setStatus(401, "Access Denied");
-            Boolean prompt = new javaxt.utils.Value(request.getParameter("prompt")).toBoolean(); //<--Hack for Firefox
-            if (prompt!=null && prompt==true){
-                response.setHeader("WWW-Authenticate", "Basic realm=\"" +
-                "This site is restricted. Please enter your username and password.\"");
+            
+            if (ntlm){
+                response.setStatus(401, "Access Denied");
+                response.setHeader("WWW-Authenticate", "NTLM");
             }
-            response.setHeader("Cache-Control", "no-cache, no-transform");
-            response.setContentType("text/plain");
-            response.write("Unauthorized");
+            else{
+                response.setStatus(401, "Access Denied");
+                Boolean prompt = new javaxt.utils.Value(request.getParameter("prompt")).toBoolean(); //<--Hack for Firefox
+                if (prompt!=null && prompt==true){
+                    response.setHeader("WWW-Authenticate", "Basic realm=\"" +
+                    "This site is restricted. Please enter your username and password.\"");
+                }
+                response.setHeader("Cache-Control", "no-cache, no-transform");
+                response.setContentType("text/plain");
+                response.write("Unauthorized");
+            }            
         }
         else if (service.equals("whoami")){
             String username = (credentials!=null) ? credentials[0] : null;
