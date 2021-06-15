@@ -133,13 +133,20 @@ public class SupplyChainService extends WebService {
                 String query =
                 "MATCH (o:registrationlisting_registration_owner_operator)-[:has]->(a:registrationlisting_registration_owner_operator_contact_address)\n" +
                 "WHERE toLower(o.firm_name) STARTS WITH toLower(\"" + name + "\")\n" +
-                "RETURN properties(o) as owner_operator, properties(a) as address\n" +
+                "OPTIONAL MATCH (c:company)-[:source]->(o)\n" +
+                "RETURN properties(o) as owner_operator, properties(a) as address, id(c) as companyID\n" +
                 "LIMIT " + (limit-companies.size());
 
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
                     JSONObject company = getCompany(record);
+
+                    Long companyID = null;
+                    Value val = record.get("companyID");
+                    if (!val.isNull()) companyID = new javaxt.utils.Value(val.asObject()).toLong();
+                    company.set("id", companyID);
+
                     companies.put(company.get("name").toString(), company);
                 }
             }
@@ -301,7 +308,7 @@ public class SupplyChainService extends WebService {
                             Object val = updates.get(key);
                             stmt.append("SET n." + key + " = '" + val + "'\n");
                         }
-                        session.run(query);
+                        session.run(stmt.toString());
                     }
 
                 }
@@ -486,6 +493,9 @@ public class SupplyChainService extends WebService {
         Long facilityID = json.get("id").toLong();
         Long companyID = json.get("companyID").toLong(); //company node id
         String facilityName = json.get("name").toString();
+        String city = json.get("city").toString();
+        String state = json.get("state").toString();
+        String country = json.get("country").toString();
         Long sourceID = json.get("sourceID").toLong(); //fei_number
 
 
@@ -495,6 +505,16 @@ public class SupplyChainService extends WebService {
             if (sourceID==null) throw new ServletException(400, "Facility name is required");
         }
         if (companyID==null) throw new ServletException(400, "CompanyID is required");
+
+        if (state!=null){
+            state = state.trim();
+            if (state.length()!=2) throw new ServletException(400, "Invalid state. 2 char state code is required");
+        }
+
+        if (country!=null){
+            country = country.trim();
+            if (country.length()!=2) throw new ServletException(400, "Invalid country. 2 char country code is required");
+        }
 
 
       //Create or update facility
@@ -510,6 +530,9 @@ public class SupplyChainService extends WebService {
                 if (sourceID==null){
                     List<String> properties = new ArrayList<>();
                     properties.add("name: '" + facilityName + "'");
+                    properties.add("city: '" + city + "'");
+                    properties.add("state: '" + state + "'");
+                    properties.add("country: '" + country + "'");
                     query = "CREATE (a:facility {" + String.join(", ", properties) + "}) RETURN id(a)";
                 }
                 else{
@@ -570,12 +593,8 @@ public class SupplyChainService extends WebService {
                             Object val = updates.get(key);
                             stmt.append("SET n." + key + " = '" + val + "'\n");
                         }
-                        Result result = session.run(query);
-                        if (result.hasNext()) {
-                            facilityID = result.single().get(0).asLong();
-                        }
+                        session.run(stmt.toString());
                     }
-
                 }
                 else{
 
@@ -606,18 +625,16 @@ public class SupplyChainService extends WebService {
         Long facilityID = request.getParameter("facilityID").toLong();
         if (facilityID!=null){
 
-            JSONArray products = new JSONArray();
-            HashSet<String> productCodes = new HashSet<>();
+
+            TreeMap<String, JSONObject> uniqueProducts = new TreeMap<>();
             Long fei = null;
 
             String query =
             "MATCH (f:facility)-[:has]->(p:product)\n" +
             "WHERE id(f) = " + facilityID + "\n" +
             "OPTIONAL MATCH (f)-[:source]->(n)\n" + //link to registration
-            "OPTIONAL MATCH (p)-[:has]->(o)\n" + //link to openFDA
             "RETURN id(p) as id, " +
             "properties(p) as product, " +
-            "properties(o) as product_description, " +
             "n.fei_number as fei";
 
             Session session = null;
@@ -627,21 +644,15 @@ public class SupplyChainService extends WebService {
                 while (rs.hasNext()){
                     Record record = rs.next();
 
-
                     long productID = record.get("id").asLong();
                     JSONObject product = getJson(record.get("product"));
                     product.set("id", productID);
 
-
-                    String productCode = product.get("code").toString();
-                    if (productCode!=null) productCodes.add(productCode);
-
+                    String key = getProductKey(product);
+                    uniqueProducts.put(key, product);
 
                     Value val = record.get("fei");
                     if (!val.isNull()) fei = new javaxt.utils.Value(val.asObject()).toLong();
-
-
-                    products.add(product);
                 }
 
 
@@ -649,14 +660,22 @@ public class SupplyChainService extends WebService {
                 JSONArray otherProducts = getProducts(fei, session);
                 for (int i=0; i<otherProducts.length(); i++){
                     JSONObject product = otherProducts.get(i).toJSONObject();
-                    String productCode = product.get("product_code").toString();
-                    if (!productCodes.contains(productCode)){
-                        products.add(product);
+                    String key = getProductKey(product);
+                    if (!uniqueProducts.containsKey(key)){
+                        uniqueProducts.put(key, product);
                     }
                 }
 
 
                 session.close();
+
+
+                JSONArray products = new JSONArray();
+                Iterator<String> it = uniqueProducts.keySet().iterator();
+                while (it.hasNext()){
+                    JSONObject product = uniqueProducts.get(it.next());
+                    products.add(product);
+                }
 
                 return new ServiceResponse(products);
             }
@@ -714,11 +733,7 @@ public class SupplyChainService extends WebService {
                         product.remove("k_number");
 
 
-
-                        name = product.get("device_name").toString();
-                        if (productCode==null) productCode = "ZZZ";
-                        if (name==null) name = "ZZZ";
-                        String key = name + "-" + productCode;
+                        String key = getProductKey(product);
                         uniqueProducts.put(key, product);
                     }
 
@@ -819,11 +834,7 @@ public class SupplyChainService extends WebService {
             TreeMap<String, JSONObject> uniqueProducts = new TreeMap<>();
             for (int i=0; i<products.size(); i++){
                 JSONObject product = products.get(i);
-                String code = product.get("product_code").toString();
-                String name = product.get("name").toString();
-                if (code==null) code = "ZZZ";
-                if (name==null) name = "ZZZ";
-                String key = name + "-" + code;
+                String key = getProductKey(product);
                 uniqueProducts.put(key, product);
             }
 
@@ -835,6 +846,27 @@ public class SupplyChainService extends WebService {
 
         }
         return arr;
+    }
+
+
+  //**************************************************************************
+  //** getProductKey
+  //**************************************************************************
+    private String getProductKey(JSONObject product){
+
+        String productName = product.get("name").toString();
+        String productCode = product.get("code").toString();
+        String productType = product.get("type").toString();
+
+        if (productCode==null) productCode = product.get("product_code").toString();
+        if (productType==null) productType = product.get("device_name").toString();
+
+
+        if (productName==null) productName = "ZZZ";
+        if (productCode==null) productCode = "ZZZ";
+        if (productType==null) productType = "ZZZ";
+
+        return productName + "-" + productType + "-" + productCode;
     }
 
 
@@ -854,11 +886,15 @@ public class SupplyChainService extends WebService {
 
       //Parse payload
         JSONObject json = request.getJson();
-        Long productID = json.get("productID").toLong();
+        Long productID = json.get("id").toLong();
         String productName = json.get("name").toString();
+        String productType = json.get("type").toString();
         String productCode = json.get("code").toString();
+        String productInventory = json.get("inventory").toString();
+        String productCapacity = json.get("capacity").toString();
+        String productLeadTime = json.get("leadTime").toString();
         Long facilityID = json.get("facilityID").toLong();
-        Long sourceID = json.get("sourceID").toLong(); //regulation_number
+
 
 
       //Validate inputs
@@ -875,11 +911,14 @@ public class SupplyChainService extends WebService {
             if (productID==null){
                 List<String> properties = new ArrayList<>();
                 properties.add("name: '" + productName + "'");
+                if (productType!=null) properties.add("type: '" + productType + "'");
                 if (productCode!=null) properties.add("code: '" + productCode + "'");
+                if (productInventory!=null) properties.add("inventory: '" + productInventory + "'");
+                if (productCapacity!=null) properties.add("capacity: '" + productCapacity + "'");
+                if (productLeadTime!=null) properties.add("leadTime: '" + productLeadTime + "'");
 
 
-
-              //Create facility
+              //Create product
                 String query = "CREATE (a:product {" + String.join(", ", properties) + "}) RETURN id(a)";
                 Result result = session.run(query);
                 if (result.hasNext()) {
@@ -891,11 +930,45 @@ public class SupplyChainService extends WebService {
                 query = "MATCH (f),(p) WHERE id(f) =" + facilityID + " AND id(p) = " + productID + " MERGE(f)-[:has]->(p)";
                 session.run(query);
 
+            }
+            else{
+                HashMap<String, Object> updates = new HashMap<>();
 
-              //Link product to OpenFDA node
-                if (sourceID!=null){
-                    query = "MATCH (r), (s) WHERE id(r) =" + productID + " AND s.regulation_number ='" + sourceID + "' MERGE(r)-[:has]->(s)";
-                    session.run(query);
+                String query = "MATCH (n:product)\n" +
+                "WHERE id(n) = " + productID + "\n" +
+                "RETURN properties(n) as product";
+
+                Result rs = session.run(query);
+                if (rs.hasNext()){
+                    Record record = rs.next();
+                    JSONObject product = getJson(record.get("product"));
+
+                    String name = product.get("name").toString();
+                    if (!productName.equals(name)) updates.put("name", productName);
+
+                    String type = product.get("type").toString();
+                    if (type==null || !type.equals(productType)) updates.put("type", productType);
+
+                    String inventory = product.get("inventory").toString();
+                    if (inventory==null || !inventory.equals(productInventory)) updates.put("inventory", productInventory);
+
+                    String capacity = product.get("capacity").toString();
+                    if (capacity==null || !capacity.equals(productCapacity)) updates.put("capacity", productCapacity);
+
+                    String leadTime = product.get("leadTime").toString();
+                    if (leadTime==null || !leadTime.equals(productLeadTime)) updates.put("leadTime", productLeadTime);
+                }
+
+                if (!updates.isEmpty()){
+                    StringBuilder stmt = new StringBuilder();
+                    stmt.append("MATCH (n:product) WHERE id(n) = " + productID + "\n");
+                    Iterator<String> it = updates.keySet().iterator();
+                    while (it.hasNext()){
+                        String key = it.next();
+                        Object val = updates.get(key);
+                        stmt.append("SET n." + key + " = '" + val + "'\n");
+                    }
+                    session.run(stmt.toString());
                 }
             }
 
