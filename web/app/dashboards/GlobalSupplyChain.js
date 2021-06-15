@@ -173,7 +173,7 @@ bluewave.dashboards.GlobalSupplyChain = function (parent, config) {
     };
 
     var getStaticData = function(callback){
-        getData("worldGeoJson", function(data) {
+        getData("countries", function(data) {
             politicalBoundaries = data;
             createBackgroundMap()
             getData("PortsOfEntry", function(data) {

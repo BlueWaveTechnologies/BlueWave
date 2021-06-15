@@ -666,6 +666,7 @@ li.tree-node:hover {
     border-bottom: 1px solid #e9e9e9;
     border-radius: 4px 4px 0px 0px;
     padding-left: 10px;
+    overflow: hidden;
 }
 
 .drawflow-node-title .fas {

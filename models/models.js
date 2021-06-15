@@ -62,6 +62,26 @@ var models = {
     },
 
 
+//  //**************************************************************************
+//  //** UserGroup
+//  //**************************************************************************
+//    UserGroup: {
+//        fields: [
+//            {name: 'name',        type: 'string'},
+//            {name: 'description', type: 'string'},
+//            {name: 'active',      type: 'boolean'},
+//            {name: 'info',        type: 'json'}
+//        ],
+//        hasMany: [
+//            {model: 'User',       name: 'users'}
+//        ],
+//        constraints: [
+//            {name: 'name',    required: true},
+//            {name: 'active',  required: true}
+//        ]
+//    },
+
+
   //**************************************************************************
   //** Dashboard
   //**************************************************************************
@@ -75,6 +95,46 @@ var models = {
         constraints: [
             {name: 'name',          required: true},
             {name: 'className',     required: true}
+        ]
+    },
+
+
+  //**************************************************************************
+  //** DashboardUser
+  //**************************************************************************
+    DashboardUser: {
+        fields: [
+            {name: 'user',        type: 'User'},
+            {name: 'dashboard',   type: 'Dashboard'},
+            {name: 'readOnly',    type: 'boolean'}
+        ],
+        constraints: [
+            {name: 'user',          required: true, onDelete: 'cascade'},
+            {name: 'dashboard',     required: true, onDelete: 'cascade'},
+            {name: 'readOnly',      required: true}
+        ],
+        defaults: [
+            {name: 'readOnly',      value: true}
+        ]
+    },
+
+
+  //**************************************************************************
+  //** DashboardGroup
+  //**************************************************************************
+    DashboardGroup: {
+        fields: [
+            {name: 'name',        type: 'string'},
+            {name: 'description', type: 'string'},
+            {name: 'user',        type: 'User'},
+            {name: 'info',        type: 'json'}
+        ],
+        hasMany: [
+            {model: 'Dashboard',       name: 'dashboards'}
+        ],
+        constraints: [
+            {name: 'name',    required: true},
+            {name: 'user',    required: true, onDelete: 'cascade'}
         ]
     }
 

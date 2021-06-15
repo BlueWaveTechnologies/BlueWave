@@ -1,12 +1,7 @@
 package bluewave.web;
 import bluewave.Config;
-import bluewave.web.services.ReportService;
-import bluewave.web.services.QueryService;
-import bluewave.web.services.DashboardService;
-import bluewave.web.services.GraphService;
-import bluewave.web.services.MapService;
-import bluewave.web.services.DataService;
 import bluewave.graph.Neo4J;
+import bluewave.web.services.*;
 
 import javaxt.express.*;
 import javaxt.http.servlet.HttpServletRequest;
@@ -33,6 +28,8 @@ public class WebServices extends WebService {
     private DataService dataService;
     private QueryService queryService;
     private GraphService graphService;
+    private ImportService importService;
+    private SupplyChainService supplyChainService;
 
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
@@ -63,6 +60,8 @@ public class WebServices extends WebService {
         dataService = new DataService(new javaxt.io.Directory(web + "data"));
         queryService = new QueryService(graph, webConfig);
         graphService = new GraphService(graph, webConfig);
+        importService = new ImportService(graph, webConfig);
+        supplyChainService = new SupplyChainService(graph);
 
 
 
@@ -207,16 +206,25 @@ public class WebServices extends WebService {
         else if (service.equals("graph")){
             ws = graphService;
         }
+        else if (service.equals("import")){
+            ws = importService;
+        }
+        else if (service.equals("supplychain")){
+            ws = supplyChainService;
+        }
         else{
             serviceRequest = new ServiceRequest(request);
             ws = this;
 
           //Special case for dashboard/thumbnail requests
-            if (service.equals("dashboard")){
+            if (service.startsWith("dashboard")){
+                ws = dashboardService;
                 String p = serviceRequest.getPath(1).toString();
                 if (p!=null && p.equalsIgnoreCase("thumbnail")){
                     serviceRequest = new ServiceRequest(service, request);
-                    ws = dashboardService;
+                }
+                else{
+                    serviceRequest = new ServiceRequest(request);
                 }
             }
         }
@@ -245,7 +253,7 @@ public class WebServices extends WebService {
                 if (op.equals("get") || op.equals("list")){
 
                   //Allow users to see themselves
-                    where.append("id=" + user.getID());
+                    //where.append("id=" + user.getID());
                 }
                 else{
 

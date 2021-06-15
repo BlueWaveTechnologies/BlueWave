@@ -18,6 +18,10 @@ bluewave.charts.SankeyChart = function(parent, config) {
             right: 10,
             bottom: 10,
             left: 10
+        },
+        links: {
+            color: "#ccc",
+            opacity: 0.3
         }
     };
     var svg, sankeyArea;
@@ -56,8 +60,16 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(data){
+    this.update = function(chartConfig, data){
         me.clear();
+
+        if (!data) return;
+
+        if (chartConfig){
+            if (chartConfig.margin) config.margin = chartConfig.margin;
+            if (chartConfig.links) config.links = chartConfig.links;
+        }
+
 
         var margin = config.margin;
         sankeyArea.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -90,6 +102,10 @@ bluewave.charts.SankeyChart = function(parent, config) {
             var width = size[0];
 
             var formatNumber = d3.format(",.0f"); // zero decimal places
+
+
+          //Create function to colorize categorical data
+            var getColor = d3.scaleOrdinal(d3.schemeCategory10);
 
 
           //Add the nodes
@@ -142,13 +158,16 @@ bluewave.charts.SankeyChart = function(parent, config) {
                 return d.width;
               })
               .style("stroke-opacity", function (d) {
-                return (d.opacity=0.3);
+                return (d.opacity=config.links.opacity);
               })
               .style("stroke", function (d) {
-                return d.source.color;
+                  var color = config.links.color;
+                  if (color==="source") return d.source.color;
+                  return color;
               })
               .on('mouseover', function(d){
-                d3.select(this).style("stroke-opacity", 0.6);
+                  var opacity = Math.min(1, config.links.opacity*1.3);
+                  d3.select(this).style("stroke-opacity", opacity);
               })
               .on('mouseout', function(d){
                 d3.select(this).style("stroke-opacity", d.opacity);
@@ -193,7 +212,6 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();
 };

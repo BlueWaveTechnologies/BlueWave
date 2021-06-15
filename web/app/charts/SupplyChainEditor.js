@@ -1,0 +1,841 @@
+if(!bluewave) var bluewave={};
+if(!bluewave.charts) bluewave.charts={};
+
+//******************************************************************************
+//**  SupplyChainEditor
+//******************************************************************************
+/**
+ *   Panel used to create supply chain charts
+ *
+ ******************************************************************************/
+
+bluewave.charts.SupplyChainEditor = function(parent, config) {
+
+    var me = this;
+    var defaultConfig = {
+        nodes: {
+            input: {
+                icon: "fas fa-industry",
+                label: "Manufacturer"
+            },
+            output: {
+                icon: "fas fa-hospital-user",
+                label: "End User"
+            },
+            distributor: {
+                icon: "fas fa-store-alt",
+                label: "Distributor"
+            }
+        }
+    };
+    var sankeyEditor;
+    var nodeEditor;
+    var waitmask;
+    var companyList, facilityList, productList, productTypes;
+
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
+    var init = function(){
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, config);
+
+
+      //Merge clone with default config
+        merge(clone, defaultConfig);
+        config = clone;
+
+
+      //Update config as needed
+        if (!config.style) config.style = javaxt.dhtml.style.default;
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;
+
+        sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
+        sankeyEditor.getNodeEditor = getNodeEditor;
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(sankeyConfig){
+        sankeyEditor.update(sankeyConfig);
+    };
+
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        sankeyEditor.clear();
+    };
+
+
+  //**************************************************************************
+  //** getConfig
+  //**************************************************************************
+    this.getConfig = function(){
+        return sankeyEditor.getConfig();
+    };
+
+
+  //**************************************************************************
+  //** getChart
+  //**************************************************************************
+    this.getChart = function(){
+        return sankeyEditor.getChart();
+    };
+
+
+  //**************************************************************************
+  //** onSave
+  //**************************************************************************
+  /** Called whenever nodes are created/updated in the graph
+   */
+    this.onSave = function(){};
+
+
+  //**************************************************************************
+  //** getNodeEditor
+  //**************************************************************************
+    var getNodeEditor = function(){
+        if (!nodeEditor){
+
+            nodeEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Node",
+                width: 550,
+                valign: "top",
+                modal: true,
+                resizable: false,
+                style: config.style.window
+            });
+
+
+            companyList = createCombobox();
+            facilityList = createCombobox();
+            productList = createCombobox();
+            productTypes = createCombobox();
+
+            var countryList = createCombobox();
+
+            var states = [];
+            getData("states", function(data) {
+                var arr = data.objects.states.geometries;
+                for (var i=0; i<arr.length; i++){
+                    var state = arr[i];
+                    states.push(state.properties);
+                }
+            });
+
+            var countries = [];
+            getData("countries", function(data) {
+                var arr = data.features;
+                for (var i=0; i<arr.length; i++){
+                    var country = arr[i];
+                    countries.push(country.properties);
+                }
+            });
+
+
+
+            var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Company",
+                        items: [
+                            {
+                                name: "company",
+                                label: "Name",
+                                type: companyList
+                            }
+                        ]
+                    },
+                    {
+                        group: "Facility",
+                        items: [
+                            {
+                                name: "facility",
+                                label: "Name",
+                                type: facilityList
+                            },
+                            {
+                                name: "city",
+                                label: "City",
+                                type: "text"
+                            },
+                            {
+                                name: "country",
+                                label: "State/Country",
+                                type: countryList
+                            },
+                            {
+                                name: "fei",
+                                label: "FEI",
+                                type: "text"
+                            }
+                        ]
+                    },
+                    {
+                        group: "Product",
+                        items: [
+                            {
+                                name: "productType",
+                                label: "Type",
+                                type: productTypes
+                            },
+                            {
+                                name: "productName",
+                                label: "Name",
+                                type: productList
+                            },
+                            {
+                                name: "inventory",
+                                label: "Inventory",
+                                type: "text"
+                            },
+                            {
+                                name: "capacity",
+                                label: "Capacity",
+                                type: "text"
+                            },
+                            {
+                                name: "leadTime",
+                                label: "Lead Time",
+                                type: "text"
+                            }
+                        ]
+                    },
+                    {
+                        group: "Notes",
+                        items: [
+                            {
+                                name: "notes",
+                                label: "",
+                                type: "textarea"
+                            }
+                        ]
+                    }
+                ],
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
+                            nodeEditor.close();
+                            form.clear();
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
+                            var data = form.getData();
+
+
+                          //Validate company
+                            var companyName = null;
+                            try{companyName = data.company.name.trim(); } catch(e){}
+                            if (companyName==null || companyName==="") {
+                                try{companyName = companyList.getText().trim(); } catch(e){}
+                                if (companyName==null || companyName==="") {
+                                    warn("Company is required", companyList);
+                                    return;
+                                }
+                            }
+                            if (!data.company) data.company = {};
+                            data.company.name = companyName;
+
+
+
+                          //Validate facility
+                            var facilityName = null;
+                            try{facilityName = data.facility.name.trim(); } catch(e){}
+                            if (facilityName==null || facilityName==="") {
+                                try{facilityName = facilityList.getText().trim(); } catch(e){}
+                                if (facilityName==null || facilityName==="") {
+                                    warn("Facility is required", facilityList);
+                                    return;
+                                }
+                            }
+                            if (!data.facility) data.facility = {};
+                            data.facility.name = facilityName;
+                            data.facility.city = cityField.getValue();
+
+                            var country = countryList.getValue();
+                            if (country){
+                                data.facility.state = countryList.getValue().state;
+                                data.facility.country = countryList.getValue().country;
+                            }
+                            else{
+                                warn("State/Country is required", facilityList);
+                                return;
+                            }
+
+
+                          //Validate product
+                            var productName = null;
+                            try{productName = productList.getText().trim(); } catch(e){}
+                            if (productName==null || productName==="") {
+                                warn("Product is required", productList);
+                                return;
+                            }
+
+                            var productType = productTypes.getValue();
+                            if (productType){
+                                data.product = productType[0];
+                            }
+                            else{
+                                data.product = {};
+                                data.product.name = productName;
+                                data.product.type = productTypes.getText();
+                            }
+
+
+
+                          //Save data
+                            save(data, function(companyID, facilityID, productID){
+
+                                var node = nodeEditor.node;
+                                node.name = companyName;
+                                node.companyID = companyID;
+                                node.facilityID = facilityID;
+                                node.productID = productID;
+
+                                node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
+                                nodeEditor.close();
+                                me.onSave();
+                            });
+                        }
+                    }
+                ]
+            });
+
+
+
+            var cityField = form.findField("city");
+            var feiField = form.findField("fei");
+            form.disableField("fei");
+
+
+
+            var lastSearch = 0;
+            form.onChange = function(field){
+                if (field.name==="company"){
+                    var name = field.getText();
+                    var value = field.getValue();
+
+                    if (value){ //user either selected an item in the list or typed in an exact match
+                        var company = value;
+                        updateFacilities(company);
+                    }
+                    else{
+
+                        if (name.trim().length>0){
+                            (function (name) {
+
+                                get("SupplyChain/Companies?name="+encodeURIComponent(name)+"&limit=50",{
+                                    success: function(arr){
+
+                                        var currTime = new Date().getTime();
+                                        if (currTime<lastSearch) return;
+                                        lastSearch = currTime;
+
+                                        companyList.removeAll();
+                                        if (arr.length===0){
+                                            companyList.hideMenu();
+                                            form.enableField("city");
+                                            form.enableField("country");
+                                        }
+                                        else{
+
+                                          //Create a unique list of companies
+                                            var uniqueCompanies = {};
+                                            for (var i=0; i<arr.length; i++){
+                                                var company = arr[i];
+                                                var companyName = company.name.trim();
+
+                                              //Update company name as needed
+                                                if (companyName.lastIndexOf(")")===companyName.length-1){
+                                                    var idx = companyName.lastIndexOf("(");
+                                                    if (idx>0) companyName = companyName.substring(0, idx).trim();
+                                                }
+                                                company.name = companyName;
+
+                                              //Create unique key for the company using either the node ID or
+                                              //the owner_operator_number (R&L)
+                                                var key = company.owner_operator_number;
+                                                if (isNaN(key)) key = -i;
+                                                key +="";
+
+                                                var _company = uniqueCompanies[key];
+                                                if (!_company){
+                                                    _company = company;
+                                                    uniqueCompanies[key] = company;
+                                                }
+
+                                                if (companyName.length<_company.name.length){
+                                                    uniqueCompanies[key] = company;
+                                                }
+                                            }
+
+
+                                          //Sort company names alphabetically
+                                            var companyNames = [];
+                                            for (var key in uniqueCompanies) {
+                                                if (uniqueCompanies.hasOwnProperty(key)){
+                                                    var company = uniqueCompanies[key];
+                                                    companyNames.push(company.name);
+                                                }
+                                            }
+                                            companyNames.sort();
+
+
+
+                                          //Update dropdown
+                                            for (var i=0; i<companyNames.length; i++){
+                                                var companyName = companyNames[i];
+                                                for (var key in uniqueCompanies) {
+                                                    if (uniqueCompanies.hasOwnProperty(key)){
+                                                        var company = uniqueCompanies[key];
+                                                        if (company.name === companyName){
+                                                            companyList.add(company.name, company);
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            companyList.showMenu();
+                                        }
+                                    }
+                                });
+                            })(name);
+                        }
+                    }
+                }
+                else if (field.name==="facility"){
+                    var name = field.getText();
+                    var value = field.getValue();
+
+                    if (value){ //user either selected an item in the list or typed in an exact match
+                        var facility = value;
+                        updateFacility(facility);
+                        updateProducts(facility);
+                    }
+                    else{
+                        feiField.setValue("");
+                        form.enableField("city");
+                        form.enableField("country");
+
+                    }
+                }
+                else if (field.name==="productType"){
+                    var name = field.getText();
+                    var value = field.getValue();
+
+                    if (value){ //user either selected an item in the list or typed in an exact match
+                        productList.clear();
+                        var products = value;
+                        for (var i=0; i<products.length; i++){
+                            var product = products[i];
+                            var productName = product.name;
+                            productList.add(productName, productName);
+                        }
+                        if (products.length===1) productList.setValue(productName);
+                    }
+                    else{
+
+                        if (name.trim().length>0){
+                            (function (name) {
+
+                                get("SupplyChain/Products?name="+encodeURIComponent(name)+"&limit=50",{
+                                    success: function(arr){
+
+                                        var currTime = new Date().getTime();
+                                        if (currTime<lastSearch) return;
+                                        lastSearch = currTime;
+
+
+                                        for (var i=0; i<arr.length; i++){
+                                            var product = arr[i];
+                                            var productCode = product.product_code;
+                                            var productType = product.device_name;
+                                            var text = productCode + " - " + productType;
+                                            productTypes.add(text, []);
+                                        }
+
+                                    }
+                                });
+                            })(name);
+                        }
+
+                    }
+                }
+                else if (field.name==="productName"){
+                    var name = field.getText();
+                    var value = field.getValue();
+                    if (value){
+                        var products = productTypes.getValue();
+                        for (var i=0; i<products.length; i++){
+                            var product = products[i];
+                            if (product.name === name){
+                                if (product.inventory) form.setValue("inventory", product.inventory);
+                                if (product.capacity) form.setValue("capacity", product.capacity);
+                                if (product.leadTime) form.setValue("leadTime", product.leadTime);
+                                break;
+                            }
+                        }
+                    }
+                }
+                else if (field.name==="country"){
+                    var name = field.getText();
+                    var value = field.getValue();
+                    if (value){ //user either selected an item in the list or typed in an exact match
+
+                    }
+                    else{
+                        countryList.removeAll();
+                        for (var i=0; i<states.length; i++){
+                            var state = states[i];
+                            if (state.name.indexOf(name)===0 || state.code.indexOf(name)===0){
+                                countryList.add(state.name, {
+                                    state: state.code,
+                                    country: 'US'
+                                });
+                            }
+                        }
+
+                        for (var i=0; i<countries.length; i++){
+                            var country = countries[i];
+                            var countryCode = country.code;
+                            if (!countryCode) countryCode = "";
+                            if (country.name.indexOf(name)===0 || countryCode.indexOf(name)===0){
+                                countryList.add(country.name, {
+                                    country: countryCode
+                                });
+                            }
+                        }
+                    }
+                }
+            };
+
+
+
+            var updateFacility = function(facility){
+                if (facility.fei_number){
+                    form.disableField("city");
+                    form.disableField("country");
+                    feiField.setValue(facility.fei_number);
+                }
+                cityField.setValue(facility.city);
+
+                countryList.removeAll();
+                var countryCode = facility.country;
+                if (!countryCode) countryCode = facility.iso_country_code;
+
+
+                var val;
+                if (countryCode==='US'){
+
+                    var stateCode = facility.state;
+                    if (!stateCode) stateCode = facility.state_code;
+
+
+                    for (var i=0; i<states.length; i++){
+                        var state = states[i];
+
+                        countryList.add(state.name, {
+                            state: state.code,
+                            country: 'US'
+                        });
+
+                        if (state.code===stateCode){
+                            val = state.name;
+                        }
+                    }
+                }
+                else{
+                    for (var i=0; i<countries.length; i++){
+                        var country = countries[i];
+                        countryList.add(country.name, {country: country.code});
+
+                        if (country.code===countryCode){
+                            val = country.name;
+                        }
+                    }
+                }
+
+                countryList.setValue(val);
+            };
+
+
+            nodeEditor.update = function(node){
+                nodeEditor.node = node;
+                form.clear();
+                companyList.clear();
+                facilityList.clear();
+                productList.clear();
+                if (companyList.resetColor) companyList.resetColor();
+                if (facilityList.resetColor) facilityList.resetColor();
+                if (productList.resetColor) productList.resetColor();
+                if (node){
+                    get("SupplyChain/Company?id="+node.companyID,{
+                        success: function(company){
+                            companyList.clear();
+                            companyList.add(company.name, company);
+                            companyList.setValue(company.name, true);
+
+                            updateFacilities(company, function(){
+
+                                var facility;
+                                node.facilityID = parseFloat(node.facilityID);
+                                var options = facilityList.getOptions();
+                                for (var i=0; i<options.length; i++){
+                                    var option = options[i];
+                                    if (option.value.id===node.facilityID){
+                                        facility = option.value;
+                                        facilityList.setValue(option.text, true);
+                                        updateFacility(facility);
+                                        break;
+                                    }
+                                }
+
+
+                                updateProducts(facility, function(){
+                                    node.productID = parseFloat(node.productID);
+                                    var options = productTypes.getOptions();
+                                    for (var i=0; i<options.length; i++){
+                                        var option = options[i];
+                                        var products = option.value;
+                                        for (var j=0; j<products.length; j++){
+                                            var product = products[j];
+                                            if (product.id===node.productID){
+                                                productTypes.setValue(option.text);
+                                                productList.setValue(product.name);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                });
+                            });
+                        }
+                    });
+                }
+            };
+        }
+
+        return nodeEditor;
+    };
+
+
+  //**************************************************************************
+  //** updateFacilities
+  //**************************************************************************
+    var updateFacilities = function(company, callback){
+        facilityList.clear();
+
+        var filter = "";
+        if (!isNaN(company.id)){
+            filter = "companyID=" + company.id;
+        }
+        else{
+            if (company.owner_operator_number){
+                filter = "owner_operator_number="+company.owner_operator_number;
+            }
+        }
+
+        if (filter){
+            get("SupplyChain/Facilities?"+filter,{
+                success: function(arr){
+                    for (var i=0; i<arr.length; i++){
+                        var facility = arr[i];
+                        var facilityName = facility.name;
+                        if (!facilityName) facilityName = "Facility " + facility.id;
+                        facilityList.add(facilityName, facility);
+                    }
+                    if (arr.length===1) facilityList.setValue(facilityName);
+                    if (callback) callback.apply(me, []);
+                }
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** updateProducts
+  //**************************************************************************
+    var updateProducts = function(facility, callback){
+        productList.clear();
+        productTypes.clear();
+        if (!facility) return;
+
+        var filter = "";
+        if (!isNaN(facility.id)){
+            filter = "facilityID=" + facility.id;
+        }
+        else{
+            if (facility.fei_number) filter = "fei="+facility.fei_number;
+        }
+
+        get("SupplyChain/Products?"+filter,{
+            success: function(arr){
+
+              //Group products by product code
+                var products = {};
+                for (var i=0; i<arr.length; i++){
+                    var product = arr[i];
+                    var productID = product.id;
+                    var productName = product.name;
+                    var productType = product.type ? product.type : product.device_name;
+                    var productCode = product.code ? product.code : product.product_code;
+
+                    product = {
+                        id: productID,
+                        name: productName,
+                        type: productType,
+                        code: productCode,
+                        inventory: product.inventory,
+                        capacity: product.capacity,
+                        leadTime: product.leadTime
+                    };
+
+
+                    var key = productCode;
+                    if (!key) key = productType;
+                    if (!key) key = "N/A";
+                    var val = products[key];
+                    if (!val) {
+                        val = [];
+                        products[key] = val;
+                    }
+                    val.push(product);
+                }
+
+
+              //Populate list of productTypes
+                for (var key in products) {
+                    if (products.hasOwnProperty(key)){
+                        var arr = products[key];
+                        var type = arr[0].type;
+                        var text;
+                        if (key && type){
+                            if (key===type) text = key;
+                            else text = key + " - " + type;
+                        }
+                        else{
+                            if (key) text = key;
+                            else{
+                                if(type) text = type;
+                                else text = "N/A";
+                            }
+                        }
+                        productTypes.add(text, arr);
+                    }
+                }
+                if (productTypes.getOptions().length===1) productTypes.setValue(text);
+                if (callback) callback.apply(me, []);
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    var save = function(data, callback){
+        waitmask.show();
+
+
+        var company = {
+            id: data.company.id,
+            name: data.company.name,
+            sourceID: data.company.owner_operator_number
+        };
+
+
+        post("SupplyChain/Company", JSON.stringify(company), {
+            success: function(companyID){
+
+
+                var facility = {
+                    id: data.facility.id,
+                    name: data.facility.name,
+                    city: data.facility.city,
+                    state: data.facility.state,
+                    country: data.facility.country,
+                    companyID: companyID,
+                    sourceID: data.facility.fei_number
+                };
+
+
+                post("SupplyChain/Facility", JSON.stringify(facility), {
+                    success: function(facilityID){
+
+
+                        var product = {
+                            id: data.product.id,
+                            name: data.product.name,
+                            type: data.product.type,
+                            code: data.product.code,
+                            inventory: data.inventory,
+                            capacity: data.capacity,
+                            leadTime: data.leadTime,
+                            facilityID: facilityID
+                        };
+
+
+                        post("SupplyChain/Product", JSON.stringify(product), {
+                            success: function(productID){
+
+                                waitmask.hide();
+                                if (callback) callback.apply(me, [companyID, facilityID, productID]);
+
+                            },
+                            failure: function(request){
+                                waitmask.hide();
+                                alert(request);
+                            }
+                        });
+
+                    },
+                    failure: function(request){
+                        waitmask.hide();
+                        alert(request);
+                    }
+                });
+
+
+            },
+            failure: function(request){
+                waitmask.hide();
+                alert(request);
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** createCombobox
+  //**************************************************************************
+    var createCombobox = function(){
+        return new javaxt.dhtml.ComboBox(document.createElement("div"), {
+            style: config.style.combobox,
+            scrollbar: true
+        });
+    };
+
+
+  //**************************************************************************
+  //** Utils
+  //**************************************************************************
+    var merge = javaxt.dhtml.utils.merge;
+    var warn = bluewave.utils.warn;
+    var get = bluewave.utils.get;
+    var post = javaxt.dhtml.utils.post;
+    var getData = bluewave.utils.getData;
+
+    init();
+};

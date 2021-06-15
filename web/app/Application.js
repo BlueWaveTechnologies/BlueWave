@@ -369,7 +369,7 @@ bluewave.Application = function(parent, config) {
 
 
       //Create new panels
-        get("dashboards?fields=id,name,className",{
+        get("dashboards?fields=id,name,className&orderBy=name",{
             success: function(dashboards) {
 
               //Convert the dashboards array into a datastore
@@ -697,8 +697,8 @@ bluewave.Application = function(parent, config) {
     var showMenu = function(menu, target){
 
         var numVisibleItems = 0;
-        for (var i=0; i<mainMenu.childNodes.length; i++){
-            var menuItem = mainMenu.childNodes[i];
+        for (var i=0; i<menu.childNodes.length; i++){
+            var menuItem = menu.childNodes[i];
             if (menuItem.isVisible()) numVisibleItems++;
         }
         if (numVisibleItems===0){
