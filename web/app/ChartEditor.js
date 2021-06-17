@@ -517,29 +517,6 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** Fake Data for Testing
-  //**************************************************************************
-    let mapData = [
-        {lat:-122.490402,long:37.786453,label:"work"},
-        {lat:5.389809,long:37.72728,label:"home"}
-    ];
-
-    let choroplethData = [
-        {name: "Togo", code: "TGO", pop: "6238572"},
-        {name: "Sao Tome and Principe", code: "STP", pop: "152622"},
-        {name: "Tunisia", code: "TUN", pop: "10104685"},
-        {name: "Turkey", code: "TUR", pop: "72969723"},
-        {name: "Tuvalu", code: "TUV", pop: "10441"},
-        {name: "Turkmenistan", code: "TKM", pop: "4833266"},
-        {name: "United Republic of Tanzania", code: "TZA", pop: "38477873"},
-        {name: "Uganda", code: "UGA", pop: "28947181"},
-        {name: "United Kingdom", code: "GBR", pop: "60244834"},
-        {name: "Ukraine", code: "UKR", pop: "46917544"},
-        {name: "United States", code: "USA", pop: "299846449"}
-    ];
-
-
-  //**************************************************************************
   //** Utils
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
