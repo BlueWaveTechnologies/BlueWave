@@ -640,6 +640,8 @@ public class SupplyChainService extends WebService {
             Session session = null;
             try{
                 session = graph.getSession();
+
+              //Get products associated with the facility
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
@@ -657,6 +659,22 @@ public class SupplyChainService extends WebService {
 
 
 
+              //If the facility has no products, check in the facility has an fei number
+                if (uniqueProducts.isEmpty()){
+                    query =
+                    "MATCH (f:facility)-[:source]->(n)\n" +
+                    "WHERE id(f) = " + facilityID + "\n" +
+                    "RETURN n.fei_number as fei";
+                    rs = session.run(query);
+                    if (rs.hasNext()){
+                        Record record = rs.next();
+                        Value val = record.get("fei");
+                        if (!val.isNull()) fei = new javaxt.utils.Value(val.asObject()).toLong();
+                    }
+                }
+
+
+              //Get products from registrationlisting using the fei number
                 JSONArray otherProducts = getProducts(fei, session);
                 for (int i=0; i<otherProducts.length(); i++){
                     JSONObject product = otherProducts.get(i).toJSONObject();
