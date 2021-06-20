@@ -284,8 +284,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             }
 
                             var productType = productTypes.getValue();
-                            if (productType){
+                            if (productType && productType.length>0){
                                 data.product = productType[0];
+                                if (!data.product.name) data.product.name = productName;
+                                else{
+                                    if (data.product.name!==productName){
+                                        data.product.name = productName;
+                                    }
+                                }
                             }
                             else{
                                 data.product = {};
@@ -694,7 +700,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                     product = {
                         id: productID,
-                        name: productName,
+                        name: productName ? productName : "N/A",
                         type: productType,
                         code: productCode,
                         inventory: product.inventory,
