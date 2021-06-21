@@ -21,6 +21,6 @@ jobs:
       - name: Create Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: jar-for-distribution
+          name: bluewave.jar
           path: |
             target/bluewave-*.jar
