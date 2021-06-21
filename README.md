@@ -2,6 +2,8 @@
 
 Web application used visualize supply chain shortages and fraud analysis.
 
+![master build](https://github.com/CentrifugeTech/BlueWave/actions/workflows/java-ci.yaml/badge.svg?branch=master)
+
 # Technology Stack
 
 - JavaScript/HTML front end
