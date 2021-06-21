@@ -1,4 +1,4 @@
-name: Java CI
+name: Run on every push
 
 on: [push]
 
