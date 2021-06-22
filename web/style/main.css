@@ -872,6 +872,12 @@ svg text {
 }
 
 
+.countries {
+    fill: #f9f9f9;
+    stroke: #e0e0e0;
+    stroke-width: 0.5px;
+}
+
 .state-lines {
   fill: #f5f5f5;
   stroke: #000;
