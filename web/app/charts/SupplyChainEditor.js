@@ -133,9 +133,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
             var countries = [];
             getData("countries", function(data) {
-                var arr = data.features;
+                var arr = data.objects.countries.geometries; //data.features;
                 for (var i=0; i<arr.length; i++){
                     var country = arr[i];
+                    console.log(country.properties);
                     countries.push(country.properties);
                 }
             });

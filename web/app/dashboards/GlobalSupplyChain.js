@@ -382,7 +382,7 @@ bluewave.dashboards.GlobalSupplyChain = function (parent, config) {
   //**************************************************************************
   //** createMap
   //**************************************************************************
-    var createMap = function (parent) {
+    var createMap = function(parent) {
         let width = 980;
         let height = 580;
         map = createDashboardItem(parent, {
@@ -420,14 +420,11 @@ bluewave.dashboards.GlobalSupplyChain = function (parent, config) {
   //** createBackgroundMap
   //**************************************************************************
     var createBackgroundMap = function (){
-        map.svg.append("g")
-            .selectAll("path")
-            .data(politicalBoundaries.features)
-            .enter()
-            .append("path")
-            .attr("fill", "#EDEDED")
-            .attr("d", d3.geoPath().projection(map.projection))
-            .style("stroke", "#fff");
+
+        map.svg
+        .append("path")
+        .attr("class", "countries")
+        .attr("d", map.path(topojson.feature(politicalBoundaries, politicalBoundaries.objects.countries)))
     }
 
 

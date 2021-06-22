@@ -527,10 +527,15 @@ bluewave.ChartEditor = function(parent, config) {
         });
 
         // Draw the map
+        var path = d3.geoPath().projection(projection);
+        mapArea
+        .append("path")
+        .attr("class", "countries")
+        .attr("d", path(topojson.feature(politicalBoundries, politicalBoundries.objects.countries)))
+
         mapArea
             .selectAll("path")
-            .data(politicalBoundries.features)
-            .enter().append("path")
+            .enter()
                 .attr("fill", function(d){
                     if(chartConfig.mapType==="choropleth"){
                         d.total = tempData.get(d.id)||0;
@@ -538,11 +543,7 @@ bluewave.ChartEditor = function(parent, config) {
                     }else{
                         return colorScale(0);
                     }
-                })
-                .attr("d", d3.geoPath()
-                    .projection(projection)
-                )
-                .style("stroke", "#fff");
+                });
 
         mapLayer.selectAll('circle').remove();
 
