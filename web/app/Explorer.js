@@ -135,6 +135,7 @@ bluewave.Explorer = function(parent, config) {
         button.addData.enable();
         button.sankeyChart.enable();
         button.supplyChain.enable();
+        button.scatter.enable();
 
 
       //Return early if the dashboard is missing config info
@@ -602,6 +603,7 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
+        createMenuButton("scatter", "fas fa-link", "Scatter Chart" , menubar);
     };
 
 
@@ -765,6 +767,22 @@ bluewave.Explorer = function(parent, config) {
                 addEventListeners(node);
 
                 break;
+
+            case "scatter":
+                var node = createNode({
+                    name: "Scatter Chart",
+                    type: nodeType,
+                    icon: "fas fa-link",
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 1
+
+
+
+                });
+                addEventListeners(node);
+                break;
             default:
 
                 var node = createNode({
@@ -897,6 +915,11 @@ bluewave.Explorer = function(parent, config) {
                     editLayout(this);
                 };
 
+                break;
+            case "scatter":
+                node.ondblclick = function() {
+                    editScatter(this);
+                };
                 break;
             default:
 
@@ -1096,57 +1119,114 @@ bluewave.Explorer = function(parent, config) {
   //** editSankey
   //**************************************************************************
     var editSankey = function(node){
-        if (!sankeyEditor){
-            var win = createWindow({
-                title: "Edit Sankey",
-                width: 1680,
-                height: 920,
-                resizable: true,
-                beforeClose: function(){
-                    var chartConfig = sankeyEditor.getConfig();
-                    var node = sankeyEditor.getNode();
-                    var orgConfig = node.config;
-                    if (!orgConfig) orgConfig = {};
-                    if (isDirty(chartConfig, orgConfig)){
-                        node.config = chartConfig;
-                        updateTitle(node, node.config.chartTitle);
-                        waitmask.show();
-                        var el = sankeyEditor.getChart();
-                        if (el.show) el.show();
-                        createPreview(el, function(canvas){
-                            node.preview = canvas.toDataURL("image/png");
-                            createThumbnail(node, canvas);
-                            win.close();
-                            waitmask.hide();
-                        }, this);
-                    }
-                    else{
-                        win.close();
-                    }
-                    button.layout.enable();
-                }
-            });
+                      if (!sankeyEditor){
+                          var win = createWindow({
+                              title: "Edit Sankey",
+                              width: 1680,
+                              height: 920,
+                              resizable: true,
+                              beforeClose: function(){
+                                  var chartConfig = sankeyEditor.getConfig();
+                                  var node = sankeyEditor.getNode();
+                                  var orgConfig = node.config;
+                                  if (!orgConfig) orgConfig = {};
+                                  if (isDirty(chartConfig, orgConfig)){
+                                      node.config = chartConfig;
+                                      updateTitle(node, node.config.chartTitle);
+                                      waitmask.show();
+                                      var el = sankeyEditor.getChart();
+                                      if (el.show) el.show();
+                                      createPreview(el, function(canvas){
+                                          node.preview = canvas.toDataURL("image/png");
+                                          createThumbnail(node, canvas);
+                                          win.close();
+                                          waitmask.hide();
+                                      }, this);
+                                  }
+                                  else{
+                                      win.close();
+                                  }
+                                  button.layout.enable();
+                              }
+                          });
 
 
-            sankeyEditor = new bluewave.charts.SankeyEditor(win.getBody(), config);
+                          sankeyEditor = new bluewave.charts.SankeyEditor(win.getBody(), config);
 
-            sankeyEditor.show = function(){
-                win.show();
-            };
+                          sankeyEditor.show = function(){
+                              win.show();
+                          };
 
-            sankeyEditor.hide = function(){
-                win.hide();
-            };
-        }
+                          sankeyEditor.hide = function(){
+                              win.hide();
+                          };
+                      }
 
-      //Add custom getNode() method to the layoutEditor to return current node
-        sankeyEditor.getNode = function(){
-            return node;
-        };
+                    //Add custom getNode() method to the layoutEditor to return current node
+                      sankeyEditor.getNode = function(){
+                          return node;
+                      };
 
-        sankeyEditor.update(node.config);
-        sankeyEditor.show();
+                      sankeyEditor.update(node.config);
+                      sankeyEditor.show();
     };
+
+  //**************************************************************************
+  //** editScatter
+  //**************************************************************************
+
+    var editScatter = function(node){
+                          if (!scatterEditor){
+                              var win = createWindow({
+                                  title: "Edit Scatter",
+                                  width: 1680,
+                                  height: 920,
+                                  resizable: true,
+                                  beforeClose: function(){
+                                      var chartConfig = scatterEditor.getConfig();
+                                      var node = scatterEditor.getNode();
+                                      var orgConfig = node.config;
+                                      if (!orgConfig) orgConfig = {};
+                                      if (isDirty(chartConfig, orgConfig)){
+                                          node.config = chartConfig;
+                                          updateTitle(node, node.config.chartTitle);
+                                          waitmask.show();
+                                          var el = scatterEditor.getChart();
+                                          if (el.show) el.show();
+                                          createPreview(el, function(canvas){
+                                              node.preview = canvas.toDataURL("image/png");
+                                              createThumbnail(node, canvas);
+                                              win.close();
+                                              waitmask.hide();
+                                          }, this);
+                                      }
+                                      else{
+                                          win.close();
+                                      }
+                                      button.layout.enable();
+                                  }
+                              });
+
+
+                              scatterEditor = new bluewave.charts.ScatterEditor(win.getBody(), config);
+
+                              scatterEditor.show = function(){
+                                  win.show();
+                              };
+
+                              scatterEditor.hide = function(){
+                                  win.hide();
+                              };
+                          }
+
+                        //Add custom getNode() method to the layoutEditor to return current node
+                          scatterEditor.getNode = function(){
+                              return node;
+                          };
+
+                          scatterEditor.update(node.config);
+                          scatterEditor.show();
+        };
 
   //**************************************************************************
   //** removeInputs
