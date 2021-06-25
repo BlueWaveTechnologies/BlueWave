@@ -124,32 +124,9 @@ bluewave.ChartEditor = function(parent, config) {
 
 
       //Allow users to change the title associated with the chart
-        panel.title.onclick = function(e){
-            if (this.childNodes[0].nodeType===1) return;
-            e.stopPropagation();
-            var currText = this.innerHTML;
-            this.innerHTML = "";
-            var input = document.createElement("input");
-            input.className = "form-input";
-            input.type = "text";
-            input.value = currText;
-            input.onkeydown = function(event){
-                var key = event.keyCode;
-                if(key == 13) {
-                    panel.title.innerHTML = this.value;
-                    chartConfig.chartTitle = this.value;
-                }
-            };
-            this.appendChild(input);
-            input.focus();
-        };
-        document.body.addEventListener('click', function(e) {
-            var input = panel.title.childNodes[0];
-            var className = e.target.className;
-            if(input.nodeType === 1 && className != "form-input") {
-                panel.title.innerHTML = input.value;
-                chartConfig.chartTitle = input.value;
-            };
+        addTextEditor(panel.title, function(title){
+            panel.title.innerHTML = title;
+            chartConfig.chartTitle = title;
         });
 
 
@@ -729,6 +706,7 @@ bluewave.ChartEditor = function(parent, config) {
     var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
+    var addTextEditor = bluewave.utils.addTextEditor;
 
     init();
 };
