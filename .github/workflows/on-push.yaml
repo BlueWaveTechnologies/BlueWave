@@ -4,15 +4,15 @@ on: [push]
 
 
 jobs:
-   formatting:
-     runs-on: ubuntu-latest
-     steps:
-       - uses: actions/checkout@v2
-       - uses: axel-op/googlejavaformat-action@v3
-         with:
-           args: "--aosp --replace --dryrun"
-           # Recommended if you use MacOS:
-           # githubToken: ${{ secrets.GITHUB_TOKEN }}
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: axel-op/googlejavaformat-action@v3
+        with:
+          args: "--aosp --replace --dryrun"
+          # Recommended if you use MacOS:
+          # githubToken: ${{ secrets.GITHUB_TOKEN }}
   build:
     runs-on: ubuntu-latest
     steps:
