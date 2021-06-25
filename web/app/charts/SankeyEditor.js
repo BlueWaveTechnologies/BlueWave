@@ -111,6 +111,17 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         editPanel.ondragover = function(e){
             e.preventDefault();
         };
+        editPanel.onwheel = function(e){
+            e.preventDefault();
+            if (drawflow){
+                if (e.deltaY>0){
+                    drawflow.zoom_out();
+                }
+                else{
+                    drawflow.zoom_in();
+                }
+            }
+        };
         innerDiv.appendChild(editPanel);
         createDrawFlow(editPanel);
         createToolbar(editPanel);
