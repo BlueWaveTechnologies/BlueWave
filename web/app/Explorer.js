@@ -36,6 +36,8 @@ bluewave.Explorer = function(parent, config) {
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
+        //div.style.overflow = "hidden";
+
 
       //Add toggle button
         createToggleButton(div);
@@ -45,10 +47,18 @@ bluewave.Explorer = function(parent, config) {
         createMask(div);
 
 
+      //Create inner div for overflow purposes
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        innerDiv.style.position = "absolute";
+        div.appendChild(innerDiv);
+
+
       //Create preview panel
         dashboardPanel = document.createElement("div");
         dashboardPanel.style.height = "100%";
-        div.appendChild(dashboardPanel);
+        innerDiv.appendChild(dashboardPanel);
         addShowHide(dashboardPanel);
         dashboardPanel.hide();
 
@@ -57,7 +67,7 @@ bluewave.Explorer = function(parent, config) {
         editPanel = document.createElement("div");
         createEditPanel(editPanel);
         addShowHide(editPanel);
-        div.appendChild(editPanel);
+        innerDiv.appendChild(editPanel);
 
 
 
@@ -1341,6 +1351,7 @@ bluewave.Explorer = function(parent, config) {
             //valign: "top",
             modal: true,
             resizable: conf.resizable,
+            shrinkToFit: true,
             style: style,
             renderers: {
 

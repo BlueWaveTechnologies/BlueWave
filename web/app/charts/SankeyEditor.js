@@ -79,18 +79,30 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.position = "relative";
+        div.style.overflow = "hidden";
+
+
+      //Add toggle button
         createToggleButton(div);
 
+
+      //Create inner div for overflow purposes
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        innerDiv.style.position = "absolute";
+        div.appendChild(innerDiv);
 
 
       //Create preview panel
         previewPanel = document.createElement("div");
         previewPanel.style.height = "100%";
         previewPanel.style.textAlign = "center";
-        div.appendChild(previewPanel);
+        innerDiv.appendChild(previewPanel);
         addShowHide(previewPanel);
         createSankey(previewPanel);
         previewPanel.hide();
+
 
       //Create editor
         editPanel = document.createElement("div");
@@ -99,7 +111,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         editPanel.ondragover = function(e){
             e.preventDefault();
         };
-        div.appendChild(editPanel);
+        innerDiv.appendChild(editPanel);
         createDrawFlow(editPanel);
         createToolbar(editPanel);
         addShowHide(editPanel);
