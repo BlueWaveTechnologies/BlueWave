@@ -186,6 +186,10 @@ bluewave.Explorer = function(parent, config) {
                 }
 
 
+              //Update title
+                if (props.config.chartTitle) updateTitle(node, props.config.chartTitle);
+
+
               //Create thumbnail
                 if (props.preview) createThumbnail(node, props.preview);
 
@@ -341,9 +345,10 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     this.save = function(){
 
+        waitmask.show(500);
         getName(function(formInputs){
             name = formInputs.name;
-            waitmask.show();
+
 
             var dashboard = {
                 id: id,
@@ -1096,6 +1101,7 @@ bluewave.Explorer = function(parent, config) {
   /** Updates the title of a drawflow node
    */
     var updateTitle = function(node, title) {
+        console.log(title);
         if (title) {
             node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
         }
@@ -1131,6 +1137,7 @@ bluewave.Explorer = function(parent, config) {
                         }, this);
                     }
                     else{
+                        updateTitle(node, node.config.chartTitle);
                         win.close();
                     }
                     button.layout.enable();
@@ -1204,6 +1211,7 @@ bluewave.Explorer = function(parent, config) {
                         }, this);
                     }
                     else{
+                        updateTitle(node, node.config.chartTitle);
                         win.close();
                     }
                     button.layout.enable();
@@ -1221,12 +1229,24 @@ bluewave.Explorer = function(parent, config) {
                 win.hide();
             };
 
-          //Automatically update dashboard whenever the graph is updated in the supplyChainEditor
-            supplyChainEditor.onSave = function(){
+
+            var save = function(){
                 var chartConfig = supplyChainEditor.getConfig();
                 var node = supplyChainEditor.getNode();
                 node.config = chartConfig;
                 me.save();
+
+                //TODO: Update thumbnail?
+            };
+
+
+          //Automatically update dashboard whenever the graph is updated in the supplyChainEditor
+            supplyChainEditor.onSave = function(){
+                save();
+            };
+
+            supplyChainEditor.onChange = function(){
+                save();
             };
         }
 
