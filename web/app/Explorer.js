@@ -18,6 +18,7 @@ bluewave.Explorer = function(parent, config) {
     var drawflow, nodes = {}; //drawflow
     var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor; //popup dialogs
     var supplyChainEditor;
+    var zoom = 0;
 
 
   //**************************************************************************
@@ -65,6 +66,17 @@ bluewave.Explorer = function(parent, config) {
 
       //Create editor
         editPanel = document.createElement("div");
+        editPanel.onwheel = function(e){
+            e.preventDefault();
+            if (drawflow){
+                if (e.deltaY>0){
+                    zoomOut();
+                }
+                else{
+                    zoomIn();
+                }
+            }
+        };
         createEditPanel(editPanel);
         addShowHide(editPanel);
         innerDiv.appendChild(editPanel);
@@ -98,6 +110,8 @@ bluewave.Explorer = function(parent, config) {
                 button[buttonName].disable();
             }
         }
+
+        setZoom(0);
     };
 
 
@@ -274,6 +288,7 @@ bluewave.Explorer = function(parent, config) {
             }
 
             mask.hide();
+            setZoom(dashboard.info.zoom);
         };
 
 
@@ -357,7 +372,8 @@ bluewave.Explorer = function(parent, config) {
                 //thumbnail: thumbnail,
                 info: {
                     layout: drawflow.export().drawflow.Home.data,
-                    nodes: {}
+                    nodes: {},
+                    zoom: zoom
                 }
             };
 
@@ -617,6 +633,42 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
+    };
+
+
+  //**************************************************************************
+  //** setZoom
+  //**************************************************************************
+    var setZoom = function(z){
+        z = parseInt(z);
+        if (isNaN(z) || z===zoom) return;
+        var d = Math.abs(z, zoom);
+        for (var i=0; i<d; i++){
+            if (z<zoom){
+                zoomOut();
+            }
+            else{
+                zoomIn();
+            }
+        }
+    };
+
+
+  //**************************************************************************
+  //** zoomIn
+  //**************************************************************************
+    var zoomIn = function(){
+        drawflow.zoom_in();
+        zoom++;
+    };
+
+
+  //**************************************************************************
+  //** zoomOut
+  //**************************************************************************
+    var zoomOut = function(){
+        drawflow.zoom_out();
+        zoom--;
     };
 
 
@@ -1101,7 +1153,6 @@ bluewave.Explorer = function(parent, config) {
   /** Updates the title of a drawflow node
    */
     var updateTitle = function(node, title) {
-        console.log(title);
         if (title) {
             node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
         }

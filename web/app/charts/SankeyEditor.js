@@ -51,6 +51,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var sankeyChart;
     var toggleButton;
     var styleEditor;
+    var zoom = 0;
 
 
   //**************************************************************************
@@ -115,10 +116,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             e.preventDefault();
             if (drawflow){
                 if (e.deltaY>0){
-                    drawflow.zoom_out();
+                    zoomOut();
                 }
                 else{
-                    drawflow.zoom_in();
+                    zoomIn();
                 }
             }
         };
@@ -152,6 +153,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         sankeyChart.clear();
         nodes = {};
         quantities = {};
+        setZoom(0);
     };
 
 
@@ -282,6 +284,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             connection.getElementsByTagName("path")[0].setAttribute("d", link.path);
             auditLinkages();
         }
+
+        setZoom(sankeyConfig.zoom);
     };
 
 
@@ -304,7 +308,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             nodes: {},
             links: {},
             chartTitle: getTitle(),
-            style: config.sankey.style
+            style: config.sankey.style,
+            zoom: zoom
         };
 
 
@@ -697,6 +702,42 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             tooltip.getInnerDiv().appendChild(div);
             tooltip.showAt(x, y, "right", "center");
         });
+    };
+
+
+  //**************************************************************************
+  //** setZoom
+  //**************************************************************************
+    var setZoom = function(z){
+        z = parseInt(z);
+        if (isNaN(z) || z===zoom) return;
+        var d = Math.abs(z, zoom);
+        for (var i=0; i<d; i++){
+            if (z<zoom){
+                zoomOut();
+            }
+            else{
+                zoomIn();
+            }
+        }
+    };
+
+
+  //**************************************************************************
+  //** zoomIn
+  //**************************************************************************
+    var zoomIn = function(){
+        drawflow.zoom_in();
+        zoom++;
+    };
+
+
+  //**************************************************************************
+  //** zoomOut
+  //**************************************************************************
+    var zoomOut = function(){
+        drawflow.zoom_out();
+        zoom--;
     };
 
 
