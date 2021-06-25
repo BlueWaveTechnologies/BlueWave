@@ -413,6 +413,43 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** addTextEditor
+  //**************************************************************************
+    addTextEditor: function(div, callback){
+        var setTitle = function(title){
+            if (callback) callback.apply(div,[title]);
+        };
+
+        div.onclick = function(e){
+            if (this.childNodes[0].nodeType===1) return;
+            e.stopPropagation();
+            var currText = this.innerHTML;
+            this.innerHTML = "";
+            var input = document.createElement("input");
+            input.className = "form-input";
+            input.type = "text";
+            input.value = currText;
+            input.onkeydown = function(event){
+                var key = event.keyCode;
+                if (key === 9 || key === 13) {
+                    setTitle(this.value);
+                }
+            };
+            this.appendChild(input);
+            input.focus();
+        };
+
+        document.body.addEventListener('click', function(e) {
+            var input = div.childNodes[0];
+            var className = e.target.className;
+            if (input.nodeType === 1 && className != "form-input") {
+                setTitle(input.value);
+            };
+        });
+    },
+
+
+  //**************************************************************************
   //** createProductList
   //**************************************************************************
     createProductList: function(tr, style){
