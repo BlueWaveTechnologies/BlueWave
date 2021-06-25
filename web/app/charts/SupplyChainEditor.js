@@ -56,7 +56,16 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
         sankeyEditor.getNodeEditor = getNodeEditor;
+        sankeyEditor.onChange = function(){
+            me.onChange();
+        };
     };
+
+
+  //**************************************************************************
+  //** onChange
+  //**************************************************************************
+    this.onChange = function(){};
 
 
   //**************************************************************************
