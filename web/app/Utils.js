@@ -423,7 +423,7 @@ bluewave.utils = {
         div.onclick = function(e){
             if (this.childNodes[0].nodeType===1) return;
             e.stopPropagation();
-            var currText = this.innerHTML;
+            var currText = this.innerText;
             this.innerHTML = "";
             var input = document.createElement("input");
             input.className = "form-input";
