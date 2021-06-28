@@ -359,7 +359,7 @@ bluewave.Explorer = function(parent, config) {
   //** save
   //**************************************************************************
     this.save = function(){
-console.log(waitmask.isVisible);
+
         waitmask.show(500);
         getName(function(formInputs){
             name = formInputs.name;
