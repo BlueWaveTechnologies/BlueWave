@@ -359,7 +359,7 @@ bluewave.Explorer = function(parent, config) {
   //** save
   //**************************************************************************
     this.save = function(){
-
+console.log(waitmask.isVisible);
         waitmask.show(500);
         getName(function(formInputs){
             name = formInputs.name;
@@ -1789,23 +1789,25 @@ bluewave.Explorer = function(parent, config) {
         if (name) nameEditor.setValue("name", name);
         nameEditor.setValue("private", true);
 
-
+        waitmask.hide();
         nameEditor.show();
     };
+
 
   //**************************************************************************
   //** checkConnection
   //**************************************************************************
     var checkConnection = function(layoutNode, node){
         var connected = false;
-        for(var inputID in layoutNode.inputs){
-            tempNode = nodes[inputID];
-            if(tempNode === node){
+        for (var inputID in layoutNode.inputs){
+            var tempNode = nodes[inputID];
+            if (tempNode === node){
                 connected = true;
             }
         }
         return connected;
-    }
+    };
+
 
   //**************************************************************************
   //** updateDashboard
