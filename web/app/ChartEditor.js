@@ -37,7 +37,6 @@ bluewave.ChartEditor = function(parent, config) {
         yAxis2:null,
         group:null
     };
-    var politicalBoundries;
     var projectionOptions;
     var chartConfig = {
         pieKey:null,

@@ -23,8 +23,6 @@ bluewave.charts.MapChart = function(parent, config) {
         }
     };
     var mapArea;
-    var politicalBoundaries;
-
 
     //**************************************************************************
     //** Constructor
@@ -62,69 +60,42 @@ bluewave.charts.MapChart = function(parent, config) {
     //** update
     //**************************************************************************
     this.update = function(chartConfig, data){
-        if(chartConfig.mapProjectionValue === null) return;
-
         this.clear();
-
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
-            var projection = chartConfig.mapProjectionValue
-                            .translate([width/2,height/2]);
-            var colorScale = d3.scaleThreshold()
-                            .domain([100000, 1000000, 10000000, 30000000, 100000000, 500000000])
-                            .range(d3.schemeBlues[7]);
-            var margin = config.margin;
+            getData("states", function(mapData) {
+                var states = topojson.feature(mapData, mapData.objects.states);
+                var projection = d3.geoIdentity()
+                    .fitSize([width,height],states);
+                var path = d3.geoPath().projection(projection);
+
+                mapArea.selectAll("path")
+                    .data(states.features)
+                    .enter()
+                    .append("path")
+                    .attr('d', path)
+                    .attr('fill', 'lightgray')
+                    .attr('stroke', 'white');
 
 
-            let tempData = d3.map();
-            mapArea
-                .selectAll("path")
-                .data(politicalBoundaries.features)
-                .enter().append("path")
-                    .attr("fill", function(d){
-                        if(chartConfig.mapType==="Area"){
-                            d.total = tempData.get(d.id)||0;
-                            return colorScale(d.total);
-                        }else{
-                            return colorScale(0);
-                        }
-                    })
-                    .attr("d", d3.geoPath()
-                        .projection(projection))
-                    .style("stroke", "#fff");
-
-            mapArea.selectAll('circle').remove();
-            if(chartConfig.mapType === "Point"){
-                let filteredData = data.filter((val)=>{
-                    let lat = parseFloat(val[chartConfig.latitude]);
-                    let lon = parseFloat(val[chartConfig.longitude]);
-                    let isValidProjection = projection([lat, lon]);
-                    if(!isValidProjection[0] || !isValidProjection[1]){
-                        return false;
-                    }else{
-                        return true;
-                    }
-                });
-                mapArea.selectAll("circle")
-                        .data(filteredData)
-                        .enter()
-                        .append("circle")
-                        .attr("cx", function (d) {
-                            let lat = parseFloat(d.lat);
-                            let lon = parseFloat(d.lon);
-                            return projection([lat,lon])[0];
-                        })
-                            .attr("cy", function (d) {
-                            let lat = parseFloat(d.lat);
-                            let lon = parseFloat(d.lon);
-                            return projection([lat,lon])[1];
-                        })
-                        .attr("r", "2px")
-                        .attr("fill", "red");
-            };
+                mapArea.selectAll('circle').remove();
+                if(chartConfig.mapType === "Point"){
+                    data.forEach(function(d) {
+                        var lat = parseFloat(d.lat);
+                        var lon = parseFloat(d.lon);
+                        if (isNaN(lat) || isNaN(lon)) return;
+                        var coord = projection([lon, lat]);
+                        if (!coord) return;
+                        mapArea.append("circle")
+                            .attr("cx", coord[1])
+                            .attr("cy", coord[0])
+                            .attr("r", "8px")
+                            .attr("fill", "red")
+                    });
+                };
+            })
         });
     }
 
@@ -133,7 +104,7 @@ bluewave.charts.MapChart = function(parent, config) {
     //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-
+    var getData = bluewave.utils.getData;
 
     init();
 };

@@ -34,12 +34,11 @@ if(!bluewave.charts) bluewave.charts={};
     var mapInputs = {
         projection:null,
         mapType:null,
-        value:null
+        lat:null,
+        long:null,
+        mapValue:null
     };
     var mapProjection;
-    var politicalBoundries;
-    var counties;
-    var states;
     var projectionOptions;
 
 
@@ -47,12 +46,7 @@ if(!bluewave.charts) bluewave.charts={};
   //** Constructor
   //**************************************************************************
     var init = function(){
-        // Setup Map Projection Options
-        // Set Scale here
         projectionOptions = [
-//            {name: "Azimuthal Equal Area", projection: d3.geoAzimuthalEqualArea()},
-//            {name: "Stereographic", projection: d3.geoStereographic()},
-            {name: "Equal Earth", projection: d3.geoEqualEarth()},
             {name: "Ablers USA", projection: d3.geoAlbers()
                             .rotate([96, 0])
                             .center([-.6, 38.7])
@@ -60,11 +54,7 @@ if(!bluewave.charts) bluewave.charts={};
                             .scale(1000)
                             .precision(.1)
             },
-            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)},
-            {name: "Mercator", projection: d3.geoMercator()
-                        .scale(this.width/2/Math.PI)
-
-            }
+            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)}
         ];
 
         let table = createTable();
@@ -166,6 +156,10 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapDropDown
   //**************************************************************************
     var createMapDropDown = function(tbody){
+        dropdownItem(tbody,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
+        dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
+        dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
+        dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
         var tr, td;
 
         tr = document.createElement("tr");
@@ -189,9 +183,6 @@ if(!bluewave.charts) bluewave.charts={};
             chartConfig.mapProjectionValue = value;
             createMapPreview();
         };
-
-        dropdownItem(tbody,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
-        dropdownItem(tbody,"mapData","Map Data",checkInputs,mapInputs,"value");
 
     };
 
@@ -225,18 +216,40 @@ if(!bluewave.charts) bluewave.charts={};
     };
 
   //**************************************************************************
+  //** showHideDropDowns
+  //**************************************************************************
+    var showHideDropdowns = function(){
+        if(chartConfig.mapType==="Point"){
+            input.lat.clear();
+            input.long.clear();
+            chartConfig.latitude.clear();
+            chartConfig.longitutde.clear();
+            input.lat.show();
+            input.long.show();
+        };
+        if(chartConfig.mapType==="Area"){
+            input.lat.clear();
+            input.long.clear();
+            chartConfig.latitude.clear();
+            chartConfig.longitutde.clear();
+            input.lat.hide();
+            input.long.hide();
+        }
+    }
+
+
+  //**************************************************************************
   //** createMapPreview
   //**************************************************************************
     var createMapPreview = function(){
         //TODO Rewrite for actual data
-        if(!politicalBoundries){
-            getData("countries", function(data) {
-                politicalBoundries = data;
-                displayMap();
-            });
-        }else{
-            displayMap();
-        }
+        if(chartConfig.mapType===null || chartConfig.latitude===null ||
+            chartConfig.longitude===null || chartConfig.mapValue===null ||
+            chartConfig.mapProjectionValue===null) return;
+        onRender(previewArea, function() {
+            var data = inputData[0];
+            mapArea.update(chartConfig, data);
+        });
     };
 
 
@@ -245,19 +258,26 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var checkInputs = function(){
         var value = chartConfig.mapData;
-        if(!counties){
-            getData("counties-albers-10m.json", function(data) {
-                counties = data;
-                counties = extractColumn(counties.objects.counties.geometries, "id");
-            });
-        };
-        if(!states){
-            getData("states-albers-10m.json", function(data) {
-                states = data;
-                states = extractColumn(states.objects.states.geometries, "properties");
-                states = extractColumn(states, "code");
-            });
-        };
+        var counties = [];
+        getData("counties", function(data) {
+            var arr = data.objects.counties.geometries;
+            for(var i=0; i<arr.length; i++){
+                var county = arr[i];
+                var varr = {
+                    id: county.id,
+                    name: county.properties.name
+                }
+                counties.push(varr);
+            }
+        });
+        var states = [];
+        getData("states", function(data) {
+            var arr = data.objects.states.geometries;
+            for (var i=0; i<arr.length; i++){
+                var state = arr[i];
+                states.push(state.properties);
+            }
+        });
 
         setTimeout(function() {
             var legalValue = true;
@@ -286,9 +306,7 @@ if(!bluewave.charts) bluewave.charts={};
         // TODO:
         // Add option to center
         // Add scaling to defaults
-        if(chartConfig.mapProjectionValue === null){
-            return;
-        }
+        if(chartConfig.mapProjectionValue === null) return;
         if (mapArea) mapArea.selectAll("*").remove();
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
@@ -366,9 +384,13 @@ if(!bluewave.charts) bluewave.charts={};
     var createOptions = function() {
         var data = inputData[0];
         let dataOptions = Object.keys(data[0]);
-        mapInputs.value.clear();
+        mapInputs.lat.clear();
+        mapInputs.long.clear()
+        mapInputs.mapValue.clear();
         dataOptions.forEach((val)=>{
-            mapInputs.value.add(val, val);
+            mapInputs.lat.add(val, val);
+            mapInputs.long.add(val, val);
+            mapInputs.mapValue.add(val, val);
         });
         mapProjection.clear();
         projectionOptions.forEach((val)=>{
@@ -378,13 +400,16 @@ if(!bluewave.charts) bluewave.charts={};
         mapProjection.setValue(chartConfig.mapProjectionName,chartConfig.mapProjectionValue);
         mapInputs.mapType.clear();
         const mapOptions = [
-            "circles",
-            "choropleth"
+            "Point",
+            "Area"
             ];
         mapOptions.forEach((val)=>{
             mapInputs.mapType.add(val,val);
         });
         mapInputs.mapType.setValue(chartConfig.mapType,chartConfig.mapType);
+        mapInputs.mapValue.setValue(chartConfig.mapValue,chartConfig.mapValue);
+        mapInputs.lat.setValue(chartConfig.latitude,chartConfig.latitude);
+        mapInputs.long.setValue(chartConfig.longitude,chartConfig.longitude);
     };
 
 
@@ -398,8 +423,8 @@ if(!bluewave.charts) bluewave.charts={};
         panel.title.innerHTML = "Untitled";
         //options.innerHTML = "";
 
-        if (mapArea) mapArea.selectAll("*").remove();
-        if (mapLayer) mapLayer.selectAll("circle").remove();
+       //if (mapArea) mapArea.selectAll("*").remove();
+       //if (mapLayer) mapLayer.selectAll("circle").remove();
     }
 
   //**************************************************************************
