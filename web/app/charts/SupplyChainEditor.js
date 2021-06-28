@@ -13,20 +13,24 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        nodes: {
-            input: {
+        nodes: [
+            {
+                icon: "fas fa-fill-drip",
+                label: "Raw Material"
+            },
+            {
                 icon: "fas fa-industry",
                 label: "Manufacturer"
             },
-            output: {
-                icon: "fas fa-hospital-user",
-                label: "End User"
-            },
-            distributor: {
+            {
                 icon: "fas fa-store-alt",
                 label: "Distributor"
+            },
+            {
+                icon: "fas fa-hospital-user",
+                label: "End User"
             }
-        }
+        ]
     };
     var sankeyEditor;
     var nodeEditor;
