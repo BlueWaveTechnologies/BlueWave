@@ -232,7 +232,7 @@ input, select, textarea { /* Allows overriding native style of form elements on 
     font-size: 14px;
     white-space: nowrap;
     cursor: default;
-    padding: 7px 10px 0 0;
+    padding: 5px 10px 0 0;
     vertical-align: top;
 }
 

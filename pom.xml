@@ -21,7 +21,7 @@
     <repositories>
        <repository>
          <id>javaxt.com</id>
-         <url>http://www.javaxt.com/maven</url>
+         <url>https://www.javaxt.com/maven</url>
        </repository>
     </repositories>
     <dependencies>
@@ -30,7 +30,7 @@
         <dependency>
           <groupId>javaxt</groupId>
           <artifactId>javaxt-core</artifactId>
-          <version>1.10.5</version>
+          <version>1.10.6</version>
         </dependency>
         <dependency>
           <groupId>javaxt</groupId>

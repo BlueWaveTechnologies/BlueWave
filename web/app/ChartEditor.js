@@ -61,6 +61,25 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        // Setup Map Projection Options
+        // Set Scale here
+        projectionOptions = [
+//            {name: "Azimuthal Equal Area", projection: d3.geoAzimuthalEqualArea()},
+//            {name: "Stereographic", projection: d3.geoStereographic()},
+            {name: "Equal Earth", projection: d3.geoEqualEarth()},
+            {name: "Ablers USA", projection: d3.geoAlbers()
+                            .rotate([96, 0])
+                            .center([-.6, 38.7])
+                            .parallels([29.5, 45.5])
+                            .scale(1000)
+                            .precision(.1)
+            },
+            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)},
+            {name: "Mercator", projection: d3.geoMercator()
+                        .scale(this.width/2/Math.PI)
+
+            }
+        ];
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -94,32 +113,9 @@ bluewave.ChartEditor = function(parent, config) {
 
 
       //Allow users to change the title associated with the chart
-        panel.title.onclick = function(e){
-            if (this.childNodes[0].nodeType===1) return;
-            e.stopPropagation();
-            var currText = this.innerHTML;
-            this.innerHTML = "";
-            var input = document.createElement("input");
-            input.className = "form-input";
-            input.type = "text";
-            input.value = currText;
-            input.onkeydown = function(event){
-                var key = event.keyCode;
-                if(key == 13) {
-                    panel.title.innerHTML = this.value;
-                    chartConfig.chartTitle = this.value;
-                }
-            };
-            this.appendChild(input);
-            input.focus();
-        };
-        document.body.addEventListener('click', function(e) {
-            var input = panel.title.childNodes[0];
-            var className = e.target.className;
-            if(input.nodeType === 1 && className != "form-input") {
-                panel.title.innerHTML = input.value;
-                chartConfig.chartTitle = input.value;
-            };
+        addTextEditor(panel.title, function(title){
+            panel.title.innerHTML = title;
+            chartConfig.chartTitle = title;
         });
 
 
@@ -523,6 +519,7 @@ bluewave.ChartEditor = function(parent, config) {
     var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
+    var addTextEditor = bluewave.utils.addTextEditor;
 
     init();
 };

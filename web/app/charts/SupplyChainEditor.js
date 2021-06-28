@@ -56,7 +56,16 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
         sankeyEditor.getNodeEditor = getNodeEditor;
+        sankeyEditor.onChange = function(){
+            me.onChange();
+        };
     };
+
+
+  //**************************************************************************
+  //** onChange
+  //**************************************************************************
+    this.onChange = function(){};
 
 
   //**************************************************************************
@@ -133,7 +142,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
             var countries = [];
             getData("countries", function(data) {
-                var arr = data.features;
+                var arr = data.objects.countries.geometries;
                 for (var i=0; i<arr.length; i++){
                     var country = arr[i];
                     countries.push(country.properties);
@@ -284,8 +293,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             }
 
                             var productType = productTypes.getValue();
-                            if (productType){
+                            if (productType && productType.length>0){
                                 data.product = productType[0];
+                                if (!data.product.name) data.product.name = productName;
+                                else{
+                                    if (data.product.name!==productName){
+                                        data.product.name = productName;
+                                    }
+                                }
                             }
                             else{
                                 data.product = {};
@@ -296,13 +311,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
                           //Save data
-                            save(data, function(companyID, facilityID, productID){
+                            save(data, function(companyID, facilityID, productID, notes){
 
                                 var node = nodeEditor.node;
                                 node.name = companyName;
                                 node.companyID = companyID;
                                 node.facilityID = facilityID;
                                 node.productID = productID;
+                                node.notes = notes;
 
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 nodeEditor.close();
@@ -623,6 +639,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             });
                         }
                     });
+                    if (node.notes){
+                        form.setValue("notes", node.notes);
+                    }
                 }
             };
         }
@@ -634,6 +653,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //**************************************************************************
   //** updateFacilities
   //**************************************************************************
+  /** Used to update the facility list
+   *  @param callback If no callback is given, will automatically pick a
+   *  facility from the list - triggering updates to the product lists
+   */
     var updateFacilities = function(company, callback){
         facilityList.clear();
 
@@ -656,7 +679,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         if (!facilityName) facilityName = "Facility " + facility.id;
                         facilityList.add(facilityName, facility);
                     }
-                    if (arr.length===1) facilityList.setValue(facilityName);
+                    if (arr.length===1 && !callback) facilityList.setValue(facilityName);
                     if (callback) callback.apply(me, []);
                 }
             });
@@ -694,7 +717,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                     product = {
                         id: productID,
-                        name: productName,
+                        name: productName ? productName : "N/A",
                         type: productType,
                         code: productCode,
                         inventory: product.inventory,
@@ -791,7 +814,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             success: function(productID){
 
                                 waitmask.hide();
-                                if (callback) callback.apply(me, [companyID, facilityID, productID]);
+                                if (callback) callback.apply(me, [companyID, facilityID, productID, data.notes]);
 
                             },
                             failure: function(request){

@@ -229,13 +229,12 @@ public class SupplyChainService extends WebService {
       //Parse payload
         JSONObject json = request.getJson();
         Long companyID = json.get("id").toLong();
-        String companyName = json.get("name").toString();
+        String companyName = getString(json.get("name"));
         Long sourceID = json.get("sourceID").toLong(); //owner_operator_number
 
 
       //Validate inputs
-        if (companyName!=null) companyName = companyName.trim();
-        if (companyName==null || companyName.isEmpty()){
+        if (companyName==null){
             if (sourceID==null){
                 throw new ServletException(400, "Company name is required");
             }
@@ -289,9 +288,8 @@ public class SupplyChainService extends WebService {
                     if (rs.hasNext()){
                         Record record = rs.next();
                         JSONObject company = getJson(record.get("company"));
-                        String name = company.get("name").toString();
+                        String name = getString(company.get("name"));
                         if (companyName!=null){
-                            companyName = companyName.trim();
                             if (!companyName.equals(name)){
                                 updates.put("name", companyName);
                             }
@@ -306,7 +304,9 @@ public class SupplyChainService extends WebService {
                         while (it.hasNext()){
                             String key = it.next();
                             Object val = updates.get(key);
-                            stmt.append("SET n." + key + " = '" + val + "'\n");
+                            stmt.append("SET n." + key + " = ");
+                            if (val==null) stmt.append("null\n");
+                            else stmt.append("'" + val + "'\n");
                         }
                         session.run(stmt.toString());
                     }
@@ -492,27 +492,24 @@ public class SupplyChainService extends WebService {
         JSONObject json = request.getJson();
         Long facilityID = json.get("id").toLong();
         Long companyID = json.get("companyID").toLong(); //company node id
-        String facilityName = json.get("name").toString();
-        String city = json.get("city").toString();
-        String state = json.get("state").toString();
-        String country = json.get("country").toString();
+        String facilityName = getString(json.get("name"));
+        String city = getString(json.get("city"));
+        String state = getString(json.get("state"));
+        String country = getString(json.get("country"));
         Long sourceID = json.get("sourceID").toLong(); //fei_number
 
 
       //Validate inputs
-        if (facilityName!=null) facilityName = facilityName.trim();
-        if (facilityName==null || facilityName.isEmpty()){
+        if (facilityName==null){
             if (sourceID==null) throw new ServletException(400, "Facility name is required");
         }
         if (companyID==null) throw new ServletException(400, "CompanyID is required");
 
         if (state!=null){
-            state = state.trim();
             if (state.length()!=2) throw new ServletException(400, "Invalid state. 2 char state code is required");
         }
 
         if (country!=null){
-            country = country.trim();
             if (country.length()!=2) throw new ServletException(400, "Invalid country. 2 char country code is required");
         }
 
@@ -530,9 +527,9 @@ public class SupplyChainService extends WebService {
                 if (sourceID==null){
                     List<String> properties = new ArrayList<>();
                     properties.add("name: '" + facilityName + "'");
-                    properties.add("city: '" + city + "'");
-                    properties.add("state: '" + state + "'");
-                    properties.add("country: '" + country + "'");
+                    if (city!=null) properties.add("city: '" + city + "'");
+                    if (state!=null) properties.add("state: '" + state + "'");
+                    if (country!=null) properties.add("country: '" + country + "'");
                     query = "CREATE (a:facility {" + String.join(", ", properties) + "}) RETURN id(a)";
                 }
                 else{
@@ -575,11 +572,28 @@ public class SupplyChainService extends WebService {
                     if (rs.hasNext()){
                         Record record = rs.next();
                         JSONObject facility = getJson(record.get("facility"));
-                        String name = facility.get("name").toString();
+                        String name = getString(facility.get("name"));
                         if (facilityName!=null){
-                            facilityName = facilityName.trim();
                             if (!facilityName.equals(name)){
                                 updates.put("name", facilityName);
+                            }
+                        }
+                        String cty = getString(facility.get("city"));
+                        if (city!=null){
+                            if (!city.equals(cty)){
+                                updates.put("city", cty);
+                            }
+                        }
+                        String st = getString(facility.get("state"));
+                        if (state!=null){
+                            if (!state.equals(st)){
+                                updates.put("state", st);
+                            }
+                        }
+                        String cntry = getString(facility.get("country"));
+                        if (country!=null){
+                            if (!country.equals(cntry)){
+                                updates.put("country", cntry);
                             }
                         }
                     }
@@ -591,7 +605,9 @@ public class SupplyChainService extends WebService {
                         while (it.hasNext()){
                             String key = it.next();
                             Object val = updates.get(key);
-                            stmt.append("SET n." + key + " = '" + val + "'\n");
+                            stmt.append("SET n." + key + " = ");
+                            if (val==null) stmt.append("null\n");
+                            else stmt.append("'" + val + "'\n");
                         }
                         session.run(stmt.toString());
                     }
@@ -640,6 +656,8 @@ public class SupplyChainService extends WebService {
             Session session = null;
             try{
                 session = graph.getSession();
+
+              //Get products associated with the facility
                 Result rs = session.run(query);
                 while (rs.hasNext()){
                     Record record = rs.next();
@@ -657,6 +675,22 @@ public class SupplyChainService extends WebService {
 
 
 
+              //If the facility has no products, check in the facility has an fei number
+                if (uniqueProducts.isEmpty()){
+                    query =
+                    "MATCH (f:facility)-[:source]->(n)\n" +
+                    "WHERE id(f) = " + facilityID + "\n" +
+                    "RETURN n.fei_number as fei";
+                    rs = session.run(query);
+                    if (rs.hasNext()){
+                        Record record = rs.next();
+                        Value val = record.get("fei");
+                        if (!val.isNull()) fei = new javaxt.utils.Value(val.asObject()).toLong();
+                    }
+                }
+
+
+              //Get products from registrationlisting using the fei number
                 JSONArray otherProducts = getProducts(fei, session);
                 for (int i=0; i<otherProducts.length(); i++){
                     JSONObject product = otherProducts.get(i).toJSONObject();
@@ -887,19 +921,18 @@ public class SupplyChainService extends WebService {
       //Parse payload
         JSONObject json = request.getJson();
         Long productID = json.get("id").toLong();
-        String productName = json.get("name").toString();
-        String productType = json.get("type").toString();
-        String productCode = json.get("code").toString();
-        String productInventory = json.get("inventory").toString();
-        String productCapacity = json.get("capacity").toString();
-        String productLeadTime = json.get("leadTime").toString();
+        String productName = getString(json.get("name"));
+        String productType = getString(json.get("type"));
+        String productCode = getString(json.get("code"));
+        String productInventory = getString(json.get("inventory"));
+        String productCapacity = getString(json.get("capacity"));
+        String productLeadTime = getString(json.get("leadTime"));
         Long facilityID = json.get("facilityID").toLong();
 
 
 
       //Validate inputs
-        if (productName!=null) productName = productName.trim();
-        if (productName==null || productName.isEmpty()) throw new ServletException(400, "Product name is required");
+        if (productName==null) throw new ServletException(400, "Product name is required");
         if (facilityID==null) throw new ServletException(400, "Facility is required");
 
 
@@ -966,7 +999,9 @@ public class SupplyChainService extends WebService {
                     while (it.hasNext()){
                         String key = it.next();
                         Object val = updates.get(key);
-                        stmt.append("SET n." + key + " = '" + val + "'\n");
+                        stmt.append("SET n." + key + " = ");
+                        if (val==null) stmt.append("null\n");
+                        else stmt.append("'" + val + "'\n");
                     }
                     session.run(stmt.toString());
                 }
@@ -1011,5 +1046,24 @@ public class SupplyChainService extends WebService {
             json = new JSONObject(gson.toJson(val.asMap()));
         }
         return json;
+    }
+
+
+  //**************************************************************************
+  //** getString
+  //**************************************************************************
+  /** Returns a string for the given value. Returns null if the string is
+   *  empty or equals "NULL" (case insensitive)
+   */
+    private String getString(JSONValue val){
+        String str = val.toString();
+        if (str!=null){
+            str = str.trim();
+            if (str.length()==0) str = null;
+            else{
+                if (str.equalsIgnoreCase("null")) str = null;
+            }
+        }
+        return str;
     }
 }
