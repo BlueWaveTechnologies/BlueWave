@@ -220,11 +220,10 @@ public class WebServices extends WebService {
             if (service.startsWith("dashboard")){
                 ws = dashboardService;
                 String p = serviceRequest.getPath(1).toString();
-                if (p!=null && p.equalsIgnoreCase("thumbnail")){
-                    serviceRequest = new ServiceRequest(service, request);
-                }
-                else{
-                    serviceRequest = new ServiceRequest(request);
+                if (p!=null){
+                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups")){
+                        serviceRequest = new ServiceRequest(service, request);
+                    }
                 }
             }
         }
