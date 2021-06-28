@@ -20,7 +20,7 @@ body, textarea, input, select, td, th {
 /**************************************************************************/
 
 .app-header {
-    background-color: #007CBA;
+    background-color: #007cba;
     height: 86px;
     color: #fff;
 }
@@ -67,7 +67,7 @@ body, textarea, input, select, td, th {
  }
 
 .app-header-menu {
-    background-color: #2c7cba;
+    background-color: #007cba;
     margin-left: 0;
  }
 
@@ -251,7 +251,7 @@ body, textarea, input, select, td, th {
 /** Dashboard Homepage
 /**************************************************************************/
 .dashboard-homepage {
-
+    background-color: #ececec;
 }
 
 .dashboard-homepage .dashboard-item {
@@ -263,6 +263,48 @@ body, textarea, input, select, td, th {
     font-size: 120px;
 }
 
+.dashboard-group {
+    border: 1px solid #c7c7c7;
+    margin: 30px 15px 20px;
+    border-radius: 0 5px 5px 5px;
+    background-color: #f5f5f5;
+    padding: 15px 10px;
+    position: relative;
+}
+
+.dashboard-group-label {
+    display: inline-block;
+    top: -21px;
+    position: absolute;
+    left: -1px;
+    padding: 2px 7px 0 7px;
+    background-color: #f5f5f5;
+    color: #585858;
+    font-size: 13px;
+    border: 1px solid #c7c7c7;
+    border-radius: 5px 5px 0 0;
+    border-bottom: 0 none;
+}
+/*
+.dashboard-group-label:after {
+    content: "";
+    position: absolute;
+    right: -1;
+    height: 50%;
+    width: 1px;
+    background: #f5f5f5;
+    bottom: 0;
+}
+.dashboard-group-label:before {
+    content: "";
+    position: absolute;
+    left: -1;
+    height: 50%;
+    width: 1px;
+    background: #f5f5f5;
+    bottom: 0;
+}
+*/
 
 /**************************************************************************/
 /** Dashboard Layout
