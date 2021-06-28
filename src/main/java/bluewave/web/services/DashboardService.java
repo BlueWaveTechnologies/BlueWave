@@ -241,6 +241,82 @@ public class DashboardService extends WebService {
 
 
   //**************************************************************************
+  //** getGroups
+  //**************************************************************************
+  /** Returns a list of user-defined groupings for dashboards
+   */
+    public ServiceResponse getGroups(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Get user associated with the request
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+
+        Connection conn = null;
+        try{
+
+            LinkedHashMap<Long, JSONObject> groups = new LinkedHashMap<>();
+            String groupIDs = "";
+
+            conn = database.getConnection();
+            Recordset rs = new Recordset();
+            rs.open("select id, name, description, info from application.dashboard_group " +
+            "where user_id=" + user.getID() + " order by name", conn);
+            while (rs.hasNext()){
+                JSONObject json = new JSONObject();
+                json.set("id", rs.getValue("id"));
+                json.set("name", rs.getValue("name"));
+                json.set("description", rs.getValue("description"));
+                json.set("info", rs.getValue("info"));
+                json.set("dashboards", new JSONArray());
+
+                Long groupID = json.get("id").toLong();
+                groups.put(groupID, json);
+                if (!groupIDs.isEmpty()) groupIDs +=",";
+                groupIDs += groupID;
+                rs.moveNext();
+            }
+            rs.close();
+
+
+            if (!groups.isEmpty()){
+                rs.open("select * from application.dashboard_group_dashboard " +
+                "where dashboard_group_id in (" + groupIDs + ")", conn);
+                while (rs.hasNext()){
+                    Long dashboardID = rs.getValue("dashboard_id").toLong();
+                    Long groupID = rs.getValue("dashboard_group_id").toLong();
+
+                    JSONObject group = groups.get(groupID);
+                    JSONArray dashboards = group.get("dashboards").toJSONArray();
+                    dashboards.add(dashboardID);
+                    rs.moveNext();
+                }
+                rs.close();
+            }
+
+
+            conn.close();
+
+
+
+            JSONArray arr = new JSONArray();
+            Iterator<Long> it = groups.keySet().iterator();
+            while (it.hasNext()){
+                JSONObject group = groups.get(it.next());
+                arr.add(group);
+            }
+
+
+            return new ServiceResponse(arr);
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
   //** getUsers
   //**************************************************************************
   /** Returns a list of user IDs associated with the given dashboard
