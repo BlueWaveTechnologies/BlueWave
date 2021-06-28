@@ -14,20 +14,20 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var me = this;
     var defaultConfig = {
         margin: { top: 10, right: 10, bottom: 10, left: 10 },
-        nodes: {
-            input: {
+        nodes: [ //order is important!
+            {
                 icon: "fas fa-sign-out-alt",
                 label: "Input"
             },
-            output: {
-                icon: "fas fa-sign-in-alt",
-                label: "Output"
-            },
-            distributor: {
+            {
                 icon: "fas fa-random",
                 label: "Distributor"
+            },
+            {
+                icon: "fas fa-sign-in-alt",
+                label: "Output"
             }
-        },
+        ],
         sankey: {
             style: {
                 links: {
@@ -469,17 +469,11 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         };
 
 
-
       //Create buttons
-        createButton("input", config.nodes.input.icon, config.nodes.input.label);
-        createButton("distributor", config.nodes.distributor.icon, config.nodes.distributor.label);
-        createButton("output", config.nodes.output.icon, config.nodes.output.label);
-
-
-      //Enable addData button
-        button.input.enable();
-        button.distributor.enable();
-        button.output.enable();
+        for (var i=0; i<config.nodes.length; i++){
+            var n = config.nodes[i];
+            createButton(n.icon, n.label);
+        }
     };
 
 
@@ -828,7 +822,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
                 var type = node.type;
-                console.log(node.name, node.type);
                 if (type===nodeType){
                     id++;
                 }
@@ -843,23 +836,31 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         i.className = icon;
 
 
+      //Set input and outputs
         var numInputs = 0;
         var numOutputs = 0;
+        for (var x=0; x<config.nodes.length; x++){
+            var n = config.nodes[x];
+            if (n.label===nodeType){
 
-        switch (nodeType) {
-            case "input":
-                numOutputs = 1;
+
+                if (x==0){ //is first node type (e.g. input)
+                    numOutputs = 1;
+                }
+                else if (x==config.nodes.length-1){ //is last node type (e.g. output)
+                    numInputs = 1;
+                }
+                else{ //middleman (e.g. distributor)
+                    numInputs = 1;
+                    numOutputs = 1;
+                }
+
                 break;
-            case "output":
-                numInputs = 1;
-                break;
-            default:
-                numInputs = 1;
-                numOutputs = 1;
-                break;
+            }
         }
 
 
+      //Create node
         var node = createNode({
             name: name,
             type: nodeType,
@@ -1090,13 +1091,13 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** createButton
   //**************************************************************************
-    var createButton = function(nodeType, icon, title){
+    var createButton = function(icon, label){
 
 
       //Create button
         var btn = new javaxt.dhtml.Button(toolbar, {
             display: "table",
-            disabled: true,
+            disabled: false,
             style: {
                 button: "drawflow-toolbar-button",
                 select: "drawflow-toolbar-button-selected",
@@ -1108,9 +1109,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
       //Add drawflow specific properties
-        btn.el.dataset["node"] = nodeType;
+        btn.el.dataset["node"] = label;
         btn.el.dataset["icon"] = icon;
-        btn.el.dataset["title"] = title;
+        btn.el.dataset["title"] = label;
         btn.el.draggable = true;
         btn.el.ondragstart = function(e){
             if (btn.isDisabled()){
@@ -1161,7 +1162,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         };
 
 
-        button[nodeType] = btn;
+        button[label] = btn;
         return btn;
     };
 
