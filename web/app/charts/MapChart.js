@@ -79,21 +79,22 @@ bluewave.charts.MapChart = function(parent, config) {
                     .attr('fill', 'lightgray')
                     .attr('stroke', 'white');
 
-
+                projection.reflectY(true);
                 mapArea.selectAll('circle').remove();
                 if(chartConfig.mapType === "Point"){
-                    data.forEach(function(d) {
-                        var lat = parseFloat(d.lat);
-                        var lon = parseFloat(d.lon);
-                        if (isNaN(lat) || isNaN(lon)) return;
-                        var coord = projection([lon, lat]);
-                        if (!coord) return;
-                        mapArea.append("circle")
-                            .attr("cx", coord[1])
-                            .attr("cy", coord[0])
-                            .attr("r", "8px")
-                            .attr("fill", "red")
-                    });
+                    mapArea.selectAll("circle")
+                        .data(data)
+                        .enter()
+                        .append("circle")
+                        .attr("cx", function(d) {
+                            return projection([d.lon, d.lat])[0];
+                        })
+                        .attr("cy", function(d) {
+                            return projection([d.lon, d.lat])[1];
+                        })
+                        .attr("r", "8px")
+                        .style("fill", "rgb(217,91,67)")
+                        .style("opacity", 0.85)
                 };
             })
         });
