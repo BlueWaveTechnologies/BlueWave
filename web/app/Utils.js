@@ -349,8 +349,8 @@ bluewave.utils = {
 
         var width = config.width+"";
         var height = config.height+"";
-        if (width.indexOf("%")===-1) parseInt(width) + "px";
-        if (height.indexOf("%")===-1) parseInt(height) + "px";
+        if (width.indexOf("%")===-1) width = parseInt(width) + "px";
+        if (height.indexOf("%")===-1) height = parseInt(height) + "px";
 
 
         var div = document.createElement("div");
