@@ -111,7 +111,7 @@ bluewave.Explorer = function(parent, config) {
             }
         }
 
-        setZoom(0);
+        zoom = 0;
     };
 
 
@@ -634,13 +634,17 @@ bluewave.Explorer = function(parent, config) {
                             deleteDiv.innerHTML = "&#x2715";
                             deleteDiv.nodeID = parseInt(key);
                             deleteDiv.onclick = function(){
-                                var nodeID = this.nodeID;
+                                var div = this;
+                                var nodeID = div.nodeID;
                                 confirm("Are you sure you want to delete this node?",{
                                     leftButton: {label: "Yes", value: true},
                                     rightButton: {label: "No", value: false},
                                     callback: function(yes){
                                         if (yes){
                                             drawflow.removeNodeId("node-"+nodeID);
+                                        }
+                                        else{
+                                            div.parentNode.removeChild(div);
                                         }
                                     }
                                 });
@@ -1550,6 +1554,7 @@ bluewave.Explorer = function(parent, config) {
 
             var img = document.createElement('img');
             img.className = "noselect";
+            img.style.width = "100%";
             img.onload = function() {
                 el.appendChild(this);
             };
