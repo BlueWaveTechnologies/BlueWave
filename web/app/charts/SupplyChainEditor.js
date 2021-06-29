@@ -121,11 +121,26 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             nodeEditor = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Node",
                 width: 550,
+                height: 600, //required because of the overflow...
                 valign: "top",
                 modal: true,
-                resizable: false,
+                resizable: true,
+                shrinkToFit: true,
                 style: config.style.window
             });
+
+
+            var div = document.createElement("div");
+            div.style.position = "relative";
+            div.style.height = "100%";
+            div.style.overflowY = "auto";
+            nodeEditor.getBody().appendChild(div);
+
+            var innerDiv = document.createElement("div");
+            innerDiv.style.position = "absolute";
+            innerDiv.style.width = "100%";
+            innerDiv.style.height = "100%";
+            div.appendChild(innerDiv);
 
 
             companyList = createCombobox();
@@ -155,7 +170,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
 
-            var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
+            var form = new javaxt.dhtml.Form(innerDiv, {
                 style: config.style.form,
                 items: [
                     {
