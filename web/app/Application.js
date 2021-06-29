@@ -853,10 +853,10 @@ bluewave.Application = function(parent, config) {
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
             if (menuItem.label==="Create Dashboard"){
-                if (currUser.accessLevel<=3) menuItem.hide();
+                if (currUser.accessLevel<3) menuItem.hide();
             }
             if (menuItem.label==="Edit Dashboard"){
-                if (currUser.accessLevel<=3) menuItem.hide();
+                if (currUser.accessLevel<3) menuItem.hide();
             }
             if (menuItem.label==="System Administration"){
                 if (currUser.accessLevel<5) menuItem.hide();
