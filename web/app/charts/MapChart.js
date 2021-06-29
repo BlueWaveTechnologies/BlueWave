@@ -65,6 +65,11 @@ bluewave.charts.MapChart = function(parent, config) {
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
+
+            var div = d3.select("body").append("div")
+                 .attr("class", "tooltip-donut")
+                 .style("opacity", 0);
+
             getData("states", function(mapData) {
                 var states = topojson.feature(mapData, mapData.objects.states);
                 var projection = d3.geoIdentity()
@@ -78,26 +83,40 @@ bluewave.charts.MapChart = function(parent, config) {
                     .attr('d', path)
                     .attr('fill', 'lightgray')
                     .attr('stroke', 'white');
-
-                projection.reflectY(true);
+                projection = d3.geoAlbersUsa()
+                    .scale(1850)
+                    .translate([(width/2)+50, (height/2)-15]);
                 mapArea.selectAll('circle').remove();
                 if(chartConfig.mapType === "Point"){
-                    mapArea.selectAll("circle")
-                        .data(data)
-                        .enter()
-                        .append("circle")
-                        .attr("cx", function(d) {
-                            return projection([d.lon, d.lat])[0];
-                        })
-                        .attr("cy", function(d) {
-                            return projection([d.lon, d.lat])[1];
-                        })
-                        .attr("r", "8px")
-                        .style("fill", "rgb(217,91,67)")
-                        .style("opacity", 0.85)
-                };
-            })
-        });
+                    data.forEach(function(d){
+                        var lat = parseFloat(d.lat);
+                        var lon = parseFloat(d.lon);
+                        if (isNaN(lat) || isNaN(lon))return;
+                        var coord = projection([lon, lat]);
+                        if (!coord) return;
+                        var value = parseFloat(d[chartConfig.mapValue]);
+                        mapArea.append("circle")
+                            .attr("cx", coord[0])
+                            .attr("cy", coord[1])
+                            .attr("r", "8px")
+                            .style("fill", "rgb(217,91,67)")
+                            .on('mouseover', function (d, i) {
+                                d3.select(this).transition()
+                                    .duration('50')
+                                    .attr('opacity', '.85');
+
+                           })
+                           .on('mouseout', function (d, i) {
+                                d3.select(this).transition()
+                                    .duration('50')
+                                      .attr('opacity', '1');
+
+                            });
+
+                    })
+                }
+            });
+        })
     }
 
     //**************************************************************************
