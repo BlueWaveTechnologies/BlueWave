@@ -566,7 +566,7 @@ bluewave.dashboards.ProductPurchases = function (parent, config) {
           }
         }
 
-        for (month in accumulator) {
+        for (var month in accumulator) {
           const y = Number(month.slice(0, 4));
           const m = Number(month.slice(-2));
           const monthDate = new Date(y, m);

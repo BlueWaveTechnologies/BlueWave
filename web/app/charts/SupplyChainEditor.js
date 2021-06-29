@@ -121,7 +121,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             nodeEditor = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Node",
                 width: 550,
-                height: 600, //required because of the overflow...
+                height: 776, //required because of the overflow...
                 valign: "top",
                 modal: true,
                 resizable: true,

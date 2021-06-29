@@ -600,7 +600,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
 
             }
-            for(i = 0; i < outputs.length; i++) {
+            for (var i = 0; i < outputs.length; i++) {
                 var k = outputs[i];
                 var n = nodes[k];
                 var v = quantities[key + "->" + k];
