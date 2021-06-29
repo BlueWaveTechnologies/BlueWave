@@ -452,11 +452,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
       //Scale the range of the data
         x.domain(d3.extent(data, function(d) { return d.date; }));
-        if (useLogScale) {
-            y.domain([minY, maxY]);
-        } else {
-            y.domain([minY, maxY]);
-        }
+        y.domain([minY, maxY]);
+
 
 
         var colors = [

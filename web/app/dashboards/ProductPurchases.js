@@ -668,11 +668,7 @@ bluewave.dashboards.ProductPurchases = function (parent, config) {
         return d.date;
       })
     );
-    if (useLogScale) {
-      y.domain([minY, maxY]);
-    } else {
-      y.domain([minY, maxY]);
-    }
+    y.domain([minY, maxY]);
 
     //Add y-axis
     svg
