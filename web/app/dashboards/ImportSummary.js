@@ -101,8 +101,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
           //Parse data and update combobox
-            for (var i in productTypes){
-                var productType = productTypes[i];
+            for (var type in productTypes){
+                var productType = productTypes[type];
 
               //Update combobox
                 productOptions.add(productType, productType);
