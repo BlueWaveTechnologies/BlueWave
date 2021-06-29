@@ -791,6 +791,39 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
             }
         });
+
+        drawflow.on('contextmenu', function(e) {
+            setTimeout(function(){
+                for (var key in nodes) {
+                    if (nodes.hasOwnProperty(key)){
+                        var node = nodes[key];
+                        var parentNode = node.parentNode.parentNode;
+                        var deleteDiv = parentNode.getElementsByClassName("drawflow-delete")[0];
+                        if (deleteDiv){
+                            parentNode.removeChild(deleteDiv);
+                            deleteDiv = document.createElement("div");
+                            deleteDiv.className = "drawflow-delete2";
+                            parentNode.appendChild(deleteDiv);
+                            deleteDiv.innerHTML = "&#x2715";
+                            deleteDiv.nodeID = parseInt(key);
+                            deleteDiv.onclick = function(){
+                                var nodeID = this.nodeID;
+                                confirm("Are you sure you want to delete this node?",{
+                                    leftButton: {label: "Yes", value: true},
+                                    rightButton: {label: "No", value: false},
+                                    callback: function(yes){
+                                        if (yes){
+                                            drawflow.removeNodeId("node-"+nodeID);
+                                        }
+                                    }
+                                });
+
+                            };
+                        }
+                    }
+                }
+            },200);
+        });
     };
 
 
