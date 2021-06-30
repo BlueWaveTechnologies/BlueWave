@@ -16,7 +16,7 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor; //popup dialogs
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, scatterEditor; //popup dialogs
     var supplyChainEditor;
 
 
@@ -603,7 +603,7 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
-        createMenuButton("scatter", "fas fa-link", "Scatter Chart" , menubar);
+        createMenuButton("scatterChart", "fas fa-link", "Scatter Chart" , menubar);
     };
 
 
@@ -768,21 +768,21 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
 
-            case "scatter":
-                var node = createNode({
-                    name: "Scatter Chart",
-                    type: nodeType,
-                    icon: "fas fa-link",
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 1
-
-
-
-                });
-                addEventListeners(node);
-                break;
+//            case "scatter":
+//                var node = createNode({
+//                    name: "Scatter Chart",
+//                    type: nodeType,
+//                    icon: "fas fa-link",
+//                    content: i,
+//                    position: [pos_x, pos_y],
+//                    inputs: 1,
+//                    outputs: 1
+//
+//
+//
+//                });
+//                addEventListeners(node);
+//                break;
             default:
 
                 var node = createNode({
@@ -915,11 +915,6 @@ bluewave.Explorer = function(parent, config) {
                     editLayout(this);
                 };
 
-                break;
-            case "scatter":
-                node.ondblclick = function() {
-                    editScatter(this);
-                };
                 break;
             default:
 
@@ -1937,6 +1932,10 @@ bluewave.Explorer = function(parent, config) {
                     else if (node.type==="lineChart"){
                         var lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
                         lineChart.update(chartConfig, data);
+                    }
+                    else if (node.type==="scatterChart"){
+                        var scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{});
+                        scatterChart.update(chartConfig, data);
                     }
                     else{
                         console.log(node.type + " preview not implemented!");

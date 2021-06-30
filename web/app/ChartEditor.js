@@ -14,7 +14,7 @@ if(!bluewave) var bluewave={};
  *   Update - chart information and config is passed in.
  *   createDropDown - initializes chart Type specific dropdowns
  *   createOptions - adds chart input options from updated Data
- *      pie, bar,line, map chart creation.
+ *      pie, bar,line, scatter, map chart creation.
  ******************************************************************************/
 
 bluewave.ChartEditor = function(parent, config) {
@@ -24,7 +24,7 @@ bluewave.ChartEditor = function(parent, config) {
     var inputData = [];
     var svg;
     var previewArea;
-    var pieChart, lineChart, barChart;
+    var pieChart, lineChart, scatterChart, barChart;
     var mapArea;
     var mapLayer;
     var optionsDiv;
@@ -209,6 +209,7 @@ bluewave.ChartEditor = function(parent, config) {
 
         if (pieChart) pieChart.clear();
         if (lineChart) lineChart.clear();
+        if (scatterChart) scatterChart.clear();
         if (barChart) barChart.clear();
         if (mapArea) mapArea.selectAll("*").remove();
         if (mapLayer) mapLayer.selectAll("circle").remove();
@@ -294,6 +295,22 @@ bluewave.ChartEditor = function(parent, config) {
                     });
                 }
                 break;
+            case 'scatterChart':
+                plotInputs.xAxis.clear();
+                plotInputs.yAxis.clear();
+                dataOptions.forEach((val)=>{
+                    plotInputs.xAxis.add(val,val);
+                    plotInputs.yAxis.add(val,val);
+                });
+                plotInputs.xAxis.setValue(chartConfig.xAxis,chartConfig.xAxis);
+                plotInputs.yAxis.setValue(chartConfig.yAxis,chartConfig.yAxis);
+                if(dataOptions2){
+                    dataOptions2.forEach(val=>{
+                        plotInputs.xAxis2.add(val,val);
+                        plotInputs.yAxis2.add(val,val);
+                    });
+                }
+                break;
             case 'map':
                 mapProjection.clear();
                 projectionOptions.forEach((val)=>{
@@ -337,6 +354,9 @@ bluewave.ChartEditor = function(parent, config) {
             case "lineChart":
                 createLineDropDown(tbody);
                 break;
+            case "scatterChart":
+                createScatterDropDown(tbody);
+                break;
             case "map":
                 createMapDropDown(tbody);
                 break;
@@ -378,6 +398,18 @@ bluewave.ChartEditor = function(parent, config) {
         if (inputData.length>1){
             dropdownItem(tbody,"xAxis2","X-Axis2",createLinePreview,plotInputs,"xAxis2");
             dropdownItem(tbody,"yAxis2","Y-Axis2",createLinePreview,plotInputs,"yAxis2");
+        }
+    };
+
+   //**************************************************************************
+   //** createScatterDropDown
+   //**************************************************************************
+    var createScatterDropDown = function(tbody){
+        dropdownItem(tbody,"xAxis","X-Axis",createScatterPreview,plotInputs,"xAxis");
+        dropdownItem(tbody,"yAxis","Y-Axis",createScatterPreview,plotInputs,"yAxis");
+        if (inputData.length>1){
+          dropdownItem(tbody,"xAxis2","X-Axis2",createScatterPreview,plotInputs,"xAxis2");
+          dropdownItem(tbody,"yAxis2","Y-Axis2",createScatterPreview,plotInputs,"yAxis2");
         }
     };
 
@@ -461,6 +493,10 @@ bluewave.ChartEditor = function(parent, config) {
         });
 
         lineChart = new bluewave.charts.LineChart(svg, {
+            margin: margin
+        });
+
+        scatterChart = new bluewave.charts.ScatterChart(svg, {
             margin: margin
         });
 
@@ -588,6 +624,14 @@ bluewave.ChartEditor = function(parent, config) {
         });
     };
 
+  //**************************************************************************
+  //** createScatterPreview
+  //**************************************************************************
+    var createScatterPreview = function(){
+        onRender(previewArea, function(){
+            scatterChart.update(chartConfig, inputData);
+        });
+    };
 
   //**************************************************************************
   //** createBarPreview
