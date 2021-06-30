@@ -18,6 +18,7 @@ bluewave.Explorer = function(parent, config) {
     var drawflow, nodes = {}; //drawflow
     var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor; //popup dialogs
     var supplyChainEditor;
+    var userManager;
     var zoom = 0;
 
 
@@ -283,7 +284,7 @@ bluewave.Explorer = function(parent, config) {
 
             if (id){
                 button["save"].enable();
-                button["copy"].enable();
+                button["users"].enable();
                 button["delete"].enable();
             }
 
@@ -520,14 +521,27 @@ bluewave.Explorer = function(parent, config) {
         button["save"].onClick = me.save;
 
 
-      //Copy button
-        button["copy"] = createButton(toolbar, {
-            label: "Copy",
-            icon: "fas fa-copy"
+//      //Copy button
+//        button["copy"] = createButton(toolbar, {
+//            label: "Copy",
+//            icon: "fas fa-copy",
+//            disabled: true
+//        });
+//        button["copy"].onClick = function(){
+//            alert("Not implemented");
+//        };
+
+
+      //Edit button
+        button["edit"] = createButton(toolbar, {
+            label: "Edit",
+            icon: "fas fa-edit",
+            disabled: true
         });
-        button["copy"].onClick = function(){
+        button["edit"].onClick = function(){
             alert("Not implemented");
         };
+
 
 
       //Delete button
@@ -559,6 +573,19 @@ bluewave.Explorer = function(parent, config) {
                     }
                 }
             });
+        };
+
+
+        createSpacer(toolbar);
+
+
+      //Copy button
+        button["users"] = createButton(toolbar, {
+            label: "Manage Access",
+            icon: "fas fa-user-cog"
+        });
+        button["users"].onClick = function(){
+            editUsers();
         };
 
 
@@ -801,7 +828,7 @@ bluewave.Explorer = function(parent, config) {
 
         button["save"].enable();
         if (id){
-            button["copy"].enable();
+            button["edit"].enable();
             button["delete"].enable();
         }
 
@@ -1828,6 +1855,34 @@ bluewave.Explorer = function(parent, config) {
 
         waitmask.hide();
         nameEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** editUsers
+  //**************************************************************************
+    var editUsers = function(){
+        if (!userManager){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Manage Access",
+                width: 650,
+                height: 500,
+                valign: "top",
+                modal: true,
+                resizable: true,
+                shrintToFit: true,
+                style: merge({body: {padding:0}},config.style.window)
+            });
+
+            userManager = new bluewave.Permissions(win.getBody(),config);
+
+            userManager.show = function(){
+                win.show();
+            };
+        }
+
+        userManager.update(id);
+        userManager.show();        
     };
 
 
