@@ -66,56 +66,71 @@ bluewave.charts.MapChart = function(parent, config) {
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
 
-            var div = d3.select("body").append("div")
-                 .attr("class", "tooltip-donut")
-                 .style("opacity", 0);
+            console.log(chartConfig);
+            if(chartConfig.mapProjectionName === "Albers USA"){
+                getData("states", function(mapData) {
+                    var states = topojson.feature(mapData, mapData.objects.states);
+                    var projection = d3.geoIdentity()
+                        .fitSize([width,height],states);
+                    var path = d3.geoPath().projection(projection);
 
-            getData("states", function(mapData) {
-                var states = topojson.feature(mapData, mapData.objects.states);
-                var projection = d3.geoIdentity()
-                    .fitSize([width,height],states);
-                var path = d3.geoPath().projection(projection);
+                    mapArea.selectAll("path")
+                        .data(states.features)
+                        .enter()
+                        .append("path")
+                        .attr('d', path)
+                        .attr('fill', 'lightgray')
+                        .attr('stroke', 'white');
+                    projection = d3.geoAlbersUsa()
+                        .scale(1850)
+                        .translate([(width/2)+50, (height/2)-15]);
+                    mapArea.selectAll('circle').remove();
+                    if(chartConfig.mapType === "Point"){
+                        data.forEach(function(d){
+                            var lat = parseFloat(d.lat);
+                            var lon = parseFloat(d.lon);
+                            if (isNaN(lat) || isNaN(lon))return;
+                            var coord = projection([lon, lat]);
+                            if (!coord) return;
+                            mapArea.append("circle")
+                                .attr("cx", coord[0])
+                                .attr("cy", coord[1])
+                                .attr("r", "8px")
+                                .style("fill", "rgb(217,91,67)");
 
-                mapArea.selectAll("path")
-                    .data(states.features)
-                    .enter()
-                    .append("path")
-                    .attr('d', path)
-                    .attr('fill', 'lightgray')
-                    .attr('stroke', 'white');
-                projection = d3.geoAlbersUsa()
-                    .scale(1850)
-                    .translate([(width/2)+50, (height/2)-15]);
-                mapArea.selectAll('circle').remove();
-                if(chartConfig.mapType === "Point"){
-                    data.forEach(function(d){
+                        })
+                    }
+                });
+            }else{
+                getData("countries", function(mapData){
+                    console.log(mapData);
+                    var countries = topojson.feature(mapData, mapData.objects.countries);
+                    var projection = d3.geoAlbers();
+                    var path = d3.geoPath().projection(projection);
+                    mapArea.selectAll("path")
+                        .data(countries.features)
+                        .enter()
+                        .append("path")
+                        .attr('d', path)
+                        .attr('fill', 'lightgray')
+                        .attr('stroke', 'white');
+                    if(chartConfig.mapType === "Point"){
+                        data.forEach(function(d){
                         var lat = parseFloat(d.lat);
                         var lon = parseFloat(d.lon);
                         if (isNaN(lat) || isNaN(lon))return;
                         var coord = projection([lon, lat]);
                         if (!coord) return;
-                        var value = parseFloat(d[chartConfig.mapValue]);
                         mapArea.append("circle")
                             .attr("cx", coord[0])
                             .attr("cy", coord[1])
                             .attr("r", "8px")
-                            .style("fill", "rgb(217,91,67)")
-                            .on('mouseover', function (d, i) {
-                                d3.select(this).transition()
-                                    .duration('50')
-                                    .attr('opacity', '.85');
+                            .style("fill", "rgb(217,91,67)");
 
-                           })
-                           .on('mouseout', function (d, i) {
-                                d3.select(this).transition()
-                                    .duration('50')
-                                      .attr('opacity', '1');
-
-                            });
-
-                    })
-                }
-            });
+                        })
+                    }
+                })
+            }
         })
     }
 
