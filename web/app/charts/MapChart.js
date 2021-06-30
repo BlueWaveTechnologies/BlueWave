@@ -66,7 +66,6 @@ bluewave.charts.MapChart = function(parent, config) {
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
 
-            console.log(chartConfig);
             if(chartConfig.mapProjectionName === "Albers USA"){
                 getData("states", function(mapData) {
                     var states = topojson.feature(mapData, mapData.objects.states);
