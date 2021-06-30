@@ -381,9 +381,11 @@ li.tree-node:hover {
     color: green;
 }
 
+/*
 .toolbar-button-icon.fas.fa-trash {
     color: #8c6c6c;
 }
+*/
 
 .toolbar-button-icon.fas.fa-copy {
     color: #b59d71;
@@ -539,7 +541,6 @@ li.tree-node:hover {
 
 .toggle-button, .toggle-button-active {
     display:inline-block;
-    padding: 1px 5px;
     border-radius: 0px;
     cursor: pointer;
     font-size: 12px;
@@ -721,7 +722,7 @@ li.tree-node:hover {
     color: #ff4e4e;
     -webkit-box-shadow: 0 2px 20px 2px #ff4e4e;
     box-shadow: 0 2px 20px 2px #ff4e4e;
-    
+
     right: -15px;
     top: -15px;
 }
