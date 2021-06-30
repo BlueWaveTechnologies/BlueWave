@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.app.Dashboard;
 import bluewave.app.DashboardUser;
+import bluewave.utils.SQLEditor;
 
 import javaxt.express.*;
 import javaxt.http.servlet.*;
@@ -34,7 +35,7 @@ public class DashboardService extends WebService {
 
 
         super.addClass(bluewave.app.Dashboard.class);
-        //super.addClass(bluewave.app.DashboardUser.class);
+        super.addClass(bluewave.app.DashboardUser.class);
         //super.addClass(bluewave.app.DashboardGroup.class);
 
 
@@ -123,7 +124,7 @@ public class DashboardService extends WebService {
 
 
 
-        SQLEditor where = new SQLEditor(sql);
+        SQLEditor where = new SQLEditor(sql, c);
         if (c.equals(bluewave.app.Dashboard.class)){
 
 
@@ -146,7 +147,7 @@ public class DashboardService extends WebService {
             }
 
 
-            if (filter!=null) where.append(filter);
+            if (filter!=null) where.addConstraint(filter);
         }
 
 
@@ -566,33 +567,4 @@ public class DashboardService extends WebService {
             throw e;
         }
     }
-
-
-  //**************************************************************************
-  //** SQLEditor
-  //**************************************************************************
-    private class SQLEditor {
-        private javaxt.sql.Parser parser;
-        private String sql;
-        public SQLEditor(String sql){
-            this.sql = sql;
-        }
-        public void append(String whereClause){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            String where = parser.getWhereString();
-            if (where==null) where = "";
-            else where += " and ";
-            where += whereClause;
-            parser.setWhere(where);
-            sql = parser.toString();
-        }
-        public void remove(){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            parser.setWhere(null);
-        }
-        public String getSQL(){
-            return sql;
-        }
-    }
-
 }
