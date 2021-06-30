@@ -156,13 +156,15 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapDropDown
   //**************************************************************************
     var createMapDropDown = function(tbody){
-        dropdownItem(tbody,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
+        dropdownItem(tbody,"mapType","Map Type",showHideDropDowns,mapInputs,"mapType");
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
+
         var tr, td;
 
         tr = document.createElement("tr");
+        tr.id="projection";
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
@@ -184,6 +186,15 @@ if(!bluewave.charts) bluewave.charts={};
             createMapPreview();
         };
 
+        document.getElementById("projection").style.visibility = "collapse";
+        mapProjection.hide();
+        document.getElementById("latitude").style.visibility = "collapse";
+        mapInputs.lat.hide();
+        document.getElementById("longitude").style.visibility = "collapse";
+        mapInputs.long.hide();
+        document.getElementById("mapValue").style.visibility = "collapse";
+        mapInputs.mapValue.hide();
+
     };
 
   //**************************************************************************
@@ -193,6 +204,7 @@ if(!bluewave.charts) bluewave.charts={};
         var tr, td;
 
         tr = document.createElement("tr");
+        tr.id = chartConfigRef;
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
@@ -218,22 +230,55 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** showHideDropDowns
   //**************************************************************************
-    var showHideDropdowns = function(){
+    var showHideDropDowns = function(){
         if(chartConfig.mapType==="Point"){
-            input.lat.clear();
-            input.long.clear();
-            chartConfig.latitude.clear();
-            chartConfig.longitutde.clear();
-            input.lat.show();
-            input.long.show();
+            //Clear our the inputs.
+            mapInputs.lat.clear();
+            mapInputs.long.clear();
+            mapInputs.mapValue.clear();
+            mapProjection.clear();
+
+            //We clear out the values from the chartConfig
+            if(chartConfig.latitude !== null) chartConfig.latitude = null;
+            if(chartConfig.longitude !== null) chartConfig.longitude = null;
+            if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
+            if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
+            if(chartConfig.mapProjectionValue !== null) chartConfig.mapProjectionValue = null;
+
+            //Show the combox box inputs
+            mapInputs.lat.show();
+            mapInputs.long.show();
+            mapInputs.mapValue.show();
+            mapProjection.show();
+
+            //Show the table row objects
+            document.getElementById("projection").style.visibility = "visible";
+            document.getElementById("latitude").style.visibility = "visible";
+            document.getElementById("longitude").style.visibility = "visible";
+            document.getElementById("mapValue").style.visibility = "visible";
+
         };
         if(chartConfig.mapType==="Area"){
-            input.lat.clear();
-            input.long.clear();
-            chartConfig.latitude.clear();
-            chartConfig.longitutde.clear();
-            input.lat.hide();
-            input.long.hide();
+            mapInputs.lat.clear();
+            mapInputs.long.clear();
+            mapInputs.mapValue.clear();
+            mapProjection.clear();
+
+            if(chartConfig.latitude !== null) chartConfig.latitude = null;
+            if(chartConfig.longitude !== null) chartConfig.longitude = null;
+            if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
+            if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
+            if(chartConfig.mapProjectionValue !== null) chartConfig.mapProjectionValue = null;
+
+            mapInputs.lat.hide();
+            mapInputs.long.hide();
+            mapInputs.mapValue.show();
+            mapProjection.show();
+
+            document.getElementById("projection").style.visibility = "visible";
+            document.getElementById("latitude").style.visibility = "collapse";
+            document.getElementById("longitude").style.visibility = "collapse";
+            document.getElementById("mapValue").style.visibility = "visible";
         }
     }
 
@@ -242,7 +287,6 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapPreview
   //**************************************************************************
     var createMapPreview = function(){
-        //TODO Rewrite for actual data
         if(chartConfig.mapType===null || chartConfig.latitude===null ||
             chartConfig.longitude===null || chartConfig.mapValue===null ||
             chartConfig.mapProjectionValue===null) return;
