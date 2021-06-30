@@ -17,7 +17,7 @@ public class SQLEditor {
     private Class c;
     private String sql;
 
-    
+
   //**************************************************************************
   //** SQLEditor
   //**************************************************************************
@@ -66,6 +66,7 @@ public class SQLEditor {
 
       //Replace "*" clause with actual field names
         if (appendAll){
+            selectStatements.add(parser.new SelectStatement("id"));
             for (java.lang.reflect.Field f : c.getDeclaredFields()){
                 String fieldName = f.getName();
                 Class fieldType = f.getType();
