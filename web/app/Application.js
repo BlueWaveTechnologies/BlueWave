@@ -369,7 +369,7 @@ bluewave.Application = function(parent, config) {
 
 
       //Create new panels
-        get("dashboards?fields=id,name,className&orderBy=name",{
+        get("dashboards?fields=id,name,className",{
             success: function(dashboards) {
 
               //Convert the dashboards array into a datastore
@@ -394,21 +394,41 @@ bluewave.Application = function(parent, config) {
               //Add event handler
                 homepage.onClick = function(dashboard){
                     if (!dashboard.app){
-                        dashboardPanel.hide();
-                        backButton.hide();
-                        nextButton.hide();
-                        getExplorerPanel().show();
+
                         waitmask.show();
-                        get("dashboard?id="+dashboard.id,{
-                            success: function(dashboard){
-                                waitmask.hide();
-                                explorerPanel.update(dashboard, true);
-                                me.setTitle(explorerPanel.getTitle());
+
+                        get("dashboardUsers?dashboardID="+dashboard.id + "&userID=" + document.user.id + "&fields=readOnly",{
+                            success: function(arr){
+                                if (arr.length===0){
+                                    waitmask.hide();
+                                }
+                                else{
+
+                                    dashboardPanel.hide();
+                                    backButton.hide();
+                                    nextButton.hide();
+                                    getExplorerPanel().show();
+
+
+                                    var readOnly = arr[0].readOnly;
+                                    get("dashboard?id="+dashboard.id,{
+                                        success: function(dashboard){
+                                            waitmask.hide();
+                                            explorerPanel.update(dashboard, readOnly, "Dashboard");
+                                            me.setTitle(explorerPanel.getTitle());
+                                        },
+                                        failure: function(){
+                                            waitmask.hide();
+                                        }
+                                    });
+                                }
                             },
                             failure: function(){
                                 waitmask.hide();
                             }
                         });
+
+
                     }
                     else{
                         raisePanel(dashboard.app);
@@ -438,6 +458,7 @@ bluewave.Application = function(parent, config) {
                 var arr = msg.split(",");
                 var op = arr[0];
                 var model = arr[1];
+                var id = parseInt(arr[2]);
                 var store = config.dataStores[model];
 
                 if (op=="alert"){
@@ -453,7 +474,6 @@ bluewave.Application = function(parent, config) {
 
               //Update currUser as needed
                 if (model=="User" && (op=="update" || op=="delete")){
-                    var id = parseInt(arr[2]);
                     if (id===currUser){
                         if (op=="delete"){
                             logoff();
@@ -491,6 +511,9 @@ bluewave.Application = function(parent, config) {
                 }
 
 
+              //Notify panels
+                if (explorerPanel) explorerPanel.notify(op, model, id);
+
 
 
 
@@ -521,6 +544,117 @@ bluewave.Application = function(parent, config) {
                                         }
                                     }
                                 }
+                            }
+                        });
+                    }
+                }
+
+
+
+              //Update Homepage and Explorer as DashboardUsers are created, edited, or removed from the database
+                if (model==="DashboardUser"){
+                    var dashboards = config.dataStores["Dashboard"];
+                    var userID = document.user.id;
+
+
+                  //Update "dashboards" DataStore whenever DashboardUsers are created
+                  //Views like the Homepage will update automatically
+                    if (op==="create"){
+                        get("DashboardUsers?userID="+userID,{
+                            success: function(arr){
+                                var newDashboards = [];
+                                for (var i=0; i<arr.length; i++){
+                                    var dashboardID = arr[i].dashboardID;
+                                    var foundMatch = false;
+                                    for (var j=0; j<dashboards.length; j++){
+                                        var dashboard = dashboards.get(j);
+                                        if (dashboard.id===dashboardID){
+                                            foundMatch = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!foundMatch){
+                                        newDashboards.push(dashboardID);
+                                        break;
+                                    }
+                                }
+                                if (newDashboards.length>0){
+                                    get("dashboards?fields=id,name,className&id="+newDashboards.join(","),{
+                                        success: function(arr) {
+                                            for (var i=0; i<arr.length; i++){
+                                                dashboards.add(arr[i]);
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+
+                    if (explorerPanel){
+                        var dashboardID = explorerPanel.getDashboardID();
+
+                        if (!isNaN(dashboardID)){
+                            if (op==="update"){
+                                get("DashboardUsers?id="+id,{
+                                    success: function(arr){
+                                        if (arr.length===0){
+
+                                        }
+                                        else{
+                                            var dashboardUser = arr[0];
+                                            if (dashboardUser.userID===userID &&
+                                                dashboardUser.dashboardID===dashboardID){
+                                                explorerPanel.setReadOnly(dashboardUser.readOnly);
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            else if (op==="delete"){
+                                get("DashboardUsers?dashboardID="+id+"&userID="+userID,{
+                                    success: function(arr){
+                                        if (arr.length===0){
+                                            explorerPanel.setReadOnly(true);
+                                            explorerPanel.onDelete();
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+
+                  //Update "dashboards" DataStore whenever DashboardUsers are deleted
+                  //Views like the Homepage will update automatically
+                    if (op==="delete"){
+                        get("dashboards?fields=id",{
+                            success: function(arr) {
+                                var deletions = [];
+
+                                for (var i=0; i<dashboards.length; i++){
+                                    var dashboard = dashboards.get(i);
+                                    var foundMatch = false;
+                                    for (var j=0; j<arr.length; j++){
+                                        if (arr[j].id===dashboard.id){
+                                            foundMatch = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!foundMatch) deletions.push(dashboard.id);
+                                }
+
+
+                                for (var i=0; i<deletions.length; i++){
+                                    for (var j=0; j<dashboards.length; j++){
+                                        var dashboard = dashboards.get(j);
+                                        if (dashboard.id===deletions[i]){
+                                            dashboards.removeAt(j);
+                                            break;
+                                        }
+                                    }
+                                }
+
                             }
                         });
                     }
@@ -750,7 +884,7 @@ bluewave.Application = function(parent, config) {
 
 
             div.appendChild(createMenuOption("Edit Dashboard", "edit", function(){
-                explorerPanel.setReadOnly(false);
+                explorerPanel.setView("Edit");
             }));
 
 
@@ -829,7 +963,7 @@ bluewave.Application = function(parent, config) {
             }
 
             if (menuItem.label==="Edit Dashboard"){
-                if (isExplorerVisible && explorerPanel.isReadOnly()){
+                if (isExplorerVisible && explorerPanel.getView()==="Dashboard"){
                     menuItem.show();
                 }
                 else{
