@@ -35,7 +35,7 @@ bluewave.Homepage = function(parent, config) {
         mainDiv = innerDiv;
 
 
-      //Add listiners to the "Dashboard" store
+      //Add listeners to the "Dashboard" store
         var dashboards = config.dataStores["Dashboard"];
         dashboards.addEventListener("add", function(dashboard){
             refresh();
@@ -49,10 +49,6 @@ bluewave.Homepage = function(parent, config) {
         dashboards.addEventListener("remove", function(dashboard){
             refresh();
         }, me);
-
-
-
-
 
     };
 
@@ -146,9 +142,13 @@ bluewave.Homepage = function(parent, config) {
 
       //Render dashboards by group
         if (groups.length===0){
+            var arr = [];
             for (var i=0; i<dashboards.length; i++){
-                var dashboard = dashboards.get(i);
-                add(dashboard, mainDiv);
+                arr.push(dashboards.get(i));
+            }
+            sort(arr);
+            for (var i=0; i<arr.length; i++){
+                add(arr[i], mainDiv);
             }
         }
         else{
@@ -167,11 +167,22 @@ bluewave.Homepage = function(parent, config) {
                     }
                 }
                 var g = createGroupBox(group);
+                sort(arr);
                 for (var j=0; j<arr.length; j++){
                     add(arr[j], g);
                 }
             }
         }
+    };
+
+
+  //**************************************************************************
+  //** sort
+  //**************************************************************************
+    var sort = function(arr){
+        arr.sort(function(a, b){
+            return a.name.localeCompare(b.name);
+        });
     };
 
 
