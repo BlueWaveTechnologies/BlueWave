@@ -891,7 +891,21 @@ bluewave.Application = function(parent, config) {
             div.appendChild(createMenuOption("Screenshot", "image", function(){
                 waitmask.show();
                 var delay = 1000;
+
+              //Get visible app
                 var app = getVisibleApp();
+
+
+              //Find dashboard associated with the app
+                var dashboard;
+                var dashboards = config.dataStores["Dashboard"];
+                for (var i=0; i<dashboards.length; i++){
+                    if (app === dashboards.get(i).app){
+                        dashboard = dashboards.get(i);
+                    }
+                }
+
+
                 if (app.beforeScreenshot){
                     app.beforeScreenshot();
                     delay = 2000;
@@ -903,8 +917,7 @@ bluewave.Application = function(parent, config) {
                             waitmask.hide();
                             this.showSaveOptions({
                                 style: config.style,
-                                name: app.getTitle(),
-                                className: app.className,
+                                dashboard: dashboard,
                                 beforeSave: function(){
                                     waitmask.show();
                                 },

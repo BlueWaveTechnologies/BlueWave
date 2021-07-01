@@ -65,12 +65,15 @@ bluewave.Screenshot = function(parent, config) {
 
         ];
 
-        var user = document.user;
-        if (user && user.accessLevel>=3){
-            options.push({
-                label: "Save/Update Homepage",
-                value: "save"
-            });
+
+        if (config.dashboard){
+            var user = document.user;
+            if (user && user.accessLevel>=3){
+                options.push({
+                    label: "Save/Update Homepage",
+                    value: "save"
+                });
+            }
         }
 
 
@@ -160,8 +163,7 @@ bluewave.Screenshot = function(parent, config) {
                             data = data.substring(("data:" + type + ";base64,").length);
                             var blob = base64ToBlob(data, type);
                             formData.append("image", blob);
-                            formData.set("name", config.name);
-                            formData.set("className", config.className);
+                            formData.append("id", config.dashboard.id);
 
                             var request = new XMLHttpRequest();
                             request.open('POST', 'dashboard/thumbnail', true);
