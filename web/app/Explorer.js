@@ -352,11 +352,13 @@ bluewave.Explorer = function(parent, config) {
           //Update toolbar
             if (isNaN(id)){
                 button["save"].disable();
+                button["edit"].disable();
                 button["delete"].disable();
                 button["users"].disable();
             }
             else{
                 button["save"].enable();
+                button["edit"].enable();
                 button["delete"].enable();
                 button["users"].enable();
             }
