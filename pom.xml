@@ -9,6 +9,7 @@
         <sonar.organization>centrifugetech</sonar.organization>
         <sonar.projectKey>CentrifugeTech_BlueWave</sonar.projectKey>
         <sonar.sources>src/</sonar.sources>
+        <sonar.exclusions>**/*.sql</sonar.exclusions>
     </properties>
 
   <!-- =========================================================== -->
