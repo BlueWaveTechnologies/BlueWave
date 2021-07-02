@@ -8,8 +8,8 @@
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.organization>centrifugetech</sonar.organization>
         <sonar.projectKey>CentrifugeTech_BlueWave</sonar.projectKey>
-        <sonar.sources>src/</sonar.sources>
-        <sonar.exclusions>**/*.sql</sonar.exclusions>
+        <sonar.sources>src/,web/</sonar.sources>
+        <sonar.exclusions>**/*.sql,web/data/*,web/lib/*</sonar.exclusions>
     </properties>
 
   <!-- =========================================================== -->
