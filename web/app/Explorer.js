@@ -902,6 +902,11 @@ bluewave.Explorer = function(parent, config) {
                 };
 
                 break;
+            case "scatterChart" :
+
+                node.ondblclick = function(){
+                    editScatter(this);
+                };
             case "supplyChain":
 
                 node.ondblclick = function(){
