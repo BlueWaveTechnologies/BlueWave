@@ -653,7 +653,11 @@ bluewave.Explorer = function(parent, config) {
             disabled: true
         });
         button["edit"].onClick = function(){
-            alert("Not implemented");
+            editName(name, function(inputs){
+                name = inputs.name;
+                me.save();
+                me.onUpdate();
+            });
         };
 
 
@@ -1900,22 +1904,6 @@ bluewave.Explorer = function(parent, config) {
                         name: "description",
                         label: "Description",
                         type: "textarea"
-                    },
-                    {
-                        name: "private",
-                        label: "Private",
-                        type: "radio",
-                        alignment: "vertical",
-                        options: [
-                            {
-                                label: "True",
-                                value: true
-                            },
-                            {
-                                label: "False",
-                                value: false
-                            }
-                        ]
                     }
                 ],
                 buttons: [
@@ -1946,7 +1934,7 @@ bluewave.Explorer = function(parent, config) {
                                 }
                                 else{
                                     win.close();
-                                    if (callback) callback.apply(me,[inputs]);
+                                    nameEditor.onSubmit(inputs);
                                 }
                             });
                         }
@@ -1965,7 +1953,10 @@ bluewave.Explorer = function(parent, config) {
         var nameField = nameEditor.findField("name");
         if (nameField.resetColor) nameField.resetColor();
         if (name) nameEditor.setValue("name", name);
-        nameEditor.setValue("private", true);
+
+        nameEditor.onSubmit = function(inputs){
+            if (callback) callback.apply(me,[inputs]);
+        };
 
         waitmask.hide();
         nameEditor.show();
