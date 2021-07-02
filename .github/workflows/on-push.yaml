@@ -22,9 +22,8 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Run Sonar
-        run: mvn clean verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        run: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}  mvn clean verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
   build:
     runs-on: ubuntu-latest
     steps:
