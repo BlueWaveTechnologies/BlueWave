@@ -805,16 +805,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                             deleteDiv.className = "drawflow-delete2";
                             parentNode.appendChild(deleteDiv);
                             deleteDiv.innerHTML = "&#x2715";
-                            deleteDiv.nodeID = parseInt(key);
                             deleteDiv.onclick = function(){
                                 var div = this;
-                                var nodeID = div.nodeID;
                                 confirm("Are you sure you want to delete this node?",{
                                     leftButton: {label: "Yes", value: true},
                                     rightButton: {label: "No", value: false},
                                     callback: function(yes){
                                         if (yes){
-                                            drawflow.removeNodeId("node-"+nodeID);
+                                            drawflow.removeNodeId(div.parentNode.id);
                                         }
                                         else{
                                             div.parentNode.removeChild(div);
