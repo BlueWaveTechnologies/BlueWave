@@ -885,6 +885,43 @@ li.tree-node:hover {
 /**************************************************************************/
 /** Admin Panel
 /**************************************************************************/
+
+.admin-panel {
+    border-top: 1px solid #dcdcdc;
+    width: 100%;
+    height: 100%;
+}
+
+.admin-sidebar {
+    width: 65px;
+    background-color: #19455a;
+}
+
+.admin-sidebar .fas {
+    color: #fff;
+    height: 65px;
+    width: 65px;
+    text-align: center;
+    font-size: 30px;
+    line-height: 65px;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.admin-sidebar .fas:hover{
+    background-color: #026698;
+}
+
+.admin-sidebar .selected {
+    background-color: #007cba;
+}
+
+.admin-landing-page {
+    text-align: center;
+    font-size: 200px;
+    color: #e6e6e6;
+}
+
 .user-status {
     display: inline-block;
     background-color: #ccc;
