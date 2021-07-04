@@ -23,6 +23,7 @@ import java.io.IOException;
 public class WebServices extends WebService {
 
     private Database database;
+    private AdminService adminService;
     private DashboardService dashboardService;
     private MapService mapService;
     private ReportService reportService;
@@ -55,6 +56,7 @@ public class WebServices extends WebService {
 
 
       //Instantiate additional web services
+        adminService = new AdminService(database, webConfig);
         dashboardService = new DashboardService(this, web, database);
         mapService = new MapService();
         reportService = new ReportService();
@@ -192,7 +194,10 @@ public class WebServices extends WebService {
 
         WebService ws;
         ServiceRequest serviceRequest = null;
-        if (service.equals("map")){
+        if (service.equals("admin")){
+            ws = adminService;
+        }
+        else if (service.equals("map")){
             ws = mapService;
         }
         else if (service.equals("report")){
@@ -315,8 +320,14 @@ public class WebServices extends WebService {
 
 
       //Create web socket
-        if (service.equals("report")){
+        if (service.equals("admin")){
+            adminService.createWebSocket(request, response);
+        }
+        else if (service.equals("report")){
             reportService.createWebSocket(request, response);
+        }
+        else if (service.equals("query")){
+            queryService.createWebSocket(request, response);
         }
         else{
             new WebSocketListener(request, response){
@@ -340,38 +351,37 @@ public class WebServices extends WebService {
   //**************************************************************************
   //** onCreate
   //**************************************************************************
-    public void onCreate(Object obj){
-        notify("create",obj);
+    public void onCreate(Object obj, ServiceRequest request){
+        notify("create", (Model) obj, (bluewave.app.User) request.getUser());
     };
 
 
   //**************************************************************************
   //** onUpdate
   //**************************************************************************
-    public void onUpdate(Object obj){
-        notify("update",obj);
+    public void onUpdate(Object obj, ServiceRequest request){
+        notify("update", (Model) obj, (bluewave.app.User) request.getUser());
     };
 
 
   //**************************************************************************
   //** onDelete
   //**************************************************************************
-    public void onDelete(Object obj){
-        notify("delete",obj);
+    public void onDelete(Object obj, ServiceRequest request){
+        notify("delete", (Model) obj, (bluewave.app.User) request.getUser());
     };
 
 
   //**************************************************************************
   //** notify
   //**************************************************************************
-    public void notify(String action, Object obj){
-        Model model = (Model) obj;
+    public void notify(String action, Model model, bluewave.app.User user){
+        Long userID = user==null ? null : user.getID();
         synchronized(listeners){
             Iterator<Long> it = listeners.keySet().iterator();
             while(it.hasNext()){
-                Long id = it.next();
-                WebSocketListener ws = listeners.get(id);
-                ws.send(action+","+model.getClass().getSimpleName()+","+model.getID());
+                WebSocketListener ws = listeners.get(it.next());
+                ws.send(action+","+model.getClass().getSimpleName()+","+model.getID()+","+userID);
             }
         }
     }
