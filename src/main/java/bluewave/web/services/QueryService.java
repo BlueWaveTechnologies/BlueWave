@@ -6,12 +6,18 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Record;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.math.BigDecimal;
+import java.io.IOException;
 
 import javaxt.json.*;
 import javaxt.express.*;
 import javaxt.sql.Database;
+
+import javaxt.http.servlet.HttpServletRequest;
+import javaxt.http.servlet.HttpServletResponse;
+import javaxt.http.websocket.WebSocketListener;
 
 //******************************************************************************
 //**  QueryService
@@ -31,6 +37,9 @@ public class QueryService extends WebService {
     private List<String> completedJobs = new LinkedList<>();
 
     private ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
+
+    private ConcurrentHashMap<Long, WebSocketListener> listeners;
+    private static AtomicLong webSocketID;
 
 
   //**************************************************************************
@@ -72,10 +81,15 @@ public class QueryService extends WebService {
         this.graph = graph;
 
 
+      //Websocket stuff
+        webSocketID = new AtomicLong(0);
+        listeners = new ConcurrentHashMap<>();
+
+
       //Spawn threads used to execute queries
         int numThreads = 1; //TODO: Make configurable...
         for (int i=0; i<numThreads; i++){
-            new Thread(new QueryProcessor()).start();
+            new Thread(new QueryProcessor(this)).start();
         }
     }
 
@@ -113,6 +127,46 @@ public class QueryService extends WebService {
         }
         else{
             return query(request, false);
+        }
+    }
+
+
+  //**************************************************************************
+  //** createWebSocket
+  //**************************************************************************
+    public void createWebSocket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        //if (!authorized(request)) throw new IOException("Not Authorized");
+
+        new WebSocketListener(request, response){
+            private Long id;
+            public void onConnect(){
+                id = webSocketID.incrementAndGet();
+                synchronized(listeners){
+                    listeners.put(id, this);
+                }
+            }
+            public void onDisconnect(int statusCode, String reason){
+                synchronized(listeners){
+                    listeners.remove(id);
+                }
+            }
+        };
+    }
+
+
+  //**************************************************************************
+  //** notify
+  //**************************************************************************
+    private void notify(QueryJob job){
+        String msg = job.id+","+job.status;
+        synchronized(listeners){
+            Iterator<Long> it = listeners.keySet().iterator();
+            while(it.hasNext()){
+                Long id = it.next();
+                WebSocketListener ws = listeners.get(id);
+                ws.send(msg);
+            }
         }
     }
 
@@ -159,6 +213,7 @@ public class QueryService extends WebService {
             QueryJob job = new QueryJob(user.getID(), query, offset, limit, params);
             String key = job.getKey();
             job.log();
+            notify(job);
 
 
           //Update list of jobs
@@ -501,6 +556,7 @@ public class QueryService extends WebService {
           //Update job status
             job.status = "canceled";
             job.updated = new javaxt.utils.Date();
+            notify(job);
 
 
           //TODO: Figure out how to cancel a query
@@ -829,6 +885,12 @@ public class QueryService extends WebService {
    */
     private class QueryProcessor implements Runnable {
 
+        private QueryService queryService;
+
+        public QueryProcessor(QueryService queryService){
+            this.queryService = queryService;
+        }
+
         public void run() {
 
             while (true) {
@@ -865,6 +927,7 @@ public class QueryService extends WebService {
                             job.status = "running";
                             job.updated = new javaxt.utils.Date();
                             long startTime = System.currentTimeMillis();
+                            queryService.notify(job);
 
 
                           //Open database connection
@@ -919,6 +982,7 @@ public class QueryService extends WebService {
                           //Update job status
                             job.status = "complete";
                             job.updated = new javaxt.utils.Date();
+                            queryService.notify(job);
                         }
                         catch(Exception e){
                             if (session!=null) session.close();
@@ -929,7 +993,7 @@ public class QueryService extends WebService {
                             else{
                                 job.status = "failed";
                                 job.updated = new javaxt.utils.Date();
-
+                                queryService.notify(job);
 
                                 java.io.PrintStream ps = null;
                                 try {
