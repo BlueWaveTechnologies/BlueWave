@@ -81,24 +81,24 @@ public class DashboardService extends WebService {
   //**************************************************************************
   //** onCreate
   //**************************************************************************
-    public void onCreate(Object obj){
-        ws.onCreate(obj);
+    public void onCreate(Object obj, ServiceRequest request){
+        ws.onCreate(obj, request);
     };
 
 
   //**************************************************************************
   //** onUpdate
   //**************************************************************************
-    public void onUpdate(Object obj){
-        ws.onUpdate(obj);
+    public void onUpdate(Object obj, ServiceRequest request){
+        ws.onUpdate(obj, request);
     };
 
 
   //**************************************************************************
   //** onDelete
   //**************************************************************************
-    public void onDelete(Object obj){
-        ws.onDelete(obj);
+    public void onDelete(Object obj, ServiceRequest request){
+        ws.onDelete(obj, request);
     };
 
 
@@ -228,7 +228,7 @@ public class DashboardService extends WebService {
 
 
           //Fire event
-            if (isNew) onCreate(dashboard); else onUpdate(dashboard);
+            if (isNew) onCreate(dashboard, request); else onUpdate(dashboard, request);
 
 
           //Return response
@@ -510,7 +510,7 @@ public class DashboardService extends WebService {
             dashboard.setThumbnail(img.getByteArray(format));
             dashboard.save();
 
-            onUpdate(dashboard);
+            onUpdate(dashboard, request);
             return new ServiceResponse(200);
         }
         catch(Exception e){
