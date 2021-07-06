@@ -163,6 +163,9 @@
 	    <plugin>
 	    <groupId>org.sonarsource.scanner.maven</groupId>
 	    <artifactId>sonar-maven-plugin</artifactId>
+	    <configuration>
+		     <skip>true</skip>
+	     </configuration>
 	    <version>3.9.0.2155</version>
 	    <executions>
 	    <execution>
