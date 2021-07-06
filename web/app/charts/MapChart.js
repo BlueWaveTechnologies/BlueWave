@@ -62,17 +62,22 @@ bluewave.charts.MapChart = function(parent, config) {
     this.update = function(chartConfig, data){
         this.clear();
         var parent = svg.node().parentNode;
+        console.log(chartConfig);
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
 
-            if(chartConfig.mapProjectionName === "Albers USA"){
+            if(chartConfig.mapProjectionName == "Ablers USA"){
                 getData("states", function(mapData) {
+                    console.log(data);
+                    console.log(mapData);
                     var states = topojson.feature(mapData, mapData.objects.states);
                     var projection = d3.geoIdentity()
                         .fitSize([width,height],states);
                     var path = d3.geoPath().projection(projection);
 
+                mapArea.selectAll('circle').remove();
+                if(chartConfig.mapType === "Point"){
                     mapArea.selectAll("path")
                         .data(states.features)
                         .enter()
@@ -83,26 +88,49 @@ bluewave.charts.MapChart = function(parent, config) {
                     projection = d3.geoAlbersUsa()
                         .scale(1850)
                         .translate([(width/2)+50, (height/2)-15]);
-                    mapArea.selectAll('circle').remove();
-                    if(chartConfig.mapType === "Point"){
-                        data.forEach(function(d){
-                            var lat = parseFloat(d.lat);
-                            var lon = parseFloat(d.lon);
-                            if (isNaN(lat) || isNaN(lon))return;
-                            var coord = projection([lon, lat]);
-                            if (!coord) return;
-                            mapArea.append("circle")
-                                .attr("cx", coord[0])
-                                .attr("cy", coord[1])
-                                .attr("r", "8px")
-                                .style("fill", "rgb(217,91,67)");
 
-                        })
+                    data.forEach(function(d){
+                        var lat = parseFloat(d.lat);
+                        var lon = parseFloat(d.lon);
+                        if (isNaN(lat) || isNaN(lon))return;
+                        var coord = projection([lon, lat]);
+                        if (!coord) return;
+                        mapArea.append("circle")
+                            .attr("cx", coord[0])
+                            .attr("cy", coord[1])
+                            .attr("r", "8px")
+                            .style("fill", "rgb(217,91,67)");
+
+                    })
+                }else if(chartConfig.mapType === "Area"){
+                    data.forEach(function(d){
+                        var state = d.state;
+                        for(var i = 0; i < states.features.length; i++){
+                            if(state == states.features[i].properties.code){
+                                states.features[i].properties.inData = true;
+                            }
+                        }
+                    });
+                    mapArea.selectAll("path")
+                        .data(states.features)
+                        .enter()
+                        .append("path")
+                        .attr('d', path)
+                        .attr('stroke', 'white')
+                        .attr('fill', function(d){
+                            var inData = d.properties.inData;
+                            console.log(inData);
+                            if(inData){
+                                return "lightblue";
+                            }else{
+                                return "lightgrey";
+                            }
+                        });
+
                     }
                 });
-            }else{
+            }else if(chartConfig.mapProjectionName == "Ablers"){
                 getData("countries", function(mapData){
-                    console.log(mapData);
                     var countries = topojson.feature(mapData, mapData.objects.countries);
                     var projection = d3.geoAlbers();
                     var path = d3.geoPath().projection(projection);
@@ -113,6 +141,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         .attr('d', path)
                         .attr('fill', 'lightgray')
                         .attr('stroke', 'white');
+                    mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
                         data.forEach(function(d){
                         var lat = parseFloat(d.lat);

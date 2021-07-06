@@ -232,11 +232,6 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var showHideDropDowns = function(){
         if(chartConfig.mapType==="Point"){
-            //Clear our the inputs.
-            mapInputs.lat.clear();
-            mapInputs.long.clear();
-            mapInputs.mapValue.clear();
-            mapProjection.clear();
 
             //We clear out the values from the chartConfig
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
@@ -259,10 +254,6 @@ if(!bluewave.charts) bluewave.charts={};
 
         };
         if(chartConfig.mapType==="Area"){
-            mapInputs.lat.clear();
-            mapInputs.long.clear();
-            mapInputs.mapValue.clear();
-            mapProjection.clear();
 
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
@@ -287,9 +278,18 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapPreview
   //**************************************************************************
     var createMapPreview = function(){
-        if(chartConfig.mapType===null || chartConfig.latitude===null ||
+        if(chartConfig.mapType===null){
+            return;
+        }
+        if(chartConfig.mapType=="Point" && (chartConfig.latitude===null ||
             chartConfig.longitude===null || chartConfig.mapValue===null ||
-            chartConfig.mapProjectionValue===null) return;
+            chartConfig.mapProjectionValue===null)){
+            return;
+        }
+        if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
+            chartConfig.mapProjectionValue===null)){
+            return;
+        }
         onRender(previewArea, function() {
             var data = inputData[0];
             mapArea.update(chartConfig, data);
