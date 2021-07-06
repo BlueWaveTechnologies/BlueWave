@@ -11,6 +11,7 @@
         <sonar.sources>src/,web/</sonar.sources>
         <sonar.login>b08d6d0ddff1f889a5e8f28cc3282f8321a542bb</sonar.login>
         <sonar.exclusions>**/*.sql,web/data/*,web/lib/*</sonar.exclusions>
+					     <sonar.skip>true</sonar.skip>
     </properties>
 
   <!-- =========================================================== -->
@@ -148,9 +149,6 @@
 	    <plugin>
 	    <groupId>org.sonarsource.scanner.maven</groupId>
 	    <artifactId>sonar-maven-plugin</artifactId>
-	    <configuration>
-		     <skip>true</skip>
-	     </configuration>
 	    <version>3.9.0.2155</version>
 	    <executions>
 	    <execution>
