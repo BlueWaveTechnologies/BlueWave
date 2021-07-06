@@ -23,7 +23,7 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
       - name: Run Sonar
-        run: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}  mvn -e --batch-mode  clean verify sonar:sonar -Dsonar.login=${{ secrets.GITHUB_TOKEN }} -Dsonar.organization=centrifugetech -Dsonar.projectKey=CentrifugeTech_BlueWave  
+        run: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}  mvn -e --batch-mode -Dsonar.skip=false  clean verify sonar:sonar -Dsonar.login=${{ secrets.GITHUB_TOKEN }} -Dsonar.organization=centrifugetech -Dsonar.projectKey=CentrifugeTech_BlueWave  
   build:
     runs-on: ubuntu-latest
     steps:
