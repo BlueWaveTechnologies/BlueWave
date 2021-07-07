@@ -62,15 +62,16 @@ bluewave.charts.MapChart = function(parent, config) {
     this.update = function(chartConfig, data){
         this.clear();
         var parent = svg.node().parentNode;
-        console.log(chartConfig);
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
 
+            var colorScale = d3.scaleThreshold()
+                .domain([10000, 100000, 300000, 600000, 1000000, 1500000])
+                .range(d3.schemeBlues[7]);
+
             if(chartConfig.mapProjectionName == "Ablers USA"){
                 getData("states", function(mapData) {
-                    console.log(data);
-                    console.log(mapData);
                     var states = topojson.feature(mapData, mapData.objects.states);
                     var projection = d3.geoIdentity()
                         .fitSize([width,height],states);
@@ -108,6 +109,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         for(var i = 0; i < states.features.length; i++){
                             if(state == states.features[i].properties.code){
                                 states.features[i].properties.inData = true;
+                                states.features[i].properties.mapValue = d[chartConfig.mapValue];
                             }
                         }
                     });
@@ -119,9 +121,8 @@ bluewave.charts.MapChart = function(parent, config) {
                         .attr('stroke', 'white')
                         .attr('fill', function(d){
                             var inData = d.properties.inData;
-                            console.log(inData);
                             if(inData){
-                                return "lightblue";
+                                return colorScale(d.properties.mapValue);
                             }else{
                                 return "lightgrey";
                             }
@@ -131,6 +132,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 });
             }else if(chartConfig.mapProjectionName == "Ablers"){
                 getData("countries", function(mapData){
+                    console.log(mapData);
                     var countries = topojson.feature(mapData, mapData.objects.countries);
                     var projection = d3.geoAlbers();
                     var path = d3.geoPath().projection(projection);
