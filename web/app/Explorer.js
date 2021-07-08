@@ -16,9 +16,8 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor; //popup dialogs
-    var supplyChainEditor;
-    var userManager;
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, userManager; //popup dialogs
+    var windows = [];
     var zoom = 0;
 
 
@@ -118,6 +117,11 @@ bluewave.Explorer = function(parent, config) {
             if (button.hasOwnProperty(buttonName)){
                 button[buttonName].disable();
             }
+        }
+
+      //Hide any popup dialogs
+        for (var i in windows){
+            windows[i].hide();
         }
 
         zoom = 0;
@@ -1212,7 +1216,7 @@ bluewave.Explorer = function(parent, config) {
     var showQuery = function(query, callback, scope){
         if (!dbView){
 
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Query",
                 width: 1020,
                 height: 600,
@@ -1271,7 +1275,7 @@ bluewave.Explorer = function(parent, config) {
     var editChart = function(node){
         if (!chartEditor){
 
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Chart",
                 width: 1060,
                 height: 600,
@@ -1340,7 +1344,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editSankey = function(node){
         if (!sankeyEditor){
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Sankey",
                 width: 1680,
                 height: 920,
@@ -1413,7 +1417,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editSupplyChain = function(node){
         if (!supplyChainEditor){
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Supply Chain",
                 width: 1680,
                 height: 920,
@@ -1494,7 +1498,7 @@ bluewave.Explorer = function(parent, config) {
 
       //Create layoutEditor as needed
         if (!layoutEditor){
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Layout",
                 width: 1425, //Up to 4 dashboard items at 250px width
                 height: 839,
@@ -1564,9 +1568,9 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** createWindow
+  //** createNodeEditor
   //**************************************************************************
-    var createWindow = function(conf){
+    var createNodeEditor = function(conf){
 
 
         merge(conf, {
@@ -1591,7 +1595,7 @@ bluewave.Explorer = function(parent, config) {
         }, config.style.window);
 
 
-        var win = new javaxt.dhtml.Window(document.body, {
+        var win = createWindow({
             title: conf.title,
             width: conf.width,
             height: conf.height,
@@ -1620,6 +1624,16 @@ bluewave.Explorer = function(parent, config) {
             }
         });
 
+        return win;
+    };
+
+
+  //**************************************************************************
+  //** createWindow
+  //**************************************************************************
+    var createWindow = function(config){
+        var win = new javaxt.dhtml.Window(document.body, config);
+        windows.push(win);
         return win;
     };
 
@@ -1879,7 +1893,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editName = function(name, callback){
         if (!nameEditor){
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Save Dashboard",
                 width: 450,
                 valign: "top",
@@ -1963,7 +1977,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editUsers = function(){
         if (!userManager){
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Manage Access",
                 width: 650,
                 height: 500,
