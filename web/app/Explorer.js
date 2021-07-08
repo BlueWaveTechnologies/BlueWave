@@ -31,7 +31,7 @@ bluewave.Explorer = function(parent, config) {
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
-        if (!config.queryService) config.queryService = "query/"
+        if (!config.queryService) config.queryService = "query/";
 
 
       //Create main panel
@@ -463,13 +463,6 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** notify
-  //**************************************************************************
-    this.notify = function(op, model, id){
-    };
-
-
-  //**************************************************************************
   //** save
   //**************************************************************************
     this.save = function(){
@@ -510,6 +503,7 @@ bluewave.Explorer = function(parent, config) {
 
             post("dashboard", JSON.stringify(dashboard),{
                 success: function(text) {
+                    me.onUpdate();
                     id = parseInt(text);
                     if (thumbnail){
                         saveThumbnail(id, function(request){
@@ -658,7 +652,6 @@ bluewave.Explorer = function(parent, config) {
             editName(name, function(inputs){
                 name = inputs.name;
                 me.save();
-                me.onUpdate();
             });
         };
 
