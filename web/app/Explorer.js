@@ -1012,6 +1012,19 @@ bluewave.Explorer = function(parent, config) {
                 addEventListeners(node);
 
                 break;
+            case "map":
+                    var node = createNode({
+                        name: title,
+                        type: nodeType,
+                        icon: icon,
+                        content: i,
+                        position: [pos_x, pos_y],
+                        inputs: 1,
+                        outputs: 0
+                    });
+
+                addEventListeners(node);
+                break;
             default:
 
                 var node = createNode({
@@ -1142,6 +1155,13 @@ bluewave.Explorer = function(parent, config) {
 
                 node.ondblclick = function(){
                     editLayout(this);
+                };
+
+                break;
+            case "map":
+
+                node.ondblclick = function(){
+                    editMap(this);
                 };
 
                 break;
@@ -1343,6 +1363,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editMap = function(node){
         if(!mapEditor){
+            console.log("Are we here?");
             var win = createNodeEditor({
                 title: "Edit Map",
                 width: 1680,
@@ -1367,8 +1388,10 @@ bluewave.Explorer = function(parent, config) {
                         }, this);
                     }
                     else{
+                        updateTitle(node, node.config.chartTitle);
                         win.close();
                     }
+                    button.layout.enable();
                 }
             });
 
