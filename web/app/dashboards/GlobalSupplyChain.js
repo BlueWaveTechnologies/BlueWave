@@ -1360,6 +1360,7 @@ bluewave.dashboards.GlobalSupplyChain = function (parent, config) {
   //** updateMontlyCharts
   //**************************************************************************
     const parseDate = function (str){
+        var date;
         var idx = str.indexOf("_");
         if (idx>-1){
             var year = parseInt(str.substring(idx+1));
@@ -1382,7 +1383,8 @@ bluewave.dashboards.GlobalSupplyChain = function (parent, config) {
             date = new Date(str);
         }
         return date;
-    }
+    };
+    
 
   //**************************************************************************
   //** Utils

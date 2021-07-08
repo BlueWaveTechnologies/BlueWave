@@ -101,8 +101,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
           //Parse data and update combobox
-            for (var i in productTypes){
-                var productType = productTypes[i];
+            for (var type in productTypes){
+                var productType = productTypes[type];
 
               //Update combobox
                 productOptions.add(productType, productType);
@@ -452,11 +452,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
       //Scale the range of the data
         x.domain(d3.extent(data, function(d) { return d.date; }));
-        if (useLogScale) {
-            y.domain([minY, maxY]);
-        } else {
-            y.domain([minY, maxY]);
-        }
+        y.domain([minY, maxY]);
+
 
 
         var colors = [

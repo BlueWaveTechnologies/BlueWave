@@ -16,8 +16,8 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, mapEditor; //popup dialogs
-    var supplyChainEditor;
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, userManager, mapEditor; //popup dialogs
+    var windows = [];
     var zoom = 0;
 
 
@@ -30,7 +30,7 @@ bluewave.Explorer = function(parent, config) {
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
-        if (!config.queryService) config.queryService = "query/"
+        if (!config.queryService) config.queryService = "query/";
 
 
       //Create main panel
@@ -90,6 +90,14 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** getDashboardID
+  //**************************************************************************
+    this.getDashboardID = function(){
+        return id;
+    };
+
+
+  //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
@@ -111,7 +119,12 @@ bluewave.Explorer = function(parent, config) {
             }
         }
 
-        setZoom(0);
+      //Hide any popup dialogs
+        for (var i in windows){
+            windows[i].hide();
+        }
+
+        zoom = 0;
     };
 
 
@@ -120,10 +133,10 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   /** Used to render a dashboard
    *  @param dashboard Json with dashboard info
-   *  @param readOnly Preferred dashboard state. If true, and a layout exists
-   *  then the edit view will be unavailable
+   *  @param readOnly If true, prevent user from editing
+   *  @param view Preferred view ("Edit", "Preview", or "Dashboard")
    */
-    this.update = function(dashboard, readOnly){
+    this.update = function(dashboard, readOnly, view){
 
       //Show mask
         mask.show();
@@ -139,7 +152,7 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Show/hide the toggleButton as needed
-        if (readOnly===true){
+        if (view==="Dashboard"){
             toggleButton.hide();
         }
         else{
@@ -155,10 +168,12 @@ bluewave.Explorer = function(parent, config) {
         thumbnail = dashboard.thumbnail;
 
 
-      //Enable default buttons
-        button.addData.enable();
-        button.sankeyChart.enable();
-        button.supplyChain.enable();
+      //Set view mode
+        drawflow.editor_mode = readOnly ? "view" : "edit";
+
+
+      //Update buttons
+        updateButtons();
 
 
       //Return early if the dashboard is missing config info
@@ -179,7 +194,6 @@ bluewave.Explorer = function(parent, config) {
 
       //Update nodes
         var csvRequests = 0;
-        var hasLayout = false;
         for (var nodeID in dashboard.info.nodes) {
             if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
@@ -247,15 +261,13 @@ bluewave.Explorer = function(parent, config) {
 
 
                   //Update buttons
-                    for (var buttonName in button) {
-                        if (button.hasOwnProperty(buttonName)){
-                            button[buttonName].enable();
+                    if (!me.isReadOnly()){
+                        for (var buttonName in button) {
+                            if (button.hasOwnProperty(buttonName)){
+                                button[buttonName].enable();
+                            }
                         }
                     }
-                }
-
-                if (node.type==="layout"){
-                    hasLayout = true;
                 }
             }
         }
@@ -273,20 +285,8 @@ bluewave.Explorer = function(parent, config) {
 
 
         var onReady = function(){
-            if (readOnly && hasLayout){
-                toggleButton.setValue("Preview");
-            }
-            else{
-                toggleButton.setValue("Edit");
-                toggleButton.show();
-            }
-
-            if (id){
-                button["save"].enable();
-                button["copy"].enable();
-                button["delete"].enable();
-            }
-
+            updateButtons();
+            me.setView(view);
             mask.hide();
             setZoom(dashboard.info.zoom);
         };
@@ -314,6 +314,63 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** updateButtons
+  //**************************************************************************
+    var updateButtons = function(){
+        if (me.isReadOnly()){
+            for (var key in button) {
+                if (button.hasOwnProperty(key)){
+                    button[key].disable();
+                }
+            }
+        }
+        else{
+
+            var hasData = false;
+            for (var key in nodes) {
+                if (nodes.hasOwnProperty(key)){
+                    var node = nodes[key];
+                    if (node.type==="addData"){
+                        if (node.csv){
+                            hasData = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (hasData){
+                for (var key in button) {
+                    if (button.hasOwnProperty(key)){
+                        button[key].enable();
+                    }
+                }
+            }
+            else{
+                button.addData.enable();
+                button.sankeyChart.enable();
+                button.supplyChain.enable();
+            }
+
+
+          //Update toolbar
+            if (isNaN(id)){
+                button["save"].disable();
+                button["edit"].disable();
+                button["delete"].disable();
+                button["users"].disable();
+            }
+            else{
+                button["save"].enable();
+                button["edit"].enable();
+                button["delete"].enable();
+                button["users"].enable();
+            }
+        }
+    };
+
+
+  //**************************************************************************
   //** onUpdate
   //**************************************************************************
     this.onUpdate = function(){};
@@ -334,16 +391,70 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** setView
+  //**************************************************************************
+  /** */
+    this.setView = function(name){
+        if (!name) name = "Edit";
+        if (name==="Edit"){
+            toggleButton.setValue("Edit");
+            toggleButton.show();
+        }
+        else if (name==="Preview"){
+            toggleButton.show();
+            toggleButton.setValue("Preview");
+        }
+        else if (name==="Dashboard"){
+            toggleButton.show();
+
+
+            var hasLayout = false;
+            for (var key in nodes) {
+                if (nodes.hasOwnProperty(key)){
+                    var node = nodes[key];
+                    if (node.type==="layout"){
+                        hasLayout = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hasLayout){
+                toggleButton.hide();
+                toggleButton.setValue("Preview");
+            }
+            else{
+                toggleButton.setValue("Edit");
+            }
+        }
+    };
+
+
+  //**************************************************************************
+  //** getView
+  //**************************************************************************
+    this.getView = function(){
+        var name = toggleButton.getValue();
+        if (name==="Preview"){
+            if (!toggleButton.isVisible()) name = "Dashboard";
+        }
+        return name;
+    };
+
+
+  //**************************************************************************
   //** setReadOnly
   //**************************************************************************
     this.setReadOnly = function(readOnly){
         if (readOnly===true){
-            //Not implemented
+            if (me.isReadOnly()) return;
+            drawflow.editor_mode = "view";
         }
         else{
-            toggleButton.setValue("Edit");
-            toggleButton.show();
+            if (!me.isReadOnly()) return;
+            drawflow.editor_mode = "edit";
         }
+        updateButtons();
     };
 
 
@@ -351,7 +462,7 @@ bluewave.Explorer = function(parent, config) {
   //** isReadOnly
   //**************************************************************************
     this.isReadOnly = function(){
-        return !toggleButton.isVisible();
+        return (drawflow.editor_mode==="view");
     };
 
 
@@ -359,6 +470,9 @@ bluewave.Explorer = function(parent, config) {
   //** save
   //**************************************************************************
     this.save = function(){
+
+        if (me.isReadOnly()) return;
+
 
         waitmask.show(500);
         getName(function(formInputs){
@@ -393,6 +507,7 @@ bluewave.Explorer = function(parent, config) {
 
             post("dashboard", JSON.stringify(dashboard),{
                 success: function(text) {
+                    me.onUpdate();
                     id = parseInt(text);
                     if (thumbnail){
                         saveThumbnail(id, function(request){
@@ -520,14 +635,30 @@ bluewave.Explorer = function(parent, config) {
         button["save"].onClick = me.save;
 
 
-      //Copy button
-        button["copy"] = createButton(toolbar, {
-            label: "Copy",
-            icon: "fas fa-copy"
+//      //Copy button
+//        button["copy"] = createButton(toolbar, {
+//            label: "Copy",
+//            icon: "fas fa-copy",
+//            disabled: true
+//        });
+//        button["copy"].onClick = function(){
+//            alert("Not implemented");
+//        };
+
+
+      //Edit button
+        button["edit"] = createButton(toolbar, {
+            label: "Edit",
+            icon: "fas fa-edit",
+            disabled: true
         });
-        button["copy"].onClick = function(){
-            alert("Not implemented");
+        button["edit"].onClick = function(){
+            editName(name, function(inputs){
+                name = inputs.name;
+                me.save();
+            });
         };
+
 
 
       //Delete button
@@ -559,6 +690,19 @@ bluewave.Explorer = function(parent, config) {
                     }
                 }
             });
+        };
+
+
+        createSpacer(toolbar);
+
+
+      //Copy button
+        button["users"] = createButton(toolbar, {
+            label: "Manage Access",
+            icon: "fas fa-user-cog"
+        });
+        button["users"].onClick = function(){
+            editUsers();
         };
 
 
@@ -618,6 +762,42 @@ bluewave.Explorer = function(parent, config) {
             var inputID = info.input_id+"";
             var node = nodes[inputID];
             delete node.inputs[outputID+""];
+        });
+        drawflow.on('contextmenu', function(e) {
+            setTimeout(function(){
+                for (var key in nodes) {
+                    if (nodes.hasOwnProperty(key)){
+                        var node = nodes[key];
+                        var parentNode = node.parentNode.parentNode;
+                        var deleteDiv = parentNode.getElementsByClassName("drawflow-delete")[0];
+                        if (deleteDiv){
+                            parentNode.removeChild(deleteDiv);
+                            deleteDiv = document.createElement("div");
+                            deleteDiv.className = "drawflow-delete2";
+                            parentNode.appendChild(deleteDiv);
+                            deleteDiv.innerHTML = "&#x2715";
+                            deleteDiv.nodeID = parseInt(key);
+                            deleteDiv.onclick = function(){
+                                var div = this;
+                                var nodeID = div.nodeID;
+                                confirm("Are you sure you want to delete this node?",{
+                                    leftButton: {label: "Yes", value: true},
+                                    rightButton: {label: "No", value: false},
+                                    callback: function(yes){
+                                        if (yes){
+                                            drawflow.removeNodeId("node-"+nodeID);
+                                        }
+                                        else{
+                                            div.parentNode.removeChild(div);
+                                        }
+                                    }
+                                });
+
+                            };
+                        }
+                    }
+                }
+            },200);
         });
 
 
@@ -765,7 +945,7 @@ bluewave.Explorer = function(parent, config) {
 
         button["save"].enable();
         if (id){
-            button["copy"].enable();
+            button["edit"].enable();
             button["delete"].enable();
         }
 
@@ -965,14 +1145,6 @@ bluewave.Explorer = function(parent, config) {
                 };
 
                 break;
-
-            case "map":
-
-                node.ondblclick = function(){
-                    editMap(this);
-                };
-
-                break;
             default:
 
                 node.ondblclick = function(){
@@ -1044,7 +1216,7 @@ bluewave.Explorer = function(parent, config) {
     var showQuery = function(query, callback, scope){
         if (!dbView){
 
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Query",
                 width: 1020,
                 height: 600,
@@ -1103,7 +1275,7 @@ bluewave.Explorer = function(parent, config) {
     var editChart = function(node){
         if (!chartEditor){
 
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Chart",
                 width: 1060,
                 height: 600,
@@ -1171,7 +1343,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editMap = function(node){
         if(!mapEditor){
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Map",
                 width: 1680,
                 height: 920,
@@ -1235,7 +1407,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editSankey = function(node){
         if (!sankeyEditor){
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Sankey",
                 width: 1680,
                 height: 920,
@@ -1308,7 +1480,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editSupplyChain = function(node){
         if (!supplyChainEditor){
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Supply Chain",
                 width: 1680,
                 height: 920,
@@ -1389,7 +1561,7 @@ bluewave.Explorer = function(parent, config) {
 
       //Create layoutEditor as needed
         if (!layoutEditor){
-            var win = createWindow({
+            var win = createNodeEditor({
                 title: "Edit Layout",
                 width: 1425, //Up to 4 dashboard items at 250px width
                 height: 839,
@@ -1459,9 +1631,9 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** createWindow
+  //** createNodeEditor
   //**************************************************************************
-    var createWindow = function(conf){
+    var createNodeEditor = function(conf){
 
 
         merge(conf, {
@@ -1486,7 +1658,7 @@ bluewave.Explorer = function(parent, config) {
         }, config.style.window);
 
 
-        var win = new javaxt.dhtml.Window(document.body, {
+        var win = createWindow({
             title: conf.title,
             width: conf.width,
             height: conf.height,
@@ -1515,6 +1687,16 @@ bluewave.Explorer = function(parent, config) {
             }
         });
 
+        return win;
+    };
+
+
+  //**************************************************************************
+  //** createWindow
+  //**************************************************************************
+    var createWindow = function(config){
+        var win = new javaxt.dhtml.Window(document.body, config);
+        windows.push(win);
         return win;
     };
 
@@ -1589,6 +1771,7 @@ bluewave.Explorer = function(parent, config) {
 
             var img = document.createElement('img');
             img.className = "noselect";
+            img.style.width = "100%";
             img.onload = function() {
                 el.appendChild(this);
             };
@@ -1773,7 +1956,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editName = function(name, callback){
         if (!nameEditor){
-            var win = new javaxt.dhtml.Window(document.body, {
+            var win = createWindow({
                 title: "Save Dashboard",
                 width: 450,
                 valign: "top",
@@ -1793,22 +1976,6 @@ bluewave.Explorer = function(parent, config) {
                         name: "description",
                         label: "Description",
                         type: "textarea"
-                    },
-                    {
-                        name: "private",
-                        label: "Private",
-                        type: "radio",
-                        alignment: "vertical",
-                        options: [
-                            {
-                                label: "True",
-                                value: true
-                            },
-                            {
-                                label: "False",
-                                value: false
-                            }
-                        ]
                     }
                 ],
                 buttons: [
@@ -1839,7 +2006,7 @@ bluewave.Explorer = function(parent, config) {
                                 }
                                 else{
                                     win.close();
-                                    if (callback) callback.apply(me,[inputs]);
+                                    nameEditor.onSubmit(inputs);
                                 }
                             });
                         }
@@ -1858,25 +2025,58 @@ bluewave.Explorer = function(parent, config) {
         var nameField = nameEditor.findField("name");
         if (nameField.resetColor) nameField.resetColor();
         if (name) nameEditor.setValue("name", name);
-        nameEditor.setValue("private", true);
 
+        nameEditor.onSubmit = function(inputs){
+            if (callback) callback.apply(me,[inputs]);
+        };
 
+        waitmask.hide();
         nameEditor.show();
     };
+
+
+  //**************************************************************************
+  //** editUsers
+  //**************************************************************************
+    var editUsers = function(){
+        if (!userManager){
+            var win = createWindow({
+                title: "Manage Access",
+                width: 650,
+                height: 500,
+                valign: "top",
+                modal: true,
+                resizable: true,
+                shrintToFit: true,
+                style: merge({body: {padding:0}},config.style.window)
+            });
+
+            userManager = new bluewave.Permissions(win.getBody(),config);
+
+            userManager.show = function(){
+                win.show();
+            };
+        }
+
+        userManager.update(id);
+        userManager.show();
+    };
+
 
   //**************************************************************************
   //** checkConnection
   //**************************************************************************
     var checkConnection = function(layoutNode, node){
         var connected = false;
-        for(var inputID in layoutNode.inputs){
-            tempNode = nodes[inputID];
-            if(tempNode === node){
+        for (var inputID in layoutNode.inputs){
+            var tempNode = nodes[inputID];
+            if (tempNode === node){
                 connected = true;
             }
         }
         return connected;
-    }
+    };
+
 
   //**************************************************************************
   //** updateDashboard

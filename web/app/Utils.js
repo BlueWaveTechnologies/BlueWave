@@ -317,11 +317,21 @@ bluewave.utils = {
         div.setValue = function(val){
             for (var i=0; i<div.childNodes.length; i++){
                 var btn = div.childNodes[i];
-                if (btn.innerHTML===val){
+                if (btn.innerText===val){
                     btn.click();
                     break;
                 }
             }
+        };
+
+        div.getValue = function(){
+            for (var i=0; i<div.childNodes.length; i++){
+                var btn = div.childNodes[i];
+                if (btn.className==="toggle-button-active"){
+                    return btn.innerText;
+                }
+            }
+            return null;
         };
 
         return div;
@@ -349,8 +359,8 @@ bluewave.utils = {
 
         var width = config.width+"";
         var height = config.height+"";
-        if (width.indexOf("%")===-1) parseInt(width) + "px";
-        if (height.indexOf("%")===-1) parseInt(height) + "px";
+        if (width.indexOf("%")===-1) width = parseInt(width) + "px";
+        if (height.indexOf("%")===-1) height = parseInt(height) + "px";
 
 
         var div = document.createElement("div");
