@@ -13,6 +13,7 @@ bluewave.Homepage = function(parent, config) {
     var me = this;
     var mainDiv;
     var t = new Date().getTime();
+    var dashboardItems = [];
 
 
   //**************************************************************************
@@ -83,9 +84,20 @@ bluewave.Homepage = function(parent, config) {
 
 
   //**************************************************************************
+  //** getDashboardItems
+  //**************************************************************************
+  /** Returns all the dashboard items in the view
+   */
+    this.getDashboardItems = function(){
+        return dashboardItems;
+    };
+
+
+  //**************************************************************************
   //** refresh
   //**************************************************************************
     var refresh = function(){
+        dashboardItems = [];
         mainDiv.innerHTML = "";
         var dashboards = config.dataStores["Dashboard"];
         var groups = config.dataStores["DashboardGroup"];
@@ -112,18 +124,17 @@ bluewave.Homepage = function(parent, config) {
         var dashboards = config.dataStores["Dashboard"];
         var groups = config.dataStores["DashboardGroup"];
 
-
       //Create groups as needed
         if (groups.length===0){
             var myDashboards = [];
             var sharedDashboards = [];
             for (var i=0; i<dashboards.length; i++){
                 var dashboard = dashboards.get(i);
-                if (!dashboard.className || !dashboard.app){
-                    myDashboards.push(dashboard.id);
+                if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
+                    sharedDashboards.push(dashboard.id);
                 }
                 else{
-                    sharedDashboards.push(dashboard.id);
+                    myDashboards.push(dashboard.id);
                 }
             }
             if (myDashboards.length>0){
@@ -198,12 +209,14 @@ bluewave.Homepage = function(parent, config) {
             height: 230,
             subtitle: title
         });
+        dashboardItem.dashboard = dashboard;
+        dashboardItems.push(dashboardItem);
 
 
         dashboardItem.innerDiv.style.cursor = "pointer";
         dashboardItem.innerDiv.style.textAlign = "center";
         dashboardItem.innerDiv.onclick = function(){
-            me.onClick(dashboard);
+            me.onClick(dashboardItem);
         };
 
 
