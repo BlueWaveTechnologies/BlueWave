@@ -135,7 +135,7 @@ bluewave.Explorer = function(parent, config) {
         button.addData.enable();
         button.sankeyChart.enable();
         button.supplyChain.enable();
-        button.scatter.enable();
+        button.scatterChart.enable();
 
 
       //Return early if the dashboard is missing config info
@@ -603,7 +603,7 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
-        createMenuButton("scatterChart", "fas fa-link", "Scatter Chart" , menubar);
+        createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
     };
 
 
@@ -768,21 +768,19 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
 
-//            case "scatter":
-//                var node = createNode({
-//                    name: "Scatter Chart",
-//                    type: nodeType,
-//                    icon: "fas fa-link",
-//                    content: i,
-//                    position: [pos_x, pos_y],
-//                    inputs: 1,
-//                    outputs: 1
-//
-//
-//
-//                });
-//                addEventListeners(node);
-//                break;
+            case "scatterChart":
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 1
+
+                });
+                addEventListeners(node);
+                break;
             default:
 
                 var node = createNode({
@@ -907,6 +905,7 @@ bluewave.Explorer = function(parent, config) {
                 node.ondblclick = function(){
                     editScatter(this);
                 };
+                break;
             case "supplyChain":
 
                 node.ondblclick = function(){
@@ -1176,36 +1175,33 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
 
     var editScatter = function(node){
-                          if (!scatterEditor){
-                              var win = createWindow({
-                                  title: "Edit Scatter",
-                                  width: 1680,
-                                  height: 920,
-                                  resizable: true,
-                                  beforeClose: function(){
-                                      var chartConfig = scatterEditor.getConfig();
-                                      var node = scatterEditor.getNode();
-                                      var orgConfig = node.config;
-                                      if (!orgConfig) orgConfig = {};
-                                      if (isDirty(chartConfig, orgConfig)){
-                                          node.config = chartConfig;
-                                          updateTitle(node, node.config.chartTitle);
-                                          waitmask.show();
-                                          var el = scatterEditor.getChart();
-                                          if (el.show) el.show();
-                                          createPreview(el, function(canvas){
-                                              node.preview = canvas.toDataURL("image/png");
-                                              createThumbnail(node, canvas);
-                                              win.close();
-                                              waitmask.hide();
-                                          }, this);
-                                      }
-                                      else{
-                                          win.close();
-                                      }
-                                      button.layout.enable();
-                                  }
-                              });
+           if (!scatterEditor){
+             var win = createWindow({
+                 title: "Edit Scatter Chart",
+                 width: 1060,
+                 height: 600,
+                 beforeClose: function(){
+                     var scatterConfig = scatterEditor.getConfig();
+                     var node = scatterEditor.getNode();
+                     var orgConfig = node.config;
+                     if (!orgConfig) orgConfig = {};
+                     if (isDirty(scatterConfig, orgConfig)){
+                         node.config = scatterConfig;
+                         waitmask.show();
+                         var el = scatterEditor.getChart();
+                         createPreview(el, function(canvas){
+                             node.preview = canvas.toDataURL("image/png");
+                             createThumbnail(node, canvas);
+                             updateTitle(node, node.config.chartTitle);
+                             win.close();
+                             waitmask.hide();
+                         }, this);
+                     }
+                     else{
+                         win.close();
+                     }
+                 }
+             });
 
 
                               scatterEditor = new bluewave.charts.ScatterEditor(win.getBody(), config);
@@ -1219,13 +1215,15 @@ bluewave.Explorer = function(parent, config) {
                               };
                           }
 
-                        //Add custom getNode() method to the layoutEditor to return current node
-                          scatterEditor.getNode = function(){
-                              return node;
-                          };
-
-                          scatterEditor.update(node.config);
-                          scatterEditor.show();
+                         var data = [];
+                                for (var key in node.inputs) {
+                                    if (node.inputs.hasOwnProperty(key)){
+                                        var csv = node.inputs[key].csv;
+                                        data.push(csv);
+                                    }
+                                }
+                         scatterEditor.update(node.type, node.config, data, node);
+                         scatterEditor.show();
         };
 
   //**************************************************************************

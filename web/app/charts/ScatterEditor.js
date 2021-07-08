@@ -17,7 +17,7 @@ if(!bluewave) var bluewave={};
  *      scatter chart creation.
  ******************************************************************************/
 
-bluewave.ScatterEditor = function(parent, config) {
+bluewave.charts.ScatterEditor = function(parent, config) {
     var me = this;
     var currentNode;
     var panel;
