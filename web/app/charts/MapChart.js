@@ -127,24 +127,22 @@ bluewave.charts.MapChart = function(parent, config) {
                                 return "lightgrey";
                             }
                         });
-
                     }
                 });
             }else if(chartConfig.mapProjectionName == "Ablers"){
                 getData("countries", function(mapData){
-                    console.log(mapData);
                     var countries = topojson.feature(mapData, mapData.objects.countries);
                     var projection = d3.geoAlbers();
                     var path = d3.geoPath().projection(projection);
-                    mapArea.selectAll("path")
-                        .data(countries.features)
-                        .enter()
-                        .append("path")
-                        .attr('d', path)
-                        .attr('fill', 'lightgray')
-                        .attr('stroke', 'white');
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
+                        mapArea.selectAll("path")
+                            .data(countries.features)
+                            .enter()
+                            .append("path")
+                            .attr('d', path)
+                            .attr('fill', 'lightgray')
+                            .attr('stroke', 'white');
                         data.forEach(function(d){
                         var lat = parseFloat(d.lat);
                         var lon = parseFloat(d.lon);
@@ -158,6 +156,43 @@ bluewave.charts.MapChart = function(parent, config) {
                             .style("fill", "rgb(217,91,67)");
 
                         })
+                    }else if(chartConfig.mapType === "Area"){
+                        var aggregateState = 0;
+                        data.forEach(function(d){
+                            console.log(d);
+                            var state;
+                            var country;
+                            if(d.state) {
+                                state = d.state;
+                                aggregateState = aggregateState + parseFloat(d[chartConfig.mapValue]);
+                                console.log(aggregateState);
+                            }
+                           if(d.country) country = d.country;
+                            for(var i = 0; i < countries.features.length; i++){
+                                if(country == countries.features[i].properties.code){
+                                    countries.features[i].properties.inData = true;
+                                    countries.features[i].properties.mapValue = d[chartConfig.mapValue];
+                                }else if(countries.features[i].properties.code == "US"){
+                                    countries.features[i].properties.inData = true;
+                                    countries.features[i].properties.mapValue = aggregateState;
+                                    console.log(countries.features[i]);
+                                }
+                            }
+                        });
+                        mapArea.selectAll("path")
+                            .data(countries.features)
+                            .enter()
+                            .append("path")
+                            .attr('d', path)
+                            .attr('stroke', 'white')
+                            .attr('fill', function(d){
+                                var inData = d.properties.inData;
+                                if(inData){
+                                    return colorScale(d.properties.mapValue);
+                                }else{
+                                    return "lightgrey";
+                                }
+                            });
                     }
                 })
             }
