@@ -317,11 +317,21 @@ bluewave.utils = {
         div.setValue = function(val){
             for (var i=0; i<div.childNodes.length; i++){
                 var btn = div.childNodes[i];
-                if (btn.innerHTML===val){
+                if (btn.innerText===val){
                     btn.click();
                     break;
                 }
             }
+        };
+
+        div.getValue = function(){
+            for (var i=0; i<div.childNodes.length; i++){
+                var btn = div.childNodes[i];
+                if (btn.className==="toggle-button-active"){
+                    return btn.innerText;
+                }
+            }
+            return null;
         };
 
         return div;
