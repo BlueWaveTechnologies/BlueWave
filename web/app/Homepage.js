@@ -111,6 +111,13 @@ bluewave.Homepage = function(parent, config) {
                     groups = new javaxt.dhtml.DataStore(groups);
                     config.dataStores["DashboardGroup"] = groups;
                     render();
+                },
+                failure: function(){
+                    if (!document.user){ //standalone mode
+                        groups = new javaxt.dhtml.DataStore(groups);
+                        config.dataStores["DashboardGroup"] = groups;
+                        render();
+                    }
                 }
             });
         }
