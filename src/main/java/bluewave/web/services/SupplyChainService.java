@@ -304,7 +304,9 @@ public class SupplyChainService extends WebService {
                         while (it.hasNext()){
                             String key = it.next();
                             Object val = updates.get(key);
-                            stmt.append("SET n." + key + " = '" + val + "'\n");
+                            stmt.append("SET n." + key + " = ");
+                            if (val==null) stmt.append("null\n");
+                            else stmt.append("'" + val + "'\n");
                         }
                         session.run(stmt.toString());
                     }
@@ -603,7 +605,9 @@ public class SupplyChainService extends WebService {
                         while (it.hasNext()){
                             String key = it.next();
                             Object val = updates.get(key);
-                            stmt.append("SET n." + key + " = '" + val + "'\n");
+                            stmt.append("SET n." + key + " = ");
+                            if (val==null) stmt.append("null\n");
+                            else stmt.append("'" + val + "'\n");
                         }
                         session.run(stmt.toString());
                     }
@@ -995,7 +999,9 @@ public class SupplyChainService extends WebService {
                     while (it.hasNext()){
                         String key = it.next();
                         Object val = updates.get(key);
-                        stmt.append("SET n." + key + " = '" + val + "'\n");
+                        stmt.append("SET n." + key + " = ");
+                        if (val==null) stmt.append("null\n");
+                        else stmt.append("'" + val + "'\n");
                     }
                     session.run(stmt.toString());
                 }

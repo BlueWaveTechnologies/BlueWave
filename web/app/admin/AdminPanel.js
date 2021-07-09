@@ -14,8 +14,12 @@ bluewave.AdminPanel = function(parent, config) {
     var defaultConfig = {
 
     };
+    var waitmask;
+    var sidebar, mainPanel, landingPage;
+    var panel = {};
     var userAdmin;
     var ws;
+
 
   //**************************************************************************
   //** Constructor
@@ -25,20 +29,69 @@ bluewave.AdminPanel = function(parent, config) {
       //Parse config
         config = merge(config, defaultConfig);
         if (!config.style) config.style = javaxt.dhtml.style.default;
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;
+
+
+        var div = document.createElement("div");
+        div.className = "admin-panel";
+        parent.appendChild(div);
+        me.el = div;
+        addShowHide(me);
+
+
+      //Create table
+        var table = createTable();
+        div.appendChild(table);
+        var tbody = table.firstChild;
+        var tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        var td;
+
+
+      //Create side bar
+        td = document.createElement("td");
+        td.style.height = "100%";
+        tr.appendChild(td);
+        sidebar = document.createElement("div");
+        sidebar.className = "admin-sidebar";
+        sidebar.style.height = "100%";
+        td.appendChild(sidebar);
 
 
       //Create main panel
-        var mainPanel = document.createElement("div");
-        //mainPanel.style.borderTop = "1px solid #cccccc";
-        mainPanel.style.width = "100%";
-        mainPanel.style.height = "100%";
-        parent.appendChild(mainPanel);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.width = "100%";
+        tr.appendChild(td);
+        mainPanel = td;
 
 
-        userAdmin = new bluewave.UserAdmin(mainPanel, config);
+      //Create landing page
+        landingPage = document.createElement("div");
+        landingPage.className = "admin-landing-page noselect";
+        landingPage.innerHTML = '<i class="fas fa-cogs"></i>';
+        mainPanel.appendChild(landingPage);
+        addShowHide(landingPage);
 
-        me.el = mainPanel;
-        addShowHide(me);
+
+      //Create panels
+        createPanel("Users", "fas fa-users", bluewave.UserAdmin, config);
+        createPanel("Database", "fas fa-database", javaxt.express.DBView, {
+            waitmask: waitmask,
+            queryService: "admin/job/",
+            getTables: "admin/tables/",
+            style:{
+                table: javaxt.dhtml.style.default.table,
+                toolbar: javaxt.dhtml.style.default.toolbar,
+                toolbarButton: javaxt.dhtml.style.default.toolbarButton,
+                toolbarIcons: {
+                    run: "fas fa-play",
+                    cancel: "fas fa-stop"
+                }
+            }
+        });
+
     };
 
 
@@ -46,7 +99,12 @@ bluewave.AdminPanel = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        userAdmin.clear();
+
+        for (var key in panel) {
+            var app = panel[key].app;
+            if (app && app.clear) app.clear();
+        }
+
 
         if (ws){
             ws.stop();
@@ -60,8 +118,6 @@ bluewave.AdminPanel = function(parent, config) {
   //**************************************************************************
     this.update = function(){
 
-        userAdmin.update();
-
 
       //Create web socket listener
         if (!ws) ws = new javaxt.dhtml.WebSocket({
@@ -71,13 +127,11 @@ bluewave.AdminPanel = function(parent, config) {
                 var op = arr[0];
                 var model = arr[1];
                 var id = parseInt(arr[2]);
-                //var store = config.dataStores[model];
 
 
                 if (op=="webrequest" || op=="logoff"){
                     if (userAdmin) userAdmin.updateActivity(id, op);
                 }
-
 
             }
         });
@@ -86,9 +140,67 @@ bluewave.AdminPanel = function(parent, config) {
 
 
   //**************************************************************************
+  //** raisePanel
+  //**************************************************************************
+    this.raisePanel = function(name){
+        landingPage.hide();
+
+        for (var key in panel) {
+            if (key!==name) panel[key].body.hide();
+            panel[key].button.className =
+            panel[key].button.className.replace(" selected","").trim();
+        }
+
+        var p = panel[name];
+        p.body.show();
+        if (!p.app){
+            var cls = eval(p.className);
+            if (cls){
+                mainPanel.appendChild(p.body);
+                p.app = new cls(p.body, p.config);
+                if (p.app.update) p.app.update();
+                if (p.app instanceof bluewave.UserAdmin){
+                    userAdmin = p.app;
+                }
+            }
+        }
+        p.button.className += " selected";
+    };
+
+
+  //**************************************************************************
+  //** createPanel
+  //**************************************************************************
+    var createPanel = function(name, icon, className, config){
+        var button = document.createElement("div");
+        button.className = icon + " noselect";
+        button.onclick = function(){
+            me.raisePanel(name);
+        };
+        sidebar.appendChild(button);
+
+        var body = document.createElement("div");
+        body.style.height = "100%";
+        addShowHide(body);
+        body.hide();
+
+
+        panel[name] = {
+           button: button,
+           body: body,
+           className: className,
+           config: config,
+           app: null
+        };
+
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();

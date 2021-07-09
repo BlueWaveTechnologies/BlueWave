@@ -13,20 +13,24 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        nodes: {
-            input: {
+        nodes: [
+            {
+                icon: "fas fa-fill-drip",
+                label: "Raw Material"
+            },
+            {
                 icon: "fas fa-industry",
                 label: "Manufacturer"
             },
-            output: {
-                icon: "fas fa-hospital-user",
-                label: "End User"
-            },
-            distributor: {
+            {
                 icon: "fas fa-store-alt",
                 label: "Distributor"
+            },
+            {
+                icon: "fas fa-hospital-user",
+                label: "End User"
             }
-        }
+        ]
     };
     var sankeyEditor;
     var nodeEditor;
@@ -56,7 +60,16 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
         sankeyEditor.getNodeEditor = getNodeEditor;
+        sankeyEditor.onChange = function(){
+            me.onChange();
+        };
     };
+
+
+  //**************************************************************************
+  //** onChange
+  //**************************************************************************
+    this.onChange = function(){};
 
 
   //**************************************************************************
@@ -108,11 +121,26 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             nodeEditor = new javaxt.dhtml.Window(document.body, {
                 title: "Edit Node",
                 width: 550,
+                height: 776, //required because of the overflow...
                 valign: "top",
                 modal: true,
-                resizable: false,
+                resizable: true,
+                shrinkToFit: true,
                 style: config.style.window
             });
+
+
+            var div = document.createElement("div");
+            div.style.position = "relative";
+            div.style.height = "100%";
+            div.style.overflowY = "auto";
+            nodeEditor.getBody().appendChild(div);
+
+            var innerDiv = document.createElement("div");
+            innerDiv.style.position = "absolute";
+            innerDiv.style.width = "100%";
+            innerDiv.style.height = "100%";
+            div.appendChild(innerDiv);
 
 
             companyList = createCombobox();
@@ -133,7 +161,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
             var countries = [];
             getData("countries", function(data) {
-                var arr = data.features;
+                var arr = data.objects.countries.geometries;
                 for (var i=0; i<arr.length; i++){
                     var country = arr[i];
                     countries.push(country.properties);
@@ -142,7 +170,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
 
-            var form = new javaxt.dhtml.Form(nodeEditor.getBody(), {
+            var form = new javaxt.dhtml.Form(innerDiv, {
                 style: config.style.form,
                 items: [
                     {
@@ -302,13 +330,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
                           //Save data
-                            save(data, function(companyID, facilityID, productID){
+                            save(data, function(companyID, facilityID, productID, notes){
 
                                 var node = nodeEditor.node;
                                 node.name = companyName;
                                 node.companyID = companyID;
                                 node.facilityID = facilityID;
                                 node.productID = productID;
+                                node.notes = notes;
 
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 nodeEditor.close();
@@ -629,6 +658,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             });
                         }
                     });
+                    if (node.notes){
+                        form.setValue("notes", node.notes);
+                    }
                 }
             };
         }
@@ -640,6 +672,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //**************************************************************************
   //** updateFacilities
   //**************************************************************************
+  /** Used to update the facility list
+   *  @param callback If no callback is given, will automatically pick a
+   *  facility from the list - triggering updates to the product lists
+   */
     var updateFacilities = function(company, callback){
         facilityList.clear();
 
@@ -662,7 +698,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                         if (!facilityName) facilityName = "Facility " + facility.id;
                         facilityList.add(facilityName, facility);
                     }
-                    if (arr.length===1) facilityList.setValue(facilityName);
+                    if (arr.length===1 && !callback) facilityList.setValue(facilityName);
                     if (callback) callback.apply(me, []);
                 }
             });
@@ -797,7 +833,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             success: function(productID){
 
                                 waitmask.hide();
-                                if (callback) callback.apply(me, [companyID, facilityID, productID]);
+                                if (callback) callback.apply(me, [companyID, facilityID, productID, data.notes]);
 
                             },
                             failure: function(request){

@@ -271,7 +271,7 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
 
       //set the dimensions and margins of the graph
         var margin = {top: 0, right: 0, bottom: 0, left: 0},
-        width = 480;//innerDiv.offsetWidth - margin.left - margin.right,
+        width = 480, //innerDiv.offsetWidth - margin.left - margin.right,
         height = 330; //innerDiv.offsetHeight - margin.top - margin.bottom;
 
 

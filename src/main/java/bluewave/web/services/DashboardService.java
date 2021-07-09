@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.app.Dashboard;
 import bluewave.app.DashboardUser;
+import bluewave.utils.SQLEditor;
 
 import javaxt.express.*;
 import javaxt.http.servlet.*;
@@ -34,7 +35,7 @@ public class DashboardService extends WebService {
 
 
         super.addClass(bluewave.app.Dashboard.class);
-        //super.addClass(bluewave.app.DashboardUser.class);
+        super.addClass(bluewave.app.DashboardUser.class);
         //super.addClass(bluewave.app.DashboardGroup.class);
 
 
@@ -80,24 +81,24 @@ public class DashboardService extends WebService {
   //**************************************************************************
   //** onCreate
   //**************************************************************************
-    public void onCreate(Object obj){
-        ws.onCreate(obj);
+    public void onCreate(Object obj, ServiceRequest request){
+        ws.onCreate(obj, request);
     };
 
 
   //**************************************************************************
   //** onUpdate
   //**************************************************************************
-    public void onUpdate(Object obj){
-        ws.onUpdate(obj);
+    public void onUpdate(Object obj, ServiceRequest request){
+        ws.onUpdate(obj, request);
     };
 
 
   //**************************************************************************
   //** onDelete
   //**************************************************************************
-    public void onDelete(Object obj){
-        ws.onDelete(obj);
+    public void onDelete(Object obj, ServiceRequest request){
+        ws.onDelete(obj, request);
     };
 
 
@@ -123,7 +124,7 @@ public class DashboardService extends WebService {
 
 
 
-        SQLEditor where = new SQLEditor(sql);
+        SQLEditor where = new SQLEditor(sql, c);
         if (c.equals(bluewave.app.Dashboard.class)){
 
 
@@ -146,7 +147,7 @@ public class DashboardService extends WebService {
             }
 
 
-            if (filter!=null) where.append(filter);
+            if (filter!=null) where.addConstraint(filter);
         }
 
 
@@ -227,11 +228,87 @@ public class DashboardService extends WebService {
 
 
           //Fire event
-            if (isNew) onCreate(dashboard); else onUpdate(dashboard);
+            if (isNew) onCreate(dashboard, request); else onUpdate(dashboard, request);
 
 
           //Return response
             return new ServiceResponse(dashboard.getID()+"");
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getGroups
+  //**************************************************************************
+  /** Returns a list of user-defined groupings for dashboards
+   */
+    public ServiceResponse getGroups(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Get user associated with the request
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+
+        Connection conn = null;
+        try{
+
+            LinkedHashMap<Long, JSONObject> groups = new LinkedHashMap<>();
+            String groupIDs = "";
+
+            conn = database.getConnection();
+            Recordset rs = new Recordset();
+            rs.open("select id, name, description, info from application.dashboard_group " +
+            "where user_id=" + user.getID() + " order by name", conn);
+            while (rs.hasNext()){
+                JSONObject json = new JSONObject();
+                json.set("id", rs.getValue("id"));
+                json.set("name", rs.getValue("name"));
+                json.set("description", rs.getValue("description"));
+                json.set("info", rs.getValue("info"));
+                json.set("dashboards", new JSONArray());
+
+                Long groupID = json.get("id").toLong();
+                groups.put(groupID, json);
+                if (!groupIDs.isEmpty()) groupIDs +=",";
+                groupIDs += groupID;
+                rs.moveNext();
+            }
+            rs.close();
+
+
+            if (!groups.isEmpty()){
+                rs.open("select * from application.dashboard_group_dashboard " +
+                "where dashboard_group_id in (" + groupIDs + ")", conn);
+                while (rs.hasNext()){
+                    Long dashboardID = rs.getValue("dashboard_id").toLong();
+                    Long groupID = rs.getValue("dashboard_group_id").toLong();
+
+                    JSONObject group = groups.get(groupID);
+                    JSONArray dashboards = group.get("dashboards").toJSONArray();
+                    dashboards.add(dashboardID);
+                    rs.moveNext();
+                }
+                rs.close();
+            }
+
+
+            conn.close();
+
+
+
+            JSONArray arr = new JSONArray();
+            Iterator<Long> it = groups.keySet().iterator();
+            while (it.hasNext()){
+                JSONObject group = groups.get(it.next());
+                arr.add(group);
+            }
+
+
+            return new ServiceResponse(arr);
         }
         catch(Exception e){
             if (conn!=null) conn.close();
@@ -433,7 +510,7 @@ public class DashboardService extends WebService {
             dashboard.setThumbnail(img.getByteArray(format));
             dashboard.save();
 
-            onUpdate(dashboard);
+            onUpdate(dashboard, request);
             return new ServiceResponse(200);
         }
         catch(Exception e){
@@ -490,33 +567,4 @@ public class DashboardService extends WebService {
             throw e;
         }
     }
-
-
-  //**************************************************************************
-  //** SQLEditor
-  //**************************************************************************
-    private class SQLEditor {
-        private javaxt.sql.Parser parser;
-        private String sql;
-        public SQLEditor(String sql){
-            this.sql = sql;
-        }
-        public void append(String whereClause){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            String where = parser.getWhereString();
-            if (where==null) where = "";
-            else where += " and ";
-            where += whereClause;
-            parser.setWhere(where);
-            sql = parser.toString();
-        }
-        public void remove(){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            parser.setWhere(null);
-        }
-        public String getSQL(){
-            return sql;
-        }
-    }
-
 }

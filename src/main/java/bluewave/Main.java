@@ -68,6 +68,9 @@ public class Main {
         if (args.containsKey("-addUser")){
             addUser(args);
         }
+        if (args.containsKey("-updatePassword")){
+            updatePassword(args);
+        }
         else if (args.containsKey("-import")){
             importFile(args);
         }
@@ -185,12 +188,8 @@ public class Main {
         }
 
         System.out.println("Create new user \"" + name + "\"");
-        String pw = console.getPassword("Enter password >");
-        String pw2 = console.getPassword("Confirm password >");
-        if (!pw.equals(pw2)) {
-            System.out.println("Passwords do not match. Please try again");
-            addUser(args);
-        }
+        String pw = getPassword(args);
+
         User user = new User();
         user.setUsername(name);
         user.setPassword(pw);
@@ -198,6 +197,45 @@ public class Main {
         user.setAccessLevel(accessLevel);
         user.save();
         System.out.println("User created");
+    }
+
+
+  //**************************************************************************
+  //** updatePassword
+  //**************************************************************************
+    private static void updatePassword(HashMap<String, String> args) throws Exception {
+        String name = args.get("-updatePassword");
+
+        User user = User.get("username=", name);
+        if (user==null){
+            System.out.println("User not found");
+            return;
+        }
+
+//        String currentPassword = console.getPassword("Current password >");
+//        if (!user.authenticate(currentPassword)){
+//            System.out.println("Sorry, incorrect password");
+//            return;
+//        }
+
+        String pw = getPassword(args);
+        user.setPassword(pw);
+        user.save();
+        System.out.println("Password changed");
+    }
+
+
+  //**************************************************************************
+  //** getPassword
+  //**************************************************************************
+    private static String getPassword(HashMap<String, String> args) throws Exception {
+        String pw = console.getPassword("Enter password: ");
+        String pw2 = console.getPassword("Confirm password: ");
+        if (!pw.equals(pw2)) {
+            System.out.println("Passwords do not match. Please try again");
+            getPassword(args);
+        }
+        return pw;
     }
 
 
@@ -268,6 +306,7 @@ public class Main {
   //**************************************************************************
     private static void test(HashMap<String, String> args) throws Exception {
         String test = args.get("-test");
+        if (test==null) test = "";
         if (test.equalsIgnoreCase("neo4j")){
             Neo4J graph = Config.getGraph();
             Session session = null;

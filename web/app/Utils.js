@@ -317,11 +317,21 @@ bluewave.utils = {
         div.setValue = function(val){
             for (var i=0; i<div.childNodes.length; i++){
                 var btn = div.childNodes[i];
-                if (btn.innerHTML===val){
+                if (btn.innerText===val){
                     btn.click();
                     break;
                 }
             }
+        };
+
+        div.getValue = function(){
+            for (var i=0; i<div.childNodes.length; i++){
+                var btn = div.childNodes[i];
+                if (btn.className==="toggle-button-active"){
+                    return btn.innerText;
+                }
+            }
+            return null;
         };
 
         return div;
@@ -349,8 +359,8 @@ bluewave.utils = {
 
         var width = config.width+"";
         var height = config.height+"";
-        if (width.indexOf("%")===-1) parseInt(width) + "px";
-        if (height.indexOf("%")===-1) parseInt(height) + "px";
+        if (width.indexOf("%")===-1) width = parseInt(width) + "px";
+        if (height.indexOf("%")===-1) height = parseInt(height) + "px";
 
 
         var div = document.createElement("div");
@@ -409,6 +419,43 @@ bluewave.utils = {
             settings: settings,
             waitmask: waitmask
         };
+    },
+
+
+  //**************************************************************************
+  //** addTextEditor
+  //**************************************************************************
+    addTextEditor: function(div, callback){
+        var setTitle = function(title){
+            if (callback) callback.apply(div,[title]);
+        };
+
+        div.onclick = function(e){
+            if (this.childNodes[0].nodeType===1) return;
+            e.stopPropagation();
+            var currText = this.innerText;
+            this.innerHTML = "";
+            var input = document.createElement("input");
+            input.className = "form-input";
+            input.type = "text";
+            input.value = currText;
+            input.onkeydown = function(event){
+                var key = event.keyCode;
+                if (key === 9 || key === 13) {
+                    setTitle(this.value);
+                }
+            };
+            this.appendChild(input);
+            input.focus();
+        };
+
+        document.body.addEventListener('click', function(e) {
+            var input = div.childNodes[0];
+            var className = e.target.className;
+            if (input.nodeType === 1 && className != "form-input") {
+                setTitle(input.value);
+            };
+        });
     },
 
 

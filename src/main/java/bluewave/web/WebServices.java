@@ -2,6 +2,7 @@ package bluewave.web;
 import bluewave.Config;
 import bluewave.graph.Neo4J;
 import bluewave.web.services.*;
+import bluewave.utils.SQLEditor;
 
 import javaxt.express.*;
 import javaxt.http.servlet.HttpServletRequest;
@@ -22,6 +23,7 @@ import java.io.IOException;
 public class WebServices extends WebService {
 
     private Database database;
+    private AdminService adminService;
     private DashboardService dashboardService;
     private MapService mapService;
     private ReportService reportService;
@@ -54,6 +56,7 @@ public class WebServices extends WebService {
 
 
       //Instantiate additional web services
+        adminService = new AdminService(database, webConfig);
         dashboardService = new DashboardService(this, web, database);
         mapService = new MapService();
         reportService = new ReportService();
@@ -191,7 +194,10 @@ public class WebServices extends WebService {
 
         WebService ws;
         ServiceRequest serviceRequest = null;
-        if (service.equals("map")){
+        if (service.equals("admin")){
+            ws = adminService;
+        }
+        else if (service.equals("map")){
             ws = mapService;
         }
         else if (service.equals("report")){
@@ -220,11 +226,10 @@ public class WebServices extends WebService {
             if (service.startsWith("dashboard")){
                 ws = dashboardService;
                 String p = serviceRequest.getPath(1).toString();
-                if (p!=null && p.equalsIgnoreCase("thumbnail")){
-                    serviceRequest = new ServiceRequest(service, request);
-                }
-                else{
-                    serviceRequest = new ServiceRequest(request);
+                if (p!=null){
+                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups")){
+                        serviceRequest = new ServiceRequest(service, request);
+                    }
                 }
             }
         }
@@ -233,53 +238,59 @@ public class WebServices extends WebService {
     }
 
 
-
   //**************************************************************************
   //** getRecordset
   //**************************************************************************
+  /** Used to apply filters when accessing models
+   */
     protected Recordset getRecordset(ServiceRequest serviceRequest, String op, Class c, String sql, Connection conn) throws Exception {
         bluewave.app.User user = (bluewave.app.User) serviceRequest.getUser();
-        if (user.getAccessLevel()<5){
-            if (op.equals("create") || op.equals("update") || op.equals("delete")){
-                if (user.getAccessLevel()<3){
+        SQLEditor sqlEditor = new SQLEditor(sql, c);
+
+      //Set filters for accessing users
+        if (c.equals(bluewave.app.User.class)){
+            if (op.equals("list")){
+
+              //Remove password field
+                sqlEditor.removeField("password");
+            }
+            else if (op.equals("get")){
+
+              //Remove password field for most requests - except admins (admins need to have password to save users)
+                if (user.getAccessLevel()<5){
+                    sqlEditor.removeField("password");
+                }
+            }
+            else{
+
+              //Non-admin users can't edit users, including themselves
+                if (user.getAccessLevel()<5){
                     throw new ServletException(401, "Unauthorized");
                 }
             }
+        }
 
+      //Only users can modify thier preferences
+        else if (c.equals(bluewave.app.UserPreference.class)){
+            sqlEditor.addConstraint("user_id=" + user.getID());
+        }
 
-            SQLEditor where = new SQLEditor(sql);
-            if (c.equals(bluewave.app.User.class)){
-
-                if (op.equals("get") || op.equals("list")){
-
-                  //Allow users to see themselves
-                    //where.append("id=" + user.getID());
-                }
-                else{
-
-                  //Non-admin users can't edit users, including themselves
-                    throw new ServletException(401, "Unauthorized");
-                }
-            }
-            else if (c.equals(bluewave.app.UserPreference.class)){
-                where.append("user_id=" + user.getID());
-            }
-            else if (c.equals(bluewave.app.Dashboard.class)){
-                if (op.equals("get") || op.equals("list")){
-                }
-                else{ //"create", "update", "delete"
-                    if (user.getAccessLevel()<5){
+        else {
+            if (user.getAccessLevel()<5){
+                if (op.equals("create") || op.equals("update") || op.equals("delete")){
+                    if (user.getAccessLevel()<3){
                         throw new ServletException(401, "Unauthorized");
                     }
                 }
             }
-            else{
-                //console.log(c);
-            }
-
-            sql = where.getSQL();
         }
 
+
+      //Update sql
+        sql = sqlEditor.getSQL();
+
+
+      //Execute query and return recordset
         Recordset rs = new Recordset();
         if (op.equals("list")) rs.setFetchSize(1000);
         try{
@@ -289,34 +300,6 @@ public class WebServices extends WebService {
         catch(Exception e){
             console.log(sql);
             throw e;
-        }
-    }
-
-
-  //**************************************************************************
-  //** SQLEditor
-  //**************************************************************************
-    private class SQLEditor {
-        private javaxt.sql.Parser parser;
-        private String sql;
-        public SQLEditor(String sql){
-            this.sql = sql;
-        }
-        public void append(String whereClause){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            String where = parser.getWhereString();
-            if (where==null) where = "";
-            else where += " and ";
-            where += whereClause;
-            parser.setWhere(where);
-            sql = parser.toString();
-        }
-        public void remove(){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            parser.setWhere(null);
-        }
-        public String getSQL(){
-            return sql;
         }
     }
 
@@ -337,8 +320,14 @@ public class WebServices extends WebService {
 
 
       //Create web socket
-        if (service.equals("report")){
+        if (service.equals("admin")){
+            adminService.createWebSocket(request, response);
+        }
+        else if (service.equals("report")){
             reportService.createWebSocket(request, response);
+        }
+        else if (service.equals("query")){
+            queryService.createWebSocket(request, response);
         }
         else{
             new WebSocketListener(request, response){
@@ -362,38 +351,37 @@ public class WebServices extends WebService {
   //**************************************************************************
   //** onCreate
   //**************************************************************************
-    public void onCreate(Object obj){
-        notify("create",obj);
+    public void onCreate(Object obj, ServiceRequest request){
+        notify("create", (Model) obj, (bluewave.app.User) request.getUser());
     };
 
 
   //**************************************************************************
   //** onUpdate
   //**************************************************************************
-    public void onUpdate(Object obj){
-        notify("update",obj);
+    public void onUpdate(Object obj, ServiceRequest request){
+        notify("update", (Model) obj, (bluewave.app.User) request.getUser());
     };
 
 
   //**************************************************************************
   //** onDelete
   //**************************************************************************
-    public void onDelete(Object obj){
-        notify("delete",obj);
+    public void onDelete(Object obj, ServiceRequest request){
+        notify("delete", (Model) obj, (bluewave.app.User) request.getUser());
     };
 
 
   //**************************************************************************
   //** notify
   //**************************************************************************
-    public void notify(String action, Object obj){
-        Model model = (Model) obj;
+    public void notify(String action, Model model, bluewave.app.User user){
+        Long userID = user==null ? null : user.getID();
         synchronized(listeners){
             Iterator<Long> it = listeners.keySet().iterator();
             while(it.hasNext()){
-                Long id = it.next();
-                WebSocketListener ws = listeners.get(id);
-                ws.send(action+","+model.getClass().getSimpleName()+","+model.getID());
+                WebSocketListener ws = listeners.get(it.next());
+                ws.send(action+","+model.getClass().getSimpleName()+","+model.getID()+","+userID);
             }
         }
     }
