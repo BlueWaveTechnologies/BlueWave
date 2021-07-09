@@ -34,7 +34,6 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         group:null
     };
 
-    var projectionOptions;
     var chartConfig = {
         xAxis:null,
         yAxis:null,
@@ -55,25 +54,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-
-        // Set Scale here
-        projectionOptions = [
-//            {name: "Azimuthal Equal Area", projection: d3.geoAzimuthalEqualArea()},
-//            {name: "Stereographic", projection: d3.geoStereographic()},
-            {name: "Equal Earth", projection: d3.geoEqualEarth()},
-            {name: "Ablers USA", projection: d3.geoAlbers()
-                            .rotate([96, 0])
-                            .center([-.6, 38.7])
-                            .parallels([29.5, 45.5])
-                            .scale(1000)
-                            .precision(.1)
-            },
-            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)},
-            {name: "Mercator", projection: d3.geoMercator()
-                        .scale(this.width/2/Math.PI)
-
-            }
-        ];
+;
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
