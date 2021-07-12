@@ -12,11 +12,20 @@ bluewave.NodeView = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        url: "graph/nodes"
+        url: "graph/nodes",
+        remoteRender: false,
+        animate: false,
+        colorBy: "labels",
+        label: "labels",
+        style: {
+            node: "graph-node",
+            edge: "graph-link"
+        }
     };
     var svg; //d3
     var getColor; //d3 function
     var nodes = [];
+    var links;
     var waitmask;
     var form, tooltip;
 
@@ -56,6 +65,7 @@ bluewave.NodeView = function(parent, config) {
         .append("svg")
         .attr("width", "100%")
         .attr("height", "100%");
+
 
       //Create color function
         getColor = d3.scaleOrdinal(getColorPalette());
@@ -106,6 +116,7 @@ bluewave.NodeView = function(parent, config) {
         var width = me.el.offsetWidth;
         var height = me.el.offsetHeight;
 
+
         var maxVal = 0;
         for (var i=0; i<data.length; i++){
             maxVal = Math.max(maxVal, data[i][key]);
@@ -144,6 +155,45 @@ bluewave.NodeView = function(parent, config) {
             this.style.fillOpacity=0.8;
             tooltip.hide();
         })
+        .on("click", function(d){
+
+        var clickedId = d.node;
+        var nWidth = 960;
+        var nHeight = 500;
+
+        var radius = Math.min(nWidth, nHeight)/2;
+        var anglePerNode = Math.PI*2/ data.length;
+
+         for (i =0; i < data.length; i++) {
+         var nodeSize = 30;
+         data[i].fx = (radius-nodeSize) * Math.cos(anglePerNode*i) + nWidth;
+         data[i].fy = (radius-nodeSize) * Math.sin(anglePerNode*i) + nHeight;
+         }
+
+         d.fx = nWidth;
+         d.fy = nHeight;
+
+         links = getRelationshipOnClick(clickedId, data);
+         links.then(relatedLinks => {
+            svg.selectAll("line").remove();
+            simulation.force("link").links(relatedLinks);
+
+            var link = svg.append("g")
+            .attr("class", config.style.edge)
+            .selectAll("line")
+            .data(relatedLinks)
+            .enter()
+            .append("line")
+            .attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; })
+            .attr("stroke-width", function(d) {
+                return Math.sqrt(4); //change based on weight in future
+            });
+            simulation.alpha(1).restart();
+         })
+        })
         .call(d3.drag() // call specific function when circle is dragged
             .on("start", function(d) {
                 if (!d3.event.active) simulation.alphaTarget(.03).restart();
@@ -165,6 +215,7 @@ bluewave.NodeView = function(parent, config) {
         // Features of the forces applied to the nodes:
         var simulation = d3.forceSimulation()
         .force("center", d3.forceCenter(width / 2, height / 2)) //Attraction to the center of the svg area
+        .force("link", d3.forceLink().id(function(d) { return d.id}))
         .force("charge", d3.forceManyBody().strength(.1)) // Nodes are attracted one each other of value is > 0
         .force("collide", d3.forceCollide() // Force that avoids circle overlapping
             .strength(.2)
@@ -177,7 +228,7 @@ bluewave.NodeView = function(parent, config) {
         .on("tick", function(d){
             node
               .attr("cx", function(d){ return d.x; })
-              .attr("cy", function(d){ return d.y; })
+              .attr("cy", function(d){ return d.y; });
         });
 
     };
@@ -234,6 +285,51 @@ bluewave.NodeView = function(parent, config) {
         tooltip.hide();
         parent.appendChild(tooltip);
     };
+
+
+  //**************************************************************************
+  //** getRelationshipOnClick
+  //**************************************************************************
+    var getRelationshipOnClick = async function(clickedId, data){
+
+
+        var animate = false;
+        var test = clickedId;
+        var response = await fetch("graph/relationships?nodeType=" + clickedId);
+        var linkJson = await response.json();
+
+            var relData = JSON.parse(JSON.stringify(linkJson));
+            var relationshipArray = [];
+            var counter = 0;
+            var sources = relData.source;
+            var targets = relData.target;
+
+            for(i=0; i < sources.length; i++) {
+                var link={};
+                link.source = sources[i];
+
+                link.target = test;
+                relationshipArray[counter++] = link;
+
+            }
+
+            for(i=0; i < targets.length; i++) {
+                var link={};
+                link.source = test;
+                link.target = targets[i];
+                relationshipArray[counter++] = link;
+            }
+            return relationshipArray;
+    };
+
+  //**************************************************************************
+  //** drawClickedNodeRelationship
+  //**************************************************************************
+    var drawClickedNodeRelationship = function(graph) {
+
+
+    }
+
 
 
   //**************************************************************************
