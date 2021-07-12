@@ -19,7 +19,6 @@ if(!bluewave) var bluewave={};
 
 bluewave.charts.ScatterEditor = function(parent, config) {
     var me = this;
-    var currentNode;
     var panel;
     var inputData = [];
     var svg;
@@ -37,9 +36,8 @@ bluewave.charts.ScatterEditor = function(parent, config) {
     var chartConfig = {
         xAxis:null,
         yAxis:null,
-        chartType:null,
         chartTitle:null,
-        nodeId:null,
+        nodeId:null
     };
     var margin = {
         top: 15,
@@ -54,7 +52,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-;
+
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -88,38 +86,15 @@ bluewave.charts.ScatterEditor = function(parent, config) {
 
 
       //Allow users to change the title associated with the chart
-        panel.title.onclick = function(e){
-            if (this.childNodes[0].nodeType===1) return;
-            e.stopPropagation();
-            var currText = this.innerHTML;
-            this.innerHTML = "";
-            var input = document.createElement("input");
-            input.className = "form-input";
-            input.type = "text";
-            input.value = currText;
-            input.onkeydown = function(event){
-                var key = event.keyCode;
-                if(key == 13) {
-                    panel.title.innerHTML = this.value;
-                    chartConfig.chartTitle = this.value;
-                }
-            };
-            this.appendChild(input);
-            input.focus();
-        };
-        document.body.addEventListener('click', function(e) {
-            var input = panel.title.childNodes[0];
-            var className = e.target.className;
-            if(input.nodeType === 1 && className != "form-input") {
-                panel.title.innerHTML = input.value;
-                chartConfig.chartTitle = input.value;
-            };
+        addTextEditor(panel.title, function(title){
+            panel.title.innerHTML = title;
+            chartConfig.chartTitle = title;
         });
 
 
       //Watch for settings
         panel.settings.onclick = function(){
-            if (chartConfig) editStyle(chartConfig.chartType);
+            editStyle();
         };
 
 
@@ -131,19 +106,10 @@ bluewave.charts.ScatterEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** getNode
-  //**************************************************************************
-    this.getNode = function() {
-        return currentNode;
-    };
-
-
-  //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(nodeType, config, inputs, node){
+    this.update = function(config, inputs){
         me.clear();
-        currentNode = node;
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
             if (input!=null) inputs[i] = d3.csvParse(input);
@@ -156,7 +122,6 @@ bluewave.charts.ScatterEditor = function(parent, config) {
             });
             panel.title.innerHTML = config.chartTitle;
         }
-        chartConfig.chartType = nodeType;
         createDropDown(optionsDiv);
         createOptions();
     };
@@ -306,10 +271,11 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         });
     };
 
+
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(chartType){
+    var editStyle = function(){
 
       //Create styleEditor as needed
         if (!styleEditor){
@@ -329,7 +295,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         body.innerHTML = "";
 
         styleEditor.showAt(108,57);
-        form.resize();
+        //form.resize();
     };
 
   //**************************************************************************
@@ -340,6 +306,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
     var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
+    var addTextEditor = bluewave.utils.addTextEditor;
 
     init();
 };
