@@ -350,7 +350,6 @@ bluewave.Explorer = function(parent, config) {
                 button.addData.enable();
                 button.sankeyChart.enable();
                 button.supplyChain.enable();
-                button.scatterChart.enable();
             }
 
 
@@ -810,11 +809,11 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("pieChart", "fas fa-chart-pie", "Pie Chart", menubar);
         createMenuButton("barChart", "fas fa-chart-bar", "Bar Chart", menubar);
         createMenuButton("lineChart", "fas fa-chart-line", "Line Chart", menubar);
+        createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
         createMenuButton("map", "fas fa-map-marked-alt", "Map", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
-        createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
     };
 
 
@@ -1423,8 +1422,8 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
 
     var editScatter = function(node){
-           if (!scatterEditor){
-             var win = createWindow({
+        if (!scatterEditor){
+            var win = createNodeEditor({
                  title: "Edit Scatter Chart",
                  width: 1060,
                  height: 600,
@@ -1449,30 +1448,38 @@ bluewave.Explorer = function(parent, config) {
                          win.close();
                      }
                  }
-             });
+            });
+
+            scatterEditor = new bluewave.charts.ScatterEditor(win.getBody(), config);
+
+            scatterEditor.show = function(){
+              win.show();
+            };
+
+            scatterEditor.hide = function(){
+              win.hide();
+            };
+        }
 
 
-                              scatterEditor = new bluewave.charts.ScatterEditor(win.getBody(), config);
-
-                              scatterEditor.show = function(){
-                                  win.show();
-                              };
-
-                              scatterEditor.hide = function(){
-                                  win.hide();
-                              };
-                          }
-
-                         var data = [];
-                                for (var key in node.inputs) {
-                                    if (node.inputs.hasOwnProperty(key)){
-                                        var csv = node.inputs[key].csv;
-                                        data.push(csv);
-                                    }
-                                }
-                         scatterEditor.update(node.type, node.config, data, node);
-                         scatterEditor.show();
+      //Add custom getNode() method to the scatterEditor to return current node
+        scatterEditor.getNode = function(){
+            return node;
         };
+
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                data.push(csv);
+            }
+        }
+
+        scatterEditor.update(node.config, data);
+        scatterEditor.show();
+    };
+
 
   //**************************************************************************
   //** removeInputs
@@ -1488,7 +1495,8 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         }
-    }
+    };
+
 
   //**************************************************************************
   //** editSupplyChain
