@@ -193,7 +193,7 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update nodes
-        var csvRequests = 0;
+        var csvRequests = [];
         for (var nodeID in dashboard.info.nodes) {
             if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
@@ -253,11 +253,8 @@ bluewave.Explorer = function(parent, config) {
 
                   //Update node with csv data
                     node.csv = null;
-                    csvRequests++;
-                    getCSV(node.config.query, function(csv){
-                        this.csv = csv;
-                        csvRequests--;
-                    }, node);
+                    csvRequests.push(node);
+
 
 
                   //Update buttons
@@ -292,20 +289,39 @@ bluewave.Explorer = function(parent, config) {
         };
 
 
-        if (csvRequests>0){
-            var timer;
+        if (csvRequests.length>0){
+            waitmask.show(500);
+            var showMask = true;
+            var updateNodes = function(){
+                var node = csvRequests.pop();
+                getCSV(node.config.query, function(csv){
+                    this.csv = csv;
+                    if (csvRequests.length===0){
+                        showMask = false;
+                        waitmask.hide();
+                        onReady.apply(me, []);
+                    }
+                    else{
+                        updateNodes();
+                    }
+                }, node);
+            };
+            updateNodes();
 
-            var checkRequests = function(){
-                if (csvRequests>0){
-                    timer = setTimeout(checkRequests, 100);
+
+          //Something is causing the waitmask to hide early. This is a workaround
+            var timer;
+            var checkMask = function(){
+                if (showMask){
+                    waitmask.show();
+                    timer = setTimeout(checkMask, 100);
                 }
                 else{
                     clearTimeout(timer);
                     onReady.apply(me, []);
                 }
             };
-
-            timer = setTimeout(checkRequests, 100);
+            timer = setTimeout(checkMask, 100);
         }
         else{
             onReady.apply(me, []);
