@@ -291,11 +291,13 @@ if(!bluewave.charts) bluewave.charts={};
         }
         if(chartConfig.mapType=="Point" && (chartConfig.latitude===null ||
             chartConfig.longitude===null || chartConfig.mapValue===null ||
-            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null)){
+            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null ||
+            chartConfig.colorScale===null)){
             return;
         }
         if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null)){
+            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null ||
+            chartConfig.colorScale===null)){
             return;
         }
         onRender(previewArea, function() {
