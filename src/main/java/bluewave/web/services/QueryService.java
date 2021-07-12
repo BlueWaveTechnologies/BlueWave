@@ -320,6 +320,7 @@ public class QueryService extends WebService {
                         if (i>0) str.append(s);
                         str.append(fields.get(i));
                     }
+                    str.append("\r\n");
                 }
 
                 if (x>0) str.append("\r\n");
