@@ -36,7 +36,8 @@ if(!bluewave.charts) bluewave.charts={};
         mapType:null,
         lat:null,
         long:null,
-        mapValue:null
+        mapValue:null,
+        mapLevel:null
     };
     var mapProjection;
     var projectionOptions;
@@ -159,6 +160,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var createMapDropDown = function(tbody){
         dropdownItem(tbody,"mapType","Map Type",showHideDropDowns,mapInputs,"mapType");
+        dropdownItem(tbody,"mapLevel","Map Level",createMapPreview,mapInputs,"mapLevel");
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
@@ -241,6 +243,7 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
             if(chartConfig.mapProjectionValue !== null) chartConfig.mapProjectionValue = null;
+            if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             //Show the combox box inputs
             mapInputs.lat.show();
@@ -262,6 +265,7 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
             if(chartConfig.mapProjectionValue !== null) chartConfig.mapProjectionValue = null;
+            if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             mapInputs.lat.hide();
             mapInputs.long.hide();
@@ -285,11 +289,11 @@ if(!bluewave.charts) bluewave.charts={};
         }
         if(chartConfig.mapType=="Point" && (chartConfig.latitude===null ||
             chartConfig.longitude===null || chartConfig.mapValue===null ||
-            chartConfig.mapProjectionValue===null)){
+            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null)){
             return;
         }
         if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapProjectionValue===null)){
+            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null)){
             return;
         }
         onRender(previewArea, function() {
@@ -373,6 +377,15 @@ if(!bluewave.charts) bluewave.charts={};
             ];
         mapOptions.forEach((val)=>{
             mapInputs.mapType.add(val,val);
+        });
+        mapInputs.mapLevel.clear();
+        const mapLevel = [
+            "counties",
+            "states",
+            "countries"
+        ];
+        mapLevel.forEach((val)=>{
+            mapInputs.mapLevel.add(val, val);
         });
         mapInputs.mapType.setValue(chartConfig.mapType,chartConfig.mapType);
         mapInputs.mapValue.setValue(chartConfig.mapValue,chartConfig.mapValue);

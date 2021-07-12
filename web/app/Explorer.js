@@ -748,6 +748,13 @@ bluewave.Explorer = function(parent, config) {
                     return;
                 }
             }
+            //Ensure that Map can only be connected by addData data type.
+            if(node.type === "map"){
+                if(inputNode.type != "addData"){
+                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+                   return;
+                }
+            }
 
           //If we're still here, update node and open editor
             node.inputs[outputID] = inputNode;
@@ -1363,7 +1370,6 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editMap = function(node){
         if(!mapEditor){
-            console.log("Are we here?");
             var win = createNodeEditor({
                 title: "Edit Map",
                 width: 1680,
