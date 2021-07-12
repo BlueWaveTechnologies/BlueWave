@@ -187,9 +187,10 @@ public class QueryService extends WebService {
             Long offset = getParameter("offset", request).toLong();
             Long limit = getParameter("limit", request).toLong();
             if (limit==null) limit = 25L;
+            if (limit<1) limit = null;
             if (offset==null){
                 Long page = getParameter("page", request).toLong();
-                if (page!=null) offset = (page*limit)-limit;
+                if (page!=null && limit!=null) offset = (page*limit)-limit;
             }
 
 
@@ -319,14 +320,15 @@ public class QueryService extends WebService {
                         if (i>0) str.append(s);
                         str.append(fields.get(i));
                     }
-                    str.append("\r\n");
                 }
+
+                if (x>0) str.append("\r\n");
 
 
                 String s = format.equals("tsv") ? "\t" : ",";
                 for (int i=0; i<fields.size(); i++){
                     if (i>0) str.append(s);
-                    String fieldName = fields.get(i).toString();
+                    String fieldName = fields.get(i);
                     Object value = r.get(fieldName).asObject();
                     if (value==null){
                         value = "";
@@ -355,7 +357,7 @@ public class QueryService extends WebService {
                     }
                     str.append(value);
                 }
-                str.append("\r\n");
+
             }
 
             x++;
@@ -939,7 +941,6 @@ public class QueryService extends WebService {
                             String query = job.getQuery();
                             Writer writer = new Writer(job.getOutputFormat(), job.addMetadata());
                             Result rs = session.run(query);
-                            //rs.open("--" + job.getKey() + "\n" + query, conn);
                             while (rs.hasNext()){
                                 Record r = rs.next();
                                 writer.write(r);
