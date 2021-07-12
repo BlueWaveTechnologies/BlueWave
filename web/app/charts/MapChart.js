@@ -63,16 +63,15 @@ bluewave.charts.MapChart = function(parent, config) {
         this.clear();
         var parent = svg.node().parentNode;
         console.log(data);
+        console.log(chartConfig);
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
 
-            var colorScale = d3.scaleThreshold()
-                .domain([10000, 100000, 300000, 600000, 1000000, 1500000])
-                .range(d3.schemeBlues[7]);
-            var countyColorScale = d3.scaleThreshold()
-                .domain([10, 100, 1000, 1500, 3000, 5000])
-                .range(d3.schemeBlues[7]);
+            var colorScale = {
+                "blue": d3.scaleQuantize([20, 100000], d3.schemeBlues[7]),
+                "red": d3.scaleQuantize([20, 100000], d3.schemeReds[7])
+            };
 
             if(chartConfig.mapProjectionName == "Ablers USA"){
                 if(chartConfig.mapLevel == "states"){
@@ -127,7 +126,7 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr('fill', function(d){
                                 var inData = d.properties.inData;
                                 if(inData){
-                                    return colorScale(d.properties.mapValue);
+                                    return colorScale[chartConfig.colorScale](d.properties.mapValue);
                                 }else{
                                     return "lightgrey";
                                 }
@@ -185,7 +184,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 .attr('fill', function(d){
                                     var inData = d.properties.inData;
                                     if(inData){
-                                        return countyColorScale(d.properties.mapValue);
+                                        return colorScale[chartConfig.colorScale](d.properties.mapValue);
                                     }else{
                                         return "lightgrey";
                                     }
@@ -252,7 +251,7 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr('fill', function(d){
                                 var inData = d.properties.inData;
                                 if(inData){
-                                    return colorScale(d.properties.mapValue);
+                                    return colorScale[chartConfig.colorScale](d.properties.mapValue);
                                 }else{
                                     return "lightgrey";
                                 }

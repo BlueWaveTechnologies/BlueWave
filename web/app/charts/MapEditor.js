@@ -37,7 +37,8 @@ if(!bluewave.charts) bluewave.charts={};
         lat:null,
         long:null,
         mapValue:null,
-        mapLevel:null
+        mapLevel:null,
+        colorScale:null
     };
     var mapProjection;
     var projectionOptions;
@@ -161,6 +162,7 @@ if(!bluewave.charts) bluewave.charts={};
     var createMapDropDown = function(tbody){
         dropdownItem(tbody,"mapType","Map Type",showHideDropDowns,mapInputs,"mapType");
         dropdownItem(tbody,"mapLevel","Map Level",createMapPreview,mapInputs,"mapLevel");
+        dropdownItem(tbody,"colorScale","Color Scale",createMapPreview,mapInputs,"colorScale");
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
@@ -387,10 +389,20 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
         });
+        mapInputs.colorScale.clear();
+        const colorScale = [
+            "red",
+            "blue"
+        ];
+        colorScale.forEach((val)=>{
+            mapInputs.colorScale.add(val, val);
+        });
         mapInputs.mapType.setValue(chartConfig.mapType,chartConfig.mapType);
         mapInputs.mapValue.setValue(chartConfig.mapValue,chartConfig.mapValue);
         mapInputs.lat.setValue(chartConfig.latitude,chartConfig.latitude);
         mapInputs.long.setValue(chartConfig.longitude,chartConfig.longitude);
+        mapInputs.mapLevel.setValue(chartConfig.mapValue,chartConfig.mapValue);
+        mapInputs.colorScale.setValue(chartConfig.colorScale,chartConfig.colorScale);
     };
 
 
