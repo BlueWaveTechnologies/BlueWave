@@ -1839,7 +1839,8 @@ bluewave.Explorer = function(parent, config) {
         var url = config.queryService;
         var payload = {
             query: query,
-            format: "csv"
+            format: "csv",
+            limit: -1
         };
 
         post(url, JSON.stringify(payload), {
