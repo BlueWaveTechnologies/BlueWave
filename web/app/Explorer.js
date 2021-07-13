@@ -30,7 +30,6 @@ bluewave.Explorer = function(parent, config) {
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
-        if (!config.queryService) config.queryService = "query/";
 
 
       //Create main panel
@@ -193,7 +192,7 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update nodes
-        var csvRequests = 0;
+        var csvRequests = [];
         for (var nodeID in dashboard.info.nodes) {
             if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
@@ -253,11 +252,8 @@ bluewave.Explorer = function(parent, config) {
 
                   //Update node with csv data
                     node.csv = null;
-                    csvRequests++;
-                    getCSV(node.config.query, function(csv){
-                        this.csv = csv;
-                        csvRequests--;
-                    }, node);
+                    csvRequests.push(node);
+
 
 
                   //Update buttons
@@ -292,20 +288,39 @@ bluewave.Explorer = function(parent, config) {
         };
 
 
-        if (csvRequests>0){
-            var timer;
+        if (csvRequests.length>0){
+            waitmask.show(500);
+            var showMask = true;
+            var updateNodes = function(){
+                var node = csvRequests.pop();
+                getCSV(node.config.query, function(csv){
+                    this.csv = csv;
+                    if (csvRequests.length===0){
+                        showMask = false;
+                        waitmask.hide();
+                        onReady.apply(me, []);
+                    }
+                    else{
+                        updateNodes();
+                    }
+                }, node);
+            };
+            updateNodes();
 
-            var checkRequests = function(){
-                if (csvRequests>0){
-                    timer = setTimeout(checkRequests, 100);
+
+          //Something is causing the waitmask to hide early. This is a workaround
+            var timer;
+            var checkMask = function(){
+                if (showMask){
+                    waitmask.show();
+                    timer = setTimeout(checkMask, 100);
                 }
                 else{
                     clearTimeout(timer);
                     onReady.apply(me, []);
                 }
             };
-
-            timer = setTimeout(checkRequests, 100);
+            timer = setTimeout(checkMask, 100);
         }
         else{
             onReady.apply(me, []);
@@ -748,6 +763,13 @@ bluewave.Explorer = function(parent, config) {
                     return;
                 }
             }
+            //Ensure that Map can only be connected by addData data type.
+            if(node.type === "map"){
+                if(inputNode.type != "addData"){
+                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+                   return;
+                }
+            }
 
           //If we're still here, update node and open editor
             node.inputs[outputID] = inputNode;
@@ -1013,20 +1035,6 @@ bluewave.Explorer = function(parent, config) {
                 addEventListeners(node);
 
                 break;
-
-            case "scatterChart":
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 1
-
-                });
-                addEventListeners(node);
-                break;
             default:
 
                 var node = createNode({
@@ -1060,20 +1068,8 @@ bluewave.Explorer = function(parent, config) {
                         }
                         else{
 
-                            var updateButtons = function(n){
-                                for (var key in button) {
-                                    if (button.hasOwnProperty(key) && key!==node.type){
-                                        if (n.csv){
-                                            button[key].enable();
-                                        }
-                                        else{
-                                            button[key].disable();
-                                        }
-                                    }
-                                }
-                            };
-                            updateButtons(this);
-
+                          //Update buttons
+                            updateButtons();
 
                           //Update node
                             if (query!==this.config.query){
@@ -1087,7 +1083,7 @@ bluewave.Explorer = function(parent, config) {
                                 this.csv = null;
                                 getCSV(query, function(csv){
                                     this.csv = csv;
-                                    updateButtons(this);
+                                    updateButtons();
                                 }, this);
 
 
@@ -1119,15 +1115,12 @@ bluewave.Explorer = function(parent, config) {
                                 if (!this.csv){
                                     getCSV(query, function(csv){
                                         this.csv = csv;
-                                        updateButtons(this);
+                                        updateButtons();
                                     }, this);
                                 };
 
                                 dbView.hide();
                             }
-
-
-
 
                         }
                     }, this);
@@ -1163,6 +1156,13 @@ bluewave.Explorer = function(parent, config) {
 
                 node.ondblclick = function(){
                     editLayout(this);
+                };
+
+                break;
+            case "map":
+
+                node.ondblclick = function(){
+                    editMap(this);
                 };
 
                 break;
@@ -1259,8 +1259,36 @@ bluewave.Explorer = function(parent, config) {
             dbView = new javaxt.express.DBView(div, {
                 waitmask: waitmask,
                 queryLanguage: "cypher",
-                queryService: config.queryService + "job/",
-                getTables: config.queryService + "nodes/",
+                queryService: "query/job/",
+                getTables: function(tree){
+                    waitmask.show();
+                    get("graph/nodes", {
+                        success: function(nodes){
+                            waitmask.hide();
+
+                          //Parse response
+                            var arr = [];
+                            for (var i=0; i<nodes.length; i++){
+                                var nodeName = nodes[i].node;
+                                if (nodeName){
+                                    arr.push({name: nodes[i].node});
+                                }
+                            }
+                            arr.sort(function(a, b){
+                                return a.name.localeCompare(b.name);
+                            });
+
+
+                          //Add nodes to the tree
+                            tree.addNodes(arr);
+
+                        },
+                        failure: function(request){
+                            if (waitmask) waitmask.hide();
+                            alert(request);
+                        }
+                    });
+                },
                 style:{
                     table: javaxt.dhtml.style.default.table,
                     toolbar: javaxt.dhtml.style.default.toolbar,
@@ -1358,6 +1386,71 @@ bluewave.Explorer = function(parent, config) {
             node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
         }
     };
+
+  //**************************************************************************
+  //** editMap
+  //**************************************************************************
+    var editMap = function(node){
+        if(!mapEditor){
+            var win = createNodeEditor({
+                title: "Edit Map",
+                width: 1680,
+                height: 920,
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = mapEditor.getConfig();
+                    var node = mapEditor.getNode();
+                    var orgConfig = node.config;
+                    if(!orgConfig) orgConfig = {};
+                    if(isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        updateTitle(node, node.config.chartTitle);
+                        waitmask.show();
+                        var el = mapEditor.getChart();
+                        if(el.show) el.show();
+                        createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        updateTitle(node, node.config.chartTitle);
+                        win.close();
+                    }
+                    button.layout.enable();
+                }
+            });
+
+            mapEditor = new bluewave.charts.MapEditor(win.getBody(), config);
+
+            mapEditor.show = function(){
+                win.show();
+            };
+
+            mapEditor.hide = function(){
+                win.hide();
+            }
+        }
+
+        //Add custom getNode() method to the mapEditor to return current node
+        mapEditor.getNode = function(){
+            return node;
+        };
+
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                data.push(csv);
+            }
+        }
+        mapEditor.update(node.config, data);
+        mapEditor.show();
+
+    }
 
 
   //**************************************************************************
@@ -1830,13 +1923,13 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var getCSV = function(query, callback, scope){
 
-        var url = config.queryService;
         var payload = {
             query: query,
-            format: "csv"
+            format: "csv",
+            limit: -1
         };
 
-        post(url, JSON.stringify(payload), {
+        post("query", JSON.stringify(payload), {
             success : function(text){
                 callback.apply(scope, [text]);
             },
@@ -2158,7 +2251,7 @@ bluewave.Explorer = function(parent, config) {
                     var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
                         columns: chartConfig.columns,
                         style: config.style.table,
-                        url: config.queryService,
+                        url: "query",
                         payload: JSON.stringify({
                             query: chartConfig.query,
                             format: "csv"

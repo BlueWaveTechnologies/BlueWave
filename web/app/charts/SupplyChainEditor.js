@@ -151,7 +151,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             var countryList = createCombobox();
 
             var states = [];
-            getData("states", function(data) {
+            getData("states_albers_usa", function(data) {
                 var arr = data.objects.states.geometries;
                 for (var i=0; i<arr.length; i++){
                     var state = arr[i];
