@@ -16,7 +16,7 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, userManager; //popup dialogs
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, userManager, mapEditor; //popup dialogs
     var windows = [];
     var zoom = 0;
 
@@ -763,6 +763,13 @@ bluewave.Explorer = function(parent, config) {
                     return;
                 }
             }
+            //Ensure that Map can only be connected by addData data type.
+            if(node.type === "map"){
+                if(inputNode.type != "addData"){
+                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+                   return;
+                }
+            }
 
           //If we're still here, update node and open editor
             node.inputs[outputID] = inputNode;
@@ -1027,6 +1034,19 @@ bluewave.Explorer = function(parent, config) {
                 addEventListeners(node);
 
                 break;
+            case "map":
+                    var node = createNode({
+                        name: title,
+                        type: nodeType,
+                        icon: icon,
+                        content: i,
+                        position: [pos_x, pos_y],
+                        inputs: 1,
+                        outputs: 0
+                    });
+
+                addEventListeners(node);
+                break;
             default:
 
                 var node = createNode({
@@ -1142,6 +1162,13 @@ bluewave.Explorer = function(parent, config) {
 
                 node.ondblclick = function(){
                     editLayout(this);
+                };
+
+                break;
+            case "map":
+
+                node.ondblclick = function(){
+                    editMap(this);
                 };
 
                 break;
@@ -1365,6 +1392,71 @@ bluewave.Explorer = function(parent, config) {
             node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
         }
     };
+
+  //**************************************************************************
+  //** editMap
+  //**************************************************************************
+    var editMap = function(node){
+        if(!mapEditor){
+            var win = createNodeEditor({
+                title: "Edit Map",
+                width: 1680,
+                height: 920,
+                resizable: true,
+                beforeClose: function(){
+                    var chartConfig = mapEditor.getConfig();
+                    var node = mapEditor.getNode();
+                    var orgConfig = node.config;
+                    if(!orgConfig) orgConfig = {};
+                    if(isDirty(chartConfig, orgConfig)){
+                        node.config = chartConfig;
+                        updateTitle(node, node.config.chartTitle);
+                        waitmask.show();
+                        var el = mapEditor.getChart();
+                        if(el.show) el.show();
+                        createPreview(el, function(canvas){
+                            node.preview = canvas.toDataURL("image/png");
+                            createThumbnail(node, canvas);
+                            win.close();
+                            waitmask.hide();
+                        }, this);
+                    }
+                    else{
+                        updateTitle(node, node.config.chartTitle);
+                        win.close();
+                    }
+                    button.layout.enable();
+                }
+            });
+
+            mapEditor = new bluewave.charts.MapEditor(win.getBody(), config);
+
+            mapEditor.show = function(){
+                win.show();
+            };
+
+            mapEditor.hide = function(){
+                win.hide();
+            }
+        }
+
+        //Add custom getNode() method to the mapEditor to return current node
+        mapEditor.getNode = function(){
+            return node;
+        };
+
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                data.push(csv);
+            }
+        }
+        mapEditor.update(node.config, data);
+        mapEditor.show();
+
+    }
 
 
   //**************************************************************************

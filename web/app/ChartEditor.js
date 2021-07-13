@@ -25,8 +25,6 @@ bluewave.ChartEditor = function(parent, config) {
     var svg;
     var previewArea;
     var pieChart, lineChart, barChart;
-    var mapArea;
-    var mapLayer;
     var optionsDiv;
     var pieInputs={
         key:"",
@@ -39,12 +37,6 @@ bluewave.ChartEditor = function(parent, config) {
         yAxis2:null,
         group:null
     };
-    var mapInputs = {
-        projection:null,
-        mapType:null
-    };
-    var mapProjection;
-    var politicalBoundries;
     var projectionOptions;
     var chartConfig = {
         pieKey:null,
@@ -54,9 +46,6 @@ bluewave.ChartEditor = function(parent, config) {
         chartType:null,
         chartTitle:null,
         nodeId:null,
-        mapProjectionName:null,
-        mapProjectionValue:null,
-        mapType:null
     };
     var margin = {
         top: 15,
@@ -162,7 +151,6 @@ bluewave.ChartEditor = function(parent, config) {
             if (input!=null) inputs[i] = d3.csvParse(input);
         }
         inputData = inputs;
-
         if(config !== null && config !== undefined){
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
@@ -187,8 +175,6 @@ bluewave.ChartEditor = function(parent, config) {
         if (pieChart) pieChart.clear();
         if (lineChart) lineChart.clear();
         if (barChart) barChart.clear();
-        if (mapArea) mapArea.selectAll("*").remove();
-        if (mapLayer) mapLayer.selectAll("circle").remove();
     };
 
 
@@ -271,23 +257,6 @@ bluewave.ChartEditor = function(parent, config) {
                     });
                 }
                 break;
-            case 'map':
-                mapProjection.clear();
-                projectionOptions.forEach((val)=>{
-                    mapProjection.add(val.name,val.projection);
-                });
-
-                mapProjection.setValue(chartConfig.mapProjectionName,chartConfig.mapProjectionValue);
-                mapInputs.mapType.clear();
-                const mapOptions = [
-                    "circles",
-                    "choropleth"
-                ];
-                mapOptions.forEach((val)=>{
-                    mapInputs.mapType.add(val,val);
-                });
-                mapInputs.mapType.setValue(chartConfig.mapType,chartConfig.mapType);
-                break;
             default:
                 break;
         }
@@ -313,9 +282,6 @@ bluewave.ChartEditor = function(parent, config) {
                 break;
             case "lineChart":
                 createLineDropDown(tbody);
-                break;
-            case "map":
-                createMapDropDown(tbody);
                 break;
             default:
                 break;
@@ -356,38 +322,6 @@ bluewave.ChartEditor = function(parent, config) {
             dropdownItem(tbody,"xAxis2","X-Axis2",createLinePreview,plotInputs,"xAxis2");
             dropdownItem(tbody,"yAxis2","Y-Axis2",createLinePreview,plotInputs,"yAxis2");
         }
-    };
-
-
-  //**************************************************************************
-  //** createMapDropDown
-  //**************************************************************************
-    var createMapDropDown = function(tbody){
-        var tr, td;
-
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        td.innerHTML= "Projection:";
-
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-
-        mapProjection = new javaxt.dhtml.ComboBox(td, {
-            style: config.style.combobox,
-            readOnly: true
-        });
-        mapProjection.clear();
-        mapProjection.onChange = function(name,value){
-            chartConfig.mapProjectionName = name;
-            chartConfig.mapProjectionValue = value;
-            createMapPreview();
-        };
-
-        dropdownItem(tr,"mapType","Map Type",createMapPreview,mapInputs,"mapType");
     };
 
 
@@ -445,8 +379,6 @@ bluewave.ChartEditor = function(parent, config) {
             margin: margin
         });
 
-        mapArea = svg.append("g");
-        mapLayer = svg.append("g");
     };
 
 
@@ -460,102 +392,6 @@ bluewave.ChartEditor = function(parent, config) {
             pieChart.update(chartConfig, data);
         });
     };
-
-
-  //**************************************************************************
-  //** createMapPreview
-  //**************************************************************************
-    var createMapPreview = function(){
-        if(!politicalBoundries){
-            getData("countries", function(data) {
-                politicalBoundries = data;
-                displayMap();
-            });
-        }else{
-            displayMap();
-        }
-    };
-
-
-  //**************************************************************************
-  //** displayMap
-  //**************************************************************************
-    var displayMap = function(){
-        // TODO:
-        // Add option to center
-        // Add scaling to defaults
-        if(chartConfig.mapProjectionValue === null){
-            return;
-        }
-        if (mapArea) mapArea.selectAll("*").remove();
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
-
-        var projection = chartConfig.mapProjectionValue
-                .translate([width/2,height/2])
-
-        var colorScale = d3.scaleThreshold()
-                .domain([100000, 1000000, 10000000, 30000000, 100000000, 500000000])
-                .range(d3.schemeBlues[7]);
-
-        let tempData = d3.map();
-        choroplethData.forEach(val=>{
-          tempData.set(val.code,+val.pop)  ;
-        });
-
-        // Draw the map
-        var path = d3.geoPath().projection(projection);
-        mapArea
-        .append("path")
-        .attr("class", "countries")
-        .attr("d", path(topojson.feature(politicalBoundries, politicalBoundries.objects.countries)))
-
-        mapArea
-            .selectAll("path")
-            .enter()
-                .attr("fill", function(d){
-                    if(chartConfig.mapType==="choropleth"){
-                        d.total = tempData.get(d.id)||0;
-                        return colorScale(d.total);
-                    }else{
-                        return colorScale(0);
-                    }
-                });
-
-        mapLayer.selectAll('circle').remove();
-
-        if(chartConfig.mapType === "circles"){
-            let filteredData = data.filter(val=>{
-                let lat = parseFloat(val.lat);
-                let lon = parseFloat(val.lon);
-                let isValidProjection = projection([lat,lon])
-                if(!isValidProjection[0] || !isValidProjection[1]){
-                    return false
-                }else{
-                    return true
-                }
-
-            });
-            //Draw Circle Points on the Map
-            mapLayer.selectAll("circle")
-                    .data(filteredData)
-                    .enter()
-                    .append("circle")
-                    .attr("cx", function (d) {
-                        let lat = parseFloat(d.lat);
-                        let lon = parseFloat(d.lon);
-                        return projection([lat,lon])[0];
-                    })
-                    .attr("cy", function (d) {
-                        let lat = parseFloat(d.lat);
-                        let lon = parseFloat(d.lon);
-                        return projection([lat,lon])[1];
-                    })
-                    .attr("r", "2px")
-                    .attr("fill", "red");
-        }
-    };
-
 
   //**************************************************************************
   //** createLinePreview
@@ -673,29 +509,6 @@ bluewave.ChartEditor = function(parent, config) {
         styleEditor.showAt(108,57);
         form.resize();
     };
-
-
-  //**************************************************************************
-  //** Fake Data for Testing
-  //**************************************************************************
-    let mapData = [
-        {lat:-122.490402,long:37.786453,label:"work"},
-        {lat:5.389809,long:37.72728,label:"home"}
-    ];
-
-    let choroplethData = [
-        {name: "Togo", code: "TGO", pop: "6238572"},
-        {name: "Sao Tome and Principe", code: "STP", pop: "152622"},
-        {name: "Tunisia", code: "TUN", pop: "10104685"},
-        {name: "Turkey", code: "TUR", pop: "72969723"},
-        {name: "Tuvalu", code: "TUV", pop: "10441"},
-        {name: "Turkmenistan", code: "TKM", pop: "4833266"},
-        {name: "United Republic of Tanzania", code: "TZA", pop: "38477873"},
-        {name: "Uganda", code: "UGA", pop: "28947181"},
-        {name: "United Kingdom", code: "GBR", pop: "60244834"},
-        {name: "Ukraine", code: "UKR", pop: "46917544"},
-        {name: "United States", code: "USA", pop: "299846449"}
-    ];
 
 
   //**************************************************************************
