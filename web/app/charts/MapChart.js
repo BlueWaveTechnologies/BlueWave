@@ -73,8 +73,8 @@ bluewave.charts.MapChart = function(parent, config) {
                 dataDomain.push(domainValue);
             });
             var colorScale = {
-                "blue": d3.scaleQuantize([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeBlues[7]),
-                "red": d3.scaleQuantize([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeReds[7])
+                "blue": d3.scaleQuantile([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeBlues[7]),
+                "red": d3.scaleQuantile([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeReds[7])
             };
 
             if(chartConfig.mapProjectionName == "Ablers USA"){
