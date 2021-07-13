@@ -27,8 +27,6 @@ if(!bluewave.charts) bluewave.charts={};
     var panel;
     var previewArea;
     var mapArea;
-    var currentNode;
-    var mapLayer;
     var inputData = [];
     var mapInputs = {
         projection:null,
@@ -165,7 +163,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapProjection.clear();
         mapProjection.onChange = function(name,value){
             chartConfig.mapProjectionName = name;
-            chartConfig.mapProjectionValue = value;
             createMapPreview();
         };
 
@@ -221,7 +218,6 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
-            if(chartConfig.mapProjectionValue !== null) chartConfig.mapProjectionValue = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             //Show the combox box inputs
@@ -243,7 +239,6 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
-            if(chartConfig.mapProjectionValue !== null) chartConfig.mapProjectionValue = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             mapInputs.lat.hide();
@@ -268,12 +263,12 @@ if(!bluewave.charts) bluewave.charts={};
         }
         if(chartConfig.mapType=="Point" && (chartConfig.latitude===null ||
             chartConfig.longitude===null || chartConfig.mapValue===null ||
-            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null ||
+            chartConfig.mapProjectionName===null || chartConfig.mapLevel===null ||
             chartConfig.colorScale===null)){
             return;
         }
         if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapProjectionValue===null || chartConfig.mapLevel===null ||
+            chartConfig.mapProjectionName===null || chartConfig.mapLevel===null ||
             chartConfig.colorScale===null)){
             return;
         }
@@ -308,7 +303,7 @@ if(!bluewave.charts) bluewave.charts={};
         projectionOptions.forEach((val)=>{
             mapProjection.add(val.name,val.projection);
         });
-        mapProjection.setValue(chartConfig.mapProjectionName,chartConfig.mapProjectionValue);
+        mapProjection.setValue(chartConfig.mapProjectionName);
         const mapOptions = [
             "Point",
             "Area"
@@ -373,20 +368,12 @@ if(!bluewave.charts) bluewave.charts={};
 
 
   //**************************************************************************
-  //** getNode
-  //**************************************************************************
-    this.getNode = function() {
-        return currentNode;
-    };
-
-
-  //**************************************************************************
   //** getConfig
   //**************************************************************************
   /** Return chart configuration file
    */
     this.getConfig = function(){
-        let copy = Object.assign({},defaultConfig);
+        let copy = Object.assign({},chartConfig);
         return copy;
     };
 
