@@ -67,10 +67,14 @@ bluewave.charts.MapChart = function(parent, config) {
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
-
+            var dataDomain = [];
+            data.forEach(function(d){
+                var domainValue = d[chartConfig.mapValue];
+                dataDomain.push(domainValue);
+            });
             var colorScale = {
-                "blue": d3.scaleQuantize([20, 100000], d3.schemeBlues[7]),
-                "red": d3.scaleQuantize([20, 100000], d3.schemeReds[7])
+                "blue": d3.scaleQuantize([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeBlues[7]),
+                "red": d3.scaleQuantize([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeReds[7])
             };
 
             if(chartConfig.mapProjectionName == "Ablers USA"){
