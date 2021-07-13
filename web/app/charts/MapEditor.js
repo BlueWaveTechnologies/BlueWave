@@ -26,7 +26,6 @@ if(!bluewave.charts) bluewave.charts={};
     var svg;
     var panel;
     var previewArea;
-    var optionsDiv;
     var mapArea;
     var currentNode;
     var mapLayer;
@@ -72,8 +71,7 @@ if(!bluewave.charts) bluewave.charts={};
         let div = document.createElement("div");
         div.className = "chart-editor-options";
         td.appendChild(div);
-        optionsDiv = div;
-        createDropDown(optionsDiv);
+        createDropDown(div);
 
         td = document.createElement("td");
         td.className = "chart-editor-preview";
@@ -90,33 +88,12 @@ if(!bluewave.charts) bluewave.charts={};
         panel.el.className = "";
 
 
-        panel.title.onclick = function(e){
-            if (this.childNodes[0].nodeType===1) return;
-            e.stopPropagation();
-            var currText = this.innerHTML;
-            this.innerHTML = "";
-            var input = document.createElement("input");
-            input.className = "form-input";
-            input.type = "text";
-            input.value = currText;
-            input.onkeydown = function(event){
-                var key = event.keyCode;
-                if(key == 13) {
-                    panel.title.innerHTML = this.value;
-                    defaultConfig.chartTitle = this.value;
-                }
-            };
-            this.appendChild(input);
-            input.focus();
-        };
-        document.body.addEventListener('click', function(e) {
-            var input = panel.title.childNodes[0];
-            var className = e.target.className;
-            if(input.nodeType === 1 && className != "form-input") {
-                panel.title.innerHTML = input.value;
-                defaultConfig.chartTitle = input.value;
-            };
+      //Allow users to change the title associated with the chart
+        addTextEditor(panel.title, function(title){
+            panel.title.innerHTML = title;
+            chartConfig.chartTitle = title;
         });
+
 
         onRender(previewArea, function(){
             initializeChartSpace();
@@ -433,6 +410,7 @@ if(!bluewave.charts) bluewave.charts={};
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var addTextEditor = bluewave.utils.addTextEditor;
     var warn = bluewave.utils.warn;
 
     init();
