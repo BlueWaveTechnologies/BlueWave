@@ -1060,20 +1060,8 @@ bluewave.Explorer = function(parent, config) {
                         }
                         else{
 
-                            var updateButtons = function(n){
-                                for (var key in button) {
-                                    if (button.hasOwnProperty(key) && key!==node.type){
-                                        if (n.csv){
-                                            button[key].enable();
-                                        }
-                                        else{
-                                            button[key].disable();
-                                        }
-                                    }
-                                }
-                            };
-                            updateButtons(this);
-
+                          //Update buttons
+                            updateButtons();
 
                           //Update node
                             if (query!==this.config.query){
@@ -1087,7 +1075,7 @@ bluewave.Explorer = function(parent, config) {
                                 this.csv = null;
                                 getCSV(query, function(csv){
                                     this.csv = csv;
-                                    updateButtons(this);
+                                    updateButtons();
                                 }, this);
 
 
@@ -1119,15 +1107,12 @@ bluewave.Explorer = function(parent, config) {
                                 if (!this.csv){
                                     getCSV(query, function(csv){
                                         this.csv = csv;
-                                        updateButtons(this);
+                                        updateButtons();
                                     }, this);
                                 };
 
                                 dbView.hide();
                             }
-
-
-
 
                         }
                     }, this);
