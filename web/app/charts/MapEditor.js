@@ -224,10 +224,8 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.lat.show();
             mapInputs.long.show();
             mapInputs.mapValue.show();
-            mapProjection.show();
 
             //Show the table row objects
-            document.getElementById("projection").style.visibility = "visible";
             document.getElementById("latitude").style.visibility = "visible";
             document.getElementById("longitude").style.visibility = "visible";
             document.getElementById("mapValue").style.visibility = "visible";
@@ -244,9 +242,7 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.lat.hide();
             mapInputs.long.hide();
             mapInputs.mapValue.show();
-            mapProjection.show();
 
-            document.getElementById("projection").style.visibility = "visible";
             document.getElementById("latitude").style.visibility = "collapse";
             document.getElementById("longitude").style.visibility = "collapse";
             document.getElementById("mapValue").style.visibility = "visible";
@@ -263,13 +259,11 @@ if(!bluewave.charts) bluewave.charts={};
         }
         if(chartConfig.mapType=="Point" && (chartConfig.latitude===null ||
             chartConfig.longitude===null || chartConfig.mapValue===null ||
-            chartConfig.mapProjectionName===null || chartConfig.mapLevel===null ||
-            chartConfig.colorScale===null)){
+            chartConfig.mapLevel===null || chartConfig.colorScale===null)){
             return;
         }
         if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapProjectionName===null || chartConfig.mapLevel===null ||
-            chartConfig.colorScale===null)){
+            chartConfig.mapLevel===null ||chartConfig.colorScale===null)){
             return;
         }
         onRender(previewArea, function() {
@@ -299,11 +293,6 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.long.add(val, val);
             mapInputs.mapValue.add(val, val);
         });
-        mapProjection.clear();
-        projectionOptions.forEach((val)=>{
-            mapProjection.add(val.name,val.projection);
-        });
-        mapProjection.setValue(chartConfig.mapProjectionName);
         const mapOptions = [
             "Point",
             "Area"

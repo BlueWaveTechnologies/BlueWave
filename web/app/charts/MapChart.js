@@ -77,14 +77,92 @@ bluewave.charts.MapChart = function(parent, config) {
                 "red": d3.scaleQuantile([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeReds[7])
             };
 
-            if(chartConfig.mapProjectionName == "Ablers USA"){
-                if(chartConfig.mapLevel == "states"){
-                    getData("states", function(mapData) {
+            if(chartConfig.mapLevel == "states"){
+                getData("states", function(mapData) {
+                    getData("countries", function(countryData){
+                        var countries = topojson.feature(countryData, countryData.objects.countries);
                         var states = topojson.feature(mapData, mapData.objects.states);
-                        var projection = d3.geoIdentity()
-                            .fitSize([width,height],states);
+                        var projection = d3.geoAlbers()
+                            .scale(width / .8)
+                            .translate([width / 2, height / 2]);
                         var path = d3.geoPath().projection(projection);
 
+                    mapArea.selectAll('circle').remove();
+                    if(chartConfig.mapType === "Point"){
+                        mapArea.selectAll("path")
+                            .data(countries.features)
+                            .enter()
+                            .append("path")
+                            .attr('d', path)
+                            .attr('fill', 'lightgray')
+                            .attr('stroke', 'white');
+
+                        mapArea.selectAll("path")
+                            .data(states.features)
+                            .enter()
+                            .append("path")
+                            .attr('d', path)
+                            .attr('fill', 'lightgray')
+                            .attr('stroke', 'white');
+
+                        data.forEach(function(d){
+                            var lat = parseFloat(d.lat);
+                            var lon = parseFloat(d.lon);
+                            if (isNaN(lat) || isNaN(lon))return;
+                            var coord = projection([lon, lat]);
+                            if (!coord) return;
+                            mapArea.append("circle")
+                                .attr("cx", coord[0])
+                                .attr("cy", coord[1])
+                                .attr("r", "8px")
+                                .style("fill", "rgb(217,91,67)");
+
+                        })
+                    }else if(chartConfig.mapType === "Area"){
+                        data.forEach(function(d){
+                            var state = d.state;
+                            for(var i = 0; i < states.features.length; i++){
+                                if(state == states.features[i].properties.code){
+                                    states.features[i].properties.inData = true;
+                                    states.features[i].properties.mapValue = d[chartConfig.mapValue];
+                                }
+                            }
+                        });
+
+                        mapArea.append("g")
+                            .attr("class", "boundary")
+                            .selectAll("boundary")
+                            .data(countries.features)
+                            .enter().append("path")
+                            .attr('d', path)
+                            .attr('fill', 'lightgray')
+                            .attr('stroke', 'white');
+
+                        mapArea.append("g")
+                            .attr("class", "boundary")
+                            .selectAll("boundary")
+                            .data(states.features)
+                            .enter()
+                            .append("path")
+                            .attr('d', path)
+                            .attr('stroke', 'white')
+                            .attr('fill', function(d){
+                                var inData = d.properties.inData;
+                                if(inData){
+                                    return colorScale[chartConfig.colorScale](d.properties.mapValue);
+                                }else{
+                                    return "lightgrey";
+                                }
+                            });
+                        }
+                    });
+                });
+            }else if(chartConfig.mapLevel == "counties"){
+                getData("counties", function(mapData){
+                    var counties = topojson.feature(mapData, mapData.objects.counties);
+                    var projection = d3.geoIdentity()
+                        .fitSize([width,height],counties);
+                    var path = d3.geoPath().projection(projection);
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
                         mapArea.selectAll("path")
@@ -113,16 +191,16 @@ bluewave.charts.MapChart = function(parent, config) {
                         })
                     }else if(chartConfig.mapType === "Area"){
                         data.forEach(function(d){
-                            var state = d.state;
-                            for(var i = 0; i < states.features.length; i++){
-                                if(state == states.features[i].properties.code){
-                                    states.features[i].properties.inData = true;
-                                    states.features[i].properties.mapValue = d[chartConfig.mapValue];
+                            var county = d.county;
+                            for(var i = 0; i < counties.features.length; i++){
+                                if(county == counties.features[i].id){
+                                    counties.features[i].properties.inData = true;
+                                    counties.features[i].properties.mapValue = d[chartConfig.mapValue];
                                 }
                             }
                         });
                         mapArea.selectAll("path")
-                            .data(states.features)
+                            .data(counties.features)
                             .enter()
                             .append("path")
                             .attr('d', path)
@@ -135,71 +213,12 @@ bluewave.charts.MapChart = function(parent, config) {
                                     return "lightgrey";
                                 }
                             });
-                        }
-                    });
-                }else if(chartConfig.mapLevel == "counties"){
-                    getData("counties", function(mapData){
-                        var counties = topojson.feature(mapData, mapData.objects.counties);
-                        var projection = d3.geoIdentity()
-                            .fitSize([width,height],counties);
-                        var path = d3.geoPath().projection(projection);
-                        mapArea.selectAll('circle').remove();
-                        if(chartConfig.mapType === "Point"){
-                            mapArea.selectAll("path")
-                                .data(states.features)
-                                .enter()
-                                .append("path")
-                                .attr('d', path)
-                                .attr('fill', 'lightgray')
-                                .attr('stroke', 'white');
-                            projection = d3.geoAlbersUsa()
-                                .scale(1850)
-                                .translate([(width/2)+50, (height/2)-15]);
-
-                            data.forEach(function(d){
-                                var lat = parseFloat(d.lat);
-                                var lon = parseFloat(d.lon);
-                                if (isNaN(lat) || isNaN(lon))return;
-                                var coord = projection([lon, lat]);
-                                if (!coord) return;
-                                mapArea.append("circle")
-                                    .attr("cx", coord[0])
-                                    .attr("cy", coord[1])
-                                    .attr("r", "8px")
-                                    .style("fill", "rgb(217,91,67)");
-
-                            })
-                        }else if(chartConfig.mapType === "Area"){
-                            data.forEach(function(d){
-                                var county = d.county;
-                                for(var i = 0; i < counties.features.length; i++){
-                                    if(county == counties.features[i].id){
-                                        counties.features[i].properties.inData = true;
-                                        counties.features[i].properties.mapValue = d[chartConfig.mapValue];
-                                    }
-                                }
-                            });
-                            mapArea.selectAll("path")
-                                .data(counties.features)
-                                .enter()
-                                .append("path")
-                                .attr('d', path)
-                                .attr('stroke', 'white')
-                                .attr('fill', function(d){
-                                    var inData = d.properties.inData;
-                                    if(inData){
-                                        return colorScale[chartConfig.colorScale](d.properties.mapValue);
-                                    }else{
-                                        return "lightgrey";
-                                    }
-                                });
-                        }
-                    });
-                }
-            }else if(chartConfig.mapProjectionName == "Ablers"){
+                    }
+                });
+            }else if(chartConfig.mapLevel == "countries"){
                 getData("countries", function(mapData){
                     var countries = topojson.feature(mapData, mapData.objects.countries);
-                    var projection = d3.geoAlbers();
+                    var projection = d3.geoMercator();
                     var path = d3.geoPath().projection(projection);
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
@@ -226,7 +245,6 @@ bluewave.charts.MapChart = function(parent, config) {
                     }else if(chartConfig.mapType === "Area"){
                         var aggregateState = 0;
                         data.forEach(function(d){
-                            console.log(d);
                             var state;
                             var country;
                             if(d.state) {
@@ -242,7 +260,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                 }else if(countries.features[i].properties.code == "US"){
                                     countries.features[i].properties.inData = true;
                                     countries.features[i].properties.mapValue = aggregateState;
-                                    console.log(countries.features[i]);
                                 }
                             }
                         });
