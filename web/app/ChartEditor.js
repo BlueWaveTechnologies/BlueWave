@@ -324,7 +324,6 @@ bluewave.ChartEditor = function(parent, config) {
         }
     };
 
-
   //**************************************************************************
   //** dropdownItem
   //**************************************************************************
@@ -401,7 +400,6 @@ bluewave.ChartEditor = function(parent, config) {
             lineChart.update(chartConfig, inputData);
         });
     };
-
 
   //**************************************************************************
   //** createBarPreview
