@@ -73,6 +73,7 @@ if(!bluewave.charts) bluewave.charts={};
         div.className = "chart-editor-options";
         td.appendChild(div);
         optionsDiv = div;
+        createDropDown(optionsDiv);
 
         td = document.createElement("td");
         td.className = "chart-editor-preview";
@@ -139,7 +140,6 @@ if(!bluewave.charts) bluewave.charts={};
             panel.title.innerHTML = mapConfig.chartTitle;
             }
         inputData = inputs;
-        createDropDown(optionsDiv);
         createOptions();
     };
 
@@ -306,63 +306,25 @@ if(!bluewave.charts) bluewave.charts={};
         });
     };
 
-
-  //**************************************************************************
-  //** checkInputs
-  //**************************************************************************
-    var checkInputs = function(){
-        var value = chartConfig.mapData;
-        var counties = [];
-        getData("counties", function(data) {
-            var arr = data.objects.counties.geometries;
-            for(var i=0; i<arr.length; i++){
-                var county = arr[i];
-                var varr = {
-                    id: county.id,
-                    name: county.properties.name
-                }
-                counties.push(varr);
-            }
-        });
-        var states = [];
-        getData("states", function(data) {
-            var arr = data.objects.states.geometries;
-            for (var i=0; i<arr.length; i++){
-                var state = arr[i];
-                states.push(state.properties);
-            }
-        });
-
-        setTimeout(function() {
-            var legalValue = true;
-            var loopData = inputData[0];
-            for(var i = 0; i < loopData.length; i++){
-                var val = loopData[i];
-                legalValue = counties.includes(val[value]);
-                if(legalValue) {
-                    legalValue = states.includes(val[value]);
-                };
-                if(!legalValue){
-                    break;
-                };
-                createMapPreview
-            }
-            alert("Your chosen field is not Map Data");
-        }, 500);
-    };
-
-
   //**************************************************************************
   //** createOptions
   //**************************************************************************
   /** Initializes Options for Dropdowns.
    */
     var createOptions = function() {
+        console.log("Create Options has been called");
         var data = inputData[0];
+        console.log(data);
         let dataOptions = Object.keys(data[0]);
-        mapInputs.lat.clear();
-        mapInputs.long.clear()
-        mapInputs.mapValue.clear();
+        console.log(dataOptions);
+        if(mapInputs){
+            mapInputs.lat.clear();
+            mapInputs.long.clear()
+            mapInputs.mapValue.clear();
+            mapInputs.mapType.clear();
+            mapInputs.mapLevel.clear();
+            mapInputs.colorScale.clear();
+        }
         dataOptions.forEach((val)=>{
             mapInputs.lat.add(val, val);
             mapInputs.long.add(val, val);
@@ -372,9 +334,7 @@ if(!bluewave.charts) bluewave.charts={};
         projectionOptions.forEach((val)=>{
             mapProjection.add(val.name,val.projection);
         });
-
         mapProjection.setValue(chartConfig.mapProjectionName,chartConfig.mapProjectionValue);
-        mapInputs.mapType.clear();
         const mapOptions = [
             "Point",
             "Area"
@@ -382,7 +342,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapOptions.forEach((val)=>{
             mapInputs.mapType.add(val,val);
         });
-        mapInputs.mapLevel.clear();
         const mapLevel = [
             "counties",
             "states",
@@ -391,7 +350,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
         });
-        mapInputs.colorScale.clear();
         const colorScale = [
             "red",
             "blue"
@@ -412,7 +370,7 @@ if(!bluewave.charts) bluewave.charts={};
   //** clear
   //**************************************************************************
     this.clear = function(){
-        mapInputs = {};
+        //mapInputs = {};
         inputData = [];
         defaultConfig = {};
         panel.title.innerHTML = "Untitled";
