@@ -30,7 +30,6 @@ bluewave.Explorer = function(parent, config) {
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
-        if (!config.queryService) config.queryService = "query/";
 
 
       //Create main panel
@@ -1254,8 +1253,36 @@ bluewave.Explorer = function(parent, config) {
             dbView = new javaxt.express.DBView(div, {
                 waitmask: waitmask,
                 queryLanguage: "cypher",
-                queryService: config.queryService + "job/",
-                getTables: config.queryService + "nodes/",
+                queryService: "query/job/",
+                getTables: function(tree){
+                    waitmask.show();
+                    get("graph/nodes", {
+                        success: function(nodes){
+                            waitmask.hide();
+
+                          //Parse response
+                            var arr = [];
+                            for (var i=0; i<nodes.length; i++){
+                                var nodeName = nodes[i].node;
+                                if (nodeName){
+                                    arr.push({name: nodes[i].node});
+                                }
+                            }
+                            arr.sort(function(a, b){
+                                return a.name.localeCompare(b.name);
+                            });
+
+
+                          //Add nodes to the tree
+                            tree.addNodes(arr);
+
+                        },
+                        failure: function(request){
+                            if (waitmask) waitmask.hide();
+                            alert(request);
+                        }
+                    });
+                },
                 style:{
                     table: javaxt.dhtml.style.default.table,
                     toolbar: javaxt.dhtml.style.default.toolbar,
@@ -1760,14 +1787,13 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var getCSV = function(query, callback, scope){
 
-        var url = config.queryService;
         var payload = {
             query: query,
             format: "csv",
             limit: -1
         };
 
-        post(url, JSON.stringify(payload), {
+        post("query", JSON.stringify(payload), {
             success : function(text){
                 callback.apply(scope, [text]);
             },
@@ -2089,7 +2115,7 @@ bluewave.Explorer = function(parent, config) {
                     var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
                         columns: chartConfig.columns,
                         style: config.style.table,
-                        url: config.queryService,
+                        url: "query",
                         payload: JSON.stringify({
                             query: chartConfig.query,
                             format: "csv"
