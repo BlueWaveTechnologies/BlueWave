@@ -16,7 +16,7 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, scatterEditor, userManager; //popup dialogs
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, scatterEditor, mapEditor, userManager; //popup dialogs
     var windows = [];
     var zoom = 0;
 
