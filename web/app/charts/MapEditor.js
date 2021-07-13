@@ -343,7 +343,7 @@ if(!bluewave.charts) bluewave.charts={};
     this.clear = function(){
         //mapInputs = {};
         inputData = [];
-        defaultConfig = {};
+        chartConfig = {};
         panel.title.innerHTML = "Untitled";
         //options.innerHTML = "";
 
