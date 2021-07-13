@@ -285,7 +285,7 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
               "translate(" + margin.left + "," + margin.top + ")");
 
 
-        getData("states", function(mapData) {
+        getData("states_albers_usa", function(mapData) {
 
 
           //Render country polygon

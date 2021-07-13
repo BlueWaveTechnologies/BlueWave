@@ -203,11 +203,23 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>bluewave.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
             </plugin>
+
+            <plugin>
+              <artifactId>maven-assembly-plugin</artifactId>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <mainClass>bluewave.Main</mainClass>
+                            <classpathPrefix>lib/</classpathPrefix>
+                  </manifest>
+                </archive>
+              </configuration>
+           </plugin>
+
 
       </plugins>
     </build>
