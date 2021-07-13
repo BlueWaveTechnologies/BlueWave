@@ -288,7 +288,7 @@ if(!bluewave.charts) bluewave.charts={};
         let dataOptions = Object.keys(data[0]);
         if(mapInputs){
             mapInputs.lat.clear();
-            mapInputs.long.clear()
+            mapInputs.long.clear();
             mapInputs.mapValue.clear();
             mapInputs.mapType.clear();
             mapInputs.mapLevel.clear();
@@ -326,12 +326,14 @@ if(!bluewave.charts) bluewave.charts={};
         colorScale.forEach((val)=>{
             mapInputs.colorScale.add(val, val);
         });
-        mapInputs.mapType.setValue(chartConfig.mapType,chartConfig.mapType);
-        mapInputs.mapValue.setValue(chartConfig.mapValue,chartConfig.mapValue);
-        mapInputs.lat.setValue(chartConfig.latitude,chartConfig.latitude);
-        mapInputs.long.setValue(chartConfig.longitude,chartConfig.longitude);
-        mapInputs.mapLevel.setValue(chartConfig.mapValue,chartConfig.mapValue);
-        mapInputs.colorScale.setValue(chartConfig.colorScale,chartConfig.colorScale);
+
+
+        mapInputs.mapType.setValue(chartConfig.mapType, true);
+        mapInputs.mapValue.setValue(chartConfig.mapValue, true);
+        mapInputs.lat.setValue(chartConfig.latitude, true);
+        mapInputs.long.setValue(chartConfig.longitude, true);
+        mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
+        mapInputs.colorScale.setValue(chartConfig.colorScale, true);
     };
 
 
