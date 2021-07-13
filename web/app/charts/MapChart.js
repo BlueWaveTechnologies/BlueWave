@@ -62,8 +62,8 @@ bluewave.charts.MapChart = function(parent, config) {
     this.update = function(chartConfig, data){
         this.clear();
         var parent = svg.node().parentNode;
-        console.log(data);
-        console.log(chartConfig);
+//        console.log(data);
+//        console.log(chartConfig);
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
