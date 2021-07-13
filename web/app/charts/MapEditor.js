@@ -312,11 +312,8 @@ if(!bluewave.charts) bluewave.charts={};
   /** Initializes Options for Dropdowns.
    */
     var createOptions = function() {
-        console.log("Create Options has been called");
         var data = inputData[0];
-        console.log(data);
         let dataOptions = Object.keys(data[0]);
-        console.log(dataOptions);
         if(mapInputs){
             mapInputs.lat.clear();
             mapInputs.long.clear()
