@@ -217,7 +217,6 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             //Show the combox box inputs
@@ -236,7 +235,6 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             mapInputs.lat.hide();
@@ -323,6 +321,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.long.setValue(chartConfig.longitude, true);
         mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
         mapInputs.colorScale.setValue(chartConfig.colorScale, true);
+        createMapPreview();
     };
 
 

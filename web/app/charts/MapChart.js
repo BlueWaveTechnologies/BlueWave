@@ -218,7 +218,9 @@ bluewave.charts.MapChart = function(parent, config) {
             }else if(chartConfig.mapLevel == "countries"){
                 getData("countries", function(mapData){
                     var countries = topojson.feature(mapData, mapData.objects.countries);
-                    var projection = d3.geoMercator();
+                    var projection = d3.geoMercator()
+                                    .scale(width / 2 / Math.PI)
+                                    .translate([width / 2, height / 2]);
                     var path = d3.geoPath().projection(projection);
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
@@ -257,7 +259,8 @@ bluewave.charts.MapChart = function(parent, config) {
                                 if(country == countries.features[i].properties.code){
                                     countries.features[i].properties.inData = true;
                                     countries.features[i].properties.mapValue = d[chartConfig.mapValue];
-                                }else if(countries.features[i].properties.code == "US"){
+                                }else if(countries.features[i].properties.code == "US" &&
+                                        aggregateState > 0){
                                     countries.features[i].properties.inData = true;
                                     countries.features[i].properties.mapValue = aggregateState;
                                 }
