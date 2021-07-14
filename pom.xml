@@ -5,12 +5,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.organization>centrifugetech</sonar.organization>
-        <sonar.projectKey>CentrifugeTech_BlueWave</sonar.projectKey>
-        <sonar.sources>.</sonar.sources>
-        <sonar.exclusions>**/*.sql,web/data/*,web/lib/*</sonar.exclusions>
-        <sonar.skip>true</sonar.skip>
     </properties>
 
   <!-- =========================================================== -->
@@ -156,43 +150,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-
-      <!-- Run the sonar scanner -->
-      <plugin>
-       <groupId>org.sonarsource.scanner.maven</groupId>
-       <artifactId>sonar-maven-plugin</artifactId>
-       <version>3.8.0.2131</version>
-       <executions>
-         <execution>
-           <phase>verify</phase>
-           <goals>
-             <goal>sonar</goal>
-           </goals>
-         </execution>
-       </executions>
-      </plugin>
-
-      <!-- Run the code coverage plugin -->
-      <plugin>
-       <groupId>org.jacoco</groupId>
-       <artifactId>jacoco-maven-plugin</artifactId>
-       <version>0.7.7.201606060606</version>
-       <executions>
-         <execution>
-           <goals>
-             <goal>prepare-agent</goal>
-           </goals>
-         </execution>
-         <execution>
-           <id>report</id>
-           <phase>prepare-package</phase>
-           <goals>
-             <goal>report</goal>
-           </goals>
-         </execution>
-       </executions>
-      </plugin>
 
 
             <!-- Create main app -->
