@@ -10,7 +10,7 @@ public class DateUtils {
   //**************************************************************************
   //** getCurrentTime
   //**************************************************************************
-  /** Returns current time in milliseconds
+  /** Returns current time in nanoseconds
    */
     public static long getCurrentTime(){
         return System.nanoTime()+jvm_diff;
