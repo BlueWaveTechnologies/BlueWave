@@ -162,7 +162,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 });
             }else if(chartConfig.mapLevel == "counties"){
                 getData("states", function(mapData) {
-                    var states = topojson.feature(mapData, mapData.objects.states);
                     getData("counties", function(mapData){
                         var counties = topojson.feature(mapData, mapData.objects.counties);
                         var projection = d3.geoIdentity()
@@ -175,31 +174,57 @@ bluewave.charts.MapChart = function(parent, config) {
 
                           //Add counties
                             mapArea.selectAll("path")
-                                .data(states.features)
+                                .data(counties.features)
                                 .enter()
                                 .append("path")
                                 .attr('d', path)
-                                .attr('fill', 'lightgray')
-                                .stroke('white');
+                                .attr('fill', 'lightgray');
 
 
-                            projection = d3.geoAlbersUsa()
-                                .scale(1850)
-                                .translate([(width/2)+50, (height/2)-15]);
+                          //Add state boundaries
+                            mapArea
+                              .append("path")
+                              .attr("fill", "none")
+                              .attr("stroke", "white")
+                              .attr("d", path(
+                                  topojson.mesh(
+                                    mapData,
+                                    mapData.objects.states,
+                                    function(a, b) {
+                                      return a !== b;
+                                    }
+                                  )
+                                )
+                              );
 
+
+
+                            var coords = [];
                             data.forEach(function(d){
                                 var lat = parseFloat(d.lat);
                                 var lon = parseFloat(d.lon);
                                 if (isNaN(lat) || isNaN(lon))return;
                                 var coord = projection([lon, lat]);
                                 if (!coord) return;
+                                coords.push(coord);
+
+                            });
+
+
+                            console.log(coords.length);
+                            if (coords.length===0){
+                                //use centroids
+                            }
+
+                            for (var i=0; i<coords.length; i++){
+                                var coord = coords[i];
                                 mapArea.append("circle")
                                     .attr("cx", coord[0])
                                     .attr("cy", coord[1])
                                     .attr("r", "8px")
                                     .style("fill", "rgb(217,91,67)");
+                            }
 
-                            });
                         }
                         else if(chartConfig.mapType === "Area"){
 
