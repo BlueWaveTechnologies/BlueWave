@@ -68,15 +68,17 @@ bluewave.charts.MapChart = function(parent, config) {
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
-            var dataDomain = [];
-            data.forEach(function(d){
-                var domainValue = d[chartConfig.mapValue];
-                dataDomain.push(domainValue);
-            });
+
+          //Get min/max values
+            var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
+
+
+          //Set color scale
             var colorScale = {
-                "blue": d3.scaleQuantile([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeBlues[7]),
-                "red": d3.scaleQuantile([d3.min(dataDomain), d3.max(dataDomain)], d3.schemeReds[7])
+                "blue": d3.scaleQuantile(extent, d3.schemeBlues[7]),
+                "red": d3.scaleQuantile(extent, d3.schemeReds[7])
             };
+
 
             if(chartConfig.mapLevel == "states"){
                 getData("states", function(mapData) {
@@ -167,14 +169,20 @@ bluewave.charts.MapChart = function(parent, config) {
                             .fitSize([width,height],counties);
                         var path = d3.geoPath().projection(projection);
                         mapArea.selectAll('circle').remove();
-                        if(chartConfig.mapType === "Point"){
+
+                        if (chartConfig.mapType === "Point"){
+
+
+                          //Add counties
                             mapArea.selectAll("path")
                                 .data(states.features)
                                 .enter()
                                 .append("path")
                                 .attr('d', path)
                                 .attr('fill', 'lightgray')
-                                .attr('stroke', 'white');
+                                .stroke('white');
+
+
                             projection = d3.geoAlbersUsa()
                                 .scale(1850)
                                 .translate([(width/2)+50, (height/2)-15]);
@@ -191,31 +199,55 @@ bluewave.charts.MapChart = function(parent, config) {
                                     .attr("r", "8px")
                                     .style("fill", "rgb(217,91,67)");
 
-                            })
-                        }else if(chartConfig.mapType === "Area"){
+                            });
+                        }
+                        else if(chartConfig.mapType === "Area"){
+
                             data.forEach(function(d){
                                 var county = d.county;
                                 for(var i = 0; i < counties.features.length; i++){
-                                    if(county == counties.features[i].id){
-                                        counties.features[i].properties.inData = true;
+                                    if (county === counties.features[i].id){
                                         counties.features[i].properties.mapValue = d[chartConfig.mapValue];
                                     }
                                 }
                             });
+
+
+                          //Add counties
                             mapArea.selectAll("path")
                                 .data(counties.features)
                                 .enter()
                                 .append("path")
                                 .attr('d', path)
-                                .attr('stroke', 'white')
                                 .attr('fill', function(d){
-                                    var inData = d.properties.inData;
-                                    if(inData){
-                                        return colorScale[chartConfig.colorScale](d.properties.mapValue);
-                                    }else{
-                                        return "lightgrey";
-                                    }
+
+                                    var v = parseFloat(d.properties.mapValue);
+                                    if (isNaN(v) || v<0) v = 0;
+                                    //else v = Math.log10(1+v);
+
+                                    var fill = colorScale[chartConfig.colorScale](v);
+                                    if (!fill) return "#f8f8f8";
+                                    else return fill;
+
                                 });
+
+
+                          //Add state boundaries
+                            mapArea
+                              .append("path")
+                              .attr("fill", "none")
+                              .attr("stroke", "white")
+                              .attr("d", path(
+                                  topojson.mesh(
+                                    mapData,
+                                    mapData.objects.states,
+                                    function(a, b) {
+                                      return a !== b;
+                                    }
+                                  )
+                                )
+                              );
+
                         }
                     });
                 });
