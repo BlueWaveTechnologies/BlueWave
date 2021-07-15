@@ -78,6 +78,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 "blue": d3.scaleQuantile(extent, d3.schemeBlues[7]),
                 "red": d3.scaleQuantile(extent, d3.schemeReds[7])
             };
+            if (!chartConfig.colorScale) chartConfig.colorScale = "red";
 
 
             if(chartConfig.mapLevel == "states"){
