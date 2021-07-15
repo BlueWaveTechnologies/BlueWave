@@ -92,35 +92,70 @@ bluewave.charts.MapChart = function(parent, config) {
 
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
-                        mapArea.selectAll("path")
+                        mapArea.append("g")
+                            .attr("class", "boundary")
+                            .selectAll("boundary")
                             .data(countries.features)
-                            .enter()
-                            .append("path")
+                            .enter().append("path")
                             .attr('d', path)
                             .attr('fill', 'lightgray')
                             .attr('stroke', 'white');
 
-                        mapArea.selectAll("path")
+                        mapArea.append("g")
+                            .attr("class", "boundary")
+                            .selectAll("boundary")
                             .data(states.features)
                             .enter()
                             .append("path")
                             .attr('d', path)
                             .attr('fill', 'lightgray')
-                            .attr('stroke', 'white');
+                            .attr('stroke', 'white')
 
+                        var coords = [];
                         data.forEach(function(d){
                             var lat = parseFloat(d.lat);
                             var lon = parseFloat(d.lon);
                             if (isNaN(lat) || isNaN(lon))return;
                             var coord = projection([lon, lat]);
                             if (!coord) return;
+                            coord.push(parseFloat(d[chartConfig.mapValue]));
+                            coords.push(coord);
+                        });
+
+                        if (coords.length===0){ //use state centroids
+                            data.forEach(function(d){
+                                var state = d.state;
+                                for (var i = 0; i < states.features.length; i++){
+                                    var feature = states.features[i];
+                                    if (state === feature.properties.code){
+                                        if (chartConfig.mapValue){
+                                            var val = parseFloat(d[chartConfig.mapValue]);
+                                            if (!isNaN(val) && val>0){
+                                                var coord = path.centroid(feature);
+                                                coord.push(d[chartConfig.mapValue]);
+                                                coords.push(coord);
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        for (var i=0; i<coords.length; i++){
+                            var coord = coords[i];
+                            var val = coord[2];
+                            if (isNaN(val) || val<=0) continue;
+                            var p = val/extent[1];
+                            var maxSize = 30;
+                            if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
+                            var r = maxSize*p;
                             mapArea.append("circle")
                                 .attr("cx", coord[0])
                                 .attr("cy", coord[1])
-                                .attr("r", "8px")
+                                .attr("r", r + "px")
                                 .style("fill", "rgb(217,91,67)");
+                        }
 
-                        });
                     }else if(chartConfig.mapType === "Area"){
                         data.forEach(function(d){
                             var state = d.state;
@@ -171,7 +206,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
                         if (chartConfig.mapType === "Point"){
 
-
                           //Add counties
                             mapArea.selectAll("path")
                                 .data(counties.features)
@@ -197,8 +231,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                 )
                               );
 
-
-
                             var coords = [];
                             data.forEach(function(d){
                                 var lat = parseFloat(d.lat);
@@ -209,7 +241,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                 coord.push(parseFloat(d[chartConfig.mapValue]));
                                 coords.push(coord);
                             });
-
 
                             if (coords.length===0){ //use county centroids
                                 data.forEach(function(d){
@@ -236,11 +267,8 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var val = coord[2];
                                 if (isNaN(val) || val<=0) continue;
                                 var p = val/extent[1];
-
-
                                 var maxSize = 30;
                                 if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
-
                                 var r = maxSize*p;
                                 mapArea.append("circle")
                                     .attr("cx", coord[0])
@@ -261,7 +289,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                 }
                             });
 
-
                           //Add counties
                             mapArea.selectAll("path")
                                 .data(counties.features)
@@ -280,7 +307,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
                                 });
 
-
                           //Add state boundaries
                             mapArea
                               .append("path")
@@ -296,7 +322,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                   )
                                 )
                               );
-
                         }
                     });
                 });
@@ -316,19 +341,52 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr('d', path)
                             .attr('fill', 'lightgray')
                             .attr('stroke', 'white');
-                        data.forEach(function(d){
-                        var lat = parseFloat(d.lat);
-                        var lon = parseFloat(d.lon);
-                        if (isNaN(lat) || isNaN(lon))return;
-                        var coord = projection([lon, lat]);
-                        if (!coord) return;
-                        mapArea.append("circle")
-                            .attr("cx", coord[0])
-                            .attr("cy", coord[1])
-                            .attr("r", "8px")
-                            .style("fill", "rgb(217,91,67)");
 
+                        var coords = [];
+                        data.forEach(function(d){
+                            var lat = parseFloat(d.lat);
+                            var lon = parseFloat(d.lon);
+                            if (isNaN(lat) || isNaN(lon))return;
+                            var coord = projection([lon, lat]);
+                            if (!coord) return;
+                            coord.push(parseFloat(d[chartConfig.mapValue]));
+                            coords.push(coord);
                         });
+                        if (coords.length===0){ //use state centroids
+                            data.forEach(function(d){
+                                var country = d.country;
+                                for (var i = 0; i < countries.features.length; i++){
+                                    var feature = countries.features[i];
+                                    console.log(feature);
+                                    if (country === feature.properties.code){
+                                        if (chartConfig.mapValue){
+                                            var val = parseFloat(d[chartConfig.mapValue]);
+                                            if (!isNaN(val) && val>0){
+                                                var coord = path.centroid(feature);
+                                                coord.push(d[chartConfig.mapValue]);
+                                                coords.push(coord);
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        for (var i=0; i<coords.length; i++){
+                            var coord = coords[i];
+                            var val = coord[2];
+                            if (isNaN(val) || val<=0) continue;
+                            var p = val/extent[1];
+                            var maxSize = 30;
+                            if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
+                            var r = maxSize*p;
+                            mapArea.append("circle")
+                                .attr("cx", coord[0])
+                                .attr("cy", coord[1])
+                                .attr("r", r + "px")
+                                .style("fill", "rgb(217,91,67)");
+                        }
+
                     }else if(chartConfig.mapType === "Area"){
                         var aggregateState = 0;
                         data.forEach(function(d){
