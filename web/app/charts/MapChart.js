@@ -206,23 +206,41 @@ bluewave.charts.MapChart = function(parent, config) {
                                 if (isNaN(lat) || isNaN(lon))return;
                                 var coord = projection([lon, lat]);
                                 if (!coord) return;
+                                coord.push(parseFloat(d[chartConfig.mapValue]));
                                 coords.push(coord);
-
                             });
 
 
-                            if (coords.length===0){
-                                coords = counties.features.map(function (feature){
-                                    return path.centroid(feature);
+                            if (coords.length===0){ //use county centroids
+                                data.forEach(function(d){
+                                    var county = d.county;
+                                    for (var i = 0; i < counties.features.length; i++){
+                                        var feature = counties.features[i];
+                                        if (county === feature.id){
+                                            if (chartConfig.mapValue){
+                                                var val = parseFloat(d[chartConfig.mapValue]);
+                                                if (!isNaN(val) && val>0){
+                                                    var coord = path.centroid(feature);
+                                                    coord.push(d[chartConfig.mapValue]);
+                                                    coords.push(coord);
+                                                }
+                                            }
+                                        }
+                                    }
                                 });
                             }
 
+
                             for (var i=0; i<coords.length; i++){
                                 var coord = coords[i];
+                                var val = coord[2];
+                                if (isNaN(val) || val<=0) continue;
+                                var p = val/extent[1];
+                                var r = 10*p;
                                 mapArea.append("circle")
                                     .attr("cx", coord[0])
                                     .attr("cy", coord[1])
-                                    .attr("r", "8px")
+                                    .attr("r", r + "px")
                                     .style("fill", "rgb(217,91,67)");
                             }
 
