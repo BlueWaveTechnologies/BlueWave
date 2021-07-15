@@ -71,10 +71,24 @@ public class QueryService extends WebService {
 
 
 
-      //Delete any orphan jobs
-        for (javaxt.io.Directory dir : jobDir.getSubDirectories()){
-            dir.delete();
+      //Populate cache with saved queries
+        HashMap<String, String> queries = new HashMap<>();
+        for (javaxt.io.File file : jobDir.getFiles("*.cypher", true)){
+            queries.put(file.getName(false), file.getText());
         }
+        if (!queries.isEmpty()){
+            for (javaxt.io.File file : jobDir.getFiles(true)){
+                String format = file.getExtension();
+                if (format.equals("json") || format.equals("csv") || format.equals("tsv")){
+                    String query = queries.get(file.getName(false));
+                    if (query!=null){
+                        console.log(format+"|"+query);
+                        cache.put(format + "|" + query, file.toString());
+                    }
+                }
+            }
+        }
+
 
 
       //Set graph
@@ -118,9 +132,6 @@ public class QueryService extends WebService {
                     return new ServiceResponse(501, "Not implemented");
                 }
             }
-            else if (path.equals("nodes")){
-                return getNodes();
-            }
             else{
                 return new ServiceResponse(501, "Not implemented");
             }
@@ -159,7 +170,7 @@ public class QueryService extends WebService {
   //** notify
   //**************************************************************************
     private void notify(QueryJob job){
-        String msg = job.id+","+job.status;
+        String msg = job.id+","+job.getStatus();
         synchronized(listeners){
             Iterator<Long> it = listeners.keySet().iterator();
             while(it.hasNext()){
@@ -187,16 +198,18 @@ public class QueryService extends WebService {
             Long offset = getParameter("offset", request).toLong();
             Long limit = getParameter("limit", request).toLong();
             if (limit==null) limit = 25L;
+            if (limit<1) limit = null;
             if (offset==null){
                 Long page = getParameter("page", request).toLong();
-                if (page!=null) offset = (page*limit)-limit;
+                if (page!=null && limit!=null) offset = (page*limit)-limit;
             }
 
 
 
           //Collect misc params
             JSONObject params = new JSONObject();
-            params.set("format", getParameter("format",request).toString());
+            String format = getParameter("format",request).toString();
+            params.set("format", format);
             Boolean addMetadata = getParameter("metadata", request).toBoolean();
             if (addMetadata!=null && addMetadata==true){
                 params.set("metadata", true);
@@ -263,21 +276,27 @@ public class QueryService extends WebService {
     private class Writer {
 
         private String format;
-        private StringBuilder str;
         private long x = 0;
         private Long elapsedTime;
         private Long count;
         private JSONArray metadata;
         private boolean addMetadata = false;
         private boolean isClosed = false;
+        private java.io.BufferedWriter writer;
 
-        public Writer(String format, boolean addMetadata){
-            str = new StringBuilder();
-            this.format = format;
-            this.addMetadata = addMetadata;
+
+        public Writer(QueryJob job){
+
+            format = job.getOutputFormat();
+            addMetadata = job.addMetadata();
+
+            javaxt.io.File[] files = job.getOutputs();
+            writer = files[0].getBufferedWriter("UTF-8");
+            files[1].write(job.getQuery());
+
 
             if (format.equals("json")){
-                str.append("{\"rows\":[");
+                write("{\"rows\":[");
             }
         }
 
@@ -306,8 +325,8 @@ public class QueryService extends WebService {
                 }
 
 
-                if (x>0) str.append(",");
-                str.append(json.toString().replace("\"null\"", "null")); //<-- this is a bit of a hack...
+                if (x>0) write(",");
+                write(json.toString().replace("\"null\"", "null")); //<-- this is a bit of a hack...
 
             }
             else if (format.equals("tsv") || format.equals("csv")){
@@ -316,17 +335,19 @@ public class QueryService extends WebService {
                 if (x==0){
                     String s = format.equals("tsv") ? "\t" : ",";
                     for (int i=0; i<fields.size(); i++){
-                        if (i>0) str.append(s);
-                        str.append(fields.get(i));
+                        if (i>0) write(s);
+                        write(fields.get(i));
                     }
-                    str.append("\r\n");
+                    write("\r\n");
                 }
+
+                if (x>0) write("\r\n");
 
 
                 String s = format.equals("tsv") ? "\t" : ",";
                 for (int i=0; i<fields.size(); i++){
-                    if (i>0) str.append(s);
-                    String fieldName = fields.get(i).toString();
+                    if (i>0) write(s);
+                    String fieldName = fields.get(i);
                     Object value = r.get(fieldName).asObject();
                     if (value==null){
                         value = "";
@@ -353,9 +374,15 @@ public class QueryService extends WebService {
                         }
 
                     }
-                    str.append(value);
+                    write(value.toString());
                 }
-                str.append("\r\n");
+
+            }
+
+            try{
+                writer.flush();
+            }
+            catch(Exception e){
             }
 
             x++;
@@ -381,37 +408,42 @@ public class QueryService extends WebService {
             isClosed = true;
             if (format.equals("json")){
 
-                str.append("]");
+                write("]");
 
 
                 if (addMetadata){
                     if (metadata!=null){
-                        str.append(",\"metadata\":");
-                        str.append(metadata);
+                        write(",\"metadata\":");
+                        write(metadata.toString());
                     }
                 }
 
 
                 if (count!=null){
-                    str.append(",\"total_rows\":");
-                    str.append(count);
+                    write(",\"total_rows\":");
+                    write(count+"");
                 }
 
                 if (this.elapsedTime!=null){
                     double elapsedTime = (double)(this.elapsedTime)/1000d;
                     BigDecimal time = new BigDecimal(elapsedTime).setScale(3, BigDecimal.ROUND_HALF_UP);
-                    str.append(",\"time\":");
-                    str.append(time);
+                    write(",\"time\":");
+                    write(time.toPlainString());
                 }
 
-                str.append("}");
+                write("}");
             }
+            try{
+                writer.close();
+            }
+            catch(Exception e){}
         }
 
-
-        public String toString(){
-            if (!isClosed) close();
-            return str.toString();
+        private void write(String str){
+            try{
+                writer.write(str);
+            }
+            catch(Exception e){}
         }
     }
 
@@ -482,21 +514,57 @@ public class QueryService extends WebService {
    */
     private ServiceResponse getJobResponse(QueryJob job){
         ServiceResponse response;
-        if (job.status.equals("failed")){
-            javaxt.io.File file = job.getOutput();
+        String jobStatus = job.getStatus();
+        if (jobStatus.equals("failed")){
+            javaxt.io.File file = job.getOutputs()[0];
             String str = file.getText();
             response = new ServiceResponse(500, str);
-            deleteJob(job);
+            deleteJob(job, false);
         }
-        else if (job.status.equals("complete")){
-            javaxt.io.File file = job.getOutput();
-            String str = file.getText();
-            response = new ServiceResponse(str);
-            response.setContentType(file.getContentType());
-            deleteJob(job);
+        else if (jobStatus.equals("complete")){
+            javaxt.io.File file = job.getOutputs()[0];
+            String query = job.getQuery();
+
+          //Check whether to save output
+            boolean saveOutput = false;
+            long ellapsedTime = job.getEllapsedTime();
+            if (ellapsedTime>15000){
+                saveOutput = true;
+            }
+
+
+          //Update cache
+            if (saveOutput){
+                synchronized(cache){
+                    cache.put(job.getFormat() + "|" + query, file.toString());
+                    cache.notify();
+                }
+            }
+
+
+            boolean returnFile = false;
+            synchronized(cache) {
+                String path = (String) cache.get(job.getFormat()+"|"+query);
+                if (path!=null){
+                    returnFile = true;
+                    file = new javaxt.io.File(path);
+                }
+            }
+
+
+            if (returnFile){
+                response = new ServiceResponse(file);
+            }
+            else{
+                String str = file.getText();
+                response = new ServiceResponse(str);
+                response.setContentType(file.getContentType());
+            }
+
+            deleteJob(job, saveOutput);
         }
         else{
-            response = new ServiceResponse(job.status);
+            response = new ServiceResponse(jobStatus);
         }
         return response;
     }
@@ -508,7 +576,7 @@ public class QueryService extends WebService {
   /** Removes a job from the queue and deletes any output files that might
    *  have been created with the job.
    */
-    private void deleteJob(QueryJob job){
+    private void deleteJob(QueryJob job, boolean saveOutput){
 
         String key = job.getKey();
         synchronized(pendingJobs){
@@ -526,8 +594,11 @@ public class QueryService extends WebService {
             jobs.notify();
         }
 
-        javaxt.io.File file = job.getOutput();
-        file.delete();
+        if (!saveOutput){
+            for (javaxt.io.File file : job.getOutputs()){
+                file.delete();
+            }
+        }
     }
 
 
@@ -554,8 +625,7 @@ public class QueryService extends WebService {
         try{
 
           //Update job status
-            job.status = "canceled";
-            job.updated = new javaxt.utils.Date();
+            job.setStatus("canceled");
             notify(job);
 
 
@@ -567,7 +637,7 @@ public class QueryService extends WebService {
 
 
           //Update queue
-            deleteJob(job);
+            deleteJob(job, false);
 
 
           //return response
@@ -575,65 +645,6 @@ public class QueryService extends WebService {
         }
         catch(Exception e){
             return new ServiceResponse(500, "failed to cancel query");
-        }
-    }
-
-
-  //**************************************************************************
-  //** getNodes
-  //**************************************************************************
-  /** Returns a list of nodes
-   */
-    public ServiceResponse getNodes() {
-
-        synchronized(cache){
-            Object obj = cache.get("nodes");
-            if (obj!=null){
-                return new ServiceResponse((JSONObject) obj);
-            }
-            else{
-                Session session = null;
-                try{
-
-                  //Execute query
-                    session = graph.getSession();
-                    TreeSet<String> nodes = new TreeSet<>();
-                    Result rs = session.run("MATCH (n) RETURN distinct labels(n)");
-                    while (rs.hasNext()){
-                        Record r = rs.next();
-                        List labels = r.get(0).asList();
-                        if (labels.isEmpty()) continue; //?
-                        String label = labels.get(0).toString();
-                        nodes.add(label);
-                    }
-                    session.close();
-
-
-                  //Generate json
-                    JSONArray arr = new JSONArray();
-                    Iterator<String> it = nodes.iterator();
-                    while (it.hasNext()){
-                        String label = it.next();
-                        JSONObject json = new JSONObject();
-                        json.set("name", label);
-                        arr.add(json);
-                    }
-                    JSONObject json = new JSONObject();
-                    json.set("tables", arr);
-
-
-                  //Update cache
-                    cache.put("nodes", json);
-                    cache.notify();
-
-                  //Return response
-                    return new ServiceResponse(json);
-                }
-                catch(Exception e){
-                    if (session!=null) session.close();
-                    return new ServiceResponse(e);
-                }
-            }
         }
     }
 
@@ -724,14 +735,41 @@ public class QueryService extends WebService {
             }
         }
 
+        public Long getLimit(){
+            return limit;
+        }
 
+        public Long getOffset(){
+            return offset;
+        }
+
+        public String getFormat(){
+            return format;
+        }
+
+        public Long getEllapsedTime(){
+            return updated.getTime()-created.getTime();
+        }
 
         public String getKey(){
             return userID + ":" + id;
         }
 
+        public String getStatus(){
+            return status;
+        }
+
+        public void setStatus(String status){
+            this.status = status;
+            updated = new javaxt.utils.Date();
+        }
+
         public boolean isCanceled(){
             return status.equals("canceled");
+        }
+
+        public boolean isComplete(){
+            return status.equals("complete");
         }
 
         public String getQuery(){
@@ -841,8 +879,12 @@ public class QueryService extends WebService {
             return format;
         }
 
-        public javaxt.io.File getOutput(){
-            return new javaxt.io.File(jobDir.toString() + userID + "/" + id + "." + format);
+        public javaxt.io.File[] getOutputs(){
+            String path = jobDir.toString() + id + ".";
+            return new javaxt.io.File[]{
+                new javaxt.io.File(path + format),
+                new javaxt.io.File(path + "cypher")
+            };
         }
 
 
@@ -920,89 +962,107 @@ public class QueryService extends WebService {
                     }
 
                     if (job!=null && !job.isCanceled()){
-                        Session session = null;
-                        try{
 
-                          //Update job status and set start time
-                            job.status = "running";
-                            job.updated = new javaxt.utils.Date();
-                            long startTime = System.currentTimeMillis();
-                            queryService.notify(job);
+                      //Get query
+                        String query = job.getQuery();
 
 
-                          //Open database connection
-                            session = graph.getSession(true);
-
-
-
-                          //Execute query and generate response
-                            String query = job.getQuery();
-                            Writer writer = new Writer(job.getOutputFormat(), job.addMetadata());
-                            Result rs = session.run(query);
-                            //rs.open("--" + job.getKey() + "\n" + query, conn);
-                            while (rs.hasNext()){
-                                Record r = rs.next();
-                                writer.write(r);
-                            }
-
-                            if (job.isCanceled()) throw new Exception();
-
-
-                          //Count total records as needed
-                            if (job.countTotal()){
-                                rs = session.run(job.getCountQuery());
-                                if (rs.hasNext()){
-                                    Record r = rs.next();
-                                    Long ttl = r.get(0).asLong();
-                                    if (ttl!=null){
-                                        writer.setCount(ttl);
-                                    }
+                      //Check if the cache has results for the query
+                        synchronized(cache) {
+                            String path = (String) cache.get(job.getFormat()+"|"+query);
+                            if (path!=null){
+                                javaxt.io.File file = new javaxt.io.File(path);
+                                if (file.exists()){
+                                    job.setStatus("complete");
+                                    queryService.notify(job);
                                 }
                             }
-                            if (job.isCanceled()) throw new Exception();
-
-
-
-
-
-                          //Close database connection
-                            session.close();
-
-
-
-                          //Set elapsed time
-                            writer.setElapsedTime(System.currentTimeMillis()-startTime);
-
-
-                          //Write output to a file
-                            javaxt.io.File file = job.getOutput();
-                            file.write(writer.toString());
-
-
-                          //Update job status
-                            job.status = "complete";
-                            job.updated = new javaxt.utils.Date();
-                            queryService.notify(job);
                         }
-                        catch(Exception e){
-                            if (session!=null) session.close();
-                            javaxt.io.File file = job.getOutput();
-                            if (job.isCanceled()){
-                                file.delete();
-                            }
-                            else{
-                                job.status = "failed";
-                                job.updated = new javaxt.utils.Date();
+
+
+                      //Execute query as needed
+                        if (!job.isComplete()){
+                            Session session = null;
+                            try{
+
+                              //Update job status and set start time
+                                job.setStatus("running");
+                                long startTime = System.currentTimeMillis();
                                 queryService.notify(job);
 
-                                java.io.PrintStream ps = null;
-                                try {
-                                    ps = new java.io.PrintStream(file.toFile());
-                                    e.printStackTrace(ps);
-                                    ps.close();
+
+                              //Instantiate writer
+                                Writer writer = new Writer(job);
+
+
+                              //Open database connection and execute query
+                                session = graph.getSession(true);
+                                Result rs = session.run(query);
+                                while (rs.hasNext()){
+                                    Record r = rs.next();
+                                    writer.write(r);
                                 }
-                                catch (Exception ex) {
-                                    if (ps!=null) ps.close();
+
+                                if (job.isCanceled()) throw new Exception();
+
+
+                              //Count total records as needed
+                                if (job.countTotal()){
+                                    rs = session.run(job.getCountQuery());
+                                    if (rs.hasNext()){
+                                        Record r = rs.next();
+                                        Long ttl = r.get(0).asLong();
+                                        if (ttl!=null){
+                                            writer.setCount(ttl);
+                                        }
+                                    }
+                                }
+                                if (job.isCanceled()) throw new Exception();
+
+
+
+
+
+                              //Close database connection
+                                session.close();
+
+
+
+                              //Set elapsed time
+                                writer.setElapsedTime(System.currentTimeMillis()-startTime);
+                                writer.close();
+
+
+                              //Update job status
+                                job.setStatus("complete");
+                                queryService.notify(job);
+                            }
+                            catch(Exception e){
+                                if (session!=null) session.close();
+
+                                if (job.isCanceled()){
+                                    for (javaxt.io.File file : job.getOutputs()){
+                                        file.delete();
+                                    }
+                                }
+                                else{
+                                    job.setStatus("failed");
+                                    queryService.notify(job);
+
+                                    javaxt.io.File file = job.getOutputs()[0];
+                                    file.delete();
+                                    java.io.PrintStream ps = null;
+                                    try {
+                                        file.create();
+                                        ps = new java.io.PrintStream(file.toFile());
+                                        e.printStackTrace(ps);
+                                        ps.close();
+                                    }
+                                    catch (Exception ex) {
+                                        if (ps!=null) ps.close();
+                                        file.write(e.getMessage());
+                                    }
+
                                 }
                             }
                         }

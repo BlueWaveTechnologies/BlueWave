@@ -85,40 +85,57 @@ public class GraphService extends WebService {
                 return new ServiceResponse((JSONArray) obj);
             }
             else{
+                JSONArray arr = new JSONArray();
 
-                Session session = null;
-                try {
+                javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
+                if (f.exists()){
+                    arr = new JSONArray(f.getText());
+                }
+                else{
 
-                    JSONArray arr = new JSONArray();
-                    String query = bluewave.queries.Index.getQuery("Nodes_And_Counts", "cypher");
-                    session = graph.getSession();
-                    Result rs = session.run(query);
-                    int id = 0;
-                    while (rs.hasNext()){
-                        Record r = rs.next();
-                        List labels = r.get(0).asList();
-                        String label = labels.isEmpty()? "" : labels.get(0).toString();
-                        Long count = r.get(1).asLong();
-                        Long relations = r.get(2).asLong();
-                        JSONObject json = new JSONObject();
-                        json.set("node", label);
-                        json.set("count", count);
-                        json.set("relations", relations);
-                        json.set("id", label);
-                        arr.add(json);
+                    Session session = null;
+                    try {
+
+                      //Execute query
+                        String query = bluewave.queries.Index.getQuery("Nodes_And_Counts", "cypher");
+                        session = graph.getSession();
+                        Result rs = session.run(query);
+                        int id = 0;
+                        while (rs.hasNext()){
+                            Record r = rs.next();
+                            List labels = r.get(0).asList();
+                            String label = labels.isEmpty()? "" : labels.get(0).toString();
+                            Long count = r.get(1).asLong();
+                            Long relations = r.get(2).asLong();
+                            JSONObject json = new JSONObject();
+                            json.set("node", label);
+                            json.set("count", count);
+                            json.set("relations", relations);
+                            json.set("id", label);
+                            arr.add(json);
+                        }
+                        session.close();
+
+
+                      //Write file
+                        f.create();
+                        f.write(arr.toString());
                     }
-                    session.close();
-
-
-                    cache.put("nodes", arr);
-                    cache.notify();
-
-                    return new ServiceResponse(arr);
+                    catch (Exception e) {
+                        if (session != null) session.close();
+                        return new ServiceResponse(e);
+                    }
                 }
-                catch (Exception e) {
-                    if (session != null) session.close();
-                    return new ServiceResponse(e);
-                }
+
+
+
+              //Update cache
+                cache.put("nodes", arr);
+                cache.notify();
+
+
+                return new ServiceResponse(arr);
+
             }
         }
     }
