@@ -134,7 +134,6 @@ if(!bluewave.charts) bluewave.charts={};
     var createMapDropDown = function(tbody){
         dropdownItem(tbody,"mapType","Map Type",showHideDropDowns,mapInputs,"mapType");
         dropdownItem(tbody,"mapLevel","Map Level",createMapPreview,mapInputs,"mapLevel");
-        dropdownItem(tbody,"colorScale","Color Scale",createMapPreview,mapInputs,"colorScale");
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
@@ -259,11 +258,11 @@ if(!bluewave.charts) bluewave.charts={};
         if(chartConfig.mapType=="Point" && (
             //chartConfig.latitude===null || chartConfig.longitude===null ||
             chartConfig.mapValue===null ||
-            chartConfig.mapLevel===null || chartConfig.colorScale===null)){
+            chartConfig.mapLevel===null)){
             return;
         }
         if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapLevel===null ||chartConfig.colorScale===null)){
+            chartConfig.mapLevel===null)){
             return;
         }
         onRender(previewArea, function() {
@@ -287,7 +286,6 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapValue.clear();
             mapInputs.mapType.clear();
             mapInputs.mapLevel.clear();
-            mapInputs.colorScale.clear();
         }
         dataOptions.forEach((val)=>{
             mapInputs.lat.add(val, val);
@@ -309,13 +307,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
         });
-        const colorScale = [
-            "red",
-            "blue"
-        ];
-        colorScale.forEach((val)=>{
-            mapInputs.colorScale.add(val, val);
-        });
+
 
 
         mapInputs.mapType.setValue(chartConfig.mapType, true);
@@ -323,7 +315,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.lat.setValue(chartConfig.latitude, true);
         mapInputs.long.setValue(chartConfig.longitude, true);
         mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
-        mapInputs.colorScale.setValue(chartConfig.colorScale, true);
         createMapPreview();
     };
 
@@ -397,11 +388,12 @@ if(!bluewave.charts) bluewave.charts={};
         }
 
 
-      //Update form
+      //Create form
+        var form;
         var body = styleEditor.getBody();
         body.innerHTML = "";
         if (mapType==="Point"){
-            var form = new javaxt.dhtml.Form(body, {
+            form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
                     {
@@ -469,11 +461,50 @@ if(!bluewave.charts) bluewave.charts={};
                 createMapPreview();
             };
         }
+        else if (mapType==="Area"){
+
+            var colorField = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox
+                }
+            );
+            colorField.add("Red", "red");
+            colorField.add("Blue", "blue");
+
+
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            {
+                                name: "color",
+                                label: "Color",
+                                type: colorField
+                            }
+                        ]
+                    }
+                ]
+            });
 
 
 
-        styleEditor.showAt(108,57);
-        form.resize();
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+                chartConfig.colorScale = settings.color;
+                createMapPreview();
+            };
+        }
+
+
+        if (form){
+            styleEditor.showAt(108,57);
+            form.resize();
+        }
     };
 
 
