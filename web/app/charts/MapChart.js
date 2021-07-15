@@ -118,7 +118,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 .attr("r", "8px")
                                 .style("fill", "rgb(217,91,67)");
 
-                        })
+                        });
                     }else if(chartConfig.mapType === "Area"){
                         data.forEach(function(d){
                             var state = d.state;
@@ -159,62 +159,65 @@ bluewave.charts.MapChart = function(parent, config) {
                     });
                 });
             }else if(chartConfig.mapLevel == "counties"){
-                getData("counties", function(mapData){
-                    var counties = topojson.feature(mapData, mapData.objects.counties);
-                    var projection = d3.geoIdentity()
-                        .fitSize([width,height],counties);
-                    var path = d3.geoPath().projection(projection);
-                    mapArea.selectAll('circle').remove();
-                    if(chartConfig.mapType === "Point"){
-                        mapArea.selectAll("path")
-                            .data(states.features)
-                            .enter()
-                            .append("path")
-                            .attr('d', path)
-                            .attr('fill', 'lightgray')
-                            .attr('stroke', 'white');
-                        projection = d3.geoAlbersUsa()
-                            .scale(1850)
-                            .translate([(width/2)+50, (height/2)-15]);
+                getData("states", function(mapData) {
+                    var states = topojson.feature(mapData, mapData.objects.states);
+                    getData("counties", function(mapData){
+                        var counties = topojson.feature(mapData, mapData.objects.counties);
+                        var projection = d3.geoIdentity()
+                            .fitSize([width,height],counties);
+                        var path = d3.geoPath().projection(projection);
+                        mapArea.selectAll('circle').remove();
+                        if(chartConfig.mapType === "Point"){
+                            mapArea.selectAll("path")
+                                .data(states.features)
+                                .enter()
+                                .append("path")
+                                .attr('d', path)
+                                .attr('fill', 'lightgray')
+                                .attr('stroke', 'white');
+                            projection = d3.geoAlbersUsa()
+                                .scale(1850)
+                                .translate([(width/2)+50, (height/2)-15]);
 
-                        data.forEach(function(d){
-                            var lat = parseFloat(d.lat);
-                            var lon = parseFloat(d.lon);
-                            if (isNaN(lat) || isNaN(lon))return;
-                            var coord = projection([lon, lat]);
-                            if (!coord) return;
-                            mapArea.append("circle")
-                                .attr("cx", coord[0])
-                                .attr("cy", coord[1])
-                                .attr("r", "8px")
-                                .style("fill", "rgb(217,91,67)");
+                            data.forEach(function(d){
+                                var lat = parseFloat(d.lat);
+                                var lon = parseFloat(d.lon);
+                                if (isNaN(lat) || isNaN(lon))return;
+                                var coord = projection([lon, lat]);
+                                if (!coord) return;
+                                mapArea.append("circle")
+                                    .attr("cx", coord[0])
+                                    .attr("cy", coord[1])
+                                    .attr("r", "8px")
+                                    .style("fill", "rgb(217,91,67)");
 
-                        })
-                    }else if(chartConfig.mapType === "Area"){
-                        data.forEach(function(d){
-                            var county = d.county;
-                            for(var i = 0; i < counties.features.length; i++){
-                                if(county == counties.features[i].id){
-                                    counties.features[i].properties.inData = true;
-                                    counties.features[i].properties.mapValue = d[chartConfig.mapValue];
-                                }
-                            }
-                        });
-                        mapArea.selectAll("path")
-                            .data(counties.features)
-                            .enter()
-                            .append("path")
-                            .attr('d', path)
-                            .attr('stroke', 'white')
-                            .attr('fill', function(d){
-                                var inData = d.properties.inData;
-                                if(inData){
-                                    return colorScale[chartConfig.colorScale](d.properties.mapValue);
-                                }else{
-                                    return "lightgrey";
+                            })
+                        }else if(chartConfig.mapType === "Area"){
+                            data.forEach(function(d){
+                                var county = d.county;
+                                for(var i = 0; i < counties.features.length; i++){
+                                    if(county == counties.features[i].id){
+                                        counties.features[i].properties.inData = true;
+                                        counties.features[i].properties.mapValue = d[chartConfig.mapValue];
+                                    }
                                 }
                             });
-                    }
+                            mapArea.selectAll("path")
+                                .data(counties.features)
+                                .enter()
+                                .append("path")
+                                .attr('d', path)
+                                .attr('stroke', 'white')
+                                .attr('fill', function(d){
+                                    var inData = d.properties.inData;
+                                    if(inData){
+                                        return colorScale[chartConfig.colorScale](d.properties.mapValue);
+                                    }else{
+                                        return "lightgrey";
+                                    }
+                                });
+                        }
+                    });
                 });
             }else if(chartConfig.mapLevel == "countries"){
                 getData("countries", function(mapData){
