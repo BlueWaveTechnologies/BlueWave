@@ -249,8 +249,9 @@ if(!bluewave.charts) bluewave.charts={};
         if(chartConfig.mapType===null){
             return;
         }
-        if(chartConfig.mapType=="Point" && (chartConfig.latitude===null ||
-            chartConfig.longitude===null || chartConfig.mapValue===null ||
+        if(chartConfig.mapType=="Point" && (
+            //chartConfig.latitude===null || chartConfig.longitude===null ||
+            chartConfig.mapValue===null ||
             chartConfig.mapLevel===null || chartConfig.colorScale===null)){
             return;
         }
@@ -263,7 +264,7 @@ if(!bluewave.charts) bluewave.charts={};
             mapArea.update(chartConfig, data);
         });
     };
-    
+
 
   //**************************************************************************
   //** createOptions
