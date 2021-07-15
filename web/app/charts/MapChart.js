@@ -211,9 +211,10 @@ bluewave.charts.MapChart = function(parent, config) {
                             });
 
 
-                            console.log(coords.length);
                             if (coords.length===0){
-                                //use centroids
+                                coords = counties.features.map(function (feature){
+                                    return path.centroid(feature);
+                                });
                             }
 
                             for (var i=0; i<coords.length; i++){
@@ -230,7 +231,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
                             data.forEach(function(d){
                                 var county = d.county;
-                                for(var i = 0; i < counties.features.length; i++){
+                                for (var i = 0; i < counties.features.length; i++){
                                     if (county === counties.features[i].id){
                                         counties.features[i].properties.mapValue = d[chartConfig.mapValue];
                                     }
