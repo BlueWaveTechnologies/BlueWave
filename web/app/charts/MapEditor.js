@@ -142,38 +142,40 @@ if(!bluewave.charts) bluewave.charts={};
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
 
-        var tr, td;
+        var tr, tr2, td;
 
         tr = document.createElement("tr");
-        tr.id="projection";
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
         td.innerHTML= "Projection:";
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
+        addShowHide(tr);
+
+        tr2 = document.createElement("tr");
+        tbody.appendChild(tr2);
         td = document.createElement("td");
-        tr.appendChild(td);
+        tr2.appendChild(td);
 
         mapProjection = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
         mapProjection.clear();
+        mapProjection.row = tr;
         mapProjection.onChange = function(name,value){
             chartConfig.mapProjectionName = name;
             createMapPreview();
         };
 
-        document.getElementById("projection").style.visibility = "collapse";
         mapProjection.hide();
-        document.getElementById("latitude").style.visibility = "collapse";
+        mapProjection.row.hide();
         mapInputs.lat.hide();
-        document.getElementById("longitude").style.visibility = "collapse";
+        mapInputs.lat.row.hide();
         mapInputs.long.hide();
-        document.getElementById("mapValue").style.visibility = "collapse";
+        mapInputs.long.row.hide();
         mapInputs.mapValue.hide();
+        mapInputs.mapValue.row.hide();
 
     };
 
@@ -181,25 +183,26 @@ if(!bluewave.charts) bluewave.charts={};
   //** dropdownItem
   //**************************************************************************
     var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
-        var tr, td;
+        var tr, tr2, td;
 
         tr = document.createElement("tr");
-        tr.id = chartConfigRef;
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
         td.innerHTML= displayName+":";
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
+        addShowHide(tr);
 
+        tr2 = document.createElement("tr");
+        tbody.appendChild(tr2);
+        td = document.createElement("td");
+        tr2.appendChild(td);
 
         input[inputType] = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
+        input[inputType].row = tr;
         input[inputType].clear();
         input[inputType].onChange = function(name,value){
             chartConfig[chartConfigRef] = value;
@@ -225,10 +228,9 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapValue.show();
 
             //Show the table row objects
-            document.getElementById("latitude").style.visibility = "visible";
-            document.getElementById("longitude").style.visibility = "visible";
-            document.getElementById("mapValue").style.visibility = "visible";
-
+            mapInputs.lat.row.show();
+            mapInputs.long.row.show();
+            mapInputs.mapValue.row.show();
         };
         if(chartConfig.mapType==="Area"){
 
@@ -241,9 +243,9 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.long.hide();
             mapInputs.mapValue.show();
 
-            document.getElementById("latitude").style.visibility = "collapse";
-            document.getElementById("longitude").style.visibility = "collapse";
-            document.getElementById("mapValue").style.visibility = "visible";
+            mapInputs.lat.row.hide();
+            mapInputs.long.row.hide();
+            mapInputs.mapValue.row.show();
         }
     };
 
