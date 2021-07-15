@@ -38,6 +38,7 @@ if(!bluewave.charts) bluewave.charts={};
         colorScale:null
     };
     var mapProjection;
+    var styleEditor;
 
 
   //**************************************************************************
@@ -80,6 +81,12 @@ if(!bluewave.charts) bluewave.charts={};
             panel.title.innerHTML = title;
             chartConfig.chartTitle = title;
         });
+
+
+      //Watch for settings
+        panel.settings.onclick = function(){
+            if (chartConfig) editStyle(chartConfig.mapType);
+        };
 
 
         onRender(previewArea, function(){
@@ -373,6 +380,104 @@ if(!bluewave.charts) bluewave.charts={};
 
 
   //**************************************************************************
+  //** editStyle
+  //**************************************************************************
+    var editStyle = function(mapType){
+
+      //Create styleEditor as needed
+        if (!styleEditor){
+            styleEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Style",
+                width: 400,
+                valign: "top",
+                modal: false,
+                resizable: false,
+                style: config.style.window
+            });
+        }
+
+
+      //Update form
+        var body = styleEditor.getBody();
+        body.innerHTML = "";
+        if (mapType==="Point"){
+            var form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            {
+                                name: "color",
+                                label: "Color",
+                                type: new javaxt.dhtml.ComboBox(
+                                    document.createElement("div"),
+                                    {
+                                        style: config.style.combobox
+                                    }
+                                )
+                            },
+                            {
+                                name: "radius",
+                                label: "Radius",
+                                type: "text"
+                            },
+                            {
+                                name: "labels",
+                                label: "Labels",
+                                type: "radio",
+                                alignment: "vertical",
+                                options: [
+                                    {
+                                        label: "True",
+                                        value: true
+                                    },
+                                    {
+                                        label: "False",
+                                        value: false
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+          //Update cutout field (add slider) and set initial value
+            createSlider("radius", form, "%");
+            var radius = chartConfig.pointRadius;
+            if (radius==null) radius = 0.65;
+            chartConfig.pointRadius = radius;
+            form.findField("radius").setValue(radius*100);
+
+
+          //Tweak height of the label field and set initial value
+            var labelField = form.findField("labels");
+            labelField.row.style.height = "68px";
+            var labels = chartConfig.pieLabels;
+            labelField.setValue(labels===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+                chartConfig.pointRadius = settings.radius/100;
+                if (settings.labels==="true") settings.labels = true;
+                else if (settings.labels==="false") settings.labels = false;
+                chartConfig.pointLabels = settings.labels;
+                createMapPreview();
+            };
+        }
+
+
+
+        styleEditor.showAt(108,57);
+        form.resize();
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
@@ -384,6 +489,7 @@ if(!bluewave.charts) bluewave.charts={};
     var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addTextEditor = bluewave.utils.addTextEditor;
+    var createSlider = bluewave.utils.createSlider;
     var warn = bluewave.utils.warn;
 
     init();
