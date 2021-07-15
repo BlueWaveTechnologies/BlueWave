@@ -38,23 +38,12 @@ if(!bluewave.charts) bluewave.charts={};
         colorScale:null
     };
     var mapProjection;
-    var projectionOptions;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
-        projectionOptions = [
-            {name: "Ablers USA", projection: d3.geoAlbers()
-                            .rotate([96, 0])
-                            .center([-.6, 38.7])
-                            .parallels([29.5, 45.5])
-                            .scale(1000)
-                            .precision(.1)
-            },
-            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)}
-        ];
 
         let table = createTable();
         let tbody = table.firstChild;
@@ -113,7 +102,7 @@ if(!bluewave.charts) bluewave.charts={};
                 chartConfig[val] = mapConfig[val]? mapConfig[val]:null;
             });
             panel.title.innerHTML = mapConfig.chartTitle;
-            }
+        }
         inputData = inputs;
         createOptions();
     };
@@ -130,6 +119,7 @@ if(!bluewave.charts) bluewave.charts={};
         parent.appendChild(table);
         createMapDropDown(tbody);
     };
+
 
   //**************************************************************************
   //** createMapDropDown
@@ -179,6 +169,7 @@ if(!bluewave.charts) bluewave.charts={};
 
     };
 
+
   //**************************************************************************
   //** dropdownItem
   //**************************************************************************
@@ -209,6 +200,7 @@ if(!bluewave.charts) bluewave.charts={};
             callBack();
         };
     };
+
 
   //**************************************************************************
   //** showHideDropDowns
@@ -271,6 +263,7 @@ if(!bluewave.charts) bluewave.charts={};
             mapArea.update(chartConfig, data);
         });
     };
+    
 
   //**************************************************************************
   //** createOptions

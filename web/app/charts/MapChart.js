@@ -23,10 +23,11 @@ bluewave.charts.MapChart = function(parent, config) {
         }
     };
     var mapArea;
+    var svg;
 
-    //**************************************************************************
-    //** Constructor
-    //**************************************************************************
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
     var init = function(){
         config = merge(config, defaultConfig);
 
@@ -47,23 +48,23 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
-    }
+    };
 
-    //**************************************************************************
-    //** clear
-    //**************************************************************************
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
     this.clear = function(){
         if (mapArea) mapArea.selectAll("*").remove();
     };
 
-    //**************************************************************************
-    //** update
-    //**************************************************************************
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
     this.update = function(chartConfig, data){
         this.clear();
         var parent = svg.node().parentNode;
-//        console.log(data);
-//        console.log(chartConfig);
         onRender(parent, function(){
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
@@ -243,7 +244,7 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr("r", "8px")
                             .style("fill", "rgb(217,91,67)");
 
-                        })
+                        });
                     }else if(chartConfig.mapType === "Area"){
                         var aggregateState = 0;
                         data.forEach(function(d){
@@ -252,7 +253,7 @@ bluewave.charts.MapChart = function(parent, config) {
                             if(d.state) {
                                 state = d.state;
                                 aggregateState = aggregateState + parseFloat(d[chartConfig.mapValue]);
-                                console.log(aggregateState);
+                                //console.log(aggregateState);
                             }
                            if(d.country) country = d.country;
                             for(var i = 0; i < countries.features.length; i++){
@@ -281,14 +282,15 @@ bluewave.charts.MapChart = function(parent, config) {
                                 }
                             });
                     }
-                })
+                });
             }
-        })
-    }
+        });
+    };
 
-    //**************************************************************************
-    //** Utils
-    //**************************************************************************
+
+  //**************************************************************************
+  //** Utils
+  //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var getData = bluewave.utils.getData;
