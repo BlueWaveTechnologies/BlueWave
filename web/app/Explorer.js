@@ -765,7 +765,7 @@ bluewave.Explorer = function(parent, config) {
             }
             //Ensure that Map can only be connected by addData data type.
             if(node.type === "map"){
-                if(inputNode.type != "addData"){
+                if(inputNode.type != "addData" && inputNode.type != "supplyChain"){
                    drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
                    return;
                 }
@@ -1021,6 +1021,22 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
             case "layout":
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 0
+                });
+
+                addEventListeners(node);
+
+                break;
+
+            case "map":
 
                 var node = createNode({
                     name: title,
@@ -1444,7 +1460,12 @@ bluewave.Explorer = function(parent, config) {
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
-                data.push(csv);
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
             }
         }
         mapEditor.update(node.config, data);
