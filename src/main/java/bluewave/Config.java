@@ -22,11 +22,11 @@ public class Config {
 
 
   //**************************************************************************
-  //** init
+  //** load
   //**************************************************************************
-  /** Used to load a config file (JSON) and initialize the database
+  /** Used to load a config file (JSON) and update config settings
    */
-    public static void init(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
+    public static void load(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
 
 
       //Parse config file
@@ -47,13 +47,15 @@ public class Config {
 
 
       //Get schema
-        javaxt.io.File schema = null;
+        String schema = null;
         if (dbConfig.has("schema")){
             updateFile("schema", dbConfig, configFile);
-            schema = new javaxt.io.File(dbConfig.get("schema").toString());
+            javaxt.io.File schemaFile = new javaxt.io.File(dbConfig.get("schema").toString());
             dbConfig.remove("schema");
+            if (schemaFile.exists()){
+                json.set("schema", schemaFile.getText());
+            }
         }
-        if (schema==null || !schema.exists()) throw new Exception("Schema not found");
 
 
       //Update relative paths in the web config
@@ -68,12 +70,24 @@ public class Config {
         config.init(json);
 
 
-      //Get database connection info
-        Database database = getDatabase();
+        config.set("jar", jar);
+    }
+
+
+  //**************************************************************************
+  //** initDatabase
+  //**************************************************************************
+  /** Used to initialize the database
+   */
+    public static void initDatabase() throws Exception {
+        Database database = config.getDatabase();
+
+        String schema = config.get("schema").toString();
+        if (schema==null) throw new Exception("Schema not found");
 
 
       //Initialize schema (create tables, indexes, etc)
-        DbUtils.initSchema(database, schema.getText(), null);
+        DbUtils.initSchema(database, schema, null);
 
 
       //Inititalize connection pool
@@ -81,6 +95,7 @@ public class Config {
 
 
       //Initialize models
+        javaxt.io.Jar jar = (javaxt.io.Jar) config.get("jar").toObject();
         Model.init(jar, database.getConnectionPool());
     }
 
