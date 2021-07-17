@@ -82,7 +82,6 @@ public class QueryService extends WebService {
                 if (format.equals("json") || format.equals("csv") || format.equals("tsv")){
                     String query = queries.get(file.getName(false));
                     if (query!=null){
-                        console.log(format+"|"+query);
                         cache.put(format + "|" + query, file.toString());
                     }
                 }
