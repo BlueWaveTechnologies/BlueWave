@@ -69,6 +69,59 @@ public class GraphService extends WebService {
         if (cacheDir==null){
             throw new IllegalArgumentException("Invalid \"jobDir\"");
         }
+
+
+      //Prepopulate cache
+        try{
+            getNodes();
+        }
+        catch(Exception e){}
+
+
+      //Add listener to the NotificationService to update the cache
+        GraphService me = this;
+        NotificationService.addListener(new NotificationService.Listener(){
+            public void processEvent(String event, String info, long timestamp){
+                if (event.equals("neo4J")){
+                    me.updateCache(new JSONObject(info));
+                }
+            }
+        });
+    }
+
+
+  //**************************************************************************
+  //** saveUpdate
+  //**************************************************************************
+  /** REST endpoint to receive status messages from the Graph (e.g. Neo4J)
+   */
+    public ServiceResponse saveUpdate(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+
+      //Check if client is authorized to make this request
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (!user.getUsername().equalsIgnoreCase("neo4j")){
+            return new ServiceResponse(403, "Not Authorized");
+        }
+
+
+      //Parse the message and notify
+        try{
+            JSONArray arr = new JSONArray(new String(request.getPayload()));
+            JSONObject event = new JSONObject();
+            event.set("timestamp", arr.get(0).toLong()); //nanoseconds
+            event.set("action", arr.get(1).toString());
+            event.set("type", arr.get(2).toString());
+            event.set("data", arr.get(3).toJSONArray());
+            event.set("user", arr.get(4).toString());
+            NotificationService.notify("neo4J", event.toString());
+        }
+        catch(Exception e){
+            //don't return errors to the client!
+        }
+
+        return new ServiceResponse(200);
     }
 
 
@@ -77,12 +130,23 @@ public class GraphService extends WebService {
   //**************************************************************************
     public ServiceResponse getNodes(ServiceRequest request, Database database)
         throws ServletException, IOException {
+        try{
+            return new ServiceResponse(getNodes());
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
 
 
+  //**************************************************************************
+  //** getNodes
+  //**************************************************************************
+    private JSONArray getNodes() throws Exception {
         synchronized(cache){
             Object obj = cache.get("nodes");
             if (obj!=null){
-                return new ServiceResponse((JSONArray) obj);
+                return (JSONArray) obj;
             }
             else{
                 JSONArray arr = new JSONArray();
@@ -123,7 +187,7 @@ public class GraphService extends WebService {
                     }
                     catch (Exception e) {
                         if (session != null) session.close();
-                        return new ServiceResponse(e);
+                        throw e;
                     }
                 }
 
@@ -134,7 +198,7 @@ public class GraphService extends WebService {
                 cache.notify();
 
 
-                return new ServiceResponse(arr);
+                return arr;
 
             }
         }
@@ -705,4 +769,60 @@ public class GraphService extends WebService {
         return new Coordinate(mx, my);
     }
 
+
+  //**************************************************************************
+  //** updateCache
+  //**************************************************************************
+    private void updateCache(JSONObject info){
+
+        Long timestamp = info.get("timestamp").toLong();
+        String action = info.get("action").toString();
+        String type = info.get("type").toString();
+        JSONArray data = info.get("data").toJSONArray();
+        String username = info.get("user").toString();
+
+
+        if ((action.equals("create") || action.equals("delete")) && (type.equals("nodes") || type.equals("relationships")))
+        try{
+            JSONArray nodes = getNodes();
+            //console.log(nodes);
+            for (int i=0; i<data.length(); i++){
+                JSONArray entry = data.get(i).toJSONArray();
+                if (entry.isEmpty()) continue;
+                HashSet<String> labels = new HashSet<>();
+                for (int j=1; j<entry.length(); j++){
+                    labels.add(entry.get(j).toString());
+                }
+                console.log(labels, labels.size());
+
+                for (int j=0; j<nodes.length(); j++){
+                    JSONObject node = nodes.get(j).toJSONObject();
+
+                    String label = node.get("node").toString();
+                    if (label!=null && labels.contains(label.toLowerCase())){
+                        console.log("found lable!");
+                        if (type.equals("nodes")){
+                            long count = node.get("count").toLong();
+                            if (action.equals("create")){
+                                console.log("increase " + label + " count from " + count + " to " + (count+1));
+                            }
+                            else{
+                                console.log("decreate " + label + " count from " + count + " to " + (count-1));
+                            }
+                        }
+                        else if (type.equals("relationships")){
+
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+    }
 }
