@@ -61,14 +61,16 @@ public class Main {
 
 
       //Initialize config
-        Config.init(configFile, jar);
+        Config.load(configFile, jar);
 
 
       //Process command line args
         if (args.containsKey("-addUser")){
+            Config.initDatabase();
             addUser(args);
         }
         if (args.containsKey("-updatePassword")){
+            Config.initDatabase();
             updatePassword(args);
         }
         else if (args.containsKey("-import")){
@@ -90,6 +92,7 @@ public class Main {
                 throw new Exception("Config file is missing \"webserver\" config information");
             }
             else{
+                Config.initDatabase();
                 JSONObject webConfig = Config.get("webserver").toJSONObject();
                 ArrayList<InetSocketAddress> addresses = new ArrayList<>();
                 Integer port = webConfig.get("port").toInteger();
