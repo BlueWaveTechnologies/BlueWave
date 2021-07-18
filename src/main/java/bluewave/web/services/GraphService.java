@@ -17,6 +17,7 @@ import javaxt.json.*;
 import java.util.*;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import java.awt.Color;
 import java.awt.BasicStroke;
@@ -154,6 +155,15 @@ public class GraphService extends WebService {
                 javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
                 if (f.exists()){
                     arr = new JSONArray(f.getText());
+                    for (int i=0; i<arr.length(); i++){
+                        JSONObject node = arr.get(i).toJSONObject();
+                        Long c = node.get("count").toLong();
+                        Long r = node.get("relations").toLong();
+                        AtomicLong count = new AtomicLong(c==null ? 0 : c);
+                        AtomicLong relations = new AtomicLong(r==null ? 0 : r);
+                        node.set("count", count);
+                        node.set("relations", relations);
+                    }
                 }
                 else{
 
@@ -164,13 +174,12 @@ public class GraphService extends WebService {
                         String query = bluewave.queries.Index.getQuery("Nodes_And_Counts", "cypher");
                         session = graph.getSession();
                         Result rs = session.run(query);
-                        int id = 0;
                         while (rs.hasNext()){
                             Record r = rs.next();
                             List labels = r.get(0).asList();
                             String label = labels.isEmpty()? "" : labels.get(0).toString();
-                            Long count = r.get(1).asLong();
-                            Long relations = r.get(2).asLong();
+                            AtomicLong count = new AtomicLong(r.get(1).asLong());
+                            AtomicLong relations = new AtomicLong(r.get(2).asLong());
                             JSONObject json = new JSONObject();
                             json.set("node", label);
                             json.set("count", count);
@@ -783,46 +792,90 @@ public class GraphService extends WebService {
 
 
         if ((action.equals("create") || action.equals("delete")) && (type.equals("nodes") || type.equals("relationships")))
-        try{
-            JSONArray nodes = getNodes();
-            //console.log(nodes);
-            for (int i=0; i<data.length(); i++){
-                JSONArray entry = data.get(i).toJSONArray();
-                if (entry.isEmpty()) continue;
-                HashSet<String> labels = new HashSet<>();
-                for (int j=1; j<entry.length(); j++){
-                    labels.add(entry.get(j).toString());
-                }
-                console.log(labels, labels.size());
+        synchronized(cache){
+            try{
 
-                for (int j=0; j<nodes.length(); j++){
-                    JSONObject node = nodes.get(j).toJSONObject();
+              //Update nodes
+                JSONArray nodes = getNodes();
+                javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
+                boolean updateFile = false;
+                for (int i=0; i<data.length(); i++){
+                    JSONArray entry = data.get(i).toJSONArray();
+                    if (entry.isEmpty()) continue;
 
-                    String label = node.get("node").toString();
-                    if (label!=null && labels.contains(label.toLowerCase())){
-                        console.log("found lable!");
-                        if (type.equals("nodes")){
-                            long count = node.get("count").toLong();
-                            if (action.equals("create")){
-                                console.log("increase " + label + " count from " + count + " to " + (count+1));
+
+                    HashSet<String> labels = new HashSet<>();
+                    for (int j=1; j<entry.length(); j++){
+                        String label = entry.get(j).toString();
+                        if (label!=null) label = label.toLowerCase();
+                        labels.add(label);
+                    }
+
+                    boolean foundMatch = false;
+                    for (int j=0; j<nodes.length(); j++){
+                        JSONObject node = nodes.get(j).toJSONObject();
+
+                        String label = node.get("node").toString();
+                        if (label!=null && labels.contains(label.toLowerCase())){
+                            if (type.equals("nodes")){
+                                AtomicLong count = (AtomicLong) node.get("count").toObject();
+                                Long a = count.get();
+                                if (action.equals("create")){
+                                    count.incrementAndGet();
+                                }
+                                else{
+                                    Long n = count.decrementAndGet();
+                                    if (n==0){
+                                        //TODO: Remove node
+                                    }
+                                }
+                                Long b = count.get();
+                                console.log((b>a ? "increased " : "decreased ") + label + " to " + b);
+                                updateFile = true;
                             }
-                            else{
-                                console.log("decreate " + label + " count from " + count + " to " + (count-1));
+                            else if (type.equals("relationships")){
+                                AtomicLong relations = (AtomicLong) node.get("relations").toObject();
                             }
-                        }
-                        else if (type.equals("relationships")){
 
+                            foundMatch = true;
+                            break;
                         }
+                    }
 
-                        break;
+
+                    if (!foundMatch){
+                        if (action.equals("create") && (type.equals("nodes"))){
+                            console.log("add node!");
+                            String label = entry.get(1).toString();
+                            AtomicLong count = new AtomicLong(1);
+                            AtomicLong relations = new AtomicLong(0);
+                            JSONObject json = new JSONObject();
+                            json.set("node", label);
+                            json.set("count", count);
+                            json.set("relations", relations);
+                            json.set("id", label);
+                            nodes.add(json);
+                            updateFile = true;
+                        }
                     }
                 }
+
+
+                if (updateFile){
+                    f.write(nodes.toString());
+                }
+
+
+              //TODO: Update network
+
+
+                cache.notifyAll();
+
             }
-
-
-        }
-        catch(Exception e){
-            e.printStackTrace();
+            catch(Exception e){
+                e.printStackTrace();
+            }
         }
     }
+
 }
