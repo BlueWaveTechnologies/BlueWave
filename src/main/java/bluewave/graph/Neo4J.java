@@ -3,6 +3,14 @@ import java.util.logging.Level;
 import org.neo4j.driver.*;
 import static org.neo4j.driver.SessionConfig.builder;
 
+//******************************************************************************
+//**  Neo4J
+//******************************************************************************
+/**
+ *   Used to represent connection information for a Neo4J database
+ *
+ ******************************************************************************/
+
 public class Neo4J implements AutoCloseable {
     private Driver driver;
     private static int port = 7687;
@@ -18,6 +26,14 @@ public class Neo4J implements AutoCloseable {
 
 
   //**************************************************************************
+  //** getUsername
+  //**************************************************************************
+    public String getUsername(){
+        return username;
+    }
+
+
+  //**************************************************************************
   //** setUsername
   //**************************************************************************
     public void setUsername(String username){
@@ -27,11 +43,27 @@ public class Neo4J implements AutoCloseable {
 
 
   //**************************************************************************
+  //** getPassword
+  //**************************************************************************
+    public String getPassword(){
+        return password;
+    }
+
+
+  //**************************************************************************
   //** setPassword
   //**************************************************************************
     public void setPassword(String password){
         if (driver!=null) driver = null;
         this.password = password;
+    }
+
+
+  //**************************************************************************
+  //** getHost
+  //**************************************************************************
+    public String getHost(){
+        return host;
     }
 
 
@@ -48,6 +80,22 @@ public class Neo4J implements AutoCloseable {
         else{
             this.host = host;
         }
+    }
+
+
+  //**************************************************************************
+  //** getPort
+  //**************************************************************************
+    public int getPort(){
+        return port;
+    }
+
+
+  //**************************************************************************
+  //** setPort
+  //**************************************************************************
+    public void setPort(int port){
+        this.port = port;
     }
 
 
