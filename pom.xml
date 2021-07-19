@@ -166,6 +166,19 @@
                 </configuration>
             </plugin>
 
+            <!-- needed to create fat jars -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>bluewave.Main</mainClass>
+                            <classpathPrefix>lib/</classpathPrefix>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
       </plugins>
     </build>
 </project>
