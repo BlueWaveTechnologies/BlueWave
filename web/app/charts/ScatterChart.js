@@ -210,13 +210,13 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //** displayAxis
   //**************************************************************************
     var displayAxis = function(xKey,yKey,chartData){
-        let axisTemp = createAxisScale(xKey,'x',chartData);
-        x = axisTemp.scale;
-        xBand = axisTemp.band;
+        let xAxisTemp = createAxisScale(xKey,'x',chartData);
+        x = xAxisTemp.scale;
+        xBand = xAxisTemp.band;
 
-        axisTemp = createAxisScale(yKey,'y',chartData);
-        y = axisTemp.scale;
-        yBand = axisTemp.band;
+        let yAxisTemp = createAxisScale(yKey,'y',chartData);
+        y = yAxisTemp.scale;
+        yBand = yAxisTemp.band;
 
 
         if (xAxis) xAxis.selectAll("*").remove();
@@ -308,6 +308,103 @@ bluewave.charts.ScatterChart = function(parent, config) {
             band
         };
     };
+
+//  //**************************************************************************
+//  //** editStyle
+//  //**************************************************************************
+//      var editStyle = function(chartType){
+//
+//          //Create styleEditor as needed
+//            if (!styleEditor){
+//                styleEditor = new javaxt.dhtml.Window(document.body, {
+//                    title: "Edit Style",
+//                    width: 400,
+//                    valign: "top",
+//                    modal: false,
+//                    resizable: false,
+//                    style: config.style.window
+//                });
+//            }
+//
+//
+//          //Update form
+//            var body = styleEditor.getBody();
+//            body.innerHTML = "";
+//            if (chartType==="pieChart"){
+//                var form = new javaxt.dhtml.Form(body, {
+//                    style: config.style.form,
+//                    items: [
+//                        {
+//                            group: "Style",
+//                            items: [
+//                                {
+//                                    name: "color",
+//                                    label: "Color",
+//                                    type: new javaxt.dhtml.ComboBox(
+//                                        document.createElement("div"),
+//                                        {
+//                                            style: config.style.combobox
+//                                        }
+//                                    )
+//                                },
+//                                {
+//                                    name: "cutout",
+//                                    label: "Cutout",
+//                                    type: "text"
+//                                },
+//                                {
+//                                    name: "labels",
+//                                    label: "Labels",
+//                                    type: "radio",
+//                                    alignment: "vertical",
+//                                    options: [
+//                                        {
+//                                            label: "True",
+//                                            value: true
+//                                        },
+//                                        {
+//                                            label: "False",
+//                                            value: false
+//                                        }
+//                                    ]
+//                                }
+//                            ]
+//                        }
+//                    ]
+//                });
+//
+//
+//              //Update cutout field (add slider) and set initial value
+//                createSlider("cutout", form, "%");
+//                var cutout = chartConfig.pieCutout;
+//                if (cutout==null) cutout = 0.65;
+//                chartConfig.pieCutout = cutout;
+//                form.findField("cutout").setValue(cutout*100);
+//
+//
+//              //Tweak height of the label field and set initial value
+//                var labelField = form.findField("labels");
+//                labelField.row.style.height = "68px";
+//                var labels = chartConfig.pieLabels;
+//                labelField.setValue(labels===true ? true : false);
+//
+//
+//              //Process onChange events
+//                form.onChange = function(){
+//                    var settings = form.getData();
+//                    chartConfig.pieCutout = settings.cutout/100;
+//                    if (settings.labels==="true") settings.labels = true;
+//                    else if (settings.labels==="false") settings.labels = false;
+//                    chartConfig.pieLabels = settings.labels;
+//                    createPiePreview();
+//                };
+//            }
+//
+//
+//
+//            styleEditor.showAt(108,57);
+//            form.resize();
+//        };
 
   //**************************************************************************
   //** Utils
