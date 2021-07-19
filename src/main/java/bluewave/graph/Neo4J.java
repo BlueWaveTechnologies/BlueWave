@@ -13,8 +13,8 @@ import static org.neo4j.driver.SessionConfig.builder;
 
 public class Neo4J implements AutoCloseable {
     private Driver driver;
-    private static int port = 7687;
-    private static String host;
+    private int port = 7687;
+    private String host;
     private String username;
     private String password;
 
@@ -23,6 +23,19 @@ public class Neo4J implements AutoCloseable {
   //** Constructor
   //**************************************************************************
     public Neo4J(){}
+
+    
+  //**************************************************************************
+  //** clone
+  //**************************************************************************
+    public Neo4J clone(){
+        Neo4J neo4j = new Neo4J();
+        neo4j.host = host;
+        neo4j.port = port;
+        neo4j.username = username;
+        neo4j.password = password;
+        return neo4j;
+    }
 
 
   //**************************************************************************
@@ -95,6 +108,7 @@ public class Neo4J implements AutoCloseable {
   //** setPort
   //**************************************************************************
     public void setPort(int port){
+        if (driver!=null) driver = null;
         this.port = port;
     }
 
