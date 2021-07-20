@@ -91,7 +91,7 @@ bluewave.AdminPanel = function(parent, config) {
                 }
             }
         });
-
+        createPanel("Graph", "fas fa-share-alt", bluewave.GraphAdmin, config);
     };
 
 
