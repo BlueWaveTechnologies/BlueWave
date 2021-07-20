@@ -102,7 +102,9 @@ if(!bluewave.charts) bluewave.charts={};
         me.clear();
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
-            if (input!=null) inputs[i] = d3.csvParse(input);
+            if(typeof input !== 'object' && input !== null){
+                if (input!=null) inputs[i] = d3.csvParse(input);
+            }
         }
         if(mapConfig !== null && mapConfig !== undefined){
             Object.keys(mapConfig).forEach(val=>{
@@ -279,19 +281,23 @@ if(!bluewave.charts) bluewave.charts={};
    */
     var createOptions = function() {
         var data = inputData[0];
-        let dataOptions = Object.keys(data[0]);
-        if(mapInputs){
-            mapInputs.lat.clear();
-            mapInputs.long.clear();
-            mapInputs.mapValue.clear();
-            mapInputs.mapType.clear();
-            mapInputs.mapLevel.clear();
+        if(typeof data !== 'object'){
+            let dataOptions = Object.keys(data[0]);
+            if(mapInputs){
+                mapInputs.lat.clear();
+                mapInputs.long.clear();
+                mapInputs.mapValue.clear();
+                mapInputs.mapType.clear();
+                mapInputs.mapLevel.clear();
+            }
+            dataOptions.forEach((val)=>{
+                mapInputs.lat.add(val, val);
+                mapInputs.long.add(val, val);
+                mapInputs.mapValue.add(val, val);
+            });
+        }else{
+            mapInputs.mapValue.add("quantity", "quantity");
         }
-        dataOptions.forEach((val)=>{
-            mapInputs.lat.add(val, val);
-            mapInputs.long.add(val, val);
-            mapInputs.mapValue.add(val, val);
-        });
         const mapOptions = [
             "Point",
             "Area"
@@ -307,8 +313,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
         });
-
-
 
         mapInputs.mapType.setValue(chartConfig.mapType, true);
         mapInputs.mapValue.setValue(chartConfig.mapValue, true);
