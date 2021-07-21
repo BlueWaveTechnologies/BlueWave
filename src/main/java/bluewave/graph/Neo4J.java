@@ -2,19 +2,53 @@ package bluewave.graph;
 import java.util.logging.Level;
 import org.neo4j.driver.*;
 import static org.neo4j.driver.SessionConfig.builder;
+import java.util.Properties;
+
+//******************************************************************************
+//**  Neo4J
+//******************************************************************************
+/**
+ *   Used to represent connection information for a Neo4J database
+ *
+ ******************************************************************************/
 
 public class Neo4J implements AutoCloseable {
     private Driver driver;
-    private static int port = 7687;
-    private static String host;
+    private int port = 7687;
+    private String host;
     private String username;
     private String password;
+    private Properties properties;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public Neo4J(){}
+    public Neo4J(){
+        properties = new Properties();
+    }
+
+
+  //**************************************************************************
+  //** clone
+  //**************************************************************************
+    public Neo4J clone(){
+        Neo4J neo4j = new Neo4J();
+        neo4j.host = host;
+        neo4j.port = port;
+        neo4j.username = username;
+        neo4j.password = password;
+        neo4j.properties = (Properties) properties.clone();
+        return neo4j;
+    }
+
+
+  //**************************************************************************
+  //** getUsername
+  //**************************************************************************
+    public String getUsername(){
+        return username;
+    }
 
 
   //**************************************************************************
@@ -27,11 +61,27 @@ public class Neo4J implements AutoCloseable {
 
 
   //**************************************************************************
+  //** getPassword
+  //**************************************************************************
+    public String getPassword(){
+        return password;
+    }
+
+
+  //**************************************************************************
   //** setPassword
   //**************************************************************************
     public void setPassword(String password){
         if (driver!=null) driver = null;
         this.password = password;
+    }
+
+
+  //**************************************************************************
+  //** getHost
+  //**************************************************************************
+    public String getHost(){
+        return host;
     }
 
 
@@ -48,6 +98,31 @@ public class Neo4J implements AutoCloseable {
         else{
             this.host = host;
         }
+    }
+
+
+  //**************************************************************************
+  //** getPort
+  //**************************************************************************
+    public int getPort(){
+        return port;
+    }
+
+
+  //**************************************************************************
+  //** setPort
+  //**************************************************************************
+    public void setPort(int port){
+        if (driver!=null) driver = null;
+        this.port = port;
+    }
+
+    
+  //**************************************************************************
+  //** getProperties
+  //**************************************************************************
+    public Properties getProperties(){
+        return properties;
     }
 
 

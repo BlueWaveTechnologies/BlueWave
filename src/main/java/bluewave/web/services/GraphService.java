@@ -11,18 +11,22 @@ import com.google.gson.GsonBuilder;
 
 import javaxt.express.*;
 import javaxt.http.servlet.ServletException;
-import javaxt.sql.Database;
+import javaxt.sql.*;
 import javaxt.json.*;
 
 import java.util.*;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import java.awt.Color;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import javax.vecmath.Vector2d;
+
+import java.sql.Clob;
+import java.sql.PreparedStatement;
 
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
@@ -43,6 +47,7 @@ public class GraphService extends WebService {
     private Neo4J graph;
     private ConcurrentHashMap<String, Object> cache;
     private javaxt.io.Directory cacheDir;
+    private Database logDB;
     private boolean test = true;
 
 
@@ -55,20 +60,100 @@ public class GraphService extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public GraphService(Neo4J graph, JSONObject webConfig){
+    public GraphService(Neo4J graph){
         this.graph = graph;
         this.cache = new ConcurrentHashMap<>();
+        Properties properties = graph.getProperties();
+
 
       //Set path to the cacheDir directory
-        if (webConfig.has("jobDir")){
-            cacheDir = new javaxt.io.Directory(webConfig.get("jobDir").toString());
-            cacheDir = new javaxt.io.Directory(cacheDir+"graph");
+        String localCache = properties.get("localCache").toString();
+        if (localCache!=null){
+            cacheDir = new javaxt.io.Directory(localCache);
             if (!cacheDir.exists()) cacheDir.create();
             if (!cacheDir.exists()) cacheDir = null;
         }
-        if (cacheDir==null){
-            throw new IllegalArgumentException("Invalid \"jobDir\"");
+
+
+      //Initialize local log database
+        String localLog = properties.get("localLog").toString();
+        if (localLog!=null){
+            String path = localLog.replace("\\", "/");
+            javaxt.io.Directory dbDir = new javaxt.io.Directory(path);
+            dbDir.create();
+            if (dbDir.exists())
+            try{
+                path = new java.io.File(dbDir.toString()+"database").getCanonicalPath();
+                logDB = new javaxt.sql.Database();
+                logDB.setDriver("H2");
+                logDB.setHost(path);
+                logDB.setConnectionPoolSize(25);
+                initDatabase();
+            }
+            catch(Exception e){
+                logDB = null;
+                e.printStackTrace();
+            }
         }
+
+
+      //Prepopulate cache
+        try{
+            getNodes();
+        }
+        catch(Exception e){}
+
+
+      //Add listener to the NotificationService to update the cache
+        NotificationService.addListener(new NotificationService.Listener(){
+            public void processEvent(String event, String info, long timestamp){
+                if (event.equals("neo4J")){
+                    if (info.equals("newserver")){
+                        deleteCache();
+                    }
+                    else{
+                        JSONObject json = new JSONObject(info);
+                        logEvent(json);
+                        updateCache(json);
+                    }
+                }
+            }
+        });
+    }
+
+
+  //**************************************************************************
+  //** saveUpdate
+  //**************************************************************************
+  /** REST endpoint to receive status messages from the Graph (e.g. Neo4J)
+   */
+    public ServiceResponse saveUpdate(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+
+      //Check if client is authorized to make this request
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (!user.getUsername().equalsIgnoreCase("neo4j")){
+            return new ServiceResponse(403, "Not Authorized");
+        }
+
+
+      //Parse the message and notify
+        try{
+            JSONArray arr = new JSONArray(new String(request.getPayload()));
+            JSONObject event = new JSONObject();
+            event.set("timestamp", arr.get(0).toLong()); //nanoseconds
+            event.set("action", arr.get(1).toString());
+            event.set("type", arr.get(2).toString());
+            event.set("data", arr.get(3).toJSONArray());
+            event.set("user", arr.get(4).toString());
+            NotificationService.notify("neo4J", event.toString());
+        }
+        catch(Exception e){
+            //don't return errors to the client!
+        }
+
+        return new ServiceResponse(200);
     }
 
 
@@ -77,12 +162,23 @@ public class GraphService extends WebService {
   //**************************************************************************
     public ServiceResponse getNodes(ServiceRequest request, Database database)
         throws ServletException, IOException {
+        try{
+            return new ServiceResponse(getNodes());
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
 
 
+  //**************************************************************************
+  //** getNodes
+  //**************************************************************************
+    private JSONArray getNodes() throws Exception {
         synchronized(cache){
             Object obj = cache.get("nodes");
             if (obj!=null){
-                return new ServiceResponse((JSONArray) obj);
+                return (JSONArray) obj;
             }
             else{
                 JSONArray arr = new JSONArray();
@@ -90,6 +186,15 @@ public class GraphService extends WebService {
                 javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
                 if (f.exists()){
                     arr = new JSONArray(f.getText());
+                    for (int i=0; i<arr.length(); i++){
+                        JSONObject node = arr.get(i).toJSONObject();
+                        Long c = node.get("count").toLong();
+                        Long r = node.get("relations").toLong();
+                        AtomicLong count = new AtomicLong(c==null ? 0 : c);
+                        AtomicLong relations = new AtomicLong(r==null ? 0 : r);
+                        node.set("count", count);
+                        node.set("relations", relations);
+                    }
                 }
                 else{
 
@@ -100,13 +205,12 @@ public class GraphService extends WebService {
                         String query = bluewave.queries.Index.getQuery("Nodes_And_Counts", "cypher");
                         session = graph.getSession();
                         Result rs = session.run(query);
-                        int id = 0;
                         while (rs.hasNext()){
                             Record r = rs.next();
                             List labels = r.get(0).asList();
                             String label = labels.isEmpty()? "" : labels.get(0).toString();
-                            Long count = r.get(1).asLong();
-                            Long relations = r.get(2).asLong();
+                            AtomicLong count = new AtomicLong(r.get(1).asLong());
+                            AtomicLong relations = new AtomicLong(r.get(2).asLong());
                             JSONObject json = new JSONObject();
                             json.set("node", label);
                             json.set("count", count);
@@ -123,7 +227,7 @@ public class GraphService extends WebService {
                     }
                     catch (Exception e) {
                         if (session != null) session.close();
-                        return new ServiceResponse(e);
+                        throw e;
                     }
                 }
 
@@ -134,7 +238,7 @@ public class GraphService extends WebService {
                 cache.notify();
 
 
-                return new ServiceResponse(arr);
+                return arr;
 
             }
         }
@@ -295,9 +399,13 @@ public class GraphService extends WebService {
             else{
                 String str = null;
 
-                javaxt.io.File f = new javaxt.io.File(cacheDir, "network.json");
-                if (test) f = new javaxt.io.File(cacheDir, "miserables.json");
-                if (f.exists()){
+                javaxt.io.File f = null;
+                if (cacheDir!=null){
+                    f = new javaxt.io.File(cacheDir, "network.json");
+                    if (test) f = new javaxt.io.File(cacheDir, "miserables.json");
+                }
+
+                if (f!=null && f.exists()){
                     str = f.getText();
                 }
                 else{
@@ -320,7 +428,7 @@ public class GraphService extends WebService {
                         session.close();
 
 
-                        f.write(str);
+                        if (f!=null) f.write(str);
                     }
                     catch (Exception e) {
                         if (session != null) session.close();
@@ -361,10 +469,13 @@ public class GraphService extends WebService {
 
                 long t = System.currentTimeMillis();
 
+                javaxt.io.File f = null;
+                if (cacheDir!=null){
+                    f = new javaxt.io.File(cacheDir, "network.txt");
+                    if (test) f = new javaxt.io.File(cacheDir, "miserables.txt");
+                }
 
-                javaxt.io.File f = new javaxt.io.File(cacheDir, "network.txt");
-                if (test) f = new javaxt.io.File(cacheDir, "miserables.txt");
-                if (f.exists()){
+                if (f!=null && f.exists()){
                     graph = new ForceDirectedGraph(f);
                 }
                 else{
@@ -413,7 +524,7 @@ public class GraphService extends WebService {
 
 
                   //Save file
-                    graph.saveAs(f);
+                    if (f!=null) graph.saveAs(f);
                 }
 
 
@@ -703,6 +814,264 @@ public class GraphService extends WebService {
         double mx = px * res - originShift;
         double my = -py * res + originShift;
         return new Coordinate(mx, my);
+    }
+
+
+  //**************************************************************************
+  //** getCache
+  //**************************************************************************
+    public ServiceResponse getCache(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Prevent non-admin users from seeing the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+
+        JSONArray arr = new JSONArray();
+        synchronized(cache){
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                arr.add(it.next());
+            }
+        }
+        return new ServiceResponse(arr);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    public ServiceResponse deleteCache(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Prevent non-admin users from deleting the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user==null || user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+      //Delete cache
+        deleteCache();
+
+      //Return response
+        return new ServiceResponse(200);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    private void deleteCache(){
+        synchronized(cache){
+            if (cacheDir!=null){
+                Iterator<String> it = cache.keySet().iterator();
+                while (it.hasNext()){
+                    String key = it.next();
+                    javaxt.io.File f = new javaxt.io.File(cacheDir, key + ".json");
+                    if (f.exists()) f.delete();
+                }
+            }
+            cache.clear();
+            cache.notify();
+        }
+    }
+
+
+  //**************************************************************************
+  //** updateCache
+  //**************************************************************************
+    private void updateCache(JSONObject info){
+
+        Long timestamp = info.get("timestamp").toLong();
+        String action = info.get("action").toString();
+        String type = info.get("type").toString();
+        JSONArray data = info.get("data").toJSONArray();
+        String username = info.get("user").toString();
+
+
+        if ((action.equals("create") || action.equals("delete")) && (type.equals("nodes") || type.equals("relationships")))
+        synchronized(cache){
+            try{
+
+              //Update nodes
+                JSONArray nodes = getNodes();
+                boolean updateFile = false;
+                for (int i=0; i<data.length(); i++){
+                    JSONArray entry = data.get(i).toJSONArray();
+                    if (entry.isEmpty()) continue;
+
+
+                    HashSet<String> labels = new HashSet<>();
+                    for (int j=1; j<entry.length(); j++){
+                        String label = entry.get(j).toString();
+                        if (label!=null) label = label.toLowerCase();
+                        labels.add(label);
+                    }
+
+                    boolean foundMatch = false;
+                    for (int j=0; j<nodes.length(); j++){
+                        JSONObject node = nodes.get(j).toJSONObject();
+
+                        String label = node.get("node").toString();
+                        if (label!=null && labels.contains(label.toLowerCase())){
+                            if (type.equals("nodes")){
+                                AtomicLong count = (AtomicLong) node.get("count").toObject();
+                                Long a = count.get();
+                                if (action.equals("create")){
+                                    count.incrementAndGet();
+                                }
+                                else{
+                                    Long n = count.decrementAndGet();
+                                    if (n==0){
+                                        //TODO: Remove node
+                                    }
+                                }
+                                Long b = count.get();
+                                console.log((b>a ? "increased " : "decreased ") + label + " to " + b);
+                                updateFile = true;
+                            }
+                            else if (type.equals("relationships")){
+                                AtomicLong relations = (AtomicLong) node.get("relations").toObject();
+                            }
+
+                            foundMatch = true;
+                            break;
+                        }
+                    }
+
+
+                    if (!foundMatch){
+                        if (action.equals("create") && (type.equals("nodes"))){
+                            console.log("add node!");
+                            String label = entry.get(1).toString();
+                            AtomicLong count = new AtomicLong(1);
+                            AtomicLong relations = new AtomicLong(0);
+                            JSONObject json = new JSONObject();
+                            json.set("node", label);
+                            json.set("count", count);
+                            json.set("relations", relations);
+                            json.set("id", label);
+                            nodes.add(json);
+                            updateFile = true;
+                        }
+                    }
+                }
+
+
+                if (updateFile && cacheDir!=null){
+                    javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
+                    f.write(nodes.toString());
+                }
+
+
+              //TODO: Update network
+
+
+                cache.notifyAll();
+
+            }
+            catch(Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+  //**************************************************************************
+  //** initDatabase
+  //**************************************************************************
+  /** Used to initialize the log database
+   */
+    private void initDatabase() throws Exception {
+
+
+      //Create tables as needed
+        Connection conn = null;
+        try{
+            conn = logDB.getConnection();
+
+            boolean initSchema;
+            javaxt.io.File db = new javaxt.io.File(logDB.getHost() + ".mv.db");
+            if (!db.exists()){
+                initSchema = true;
+            }
+            else{
+                Table[] tables = Database.getTables(conn);
+                initSchema = tables.length==0;
+            }
+
+
+            if (initSchema){
+                db.getDirectory().create();
+
+                String cmd =
+                "CREATE TABLE IF NOT EXISTS TRANSACTION( " +
+                "id bigint auto_increment, " +
+                "action varchar(10), "+
+                "type varchar(25), " +
+                "data clob, " +
+                "username varchar(35), " +
+                "timestamp LONG);";
+
+                java.sql.Statement stmt = conn.getConnection().createStatement();
+                stmt.execute(cmd);
+                stmt.close();
+            }
+
+
+            conn.close();
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            throw e;
+        }
+
+
+      //Inititalize connection pool
+        logDB.initConnectionPool();
+    }
+
+
+  //**************************************************************************
+  //** logEvent
+  //**************************************************************************
+  /** Used to log a transaction in the log database
+   */
+    private void logEvent(JSONObject info){
+        if (logDB==null) return;
+
+        Long timestamp = info.get("timestamp").toLong();
+        String action = info.get("action").toString();
+        String type = info.get("type").toString();
+        JSONArray data = info.get("data").toJSONArray();
+        String user = info.get("user").toString();
+
+
+        Connection conn = null;
+        try{
+            conn = logDB.getConnection();
+            java.sql.Connection c = conn.getConnection();
+
+            PreparedStatement preparedStatement = c.prepareStatement(
+            "INSERT INTO TRANSACTION (action, type, data, username, timestamp) " +
+            "VALUES (?, ?, ?, ?, ?)");
+
+            Clob clob = c.createClob();
+            clob.setString(1, data.toString());
+
+            preparedStatement.setString(1, action);
+            preparedStatement.setString(2, type);
+            preparedStatement.setClob(3, clob);
+            preparedStatement.setString(4, user);
+            preparedStatement.setLong(5, timestamp);
+            preparedStatement.executeUpdate();
+            preparedStatement.close();
+
+            conn.close();
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+        }
+
     }
 
 }

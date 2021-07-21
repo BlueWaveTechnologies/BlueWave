@@ -52,6 +52,8 @@ public class WebServices extends WebService {
 
       //Get database
         database = Config.getDatabase();
+
+      //Get graph
         Neo4J graph = Config.getGraph();
 
 
@@ -62,8 +64,8 @@ public class WebServices extends WebService {
         reportService = new ReportService();
         dataService = new DataService(new javaxt.io.Directory(web + "data"));
         queryService = new QueryService(graph, webConfig);
-        graphService = new GraphService(graph, webConfig);
-        importService = new ImportService(graph, webConfig);
+        graphService = new GraphService(graph);
+        importService = new ImportService(graph);
         supplyChainService = new SupplyChainService(graph);
 
 
