@@ -6,7 +6,6 @@ import javaxt.express.ServiceResponse;
 import javaxt.express.WebService;
 import javaxt.http.servlet.ServletException;
 
-import javaxt.json.JSONObject;
 import javaxt.sql.Database;
 
 public class ImportService extends WebService {
@@ -17,7 +16,7 @@ public class ImportService extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public ImportService(Neo4J graph, JSONObject webConfig){
+    public ImportService(Neo4J graph){
         this.graph = graph;
     }
 
