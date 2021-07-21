@@ -80,11 +80,15 @@ public class GraphService extends WebService {
 
 
       //Add listener to the NotificationService to update the cache
-        GraphService me = this;
         NotificationService.addListener(new NotificationService.Listener(){
             public void processEvent(String event, String info, long timestamp){
                 if (event.equals("neo4J")){
-                    me.updateCache(new JSONObject(info));
+                    if (info.equals("newserver")){
+                        deleteCache();
+                    }
+                    else{
+                        updateCache(new JSONObject(info));
+                    }
                 }
             }
         });
@@ -776,6 +780,63 @@ public class GraphService extends WebService {
         double mx = px * res - originShift;
         double my = -py * res + originShift;
         return new Coordinate(mx, my);
+    }
+
+
+  //**************************************************************************
+  //** getCache
+  //**************************************************************************
+    public ServiceResponse getCache(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Prevent non-admin users from seeing the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+
+        JSONArray arr = new JSONArray();
+        synchronized(cache){
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                arr.add(it.next());
+            }
+        }
+        return new ServiceResponse(arr);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    public ServiceResponse deleteCache(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Prevent non-admin users from deleting the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user==null || user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+      //Delete cache
+        deleteCache();
+
+      //Return response
+        return new ServiceResponse(200);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    private void deleteCache(){
+        synchronized(cache){
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                String key = it.next();
+                javaxt.io.File f = new javaxt.io.File(cacheDir, key + ".json");
+                if (f.exists()) f.delete();
+            }
+            cache.clear();
+            cache.notify();
+        }
     }
 
 
