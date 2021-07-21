@@ -182,9 +182,13 @@ public class GraphService extends WebService {
             }
             else{
                 JSONArray arr = new JSONArray();
-
-                javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
-                if (f.exists()){
+                
+                javaxt.io.File f = null;
+                if (cacheDir!=null){
+                    f = new javaxt.io.File(cacheDir, "nodes.json");
+                }
+                
+                if (f!=null && f.exists()){
                     arr = new JSONArray(f.getText());
                     for (int i=0; i<arr.length(); i++){
                         JSONObject node = arr.get(i).toJSONObject();
@@ -222,8 +226,10 @@ public class GraphService extends WebService {
 
 
                       //Write file
-                        f.create();
-                        f.write(arr.toString());
+                        if (f!=null){
+                            f.create();
+                            f.write(arr.toString());
+                        }
                     }
                     catch (Exception e) {
                         if (session != null) session.close();
