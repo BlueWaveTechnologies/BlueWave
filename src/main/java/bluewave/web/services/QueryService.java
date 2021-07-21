@@ -94,26 +94,32 @@ public class QueryService extends WebService {
         NotificationService.addListener(new NotificationService.Listener(){
             public void processEvent(String event, String info, long timestamp){
                 if (event.equals("neo4J")){
-                    JSONObject json = new JSONObject(info);
-                    synchronized(cache){
-                        ArrayList<String> deletions = new ArrayList<>();
-                        Iterator<String> it = cache.keySet().iterator();
-                        while (it.hasNext()){
-                            String key = it.next();
-                            String query = key.substring(key.indexOf("|")+1);
-                            String file = cache.get(key).toString();
-                            if (requiresUpdate(query, json)){
-                                deletedCachedFiles(file);
-                                deletions.add(key);
-                            }
-                        }
 
-                        if (!deletions.isEmpty()){
-                            for (String key : deletions){
-                                console.log(key);
-                                cache.remove(key);
+                    if (info.equals("newserver")){
+                        deleteCache();
+                    }
+                    else{
+                        JSONObject json = new JSONObject(info);
+                        synchronized(cache){
+                            ArrayList<String> deletions = new ArrayList<>();
+                            Iterator<String> it = cache.keySet().iterator();
+                            while (it.hasNext()){
+                                String key = it.next();
+                                String query = key.substring(key.indexOf("|")+1);
+                                String file = cache.get(key).toString();
+                                if (requiresUpdate(query, json)){
+                                    deletedCachedFiles(file);
+                                    deletions.add(key);
+                                }
                             }
-                            cache.notifyAll();
+
+                            if (!deletions.isEmpty()){
+                                for (String key : deletions){
+                                    console.log(key);
+                                    cache.remove(key);
+                                }
+                                cache.notifyAll();
+                            }
                         }
                     }
                 }
@@ -1152,7 +1158,14 @@ public class QueryService extends WebService {
         if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
 
 
-        return new ServiceResponse(501, "Not implemented");
+        JSONArray arr = new JSONArray();
+        synchronized(cache){
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                arr.add(it.next());
+            }
+        }
+        return new ServiceResponse(arr);
     }
 
 
@@ -1161,12 +1174,20 @@ public class QueryService extends WebService {
   //**************************************************************************
     private ServiceResponse deleteCache(ServiceRequest request){
 
-      //Prevent non-admin users from deleteing the cache
+      //Prevent non-admin users from deleting the cache
         bluewave.app.User user = (bluewave.app.User) request.getUser();
         if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
 
+        deleteCache();
 
-      //Update cache
+        return new ServiceResponse(200);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    private void deleteCache(){
         synchronized(cache){
 
           //Deleted cached files
@@ -1181,7 +1202,6 @@ public class QueryService extends WebService {
             cache.clear();
             cache.notifyAll();
         }
-        return new ServiceResponse(200);
     }
 
 
