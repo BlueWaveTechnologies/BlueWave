@@ -1,4 +1,5 @@
 package bluewave;
+import java.util.Properties;
 import javaxt.express.utils.DbUtils;
 import static javaxt.utils.Console.console;
 import javaxt.json.*;
@@ -22,11 +23,11 @@ public class Config {
 
 
   //**************************************************************************
-  //** init
+  //** load
   //**************************************************************************
-  /** Used to load a config file (JSON) and initialize the database
+  /** Used to load a config file (JSON) and update config settings
    */
-    public static void init(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
+    public static void load(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
 
 
       //Parse config file
@@ -47,13 +48,15 @@ public class Config {
 
 
       //Get schema
-        javaxt.io.File schema = null;
+        String schema = null;
         if (dbConfig.has("schema")){
             updateFile("schema", dbConfig, configFile);
-            schema = new javaxt.io.File(dbConfig.get("schema").toString());
+            javaxt.io.File schemaFile = new javaxt.io.File(dbConfig.get("schema").toString());
             dbConfig.remove("schema");
+            if (schemaFile.exists()){
+                json.set("schema", schemaFile.getText());
+            }
         }
-        if (schema==null || !schema.exists()) throw new Exception("Schema not found");
 
 
       //Update relative paths in the web config
@@ -64,16 +67,34 @@ public class Config {
         updateFile("keystore", webConfig, configFile);
 
 
+      //Update relative paths in the graph config
+        JSONObject graphConfig = json.get("graph").toJSONObject();
+        updateDir("localLog", graphConfig, configFile, true);
+        updateDir("localCache", graphConfig, configFile, true);
+
+
       //Load config
         config.init(json);
 
 
-      //Get database connection info
-        Database database = getDatabase();
+        config.set("jar", jar);
+    }
+
+
+  //**************************************************************************
+  //** initDatabase
+  //**************************************************************************
+  /** Used to initialize the database
+   */
+    public static void initDatabase() throws Exception {
+        Database database = config.getDatabase();
+
+        String schema = config.get("schema").toString();
+        if (schema==null) throw new Exception("Schema not found");
 
 
       //Initialize schema (create tables, indexes, etc)
-        DbUtils.initSchema(database, schema.getText(), null);
+        DbUtils.initSchema(database, schema, null);
 
 
       //Inititalize connection pool
@@ -81,6 +102,7 @@ public class Config {
 
 
       //Initialize models
+        javaxt.io.Jar jar = (javaxt.io.Jar) config.get("jar").toObject();
         Model.init(jar, database.getConnectionPool());
     }
 
@@ -124,13 +146,16 @@ public class Config {
             return (bluewave.graph.Neo4J) val.toObject();
         }
         else{
-            bluewave.graph.Neo4J database = new bluewave.graph.Neo4J();
+            bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             JSONObject json = get(key).toJSONObject();
-            database.setHost(json.get("host").toString());
-            database.setUsername(json.get("username").toString());
-            database.setPassword(json.get("password").toString());
-            config.set(key, database);
-            return database;
+            neo4j.setHost(json.get("host").toString());
+            neo4j.setUsername(json.get("username").toString());
+            neo4j.setPassword(json.get("password").toString());
+            Properties properties = neo4j.getProperties();
+            properties.put("localLog", json.get("localLog"));
+            properties.put("localCache", json.get("localCache"));
+            config.set(key, neo4j);
+            return neo4j;
         }
     }
 

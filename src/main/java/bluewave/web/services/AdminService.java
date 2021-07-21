@@ -1,4 +1,6 @@
 package bluewave.web.services;
+import bluewave.Config;
+import bluewave.utils.NotificationService;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -12,10 +14,13 @@ import javaxt.express.services.QueryService.QueryJob;
 
 import javaxt.http.servlet.HttpServletRequest;
 import javaxt.http.servlet.HttpServletResponse;
+import javaxt.http.servlet.ServletException;
 import javaxt.http.websocket.WebSocketListener;
 
+import javaxt.json.JSONArray;
 import javaxt.json.JSONObject;
 import javaxt.sql.Database;
+import org.neo4j.driver.Session;
 
 //******************************************************************************
 //**  AdminService
@@ -55,7 +60,7 @@ public class AdminService extends WebService {
   //**************************************************************************
   //** getServiceResponse
   //**************************************************************************
-    public ServiceResponse getServiceResponse(ServiceRequest request, Database database) {
+    public ServiceResponse getServiceResponse(ServiceRequest request, Database database) throws ServletException {
 
         bluewave.app.User user = (bluewave.app.User) request.getUser();
         if (user==null || user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
@@ -66,7 +71,7 @@ public class AdminService extends WebService {
                 return queryService.getServiceResponse(request, database);
             }
             else{
-                return new ServiceResponse(501, "Not implemented");
+                return super.getServiceResponse(request, database);
             }
         }
         else{
@@ -74,6 +79,88 @@ public class AdminService extends WebService {
         }
     }
 
+
+  //**************************************************************************
+  //** getSettings
+  //**************************************************************************
+    public ServiceResponse getSettings(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        String key = request.getPath(1).toString();
+        if (key!=null){
+            Object val = Config.get(key).toObject();
+            if (val!=null){
+                if (val instanceof JSONObject){
+                    return new ServiceResponse((JSONObject) val);
+                }
+                else if (val instanceof bluewave.graph.Neo4J){
+                    bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J) val;
+                    JSONObject json = new JSONObject();
+                    json.set("username", graph.getUsername());
+                    json.set("password", graph.getPassword());
+                    json.set("host", graph.getHost());
+                    json.set("port", graph.getPort());
+                    return new ServiceResponse(json);
+                }
+            }
+        }
+
+        return new ServiceResponse(404);
+    }
+
+
+  //**************************************************************************
+  //** saveSettings
+  //**************************************************************************
+    public ServiceResponse saveSettings(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        String key = request.getPath(1).toString();
+        if (key!=null){
+            Object val = Config.get(key).toObject();
+            if (val!=null){
+                if (val instanceof bluewave.graph.Neo4J){
+                    bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J) val;
+                    String host = graph.getHost();
+                    int port = graph.getPort();
+
+                    bluewave.graph.Neo4J clone = graph.clone();
+
+                    JSONObject json = request.getJson();
+                    clone.setHost(json.get("host").toString());
+                    clone.setUsername(json.get("username").toString());
+                    clone.setPassword(json.get("password").toString());
+
+                    Session session = null;
+                    try {
+                        session = clone.getSession();
+                        session.close();
+                    }
+                    catch(Exception e){
+                        if (session!=null) session.close();
+                        return new ServiceResponse(400, "Failed to connect to server");
+                    }
+
+                    graph.setHost(clone.getHost());
+                    graph.setPort(clone.getPort());
+                    graph.setUsername(clone.getUsername());
+                    graph.setPassword(clone.getPassword());
+
+                    if (!graph.getHost().equalsIgnoreCase(host)){
+                        NotificationService.notify("neo4j", "newserver");
+                    }
+
+                    return new ServiceResponse(200);
+                }
+                else{
+                    return new ServiceResponse(501, "Not implemented");
+                }
+            }
+        }
+
+        return new ServiceResponse(404);
+
+    }
 
 
   //**************************************************************************

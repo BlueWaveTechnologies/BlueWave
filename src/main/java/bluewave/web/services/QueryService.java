@@ -1,6 +1,7 @@
 package bluewave.web.services;
 
 import bluewave.graph.Neo4J;
+import bluewave.utils.NotificationService;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Record;
@@ -82,12 +83,48 @@ public class QueryService extends WebService {
                 if (format.equals("json") || format.equals("csv") || format.equals("tsv")){
                     String query = queries.get(file.getName(false));
                     if (query!=null){
-                        console.log(format+"|"+query);
                         cache.put(format + "|" + query, file.toString());
                     }
                 }
             }
         }
+
+
+      //Add listener to the NotificationService to update the cache
+        NotificationService.addListener(new NotificationService.Listener(){
+            public void processEvent(String event, String info, long timestamp){
+                if (event.equals("neo4J")){
+
+                    if (info.equals("newserver")){
+                        deleteCache();
+                    }
+                    else{
+                        JSONObject json = new JSONObject(info);
+                        synchronized(cache){
+                            ArrayList<String> deletions = new ArrayList<>();
+                            Iterator<String> it = cache.keySet().iterator();
+                            while (it.hasNext()){
+                                String key = it.next();
+                                String query = key.substring(key.indexOf("|")+1);
+                                String file = cache.get(key).toString();
+                                if (requiresUpdate(query, json)){
+                                    deletedCachedFiles(file);
+                                    deletions.add(key);
+                                }
+                            }
+
+                            if (!deletions.isEmpty()){
+                                for (String key : deletions){
+                                    console.log(key);
+                                    cache.remove(key);
+                                }
+                                cache.notifyAll();
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
 
 
@@ -114,11 +151,11 @@ public class QueryService extends WebService {
     public ServiceResponse getServiceResponse(ServiceRequest request, Database database) {
         String path = request.getPath(0).toString();
         if (path!=null){
+            String method = request.getRequest().getMethod();
             if (path.equals("jobs")){
                 return list(request);
             }
             else if (path.equals("job")){
-                String method = request.getRequest().getMethod();
                 if (method.equals("GET")){
                     return getJob(request);
                 }
@@ -127,6 +164,17 @@ public class QueryService extends WebService {
                 }
                 else if (method.equals("DELETE")){
                     return cancel(request);
+                }
+                else{
+                    return new ServiceResponse(501, "Not implemented");
+                }
+            }
+            else if (path.equals("cache")){
+                if (method.equals("GET")){
+                    return getCache(request);
+                }
+                else if (method.equals("DELETE")){
+                    return deleteCache(request);
                 }
                 else{
                     return new ServiceResponse(501, "Not implemented");
@@ -1097,5 +1145,109 @@ public class QueryService extends WebService {
             fields.add(key);
         }
         return fields;
+    }
+
+
+  //**************************************************************************
+  //** getCache
+  //**************************************************************************
+    private ServiceResponse getCache(ServiceRequest request) {
+
+      //Prevent non-admin users from seeing the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+
+        JSONArray arr = new JSONArray();
+        synchronized(cache){
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                arr.add(it.next());
+            }
+        }
+        return new ServiceResponse(arr);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    private ServiceResponse deleteCache(ServiceRequest request){
+
+      //Prevent non-admin users from deleting the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+        deleteCache();
+
+        return new ServiceResponse(200);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    private void deleteCache(){
+        synchronized(cache){
+
+          //Deleted cached files
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                String key = it.next();
+                String file = cache.get(key).toString();
+                deletedCachedFiles(file);
+            }
+
+          //Clear hashmap
+            cache.clear();
+            cache.notifyAll();
+        }
+    }
+
+
+  //**************************************************************************
+  //** deletedCachedFiles
+  //**************************************************************************
+    private void deletedCachedFiles(String file){
+        javaxt.io.File f = new javaxt.io.File(file);
+        f.delete();
+        new javaxt.io.File(f.getDirectory(), f.getName(false) + ".cypher").delete();
+    }
+
+
+  //**************************************************************************
+  //** requiresUpdate
+  //**************************************************************************
+    private boolean requiresUpdate(String query, JSONObject info){
+        Long timestamp = info.get("timestamp").toLong();
+        String action = info.get("action").toString();
+        String type = info.get("type").toString();
+        JSONArray data = info.get("data").toJSONArray();
+        String username = info.get("user").toString();
+
+
+        if ((action.equals("create") || action.equals("delete")) && (type.equals("nodes"))){
+
+          //Check if query contains node
+            query = query.toLowerCase();
+            for (int i=0; i<data.length(); i++){
+                JSONArray entry = data.get(i).toJSONArray();
+                if (entry.isEmpty()) continue;
+
+
+                for (int j=1; j<entry.length(); j++){
+                    String label = entry.get(j).toString();
+                    if (label!=null){
+                        label = label.toLowerCase();
+                        if (query.contains(label)){
+                            return true;
+                        }
+                    }
+                }
+
+            }
+
+        }
+        return false;
     }
 }
