@@ -1,4 +1,5 @@
 package bluewave;
+import java.util.Properties;
 import javaxt.express.utils.DbUtils;
 import static javaxt.utils.Console.console;
 import javaxt.json.*;
@@ -64,6 +65,12 @@ public class Config {
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
         updateFile("keystore", webConfig, configFile);
+
+
+      //Update relative paths in the graph config
+        JSONObject graphConfig = json.get("graph").toJSONObject();
+        updateDir("localLog", graphConfig, configFile, true);
+        updateDir("localCache", graphConfig, configFile, true);
 
 
       //Load config
@@ -139,13 +146,16 @@ public class Config {
             return (bluewave.graph.Neo4J) val.toObject();
         }
         else{
-            bluewave.graph.Neo4J database = new bluewave.graph.Neo4J();
+            bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             JSONObject json = get(key).toJSONObject();
-            database.setHost(json.get("host").toString());
-            database.setUsername(json.get("username").toString());
-            database.setPassword(json.get("password").toString());
-            config.set(key, database);
-            return database;
+            neo4j.setHost(json.get("host").toString());
+            neo4j.setUsername(json.get("username").toString());
+            neo4j.setPassword(json.get("password").toString());
+            Properties properties = neo4j.getProperties();
+            properties.put("localLog", json.get("localLog"));
+            properties.put("localCache", json.get("localCache"));
+            config.set(key, neo4j);
+            return neo4j;
         }
     }
 
