@@ -2,6 +2,7 @@ package bluewave.graph;
 import java.util.logging.Level;
 import org.neo4j.driver.*;
 import static org.neo4j.driver.SessionConfig.builder;
+import java.util.Properties;
 
 //******************************************************************************
 //**  Neo4J
@@ -17,14 +18,17 @@ public class Neo4J implements AutoCloseable {
     private String host;
     private String username;
     private String password;
+    private Properties properties;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public Neo4J(){}
+    public Neo4J(){
+        properties = new Properties();
+    }
 
-    
+
   //**************************************************************************
   //** clone
   //**************************************************************************
@@ -34,6 +38,7 @@ public class Neo4J implements AutoCloseable {
         neo4j.port = port;
         neo4j.username = username;
         neo4j.password = password;
+        neo4j.properties = (Properties) properties.clone();
         return neo4j;
     }
 
@@ -110,6 +115,14 @@ public class Neo4J implements AutoCloseable {
     public void setPort(int port){
         if (driver!=null) driver = null;
         this.port = port;
+    }
+
+    
+  //**************************************************************************
+  //** getProperties
+  //**************************************************************************
+    public Properties getProperties(){
+        return properties;
     }
 
 
