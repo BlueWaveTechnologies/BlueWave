@@ -258,7 +258,6 @@ if(!bluewave.charts) bluewave.charts={};
             return;
         }
         if(chartConfig.mapType=="Point" && (
-            //chartConfig.latitude===null || chartConfig.longitude===null ||
             chartConfig.mapValue===null ||
             chartConfig.mapLevel===null)){
             return;
@@ -283,6 +282,7 @@ if(!bluewave.charts) bluewave.charts={};
         var data = inputData[0];
         if(typeof data !== 'object'){
             let dataOptions = Object.keys(data[0]);
+            chartConfig.isObject = true;
             if(mapInputs){
                 mapInputs.lat.clear();
                 mapInputs.long.clear();
@@ -297,6 +297,7 @@ if(!bluewave.charts) bluewave.charts={};
             });
         }else{
             mapInputs.mapValue.add("quantity", "quantity");
+            chartConfig.isObject = false;
         }
         const mapOptions = [
             "Point",

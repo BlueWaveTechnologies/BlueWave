@@ -331,14 +331,16 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                           //Save data
                             save(data, function(companyID, facilityID, productID, notes){
-
+                                console.log(data);
                                 var node = nodeEditor.node;
                                 node.name = companyName;
                                 node.companyID = companyID;
                                 node.facilityID = facilityID;
                                 node.productID = productID;
                                 node.notes = notes;
-
+                                node.country = data.country.country;
+                                if(data.country.state) node.state = data.country.state;
+                                console.log(node.country);
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 nodeEditor.close();
                                 me.onSave();
