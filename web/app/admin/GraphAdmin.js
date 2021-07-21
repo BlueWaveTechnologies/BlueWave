@@ -15,11 +15,7 @@ bluewave.GraphAdmin = function(parent, config) {
 
     };
 
-    var connectionInfo;
-
-
-    var propogateEvents = false;
-    var currGraph = {};
+    var connectionInfo, cacheInfo, activityInfo; //dashboard items
 
 
   //**************************************************************************
@@ -69,8 +65,9 @@ bluewave.GraphAdmin = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        currGraph = {};
         connectionInfo.clear();
+        cacheInfo.clear();
+        activityInfo.clear();
     };
 
 
@@ -78,8 +75,9 @@ bluewave.GraphAdmin = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
-        propogateEvents = false;
+
         me.clear();
+
         get("admin/settings/graph", {
             success: function(graph){
                 connectionInfo.update(graph);
@@ -87,11 +85,30 @@ bluewave.GraphAdmin = function(parent, config) {
         });
 
         get("graph/cache", {
-            success: function(arr){
+            success: function(graphCache){
+                cacheInfo.addRow("Graph Service", graphCache.length, function(el){
+                    del("graph/cache",{
+                        success: function(){
+                            el.innerHTML = 0;
+                        }
+                    });
+                });
+            }
+        });
 
+        get("query/cache", {
+            success: function(queryCache){
+                cacheInfo.addRow("Query Service", queryCache.length, function(el){
+                    del("query/cache",{
+                        success: function(){
+                            el.innerHTML = 0;
+                        }
+                    });
+                });
             }
         });
     };
+    
 
   //**************************************************************************
   //** createHeader
@@ -118,6 +135,7 @@ bluewave.GraphAdmin = function(parent, config) {
     var createPanels = function(parent){
         createConnectionInfo(parent);
         createCacheInfo(parent);
+        createActivityInfo(parent);
     };
 
 
@@ -162,9 +180,9 @@ bluewave.GraphAdmin = function(parent, config) {
 
       //Watch for settings
         connectionInfo.settings.onclick = function(){
-                propPanel.hide();
-                editPanel.show();
-                form.resize();
+            propPanel.hide();
+            editPanel.show();
+            form.resize();
         };
 
 
@@ -253,6 +271,9 @@ bluewave.GraphAdmin = function(parent, config) {
             ]
         });
 
+
+        var currGraph = {};
+        var propogateEvents = false;
         var btn = form.getButton("Update");
         btn.disabled = true;
 
@@ -269,23 +290,25 @@ bluewave.GraphAdmin = function(parent, config) {
         };
 
         connectionInfo.clear = function(){
+            currGraph = {};
             tbody.innerHTML = "";
         };
 
         connectionInfo.update = function(graph){
 
-
+          //Update props
             propPanel.addRow("Graph", "Neo4J");
             propPanel.addRow("Host", graph.host);
             propPanel.addRow("Port", graph.port);
             propPanel.addRow("User", graph.username);
 
 
+          //Update form
+            propogateEvents = false;
             form.setValue("username", graph.username);
             form.setValue("password", graph.password);
             form.setValue("host", graph.host + ":" + graph.port);
             currGraph = form.getData();
-
             propogateEvents = true;
         };
 
@@ -297,20 +320,78 @@ bluewave.GraphAdmin = function(parent, config) {
   //** createCacheInfo
   //**************************************************************************
     var createCacheInfo = function(parent){
-        var dashboardItem = createDashboardItem(parent, {
+        cacheInfo = createDashboardItem(parent, {
             width: 360,
             height: 230,
-            title: "Cache Control"
+            title: "Cached Items"
         });
+
+
+        cacheInfo.innerDiv.style.verticalAlign = "top";
+        cacheInfo.innerDiv.style.padding = "10px 0 0 0";
+
+
+        var table = createTable();
+        //table.style.width = "";
+        table.style.height = "";
+        var tbody = table.firstChild;
+        var tr, td;
+        cacheInfo.innerDiv.appendChild(table);
+
+        cacheInfo.addRow = function(label, value, callback){
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+
+            td = document.createElement("td");
+            td.className = "form-label noselect";
+            td.style.paddingRight = "10px";
+            td.innerHTML = label + ":";
+            tr.appendChild(td);
+
+            td = document.createElement("td");
+            td.className = "form-label";
+            td.style.width = "100%";
+            td.innerHTML = value;
+            tr.appendChild(td);
+            var v = td;
+
+            td = document.createElement("td");
+            td.innerHTML = '<i class="far fa-trash-alt"></i>';
+            td.onclick = function(){
+                if (callback) callback.apply(me, [v]);
+            };
+            tr.appendChild(td);
+        };
+
+
+        cacheInfo.clear = function(){
+            tbody.innerHTML = "";
+        };
+
     };
 
 
+  //**************************************************************************
+  //** createActivityInfo
+  //**************************************************************************
+    var createActivityInfo = function(parent){
+        activityInfo = createDashboardItem(parent, {
+            width: 360,
+            height: 230,
+            title: "Recent Activity"
+        });
+
+        activityInfo.clear = function(){
+
+        };
+    };
 
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var get = bluewave.utils.get;
+    var del = javaxt.dhtml.utils.delete;
     var merge = javaxt.dhtml.utils.merge;
     var isDirty = javaxt.dhtml.utils.isDirty;
     var createTable = javaxt.dhtml.utils.createTable;
