@@ -78,7 +78,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         panel = createDashboardItem(td,{
             width: "100%",
             height: "100%",
-            title: "Untitled",
+            title: "Scatter Chart",
             settings: true
         });
         previewArea = panel.innerDiv;

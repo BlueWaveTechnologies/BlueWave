@@ -114,15 +114,15 @@ bluewave.charts.ScatterChart = function(parent, config) {
             }
                 let xType = typeOfAxisValue();
 
-                var scatterData = d3.nest()
-                    .key(function(d){return d[xKey];})
-                    .rollup(function(d){
-                        return d3.sum(d,function(g){
-                            return g[yKey];
-                        });
-                }).entries(data);
+//                var scatterData = d3.nest()
+//                    .key(function(d){return d[xKey];})
+//                    .rollup(function(d){
+//                        return d3.sum(d,function(g){
+//                            return g[yKey];
+//                        });
+//                }).entries(data);
 
-               displayAxis("key","value",scatterData);
+               displayAxis(xKey, yKey, data);
 
                var tooltip = d3.select(parent)
                  .append("div")
@@ -153,19 +153,19 @@ bluewave.charts.ScatterChart = function(parent, config) {
                   .style("opacity", 0)
                }
 
-               let keyType = typeOfAxisValue(scatterData[0].key);
+               let keyType = typeOfAxisValue(data[0].xKey);
                scatterArea
                    .selectAll("dot")
-                   .data(scatterData)
+                   .data(data)
                    .enter()
                    .append("circle")
                       .attr("cx", function (d) {
                       if(keyType==="date"){
-                        return x(new Date(d.key));
+                        return x(new Date(d[xKey]));
                       } else{
-                        return x(d.key);
+                        return x(d[xKey]);
                       }})
-                      .attr("cy", function (d) { return y(d["value"]); } )
+                      .attr("cy", function (d) { return y(d[yKey]); } )
                       .attr("r", 7)
                       .style("fill", "#12b84c")
                       .style("opacity", 0.3)
@@ -244,6 +244,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
         let band;
         let type = typeOfAxisValue(chartData[0][key]);
         let max = 0;
+        let min = 0;
         let timeRange;
         let axisRange;
         let axisRangePadded;
@@ -297,9 +298,19 @@ bluewave.charts.ScatterChart = function(parent, config) {
                     }
                 });
 
+                min = max;
+
+                chartData.forEach((val) => {
+                    let curVal = parseFloat(val[key]);
+                    if (curVal < min) {
+                        min = curVal;
+                    }
+                });
+
+
                 scale = d3
                     .scaleLinear()
-                    .domain([0, max])
+                    .domain([min, max])
                     .range(axisRange);
                 break;
         }
