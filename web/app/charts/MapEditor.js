@@ -38,23 +38,13 @@ if(!bluewave.charts) bluewave.charts={};
         colorScale:null
     };
     var mapProjection;
-    var projectionOptions;
+    var styleEditor;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
-        projectionOptions = [
-            {name: "Ablers USA", projection: d3.geoAlbers()
-                            .rotate([96, 0])
-                            .center([-.6, 38.7])
-                            .parallels([29.5, 45.5])
-                            .scale(1000)
-                            .precision(.1)
-            },
-            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)}
-        ];
 
         let table = createTable();
         let tbody = table.firstChild;
@@ -93,6 +83,12 @@ if(!bluewave.charts) bluewave.charts={};
         });
 
 
+      //Watch for settings
+        panel.settings.onclick = function(){
+            if (chartConfig) editStyle(chartConfig.mapType);
+        };
+
+
         onRender(previewArea, function(){
             initializeChartSpace();
         });
@@ -113,7 +109,7 @@ if(!bluewave.charts) bluewave.charts={};
                 chartConfig[val] = mapConfig[val]? mapConfig[val]:null;
             });
             panel.title.innerHTML = mapConfig.chartTitle;
-            }
+        }
         inputData = inputs;
         createOptions();
     };
@@ -131,81 +127,86 @@ if(!bluewave.charts) bluewave.charts={};
         createMapDropDown(tbody);
     };
 
+
   //**************************************************************************
   //** createMapDropDown
   //**************************************************************************
     var createMapDropDown = function(tbody){
         dropdownItem(tbody,"mapType","Map Type",showHideDropDowns,mapInputs,"mapType");
         dropdownItem(tbody,"mapLevel","Map Level",createMapPreview,mapInputs,"mapLevel");
-        dropdownItem(tbody,"colorScale","Color Scale",createMapPreview,mapInputs,"colorScale");
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
 
-        var tr, td;
+        var tr, tr2, td;
 
         tr = document.createElement("tr");
-        tr.id="projection";
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
         td.innerHTML= "Projection:";
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
+        addShowHide(tr);
+
+        tr2 = document.createElement("tr");
+        tbody.appendChild(tr2);
         td = document.createElement("td");
-        tr.appendChild(td);
+        tr2.appendChild(td);
 
         mapProjection = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
         mapProjection.clear();
+        mapProjection.row = tr;
         mapProjection.onChange = function(name,value){
             chartConfig.mapProjectionName = name;
             createMapPreview();
         };
 
-        document.getElementById("projection").style.visibility = "collapse";
         mapProjection.hide();
-        document.getElementById("latitude").style.visibility = "collapse";
+        mapProjection.row.hide();
         mapInputs.lat.hide();
-        document.getElementById("longitude").style.visibility = "collapse";
+        mapInputs.lat.row.hide();
         mapInputs.long.hide();
-        document.getElementById("mapValue").style.visibility = "collapse";
+        mapInputs.long.row.hide();
         mapInputs.mapValue.hide();
+        mapInputs.mapValue.row.hide();
 
     };
+
 
   //**************************************************************************
   //** dropdownItem
   //**************************************************************************
     var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
-        var tr, td;
+        var tr, tr2, td;
 
         tr = document.createElement("tr");
-        tr.id = chartConfigRef;
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
         td.innerHTML= displayName+":";
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
+        addShowHide(tr);
 
+        tr2 = document.createElement("tr");
+        tbody.appendChild(tr2);
+        td = document.createElement("td");
+        tr2.appendChild(td);
 
         input[inputType] = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
+        input[inputType].row = tr;
         input[inputType].clear();
         input[inputType].onChange = function(name,value){
             chartConfig[chartConfigRef] = value;
             callBack();
         };
     };
+
 
   //**************************************************************************
   //** showHideDropDowns
@@ -217,7 +218,6 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             //Show the combox box inputs
@@ -226,26 +226,24 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapValue.show();
 
             //Show the table row objects
-            document.getElementById("latitude").style.visibility = "visible";
-            document.getElementById("longitude").style.visibility = "visible";
-            document.getElementById("mapValue").style.visibility = "visible";
-
+            mapInputs.lat.row.show();
+            mapInputs.long.row.show();
+            mapInputs.mapValue.row.show();
         };
         if(chartConfig.mapType==="Area"){
 
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.mapProjectionName !== null) chartConfig.mapProjectionName = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
 
             mapInputs.lat.hide();
             mapInputs.long.hide();
             mapInputs.mapValue.show();
 
-            document.getElementById("latitude").style.visibility = "collapse";
-            document.getElementById("longitude").style.visibility = "collapse";
-            document.getElementById("mapValue").style.visibility = "visible";
+            mapInputs.lat.row.hide();
+            mapInputs.long.row.hide();
+            mapInputs.mapValue.row.show();
         }
     };
 
@@ -257,13 +255,14 @@ if(!bluewave.charts) bluewave.charts={};
         if(chartConfig.mapType===null){
             return;
         }
-        if(chartConfig.mapType=="Point" && (chartConfig.latitude===null ||
-            chartConfig.longitude===null || chartConfig.mapValue===null ||
-            chartConfig.mapLevel===null || chartConfig.colorScale===null)){
+        if(chartConfig.mapType=="Point" && (
+            //chartConfig.latitude===null || chartConfig.longitude===null ||
+            chartConfig.mapValue===null ||
+            chartConfig.mapLevel===null)){
             return;
         }
         if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapLevel===null ||chartConfig.colorScale===null)){
+            chartConfig.mapLevel===null)){
             return;
         }
         onRender(previewArea, function() {
@@ -271,6 +270,7 @@ if(!bluewave.charts) bluewave.charts={};
             mapArea.update(chartConfig, data);
         });
     };
+
 
   //**************************************************************************
   //** createOptions
@@ -286,7 +286,6 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapValue.clear();
             mapInputs.mapType.clear();
             mapInputs.mapLevel.clear();
-            mapInputs.colorScale.clear();
         }
         dataOptions.forEach((val)=>{
             mapInputs.lat.add(val, val);
@@ -308,13 +307,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
         });
-        const colorScale = [
-            "red",
-            "blue"
-        ];
-        colorScale.forEach((val)=>{
-            mapInputs.colorScale.add(val, val);
-        });
+
 
 
         mapInputs.mapType.setValue(chartConfig.mapType, true);
@@ -322,7 +315,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.lat.setValue(chartConfig.latitude, true);
         mapInputs.long.setValue(chartConfig.longitude, true);
         mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
-        mapInputs.colorScale.setValue(chartConfig.colorScale, true);
+        createMapPreview();
     };
 
 
@@ -378,6 +371,144 @@ if(!bluewave.charts) bluewave.charts={};
 
 
   //**************************************************************************
+  //** editStyle
+  //**************************************************************************
+    var editStyle = function(mapType){
+
+      //Create styleEditor as needed
+        if (!styleEditor){
+            styleEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Style",
+                width: 400,
+                valign: "top",
+                modal: false,
+                resizable: false,
+                style: config.style.window
+            });
+        }
+
+
+      //Create form
+        var form;
+        var body = styleEditor.getBody();
+        body.innerHTML = "";
+        if (mapType==="Point"){
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            {
+                                name: "color",
+                                label: "Color",
+                                type: new javaxt.dhtml.ComboBox(
+                                    document.createElement("div"),
+                                    {
+                                        style: config.style.combobox
+                                    }
+                                )
+                            },
+                            {
+                                name: "radius",
+                                label: "Radius",
+                                type: "text"
+                            },
+                            {
+                                name: "labels",
+                                label: "Labels",
+                                type: "radio",
+                                alignment: "vertical",
+                                options: [
+                                    {
+                                        label: "True",
+                                        value: true
+                                    },
+                                    {
+                                        label: "False",
+                                        value: false
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+          //Update cutout field (add slider) and set initial value
+            createSlider("radius", form, "%");
+            var radius = chartConfig.pointRadius;
+            if (radius==null) radius = 0.65;
+            chartConfig.pointRadius = radius;
+            form.findField("radius").setValue(radius*100);
+
+
+          //Tweak height of the label field and set initial value
+            var labelField = form.findField("labels");
+            labelField.row.style.height = "68px";
+            var labels = chartConfig.pieLabels;
+            labelField.setValue(labels===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+                chartConfig.pointRadius = settings.radius/100;
+                if (settings.labels==="true") settings.labels = true;
+                else if (settings.labels==="false") settings.labels = false;
+                chartConfig.pointLabels = settings.labels;
+                createMapPreview();
+            };
+        }
+        else if (mapType==="Area"){
+
+            var colorField = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox
+                }
+            );
+            colorField.add("Red", "red");
+            colorField.add("Blue", "blue");
+
+
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            {
+                                name: "color",
+                                label: "Color",
+                                type: colorField
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+                chartConfig.colorScale = settings.color;
+                createMapPreview();
+            };
+        }
+
+
+        if (form){
+            styleEditor.showAt(108,57);
+            form.resize();
+        }
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
@@ -389,6 +520,7 @@ if(!bluewave.charts) bluewave.charts={};
     var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addTextEditor = bluewave.utils.addTextEditor;
+    var createSlider = bluewave.utils.createSlider;
     var warn = bluewave.utils.warn;
 
     init();

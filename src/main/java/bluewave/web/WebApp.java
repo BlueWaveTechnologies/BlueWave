@@ -42,7 +42,8 @@ public class WebApp extends HttpServlet {
 
 
       //Initialize config
-        Config.init(configFile, jar);
+        Config.load(configFile, jar);
+        Config.initDatabase();
 
 
       //Initialize this class
@@ -229,6 +230,7 @@ public class WebApp extends HttpServlet {
             }
         }
         else if (service.equals("appinfo")){
+            response.setContentType("application/json");
             response.write("{\"name\":\"" + appName + "\"}");
         }
         else if (service.equals("data")){
