@@ -141,7 +141,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
                var mousemove = function(d) {
                   tooltip
-                  .html("Example tooltip: " + "some value entered")
+                  .html("X: " + d[xKey]+ "     Y: " + d[yKey])
                   .style("left", (d3.mouse(this)[0]+90) + "px")
                   .style("top", (d3.mouse(this)[1]) + "px")
                }
@@ -422,6 +422,3 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-
-    init();
-};
