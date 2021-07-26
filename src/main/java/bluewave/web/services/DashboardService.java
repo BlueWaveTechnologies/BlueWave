@@ -50,8 +50,6 @@ public class DashboardService extends WebService {
             rs.open("select class_name from " + tableName, conn);
             while (rs.hasNext()){
                 String className = rs.getValue(0).toString();
-                int idx = className.lastIndexOf(".");
-                if (idx>0) className = className.substring(idx+1);
                 dashboards.add(className);
                 rs.moveNext();
             }
@@ -62,10 +60,11 @@ public class DashboardService extends WebService {
           //Add dashboards as needed
             javaxt.io.Directory dir = new javaxt.io.Directory(web + "app/dashboards/");
             for (javaxt.io.File file : dir.getFiles("*.js")){
-                String className = file.getName(false);
+                String fileName = file.getName(false);
+                String className = "bluewave.dashboards." + fileName;
                 if (!dashboards.contains(className)){
                     Dashboard dashboard = new Dashboard();
-                    dashboard.setName(className);
+                    dashboard.setName(fileName);
                     dashboard.setClassName(className);
                     dashboard.save();
                 }
