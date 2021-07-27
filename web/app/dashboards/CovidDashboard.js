@@ -389,10 +389,9 @@ bluewave.dashboards.CovidDashboard = function(parent, config) {
             callback.apply(null, [countiesAndStates]);
         }
         else{
-            d3.json("data/counties-albers-10m.json")
-              .then(function(topo_data) {
-                  countiesAndStates = topo_data;
-                  callback.apply(null, [countiesAndStates]);
+            getData("counties", function(mapData){
+                countiesAndStates = mapData;
+                callback.apply(null, [countiesAndStates]);
             });
         }
     };

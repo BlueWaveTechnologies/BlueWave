@@ -329,6 +329,7 @@ public class Main {
                     while (rs.hasNext()){
                         org.neo4j.driver.Record r = rs.next();
                         List labels = r.get(0).asList();
+                        if (labels.isEmpty()) continue;
                         String label = labels.get(0).toString();
                         System.out.println(" -" + label);
                     }
