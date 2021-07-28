@@ -507,7 +507,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                                     break;
                                                 }
                                             }
-                                            for(var i = 0; i < countries.features.length; i++){
+                                            for(var i = 0; i < centers.length; i++){
                                                 var center = centers[i];
                                                 if(countryTwo === center.country){
                                                     console.log(center);
@@ -522,7 +522,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                             coords.push(connectionPath);
                                         }
                                     });
-                                    console.log(coords);
                                     mapArea.selectAll("#connection-path").remove();
                                     mapArea.selectAll("#connection-path")
                                         .data(coords)
@@ -588,7 +587,72 @@ bluewave.charts.MapChart = function(parent, config) {
 
                                 }else if(chartConfig.mapType === "Area"){
                                     var nodes = data.nodes;
+                                    var links = data.links;
+                                    var linkArray = []
+                                    var connections = [];
                                     var coords = [];
+                                    for(link in links){
+                                        if(links.hasOwnProperty(link)){
+                                            var linkage = link.split('->');
+                                            linkage.push(links[link].quantity);
+                                            linkArray.push(linkage);
+                                        }
+                                    }
+                                    linkArray.forEach(function(d){
+                                        var connection = {};
+                                        countryCodeOne = nodes[d[0]].country;
+                                        countryCodeTwo = nodes[d[1]].country;
+                                        countryValue = d[2];
+                                        connection.countryCodeOne = countryCodeOne;
+                                        connection.countryCodeTwo = countryCodeTwo;
+                                        connection.quantity = countryValue;
+                                        connections.push(connection);
+                                    });
+                                    connections.forEach(function(d){
+                                        var countryOne = d.countryCodeOne;
+                                        var countryTwo = d.countryCodeTwo;
+                                        var coordOne = [];
+                                        var coordTwo = [];
+                                        var connectionPath = [];
+                                        if(countryOne !== 'US' && countryTwo === 'US'){
+                                            for(var i = 0; i < ports.length; i++){
+                                                if(countryOne === ports[i].iso2){
+                                                    coordOne.push(ports[i].exlatitude);
+                                                    coordOne.push(ports[i].exlongitude);
+                                                    coordTwo.push(ports[i].imlatitude);
+                                                    coordTwo.push(ports[i].imlongitude);
+                                                    connectionPath.push(coordOne);
+                                                    connectionPath.push(coordTwo);
+                                                    coords.push(connectionPath)
+                                                }
+                                            }
+                                        }else{
+                                            for (var i = 0; i < centers.length; i++){
+                                                var center = centers[i];
+                                                if (countryOne === center.country){
+                                                    var lat = center.latitude;
+                                                    var lon = center.longitude;
+                                                    coordOne.push(lat);
+                                                    coordOne.push(lon);
+                                                    connectionPath.push(coordOne);
+                                                    break;
+                                                }
+                                            }
+                                            for(var i = 0; i < centers.length; i++){
+                                                var center = centers[i];
+                                                if(countryTwo === center.country){
+                                                    console.log(center);
+                                                    var lat = center.latitude;
+                                                    var lon = center.longitude;
+                                                    coordTwo.push(lat);
+                                                    coordTwo.push(lon);
+                                                    connectionPath.push(coordTwo);
+                                                    break;
+                                                }
+                                            }
+                                            coords.push(connectionPath);
+                                        }
+                                    });
                                     for(var country in nodes){
                                         if(nodes.hasOwnProperty(country)){
                                             countryCode = nodes[country].country;
@@ -609,10 +673,73 @@ bluewave.charts.MapChart = function(parent, config) {
                                         .attr('fill', function(d){
                                             var inData = d.properties.inData;
                                             if(inData){
-                                                return colorScale[chartConfig.colorScale](d.properties.mapValue);
+                                                return getColor(d);
                                             }else{
                                                 return "lightgrey";
                                             }
+                                        });
+                                    console.log(coords);
+                                    mapArea.selectAll("#connection-path").remove();
+                                    mapArea.selectAll("#connection-path")
+                                        .data(coords)
+                                        .enter()
+                                        .append("path")
+                                        .attr("id", "#connection-path")
+                                        .attr("d", function (d) {
+                                            console.log(d);
+                                            return path({
+                                                type: "LineString",
+                                                coordinates: [
+                                                    [d[0][1], d[0][0]],
+                                                    [d[1][1], d[1][0]],
+                                                ],
+                                            });
+                                        })
+                                        .style("fill", "none")
+                                        .style("stroke-opacity", 0.5)
+                                        .style("stroke-width", 7)
+                                        .style('stroke', (d) =>{
+                                            return getColor(d);
+                                        })
+
+                                    mapArea.selectAll("#connection-dot").remove();
+                                    let dots = mapArea
+                                        .append("g")
+                                        .attr("id", "connection-dot")
+                                        .selectAll("#connection-dot")
+                                        .data(coords)
+                                        .enter();
+
+                                    dots.append("circle")
+                                        .attr("cx", function(d){
+                                            let lat = d[0][0];
+                                            let lon = d[0][1];
+                                            return projection([lon, lat])[0];
+                                        })
+                                        .attr("cy", function(d){
+                                            let lat = d[0][0];
+                                            let lon = d[0][1];
+                                            return projection([lon, lat])[1];
+                                        })
+                                        .attr("r", 6)
+                                        .attr("fill", (d) =>{
+                                            return getColor(d);
+                                        });
+
+                                    dots.append("circle")
+                                        .attr("cx", function(d){
+                                            let lat = d[1][0];
+                                            let lon = d[1][1];
+                                            return projection([lon, lat])[0];
+                                        })
+                                        .attr("cy", function(d){
+                                            let lat = d[1][0];
+                                            let lon = d[1][1];
+                                            return projection([lon, lat])[1];
+                                        })
+                                        .attr("r", 6)
+                                        .attr("fill", (d) =>{
+                                            return getColor(d[0]);
                                         });
                                 }
                             })
