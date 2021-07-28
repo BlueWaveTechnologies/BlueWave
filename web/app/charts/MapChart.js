@@ -432,170 +432,190 @@ bluewave.charts.MapChart = function(parent, config) {
                 if(chartConfig.mapLevel == "countries"){
                     getData("countries", function(mapData){
                         getData("PortsOfEntry", function(ports){
+                            getData("geoCenters", function(centers){
+                                var countries = topojson.feature(mapData, mapData.objects.countries);
+                                var projection = d3.geoMercator()
+                                                .scale(width / 2 / Math.PI)
+                                                .rotate([120, 0])
+                                                .center([0, 30])
+                                                .translate([width / 2, height / 2]);
+                                var path = d3.geoPath().projection(projection);
 
-                            var countries = topojson.feature(mapData, mapData.objects.countries);
-                            var projection = d3.geoMercator()
-                                            .scale(width / 2 / Math.PI)
-                                            .translate([width / 2, height / 2]);
-                            var path = d3.geoPath().projection(projection);
-                            if(chartConfig.mapType === "Point"){
-                                mapArea.selectAll("path")
-                                    .data(countries.features)
-                                    .enter()
-                                    .append("path")
-                                    .attr('d', path)
-                                    .attr('fill', 'lightgray')
-                                    .attr('stroke', 'white');
+                                var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
+
+                                if(chartConfig.mapType === "Point"){
+                                    mapArea.selectAll("path")
+                                        .data(countries.features)
+                                        .enter()
+                                        .append("path")
+                                        .attr('d', path)
+                                        .attr('fill', 'lightgray')
+                                        .attr('stroke', 'white');
 
 
-                                var nodes = data.nodes;
-                                var links = data.links;
-                                var linkArray = []
-                                var connections = [];
-                                var coords = [];
-                                //Split Links up into the component parts.
-                                for(link in links){
-                                    if(links.hasOwnProperty(link)){
-                                        var linkage = link.split('->');
-                                        linkage.push(links[link].quantity);
-                                        linkArray.push(linkage);
-                                    }
-                                };
-                                linkArray.forEach(function(d){
-                                    var connection = {};
-                                    countryCodeOne = nodes[d[0]].country;
-                                    countryCodeTwo = nodes[d[1]].country;
-                                    countryValue = d[2];
-                                    connection.countryCodeOne = countryCodeOne;
-                                    connection.countryCodeTwo = countryCodeTwo;
-                                    connection.quantity = countryValue;
-                                    connections.push(connection);
-                                });
-                                connections.forEach(function(d){
-                                    var countryOne = d.countryCodeOne;
-                                    var countryTwo = d.countryCodeTwo;
-                                    var coordOne = [];
-                                    var coordTwo = [];
-                                    var connectionPath = [];
-                                    if(countryOne !== 'US' && countryTwo === 'US'){
-                                        for(var i = 0; i < ports.length; i++){
-                                            if(countryOne === ports[i].iso2){
-                                                coordOne.push(ports[i].exlatitude);
-                                                coordOne.push(ports[i].exlongitude);
-                                                coordTwo.push(ports[i].imlatitude);
-                                                coordTwo.push(ports[i].imlongitude);
-                                                connectionPath.push(coordOne);
-                                                connectionPath.push(coordTwo);
-                                                coords.push(connectionPath)
-                                            }
+                                    var nodes = data.nodes;
+                                    var links = data.links;
+                                    var linkArray = []
+                                    var connections = [];
+                                    var coords = [];
+                                    //Split Links up into the component parts.
+                                    for(link in links){
+                                        if(links.hasOwnProperty(link)){
+                                            var linkage = link.split('->');
+                                            linkage.push(links[link].quantity);
+                                            linkArray.push(linkage);
                                         }
-                                    }else{
-                                        for (var i = 0; i < countries.features.length; i++){
-                                            var feature = countries.features[i];
-                                            if (countryOne === feature.properties.code){
-                                                coordOne = path.centroid(feature);
-                                                connectionPath.push(coordOne);
-                                                if(connectionPath.length == 2){
-                                                    //coords.push(connectionPath);
+                                    };
+                                    linkArray.forEach(function(d){
+                                        var connection = {};
+                                        countryCodeOne = nodes[d[0]].country;
+                                        countryCodeTwo = nodes[d[1]].country;
+                                        countryValue = d[2];
+                                        connection.countryCodeOne = countryCodeOne;
+                                        connection.countryCodeTwo = countryCodeTwo;
+                                        connection.quantity = countryValue;
+                                        connections.push(connection);
+                                    });
+                                    connections.forEach(function(d){
+                                        var countryOne = d.countryCodeOne;
+                                        var countryTwo = d.countryCodeTwo;
+                                        var coordOne = [];
+                                        var coordTwo = [];
+                                        var connectionPath = [];
+                                        if(countryOne !== 'US' && countryTwo === 'US'){
+                                            for(var i = 0; i < ports.length; i++){
+                                                if(countryOne === ports[i].iso2){
+                                                    coordOne.push(ports[i].exlatitude);
+                                                    coordOne.push(ports[i].exlongitude);
+                                                    coordTwo.push(ports[i].imlatitude);
+                                                    coordTwo.push(ports[i].imlongitude);
+                                                    connectionPath.push(coordOne);
+                                                    connectionPath.push(coordTwo);
+                                                    coords.push(connectionPath)
                                                 }
                                             }
-                                            if(countryTwo === feature.properties.code){
-                                                coordTwo = path.centroid(feature);
-                                                connectionPath.push(coordTwo);
-                                                if(connectionPath.length == 2){
-                                                    //coords.push(connectionPath);
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                                console.log(coords);
-                                mapArea.selectAll("#connection-path").remove();
-                                mapArea.selectAll("#connection-path")
-                                    .data(coords)
-                                    .enter()
-                                    .append("path")
-                                    .attr("id", "#connection-path")
-                                    .attr("d", function (d) {
-                                        console.log(d);
-                                        return path({
-                                            type: "LineString",
-                                            coordinates: [
-                                                [d[0][1], d[0][0]],
-                                                [d[1][1], d[1][0]],
-                                            ],
-                                        });
-                                    })
-                                    .style("fill", "none")
-                                    .style("stroke-opacity", 0.5)
-                                    .style("stroke-width", 7)
-                                    .attr('stroke', 'brown')
-
-                                mapArea.selectAll("#connection-dot").remove();
-                                let dots = mapArea
-                                    .append("g")
-                                    .attr("id", "connection-dot")
-                                    .selectAll("#connection-dot")
-                                    .data(coords)
-                                    .enter();
-
-                                dots.append("circle")
-                                    .attr("cx", function(d){
-                                        let lat = d[0][0];
-                                        let lon = d[0][1];
-                                        return projection([lon, lat])[0];
-                                    })
-                                    .attr("cy", function(d){
-                                        let lat = d[0][0];
-                                        let lon = d[0][1];
-                                        return projection([lon, lat])[1];
-                                    })
-                                    .attr("r", 6)
-                                    .attr("fill", "brown");
-
-                                dots.append("circle")
-                                    .attr("cx", function(d){
-                                        let lat = d[1][0];
-                                        let lon = d[1][1];
-                                        return projection([lon, lat])[0];
-                                    })
-                                    .attr("cy", function(d){
-                                        let lat = d[1][0];
-                                        let lon = d[1][1];
-                                        return projection([lon, lat])[1];
-                                    })
-                                    .attr("r", 6)
-                                    .attr("fill", "brown");
-
-                            }else if(chartConfig.mapType === "Area"){
-                                var nodes = data.nodes;
-                                var coords = [];
-                                for(var country in nodes){
-                                    if(nodes.hasOwnProperty(country)){
-                                        countryCode = nodes[country].country;
-                                        for(var i = 0; i < countries.features.length; i++){
-                                            if(countryCode == countries.features[i].properties.code){
-                                                countries.features[i].properties.inData = true;
-                                                countries.features[i].properties.mapValue = 1000;
-                                            }
-                                        }
-                                    }
-                                }
-                                mapArea.selectAll("path")
-                                    .data(countries.features)
-                                    .enter()
-                                    .append("path")
-                                    .attr('d', path)
-                                    .attr('stroke', 'white')
-                                    .attr('fill', function(d){
-                                        var inData = d.properties.inData;
-                                        if(inData){
-                                            return colorScale[chartConfig.colorScale](d.properties.mapValue);
                                         }else{
-                                            return "lightgrey";
+                                            for (var i = 0; i < centers.length; i++){
+                                                var center = centers[i];
+                                                if (countryOne === center.country){
+                                                    console.log(center);
+                                                    var lat = center.latitude;
+                                                    var lon = center.longitude;
+                                                    coordOne.push(lat);
+                                                    coordOne.push(lon);
+                                                    connectionPath.push(coordOne);
+                                                    break;
+                                                }
+                                            }
+                                            for(var i = 0; i < countries.features.length; i++){
+                                                var center = centers[i];
+                                                if(countryTwo === center.country){
+                                                    console.log(center);
+                                                    var lat = center.latitude;
+                                                    var lon = center.longitude;
+                                                    coordTwo.push(lat);
+                                                    coordTwo.push(lon);
+                                                    connectionPath.push(coordTwo);
+                                                    break;
+                                                }
+                                            }
+                                            coords.push(connectionPath);
                                         }
                                     });
-                            }
+                                    console.log(coords);
+                                    mapArea.selectAll("#connection-path").remove();
+                                    mapArea.selectAll("#connection-path")
+                                        .data(coords)
+                                        .enter()
+                                        .append("path")
+                                        .attr("id", "#connection-path")
+                                        .attr("d", function (d) {
+                                            console.log(d);
+                                            return path({
+                                                type: "LineString",
+                                                coordinates: [
+                                                    [d[0][1], d[0][0]],
+                                                    [d[1][1], d[1][0]],
+                                                ],
+                                            });
+                                        })
+                                        .style("fill", "none")
+                                        .style("stroke-opacity", 0.5)
+                                        .style("stroke-width", 7)
+                                        .style('stroke', (d) =>{
+                                            return getColor(d);
+                                        })
+
+                                    mapArea.selectAll("#connection-dot").remove();
+                                    let dots = mapArea
+                                        .append("g")
+                                        .attr("id", "connection-dot")
+                                        .selectAll("#connection-dot")
+                                        .data(coords)
+                                        .enter();
+
+                                    dots.append("circle")
+                                        .attr("cx", function(d){
+                                            let lat = d[0][0];
+                                            let lon = d[0][1];
+                                            return projection([lon, lat])[0];
+                                        })
+                                        .attr("cy", function(d){
+                                            let lat = d[0][0];
+                                            let lon = d[0][1];
+                                            return projection([lon, lat])[1];
+                                        })
+                                        .attr("r", 6)
+                                        .attr("fill", (d) =>{
+                                            return getColor(d);
+                                        });
+
+                                    dots.append("circle")
+                                        .attr("cx", function(d){
+                                            let lat = d[1][0];
+                                            let lon = d[1][1];
+                                            return projection([lon, lat])[0];
+                                        })
+                                        .attr("cy", function(d){
+                                            let lat = d[1][0];
+                                            let lon = d[1][1];
+                                            return projection([lon, lat])[1];
+                                        })
+                                        .attr("r", 6)
+                                        .attr("fill", (d) =>{
+                                            return getColor(d[0]);
+                                        });
+
+                                }else if(chartConfig.mapType === "Area"){
+                                    var nodes = data.nodes;
+                                    var coords = [];
+                                    for(var country in nodes){
+                                        if(nodes.hasOwnProperty(country)){
+                                            countryCode = nodes[country].country;
+                                            for(var i = 0; i < countries.features.length; i++){
+                                                if(countryCode == countries.features[i].properties.code){
+                                                    countries.features[i].properties.inData = true;
+                                                    countries.features[i].properties.mapValue = 1000;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    mapArea.selectAll("path")
+                                        .data(countries.features)
+                                        .enter()
+                                        .append("path")
+                                        .attr('d', path)
+                                        .attr('stroke', 'white')
+                                        .attr('fill', function(d){
+                                            var inData = d.properties.inData;
+                                            if(inData){
+                                                return colorScale[chartConfig.colorScale](d.properties.mapValue);
+                                            }else{
+                                                return "lightgrey";
+                                            }
+                                        });
+                                }
+                            })
                         })
                     })
                 }
