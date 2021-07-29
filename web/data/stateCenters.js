@@ -1,6 +1,6 @@
 if(!bluewave) var bluewave={};
 if(!bluewave.data) bluewave.data={};
-bluewave.data.geoCenters = [
+bluewave.data.stateCenters = [
  {
    "state": "AK",
    "latitude": 63.588753,
