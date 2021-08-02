@@ -642,7 +642,19 @@ bluewave.charts.MapChart = function(parent, config) {
                                                 }
                                             }
                                         }
-                                        mapArea.selectAll("path")
+
+                                        mapArea.append("g")
+                                            .attr("class", "boundary")
+                                            .selectAll("boundary")
+                                            .data(countries.features)
+                                            .enter().append("path")
+                                            .attr('d', path)
+                                            .attr('fill', 'lightgray')
+                                            .attr('stroke', 'white');
+
+                                        mapArea.append("g")
+                                            .attr("class", "boundary")
+                                            .selectAll("boundary")
                                             .data(states.features)
                                             .enter()
                                             .append("path")
