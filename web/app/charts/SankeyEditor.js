@@ -164,9 +164,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(sankeyConfig){
+    this.update = function(sankeyConfig, inputs){
         me.clear();
-
+        
         if (!sankeyConfig) sankeyConfig = {};
 
 
@@ -181,6 +181,42 @@ bluewave.charts.SankeyEditor = function(parent, config) {
       //Update style
         if (!sankeyConfig.style) sankeyConfig.style = {};
         config.sankey.style = merge(sankeyConfig.style, defaultConfig.sankey.style);
+
+
+
+      //Special case when inputs are present (e.g. from SupplyChain editor)
+        if (inputs && inputs.length){
+           
+          //Hide the toggle button
+            toggleButton.hide();
+            
+            
+          //Generate data to mimic what we need to generate a sankey using drawflow 
+            var input = inputs[0];
+            for (var nodeID in input.nodes) {
+                if (input.nodes.hasOwnProperty(nodeID)){
+                    var node = input.nodes[nodeID];
+                    node.inputs = {};
+                    nodes[nodeID] = node;
+                }
+            }
+            for (var linkID in input.links) {
+                if (input.links.hasOwnProperty(linkID)){
+                    var link = input.links[linkID];
+                    quantities[linkID] = link.quantity;
+                    
+                    var arr = linkID.split("->");
+                    var sourceID = arr[0];
+                    var targetID = arr[1];
+                    nodes[targetID].inputs[sourceID] = {};
+                }
+            }
+            
+            
+          //Switch views and return early
+            toggleButton.setValue("Preview");            
+            return;
+        }
 
 
 
@@ -575,10 +611,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 quantity = quantity + v;
             }
         }
-        if(quantity == 0){
+        if (quantity == 0){
             quantity = 1;
         }
-        return quantity
+        return quantity;
     };
 
 
