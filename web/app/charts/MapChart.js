@@ -429,7 +429,161 @@ bluewave.charts.MapChart = function(parent, config) {
                     });
                 }
             }else{
-                if(chartConfig.mapLevel == "countries"){
+                if(chartConfig.mapLevel == "states"){
+                    getData("states", function(mapData) {
+                        getData("countries", function(countryData){
+                            getData("PortsOfEntry", function(ports){
+                                getData("stateCenters", function(centers){
+                                    var countries = topojson.feature(countryData, countryData.objects.countries);
+                                    var states = topojson.feature(mapData, mapData.objects.states);
+                                    var projection = d3.geoAlbers()
+                                        .scale(width / .8)
+                                        .translate([width / 2, height / 2]);
+                                    var path = d3.geoPath().projection(projection);
+
+                                    var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
+
+                                    if(chartConfig.mapType === "Point"){
+                                        mapArea.append("g")
+                                            .attr("class", "boundary")
+                                            .selectAll("boundary")
+                                            .data(countries.features)
+                                            .enter().append("path")
+                                            .attr('d', path)
+                                            .attr('fill', 'lightgray')
+                                            .attr('stroke', 'white');
+
+                                        mapArea.append("g")
+                                            .attr("class", "boundary")
+                                            .selectAll("boundary")
+                                            .data(states.features)
+                                            .enter()
+                                            .append("path")
+                                            .attr('d', path)
+                                            .attr('fill', 'lightgray')
+                                            .attr('stroke', 'white')
+
+
+                                        var nodes = data.nodes;
+                                        var links = data.links;
+                                        var linkArray = []
+                                        var connections = [];
+                                        var coords = [];
+                                        //Split Links up into the component parts.
+                                        for(link in links){
+                                            if(links.hasOwnProperty(link)){
+                                                var linkage = link.split('->');
+                                                linkage.push(links[link].quantity);
+                                                linkArray.push(linkage);
+                                            }
+                                        };
+                                        linkArray.forEach(function(d){
+                                            var connection = {};
+                                            var stateCodeOne = nodes[d[0]].state;
+                                            var stateCodeTwo = nodes[d[1]].state;
+                                            stateValue = d[2];
+                                            connection.stateCodeOne = stateCodeOne;
+                                            connection.stateCodeTwo = stateCodeTwo;
+                                            connection.quantity = stateValue;
+                                            connections.push(connection);
+                                        });
+                                        connections.forEach(function(d){
+                                            var stateOne = d.stateCodeOne;
+                                            var stateTwo = d.stateCodeTwo;
+                                            var coordOne = [];
+                                            var coordTwo = [];
+                                            var connectionPath = [];
+                                            for (var i = 0; i < centers.length; i++){
+                                                var center = centers[i];
+                                                if (stateOne === center.state){
+                                                    var lat = center.latitude;
+                                                    var lon = center.longitude;
+                                                    coordOne.push(lat);
+                                                    coordOne.push(lon);
+                                                    connectionPath.push(coordOne);
+                                                    break;
+                                                }
+                                            }
+                                            for(var i = 0; i < centers.length; i++){
+                                                var center = centers[i];
+                                                if(stateTwo === center.state){
+                                                    var lat = center.latitude;
+                                                    var lon = center.longitude;
+                                                    coordTwo.push(lat);
+                                                    coordTwo.push(lon);
+                                                    connectionPath.push(coordTwo);
+                                                    break;
+                                                }
+                                            }
+                                            coords.push(connectionPath);
+                                        });
+
+                                        mapArea.selectAll("#connection-path").remove();
+                                        mapArea.selectAll("#connection-path")
+                                            .data(coords)
+                                            .enter()
+                                            .append("path")
+                                            .attr("id", "#connection-path")
+                                            .attr("d", function (d) {
+                                                return path({
+                                                    type: "LineString",
+                                                    coordinates: [
+                                                        [d[0][1], d[0][0]],
+                                                        [d[1][1], d[1][0]],
+                                                    ],
+                                                });
+                                            })
+                                            .style("fill", "none")
+                                            .style("stroke-opacity", 0.5)
+                                            .style("stroke-width", 7)
+                                            .style('stroke', (d) =>{
+                                                return getColor(d);
+                                            })
+                                            mapArea.selectAll("#connection-dot").remove();
+                                            let dots = mapArea
+                                                .append("g")
+                                                .attr("id", "connection-dot")
+                                                .selectAll("#connection-dot")
+                                                .data(coords)
+                                                .enter();
+
+                                            dots.append("circle")
+                                                .attr("cx", function(d){
+                                                    let lat = d[0][0];
+                                                    let lon = d[0][1];
+                                                    return projection([lon, lat])[0];
+                                                })
+                                                .attr("cy", function(d){
+                                                    let lat = d[0][0];
+                                                    let lon = d[0][1];
+                                                    return projection([lon, lat])[1];
+                                                })
+                                                .attr("r", 6)
+                                                .attr("fill", (d) =>{
+                                                    return getColor(d);
+                                                });
+
+                                            dots.append("circle")
+                                                .attr("cx", function(d){
+                                                    let lat = d[1][0];
+                                                    let lon = d[1][1];
+                                                    return projection([lon, lat])[0];
+                                                })
+                                                .attr("cy", function(d){
+                                                    let lat = d[1][0];
+                                                    let lon = d[1][1];
+                                                    return projection([lon, lat])[1];
+                                                })
+                                                .attr("r", 6)
+                                                .attr("fill", (d) =>{
+                                                    return getColor(d[0]);
+                                                });
+                                    }
+                                });
+                            });
+                        });
+                    });
+                }else if(chartConfig.mapLevel == "countries"){
                     getData("countries", function(mapData){
                         getData("PortsOfEntry", function(ports){
                             getData("geoCenters", function(centers){
@@ -498,7 +652,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                             for (var i = 0; i < centers.length; i++){
                                                 var center = centers[i];
                                                 if (countryOne === center.country){
-                                                    console.log(center);
                                                     var lat = center.latitude;
                                                     var lon = center.longitude;
                                                     coordOne.push(lat);
@@ -510,7 +663,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                             for(var i = 0; i < centers.length; i++){
                                                 var center = centers[i];
                                                 if(countryTwo === center.country){
-                                                    console.log(center);
                                                     var lat = center.latitude;
                                                     var lon = center.longitude;
                                                     coordTwo.push(lat);
@@ -529,7 +681,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                         .append("path")
                                         .attr("id", "#connection-path")
                                         .attr("d", function (d) {
-                                            console.log(d);
                                             return path({
                                                 type: "LineString",
                                                 coordinates: [
@@ -641,7 +792,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                             for(var i = 0; i < centers.length; i++){
                                                 var center = centers[i];
                                                 if(countryTwo === center.country){
-                                                    console.log(center);
                                                     var lat = center.latitude;
                                                     var lon = center.longitude;
                                                     coordTwo.push(lat);
@@ -677,8 +827,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                             }else{
                                                 return "lightgrey";
                                             }
-                                        });
-                                    console.log(coords);
+                                        });;
                                     mapArea.selectAll("#connection-path").remove();
                                     mapArea.selectAll("#connection-path")
                                         .data(coords)
@@ -686,7 +835,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                         .append("path")
                                         .attr("id", "#connection-path")
                                         .attr("d", function (d) {
-                                            console.log(d);
                                             return path({
                                                 type: "LineString",
                                                 coordinates: [
