@@ -108,6 +108,14 @@
             <version>4.1</version>
         </dependency>
 
+
+        <!-- jsch (used to download data via sftp) -->
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.55</version>
+        </dependency>
+
     </dependencies>
 
 
