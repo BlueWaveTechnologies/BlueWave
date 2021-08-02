@@ -153,6 +153,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     this.clear = function(){
         drawflow.clear();
         drawflow.removeModule(currModule);
+        currModule = null;
         setTitle("Untitled", true);
         sankeyChart.clear();
         nodes = {};
@@ -416,7 +417,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
       //Create basic config
         var sankeyConfig = {
-            layout: drawflow.export().drawflow[currModule].data,
+            layout: currModule ? drawflow.export().drawflow[currModule].data : {},
             nodes: {},
             links: {},
             chartTitle: getTitle(),
