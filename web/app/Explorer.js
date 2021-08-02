@@ -365,6 +365,18 @@ bluewave.Explorer = function(parent, config) {
                 button.addData.enable();
                 button.sankeyChart.enable();
                 button.supplyChain.enable();
+                
+
+              //Special case for SupplyChain nodes
+                for (var key in nodes) {
+                    if (nodes.hasOwnProperty(key)){
+                        var node = nodes[key];
+                        if (node.type==="supplyChain"){
+                            button.map.enable();
+                            break;
+                        }
+                    }
+                }
             }
 
 
