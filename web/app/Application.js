@@ -314,7 +314,6 @@ bluewave.Application = function (parent, config) {
 
         carousel.onChange = function (currPanel) {
             if (currApp) {
-
                 //Check if the currPanel is a clone created by the carousel.
                 //If so, replace content with the currApp
                 if (currApp.el.parentNode !== currPanel) {
@@ -779,6 +778,7 @@ bluewave.Application = function (parent, config) {
             }
 
             currApp = app;
+            console.log("current app is " + currApp)
             return app;
         }
     };
@@ -904,7 +904,6 @@ bluewave.Application = function (parent, config) {
                 me.setTitle("");
                 if (adminPanel) adminPanel.hide();
                 if (explorerPanel) explorerPanel.hide();
-                dashboardPanel.show();
                 raisePanel(bluewave.Homepage);
             }));
 
@@ -992,40 +991,69 @@ bluewave.Application = function (parent, config) {
 
 
         //Update menu items
-        for (var i = 0; i < mainMenu.childNodes.length; i++) mainMenu.childNodes[i].show();
+        for (var i = 0; i < mainMenu.childNodes.length; i++) {
+            console.log("showing another mainmenu node");
+            mainMenu.childNodes[i].show();
+        }
 
 
         //Show/hide menu items based on current app
+        // these are the current apps, these should return true or false
+        // and later determine whether an element is shown.
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
+        console.log("current app is registering as " + currApp)
+        console.log("logging each of the pages one after another" + isHomepageVisible, isExplorerVisible, isAdminVisible)
+        //
         for (var i = 0; i < mainMenu.childNodes.length; i++) {
             var menuItem = mainMenu.childNodes[i];
-
+            // console.log("menu item is listing as " + menuItem.label);
+            console.log(menuItem.label);
             if (menuItem.label === "Screenshot") {
                 if (isHomepageVisible || isExplorerVisible) {
+                    console.log("deciding to hide screenshot from menu")
                     menuItem.hide();
                 }
             }
+            // Hide homepage icon when on homepage
+            console.log("homepage status " + isHomepageVisible);
 
             if (menuItem.label === "Dashboard Home" && isHomepageVisible) {
+                console.log("deciding to hide the dashboard home");
                 menuItem.hide();
             }
-
+            // Hide Create dashboard icon when on Create dashboard 
+            console.log("create dashboard status " + isExplorerVisible);
+            if (menuItem.label === "Create Dashboard" && isExplorerVisible) {
+                console.log("deciding to hide the create dashboard icon");
+                menuItem.hide();
+            }
+            // Hide sys admin icon when on sys admin
+            console.log("system administration status " + isAdminVisible);
+            if (menuItem.label === "System Administration" && isAdminVisible) {
+                console.log("deciding to hide the systems administration");
+                menuItem.hide();
+            }
+            // choose when to show edit dashboard menu icon
             if (menuItem.label === "Edit Dashboard") {
                 if (isExplorerVisible && explorerPanel.getView() === "Dashboard") {
+                    console.log("deciding to show the edit bashboard");
                     menuItem.show();
                 }
                 else {
+                    console.log("deciding to hide the edit dashboard");
                     menuItem.hide();
                 }
             }
-
+            // specify when to show/when-not-to-show specific icons
             if (isAdminVisible) {
                 if (menuItem.label === "Dashboard Home") {
+                    console.log("deciding to show the dashboard home")
                     menuItem.show();
                 }
                 else {
+                    console.log("deciding to hide the dashboard home")
                     menuItem.hide();
                 }
             }
