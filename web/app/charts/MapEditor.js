@@ -246,6 +246,20 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.lat.row.hide();
             mapInputs.long.row.hide();
             mapInputs.mapValue.row.show();
+        };
+        if(chartConfig.mapType==="Links"){
+            if(chartConfig.latitude !== null) chartConfig.latitude = null;
+            if(chartConfig.longitude !== null) chartConfig.longitude = null;
+            if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
+            if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
+
+            mapInputs.lat.hide();
+            mapInputs.long.hide();
+            mapInputs.mapValue.show();
+
+            mapInputs.lat.row.hide();
+            mapInputs.long.row.hide();
+            mapInputs.mapValue.row.show();
         }
     };
 
@@ -294,7 +308,8 @@ if(!bluewave.charts) bluewave.charts={};
         }
         const mapOptions = [
             "Point",
-            "Area"
+            "Area",
+            "Links"
             ];
         mapOptions.forEach((val)=>{
             mapInputs.mapType.add(val,val);
