@@ -363,6 +363,7 @@ bluewave.Application = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(user){
+        console.log("update function called of user " + user.username);
         currUser = user;
         me.setTitle("");
         currDashboardItem = null;
@@ -385,6 +386,9 @@ bluewave.Application = function(parent, config) {
                     className: "bluewave.dashboards." + dashboards[i]
                 };
             }
+
+
+
 
           //Convert the dashboards array into a datastore
             dashboards = new javaxt.dhtml.DataStore(dashboards);
@@ -779,6 +783,7 @@ bluewave.Application = function(parent, config) {
             }
 
             currApp = app;
+            console.log("current app is " + currApp.getTitle());
             return app;
         }
     };
@@ -811,6 +816,8 @@ bluewave.Application = function(parent, config) {
 
             get("dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly",{
                 success: function(arr){
+                    console.log("success ... dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly");
+
                     if (arr.length===0){
                         waitmask.hide();
                     }
@@ -839,6 +846,8 @@ bluewave.Application = function(parent, config) {
                     }
                 },
                 failure: function(){
+                    console.log("failure ... dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly");
+
                     waitmask.hide();
                 }
             });
@@ -903,8 +912,10 @@ bluewave.Application = function(parent, config) {
             div.appendChild(createMenuOption("Dashboard Home", "home", function(){
                 me.setTitle("");
                 if (adminPanel) adminPanel.hide();
+                console.log("label " + label + " provided");
+                // dashboardPanel.show();
                 if (explorerPanel) explorerPanel.hide();
-                dashboardPanel.show();
+                // dashboardPanel.show();
                 raisePanel(bluewave.Homepage);
             }));
 
@@ -913,7 +924,7 @@ bluewave.Application = function(parent, config) {
                 backButton.hide();
                 nextButton.hide();
                 if (adminPanel) adminPanel.hide();
-                dashboardPanel.show()
+                dashboardPanel.show();
                 me.setTitle(label);
                 var app = raisePanel(bluewave.Explorer);
                 if (!explorerPanel) explorerPanel = app;
@@ -999,21 +1010,41 @@ bluewave.Application = function(parent, config) {
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
+        console.log("current app is registering as " + currApp.getTitle());
+        console.log("logging each of the pages state one after another (homepage, explorer, admin)" + isHomepageVisible, isExplorerVisible, isAdminVisible)
+
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
-
+            console.log("menu item label is " + menuItem.label);
             if (menuItem.label==="Screenshot"){
                 if (isHomepageVisible || isExplorerVisible){
+                    console.log("deciding to hide screenshot from menu")
                     menuItem.hide();
                 }
             }
-
+            console.log("homepage status " + isHomepageVisible);
+            // Hide homepage icon when on homepage
             if (menuItem.label==="Dashboard Home" && isHomepageVisible){
+                console.log("deciding to hide the dashboard home");
                 menuItem.hide();
             }
+            // Hide Create dashboard icon when on Create dashboard 
+            console.log("create dashboard status " + isExplorerVisible);
+            if (menuItem.label === "Create Dashboard" && isExplorerVisible) {
+                console.log("deciding to hide the create dashboard icon");
+                menuItem.hide();
+            }
+            // Hide sys admin icon when on sys admin
+            console.log("system administration status " + isAdminVisible);
+            if (menuItem.label === "System Administration" && isAdminVisible) {
+                console.log("deciding to hide the systems administration");
+                menuItem.hide();
+            }
+            // choose when to show edit dashboard menu icon
 
             if (menuItem.label==="Edit Dashboard"){
                 if (isExplorerVisible && explorerPanel.getView()==="Dashboard"){
+                    console.log("deciding to hide the create dashboard icon");
                     menuItem.show();
                 }
                 else{
@@ -1023,9 +1054,11 @@ bluewave.Application = function(parent, config) {
 
             if (isAdminVisible){
                 if (menuItem.label==="Dashboard Home"){
+                    console.log("deciding to show the dashboard home")
                     menuItem.show();
                 }
                 else{
+                    console.log("deciding to hide the dashboard home")
                     menuItem.hide();
                 }
             }
