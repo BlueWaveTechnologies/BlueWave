@@ -13,6 +13,3 @@ nb-configuration.xml
 *.dll
 **/test.html*
 **/!README.TXT
-
-# generated custom graphs
-graph/
