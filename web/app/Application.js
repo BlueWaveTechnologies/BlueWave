@@ -778,7 +778,7 @@ bluewave.Application = function (parent, config) {
             }
 
             currApp = app;
-            console.log("current app is " + currApp)
+            console.log("current app is " + currApp.getTitle());
             return app;
         }
     };
@@ -912,6 +912,7 @@ bluewave.Application = function (parent, config) {
                 backButton.hide();
                 nextButton.hide();
                 if (adminPanel) adminPanel.hide();
+                console.log("label " + label + " provided")
                 dashboardPanel.show();
                 me.setTitle(label);
                 var app = raisePanel(bluewave.Explorer);
@@ -1003,7 +1004,7 @@ bluewave.Application = function (parent, config) {
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
-        console.log("current app is registering as " + currApp)
+        console.log("current app is registering as " + currApp.getTitle());
         console.log("logging each of the pages one after another" + isHomepageVisible, isExplorerVisible, isAdminVisible)
         //
         for (var i = 0; i < mainMenu.childNodes.length; i++) {
