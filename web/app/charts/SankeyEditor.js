@@ -35,7 +35,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     opacity: 0.3
                 }
             }
-        }
+        },
+        hidePreview: false
     };
 
     var editPanel, previewPanel, waitmask; //primary components
@@ -222,6 +223,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
       //Update toggle button
+        if (config.hidePreview===true) toggleButton.hide(); 
+        else toggleButton.show();
         toggleButton.setValue("Edit");
 
 
@@ -519,6 +522,15 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     this.getChart = function(){
         if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
+    };
+    
+    
+  //**************************************************************************
+  //** getEditor
+  //**************************************************************************  
+    this.getEditor = function(){
+        if (previewPanel.isVisible()) toggleButton.setValue("Edit");
+        return editPanel;
     };
 
 
