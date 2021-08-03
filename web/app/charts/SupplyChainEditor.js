@@ -30,7 +30,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 icon: "fas fa-hospital-user",
                 label: "End User"
             }
-        ]
+        ],
+        hidePreview: true
     };
     var sankeyEditor;
     var nodeEditor;
@@ -100,7 +101,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** getChart
   //**************************************************************************
     this.getChart = function(){
-        return sankeyEditor.getChart();
+        return sankeyEditor.getEditor();
     };
 
 
