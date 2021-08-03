@@ -993,7 +993,7 @@ bluewave.Application = function (parent, config) {
 
         //Update menu items
         for (var i = 0; i < mainMenu.childNodes.length; i++) {
-            console.log("showing another mainmenu node");
+            // console.log("showing another mainmenu node");
             mainMenu.childNodes[i].show();
         }
 
@@ -1005,12 +1005,12 @@ bluewave.Application = function (parent, config) {
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
         console.log("current app is registering as " + currApp.getTitle());
-        console.log("logging each of the pages one after another" + isHomepageVisible, isExplorerVisible, isAdminVisible)
+        console.log("logging each of the pages state one after another (homepage, explorer, admin)" + isHomepageVisible, isExplorerVisible, isAdminVisible)
         //
         for (var i = 0; i < mainMenu.childNodes.length; i++) {
             var menuItem = mainMenu.childNodes[i];
             // console.log("menu item is listing as " + menuItem.label);
-            console.log(menuItem.label);
+            console.log("menu item label is " + menuItem.label);
             if (menuItem.label === "Screenshot") {
                 if (isHomepageVisible || isExplorerVisible) {
                     console.log("deciding to hide screenshot from menu")
