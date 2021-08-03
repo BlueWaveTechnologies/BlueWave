@@ -584,7 +584,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var connections = [];
                                 var coords = [];
                                 //Split Links up into the component parts.
-                                for(link in links){
+                                for (var link in links){
                                     if(links.hasOwnProperty(link)){
                                         var linkage = link.split('->');
                                         linkage.push(links[link].quantity);
@@ -593,13 +593,15 @@ bluewave.charts.MapChart = function(parent, config) {
                                 };
                                 linkArray.forEach(function(d){
                                     var connection = {};
-                                    countryCodeOne = nodes[d[0]].country;
-                                    countryCodeTwo = nodes[d[1]].country;
-                                    countryValue = d[2];
-                                    connection.countryCodeOne = countryCodeOne;
-                                    connection.countryCodeTwo = countryCodeTwo;
-                                    connection.quantity = countryValue;
-                                    connections.push(connection);
+                                    var countryCodeOne = nodes[d[0]].country;
+                                    var countryCodeTwo = nodes[d[1]].country;
+                                    var countryValue = d[2];
+                                    if (countryCodeOne && countryCodeTwo){
+                                        connection.countryCodeOne = countryCodeOne;
+                                        connection.countryCodeTwo = countryCodeTwo;
+                                        connection.quantity = countryValue;
+                                        connections.push(connection);
+                                    }
                                 });
                                 connections.forEach(function(d){
                                     var countryOne = d.countryCodeOne;
@@ -651,12 +653,12 @@ bluewave.charts.MapChart = function(parent, config) {
                                     .enter()
                                     .append("path")
                                     .attr("id", "#connection-path")
-                                    .attr("d", function (d) {
+                                    .attr("d", function(d) {
                                         return path({
                                             type: "LineString",
                                             coordinates: [
                                                 [d[0][1], d[0][0]],
-                                                [d[1][1], d[1][0]],
+                                                [d[1][1], d[1][0]]
                                             ],
                                         });
                                     })
@@ -706,8 +708,8 @@ bluewave.charts.MapChart = function(parent, config) {
                                     .attr("fill", (d) =>{
                                         return getColor(d[0]);
                                     });
-                            })
-                        })
+                            });
+                        });
                     }
                 });
             }
