@@ -283,13 +283,6 @@ if(!bluewave.charts) bluewave.charts={};
         if(typeof data !== 'object'){
             let dataOptions = Object.keys(data[0]);
             chartConfig.isObject = true;
-            if(mapInputs){
-                mapInputs.lat.clear();
-                mapInputs.long.clear();
-                mapInputs.mapValue.clear();
-                mapInputs.mapType.clear();
-                mapInputs.mapLevel.clear();
-            }
             dataOptions.forEach((val)=>{
                 mapInputs.lat.add(val, val);
                 mapInputs.long.add(val, val);
@@ -328,12 +321,20 @@ if(!bluewave.charts) bluewave.charts={};
   //** clear
   //**************************************************************************
     this.clear = function(){
-        //mapInputs = {};
         inputData = [];
         chartConfig = {};
         panel.title.innerHTML = "Untitled";
-        //options.innerHTML = "";
 
+      //Clear map inputs
+        if (mapInputs){
+            for (var key in mapInputs) {
+                if (mapInputs.hasOwnProperty(key)){
+                    var mapInput = mapInputs[key];
+                    if (mapInput && mapInput.clear) mapInput.clear();
+                }
+            }
+        }
+        
        //if (mapArea) mapArea.selectAll("*").remove();
        //if (mapLayer) mapLayer.selectAll("circle").remove();
     };
