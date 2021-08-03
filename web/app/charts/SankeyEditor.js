@@ -185,6 +185,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         config.sankey.style = merge(sankeyConfig.style, defaultConfig.sankey.style);
 
 
+      //Set view
+        toggleButton.setValue("Edit");
+
 
       //Special case when inputs are present (e.g. from SupplyChain editor)
         if (inputs && inputs.length){
@@ -215,18 +218,18 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
             
             
-          //Switch views and return early
+            
+          //Switch view and return early
             toggleButton.setValue("Preview");            
             return;
         }
 
 
 
-      //Update toggle button
+      //Show/hide toggle button
         if (config.hidePreview===true) toggleButton.hide(); 
         else toggleButton.show();
-        toggleButton.setValue("Edit");
-
+        
 
       //Set module
         currModule = "sankey_" + new Date().getTime();
