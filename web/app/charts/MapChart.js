@@ -472,7 +472,10 @@ bluewave.charts.MapChart = function(parent, config) {
                     var countries = topojson.feature(mapData, mapData.objects.countries);
                     var projection = d3.geoMercator()
                                     .scale(width / 2 / Math.PI)
+                                    .rotate([110, 0])
+                                    .center([0, 20])
                                     .translate([width / 2, height / 2]);
+
                     var path = d3.geoPath().projection(projection);
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
@@ -564,7 +567,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                     return "lightgrey";
                                 }
                             });
-                    }else if(chartConfig.mapLevel === "Links"){
+                    }else if(chartConfig.mapType === "Links"){
                         getData("PortsOfEntry", function(ports){
                             getData("geoCenters", function(centers){
                                 mapArea.selectAll("path")
