@@ -30,7 +30,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 icon: "fas fa-hospital-user",
                 label: "End User"
             }
-        ]
+        ],
+        hidePreview: true
     };
     var sankeyEditor;
     var nodeEditor;
@@ -100,7 +101,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** getChart
   //**************************************************************************
     this.getChart = function(){
-        return sankeyEditor.getChart();
+        return sankeyEditor.getEditor();
     };
 
 
@@ -331,14 +332,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
                           //Save data
                             save(data, function(companyID, facilityID, productID, notes){
-
                                 var node = nodeEditor.node;
                                 node.name = companyName;
                                 node.companyID = companyID;
                                 node.facilityID = facilityID;
                                 node.productID = productID;
                                 node.notes = notes;
-
+                                node.country = data.country.country;
+                                node.state = data.country.state;
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 nodeEditor.close();
                                 me.onSave();

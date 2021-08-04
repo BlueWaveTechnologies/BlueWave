@@ -35,7 +35,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     opacity: 0.3
                 }
             }
-        }
+        },
+        hidePreview: false
     };
 
     var editPanel, previewPanel, waitmask; //primary components
@@ -153,6 +154,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     this.clear = function(){
         drawflow.clear();
         drawflow.removeModule(currModule);
+        currModule = null;
         setTitle("Untitled", true);
         sankeyChart.clear();
         nodes = {};
@@ -164,9 +166,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(sankeyConfig){
+    this.update = function(sankeyConfig, inputs){
         me.clear();
-
+        
         if (!sankeyConfig) sankeyConfig = {};
 
 
@@ -183,10 +185,51 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         config.sankey.style = merge(sankeyConfig.style, defaultConfig.sankey.style);
 
 
-
-      //Update toggle button
+      //Set view
         toggleButton.setValue("Edit");
 
+
+      //Special case when inputs are present (e.g. from SupplyChain editor)
+        if (inputs && inputs.length){
+           
+          //Hide the toggle button
+            toggleButton.hide();
+            
+            
+          //Generate data to mimic what we need to generate a sankey using drawflow 
+            var input = inputs[0];
+            for (var nodeID in input.nodes) {
+                if (input.nodes.hasOwnProperty(nodeID)){
+                    var node = input.nodes[nodeID];
+                    node.inputs = {};
+                    nodes[nodeID] = node;
+                }
+            }
+            for (var linkID in input.links) {
+                if (input.links.hasOwnProperty(linkID)){
+                    var link = input.links[linkID];
+                    quantities[linkID] = link.quantity;
+                    
+                    var arr = linkID.split("->");
+                    var sourceID = arr[0];
+                    var targetID = arr[1];
+                    nodes[targetID].inputs[sourceID] = {};
+                }
+            }
+            
+            
+            
+          //Switch view and return early
+            toggleButton.setValue("Preview");            
+            return;
+        }
+
+
+
+      //Show/hide toggle button
+        if (config.hidePreview===true) toggleButton.hide(); 
+        else toggleButton.show();
+        
 
       //Set module
         currModule = "sankey_" + new Date().getTime();
@@ -380,7 +423,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
       //Create basic config
         var sankeyConfig = {
-            layout: drawflow.export().drawflow[currModule].data,
+            layout: currModule ? drawflow.export().drawflow[currModule].data : {},
             nodes: {},
             links: {},
             chartTitle: getTitle(),
@@ -483,6 +526,15 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
     };
+    
+    
+  //**************************************************************************
+  //** getEditor
+  //**************************************************************************  
+    this.getEditor = function(){
+        if (previewPanel.isVisible()) toggleButton.setValue("Edit");
+        return editPanel;
+    };
 
 
   //**************************************************************************
@@ -575,10 +627,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 quantity = quantity + v;
             }
         }
-        if(quantity == 0){
+        if (quantity == 0){
             quantity = 1;
         }
-        return quantity
+        return quantity;
     };
 
 

@@ -102,7 +102,9 @@ if(!bluewave.charts) bluewave.charts={};
         me.clear();
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
-            if (input!=null) inputs[i] = d3.csvParse(input);
+            if(typeof input !== 'object' && input !== null){
+                if (input!=null) inputs[i] = d3.csvParse(input);
+            }
         }
         if(mapConfig !== null && mapConfig !== undefined){
             Object.keys(mapConfig).forEach(val=>{
@@ -244,6 +246,20 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.lat.row.hide();
             mapInputs.long.row.hide();
             mapInputs.mapValue.row.show();
+        };
+        if(chartConfig.mapType==="Links"){
+            if(chartConfig.latitude !== null) chartConfig.latitude = null;
+            if(chartConfig.longitude !== null) chartConfig.longitude = null;
+            if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
+            if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
+
+            mapInputs.lat.hide();
+            mapInputs.long.hide();
+            mapInputs.mapValue.show();
+
+            mapInputs.lat.row.hide();
+            mapInputs.long.row.hide();
+            mapInputs.mapValue.row.show();
         }
     };
 
@@ -256,7 +272,6 @@ if(!bluewave.charts) bluewave.charts={};
             return;
         }
         if(chartConfig.mapType=="Point" && (
-            //chartConfig.latitude===null || chartConfig.longitude===null ||
             chartConfig.mapValue===null ||
             chartConfig.mapLevel===null)){
             return;
@@ -279,22 +294,22 @@ if(!bluewave.charts) bluewave.charts={};
    */
     var createOptions = function() {
         var data = inputData[0];
-        let dataOptions = Object.keys(data[0]);
-        if(mapInputs){
-            mapInputs.lat.clear();
-            mapInputs.long.clear();
-            mapInputs.mapValue.clear();
-            mapInputs.mapType.clear();
-            mapInputs.mapLevel.clear();
+        if(typeof data !== 'object'){
+            let dataOptions = Object.keys(data[0]);
+            chartConfig.isObject = true;
+            dataOptions.forEach((val)=>{
+                mapInputs.lat.add(val, val);
+                mapInputs.long.add(val, val);
+                mapInputs.mapValue.add(val, val);
+            });
+        }else{
+            mapInputs.mapValue.add("quantity", "quantity");
+            chartConfig.isObject = false;
         }
-        dataOptions.forEach((val)=>{
-            mapInputs.lat.add(val, val);
-            mapInputs.long.add(val, val);
-            mapInputs.mapValue.add(val, val);
-        });
         const mapOptions = [
             "Point",
-            "Area"
+            "Area",
+            "Links"
             ];
         mapOptions.forEach((val)=>{
             mapInputs.mapType.add(val,val);
@@ -307,8 +322,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
         });
-
-
 
         mapInputs.mapType.setValue(chartConfig.mapType, true);
         mapInputs.mapValue.setValue(chartConfig.mapValue, true);
@@ -323,12 +336,20 @@ if(!bluewave.charts) bluewave.charts={};
   //** clear
   //**************************************************************************
     this.clear = function(){
-        //mapInputs = {};
         inputData = [];
         chartConfig = {};
         panel.title.innerHTML = "Untitled";
-        //options.innerHTML = "";
 
+      //Clear map inputs
+        if (mapInputs){
+            for (var key in mapInputs) {
+                if (mapInputs.hasOwnProperty(key)){
+                    var mapInput = mapInputs[key];
+                    if (mapInput && mapInput.clear) mapInput.clear();
+                }
+            }
+        }
+        
        //if (mapArea) mapArea.selectAll("*").remove();
        //if (mapLayer) mapLayer.selectAll("circle").remove();
     };

@@ -365,6 +365,18 @@ bluewave.Explorer = function(parent, config) {
                 button.addData.enable();
                 button.sankeyChart.enable();
                 button.supplyChain.enable();
+                
+
+              //Special case for SupplyChain nodes
+                for (var key in nodes) {
+                    if (nodes.hasOwnProperty(key)){
+                        var node = nodes[key];
+                        if (node.type==="supplyChain"){
+                            button.map.enable();
+                            break;
+                        }
+                    }
+                }
             }
 
 
@@ -763,13 +775,25 @@ bluewave.Explorer = function(parent, config) {
                     return;
                 }
             }
-            //Ensure that Map can only be connected by addData data type.
-            if(node.type === "map"){
-                if(inputNode.type != "addData"){
+            
+            
+          //Ensure that Map can only be connected by addData or supplyChain nodes
+            if (node.type === "map"){
+                if (inputNode.type != "addData" && inputNode.type != "supplyChain"){
                    drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
                    return;
                 }
             }
+            
+            
+          //Ensure that Sankey can only be connected by a supplyChain node
+            if (node.type === "sankeyChart"){
+                if (inputNode.type != "supplyChain"){
+                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+                   return;
+                }
+            }
+            
 
           //If we're still here, update node and open editor
             node.inputs[outputID] = inputNode;
@@ -1004,7 +1028,6 @@ bluewave.Explorer = function(parent, config) {
                 });
 
                 break;
-            case "sankeyChart":
             case "supplyChain":
 
                 var node = createNode({
@@ -1035,6 +1058,7 @@ bluewave.Explorer = function(parent, config) {
                 addEventListeners(node);
 
                 break;
+
             default:
 
                 var node = createNode({
@@ -1387,6 +1411,7 @@ bluewave.Explorer = function(parent, config) {
         }
     };
 
+
   //**************************************************************************
   //** editMap
   //**************************************************************************
@@ -1431,10 +1456,11 @@ bluewave.Explorer = function(parent, config) {
 
             mapEditor.hide = function(){
                 win.hide();
-            }
+            };
         }
 
-        //Add custom getNode() method to the mapEditor to return current node
+
+      //Add custom getNode() method to the mapEditor to return current node
         mapEditor.getNode = function(){
             return node;
         };
@@ -1444,13 +1470,17 @@ bluewave.Explorer = function(parent, config) {
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
-                data.push(csv);
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
             }
         }
         mapEditor.update(node.config, data);
         mapEditor.show();
-
-    }
+    };
 
 
   //**************************************************************************
@@ -1506,14 +1536,31 @@ bluewave.Explorer = function(parent, config) {
             return node;
         };
 
-        sankeyEditor.update(node.config);
+
+        
+      //Special for supply chain inputs
+        var inputs = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var inputNode = node.inputs[key];
+                if (inputNode.type==="supplyChain"){
+                    var inputConfig = inputNode.config;
+                    if (inputConfig) inputs.push(inputConfig);
+                }
+
+            }
+        }
+        
+
+
+        sankeyEditor.update(node.config, inputs);
         sankeyEditor.show();
     };
+
 
   //**************************************************************************
   //** editScatter
   //**************************************************************************
-
     var editScatter = function(node){
         if (!scatterEditor){
             var win = createNodeEditor({
