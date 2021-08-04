@@ -278,6 +278,8 @@ bluewave.Application = function(parent, config) {
         //# review dashboard-back function of createButton
         backButton = createButton("dashboard-back");
         //! where is the backbutton? I have not seen. What is the backbutton visualized as?
+        //!a the backbutton is present only on the shared dashboard section
+        //!a it appears as a sideways carrot
         backButton.onclick = function(){
             var dashboardItems = getDashboardItems();
             for (var i=0; i<dashboardItems.length; i++){
@@ -291,6 +293,8 @@ bluewave.Application = function(parent, config) {
                         idx = i-1;
                     }
                     //! what is idx registering as?
+                    //!a idx is the current page of a shared dashboard that we are on, minus 1
+                    //!a idx represents the page we want to go to, when we use the backbutton
                     console.log("idx is registering as " + idx);
                     renderDashboard(dashboardItems[idx], true);
                     break;
@@ -298,7 +302,7 @@ bluewave.Application = function(parent, config) {
             }
         };
         backButton.hide();
-
+        //# Set next-page functionality in Shared Dashboards
         nextButton = createButton("dashboard-next");
         nextButton.onclick = function(){
             var dashboardItems = getDashboardItems();
@@ -310,12 +314,17 @@ bluewave.Application = function(parent, config) {
                         idx = 0;
                     }
                     else{
+                        //# idx represents the page id# we want to go, when we use the forward button
+                        //# 
                         idx = i+1;
                     }
                     renderDashboard(dashboardItems[idx], false);
                     break;
                 }
             }
+            //^ next button + which page we were on + which page we go to
+            //! how do we log the current dashboard title to console?
+            console.log(`next button used - current page:${i} ${dashboardItems[i]} - next page:${idx}`)
         };
         nextButton.hide();
 
@@ -968,6 +977,8 @@ bluewave.Application = function(parent, config) {
     //!A this functionality is in the created dashboards section of the app
     var getDashboardItems = function(){
         for (var i=0; i<apps.length; i++){
+            //! apps objects
+            //^ log apps object
             var app = apps[i].app;
             if (app instanceof bluewave.Homepage){
                 //^ print these items
