@@ -458,8 +458,10 @@ bluewave.Application = function(parent, config) {
 
 
           //Add homepage
-            // console.log("raising the homepage panel 407")
+            // console.log("raising the homepage panel 407");
+            //! bluewave.Homepage
             var homepage = raisePanel(bluewave.Homepage);
+            //! onClick variable
             homepage.onClick = function(dashboardItem){
                 renderDashboard(dashboardItem);
             };
@@ -962,10 +964,16 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
   /** Returns dashboard items from the Homepage
    */
+    //! is this function used?
+    //!A this functionality is in the created dashboards section of the app
     var getDashboardItems = function(){
         for (var i=0; i<apps.length; i++){
             var app = apps[i].app;
             if (app instanceof bluewave.Homepage){
+                //^ print these items
+                //# this logging shows which items are made available while active in "Shared Dashboards"
+                // console.dir(`logging dashboard items func ${app.getDashboardItems()}`);
+                console.dir(`logging dashboard items func ${JSON.stringify(app.getDashboardItems(),null, 2)}`); // spacing level = 2 (pretty print) 
                 return app.getDashboardItems();
             }
         }
