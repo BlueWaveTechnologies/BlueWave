@@ -16,17 +16,26 @@ import org.neo4j.driver.Transaction;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.GZIPInputStream;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 
 public class Import {
 
     public static final String UTF8_BOM = "\uFEFF";
 
-
+    
   //**************************************************************************
   //** importCSV
   //**************************************************************************
   /** Used to import a CSV file into a node/vertex in a Neo4J instance.
+   *  @param csvFile Accepts files with a .csv or .gz fiel extension. Assumes 
+   *  that the first line in the file contains a header.
+   *  @param vertex Label for the nodes that will be created
+   *  @param keys Column IDs with unique values used to create a unique 
+   *  constraint. Intended for upserts. Optional.
    */
     public static void importCSV(File csvFile, String vertex, Integer[] keys, Neo4J database) throws Exception {
 
@@ -35,8 +44,8 @@ public class Import {
         ArrayList<String> colNames = new ArrayList<>();
         String uniqueColName;
         StringBuilder query = new StringBuilder("CREATE (:" + vertex + " {");
-        java.io.BufferedReader br = csvFile.getBufferedReader("UTF-8");
-        String row = br.readLine();
+        java.io.BufferedReader br = getBufferedReader(csvFile);
+        String row = br.readLine(); //skip header
         if (row.startsWith(UTF8_BOM)) {
             row = row.substring(1);
         }
@@ -657,5 +666,20 @@ public class Import {
     private static Result addRow(final Transaction tx, final String query, Map<String, Object> params){
         return tx.run( query, params );
     }
-
+    
+    
+  //**************************************************************************
+  //** getBufferedReader
+  //**************************************************************************    
+    private static java.io.BufferedReader getBufferedReader(File file) throws Exception {
+        String ext = file.getExtension();
+        if (ext.equals("gz")){
+            InputStream fileStream = file.getInputStream();
+            InputStream gzipStream = new GZIPInputStream(fileStream);
+            return new BufferedReader(new InputStreamReader(gzipStream, "UTF-8"));
+        }
+        else{
+            return file.getBufferedReader("UTF-8");
+        }
+    }
 }

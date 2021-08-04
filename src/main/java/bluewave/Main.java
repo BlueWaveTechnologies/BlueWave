@@ -255,6 +255,10 @@ public class Main {
         javaxt.io.File file = new javaxt.io.File(filePath);
         if (!file.exists()) throw new IllegalArgumentException("-import file is invalid");
         String fileType = file.getExtension().toLowerCase();
+        if (fileType.equals("gz")){
+            String fileName = file.getName(false);
+            fileType = fileName.substring(fileName.lastIndexOf(".")+1);
+        }
 
 
       //Get node type
