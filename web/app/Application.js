@@ -34,6 +34,7 @@ bluewave.Application = function(parent, config) {
 
   //Dashboard components
     var carousel;
+    //# apps object for referencing back to dashboard
     var apps = [];
     var currApp, currDashboardItem;
 
@@ -190,6 +191,7 @@ bluewave.Application = function(parent, config) {
                 raisePanel(bluewave.Homepage, true);
             }
             else{
+                //# temporary patched default homepage
                 raisePanel(apps[0].app, true); //might not be the homepage if standalone
             }
         };
@@ -364,6 +366,8 @@ bluewave.Application = function(parent, config) {
 
       //Add event handlers
         carousel.beforeChange = function(){
+            //# by default, hide the back and the next button.
+            //# later, logic enables these
             me.setTitle("");
             backButton.hide();
             nextButton.hide();
@@ -387,6 +391,7 @@ bluewave.Application = function(parent, config) {
 
 
               //Update buttons
+              //# if the currently active view is a scrolling dashboard then show the buttons
                 if (apps.length>1){
                     backButton.show();
                     nextButton.show();
@@ -978,8 +983,14 @@ bluewave.Application = function(parent, config) {
     var getDashboardItems = function(){
         for (var i=0; i<apps.length; i++){
             //! apps objects
+            //!A current queued and previously loaded panels
             //^ log apps object
+            //! logging more identity details of these apps
+            console.log(`logging apps ${JSON.stringify(apps,null,2)}`);
             var app = apps[i].app;
+            //^ log full app object
+            //! log detailed app identity
+            console.log(`app identity ${JSON.stringify(app,null,2)}`);
             if (app instanceof bluewave.Homepage){
                 //^ print these items
                 //# this logging shows which items are made available while active in "Shared Dashboards"
