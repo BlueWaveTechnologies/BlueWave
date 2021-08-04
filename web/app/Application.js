@@ -57,6 +57,7 @@ bluewave.Application = function(parent, config) {
         if (!config.style) config.style = javaxt.dhtml.style.default;
         //@ generate global waitmask with javaxt
         //! what is a waitmask in this event?
+        //!a waitmask is a pre-generated html page used to display loading events
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         //@ set current waitmask as global waitmask
         waitmask = config.waitmask;
@@ -64,12 +65,15 @@ bluewave.Application = function(parent, config) {
         if (!waitmask.el.parentNode) document.body.appendChild(waitmask.el);
         //^ show waitmask
         //! how do you print this to see what it is?
-        console.log(`show waitmask ${waitmask.el.parentNode} `);
+        //!a the waitmask is a spinner, while the app is loading.
+        //! where is the waitmask created? ++ is java used to render the html?
+        console.log(`show waitmask ${waitmask.el.parentNode.innerHTML} `);
 
         //^ show document body
         //! how do we show this specific portion of the rendered html?
+        //!a using .innerHTML
         element_to_print = document.body;
-        console.dir(`document body reads as ${element_to_print}`);
+        console.dir(`document body reads as ${element_to_print.innerHTML}`);
 
         //@ if datastores have not been initialized, initialize them
         if (!config.dataStores) config.dataStores = {};
@@ -184,7 +188,7 @@ bluewave.Application = function(parent, config) {
                 if (adminPanel) adminPanel.hide();
                 //! what exactly does showing the dashboardPanel do? ++when raisePanel holds additional functionality
                 //!a comments below
-                //# dashboard panel is a carousel. by using dashboardPanel.show() the carousel it brings it onscreen.
+                //# dashboard panel is a carousel. by using dashboardPanel.show() the carousel is brought onscreen.
                 //# raisePanel renders a specific panel onscreen, on that carousel.
                 //@ show the carousel onscreen
                 dashboardPanel.show();
@@ -215,7 +219,9 @@ bluewave.Application = function(parent, config) {
         tr.appendChild(td);
         profileButton = document.createElement("div");
         profileButton.className = "app-header-profile noselect";
+        //# functionality of profile button clicking
         profileButton.onclick = function(e){
+            //! what is the getProfileMenu function?
             if (currUser) showMenu(getProfileMenu(), this);
         };
         addShowHide(profileButton);
@@ -230,10 +236,15 @@ bluewave.Application = function(parent, config) {
         var icon = document.createElement("i");
         icon.className = "fas fa-ellipsis-v";
         menuButton.appendChild(icon);
+        //# menuButton functionality of the menu button when clicked
+        //! what is the showMenu functionality?
+        //! getMainMenu func
         menuButton.onclick = function(e){
             if (currUser) showMenu(getMainMenu(), this);
         };
+        //! addShowHide ?? ++is it javaxt?
         addShowHide(menuButton);
+        //# append menubutton to the page
         td.appendChild(menuButton);
 
 
@@ -483,10 +494,15 @@ bluewave.Application = function(parent, config) {
 
             return;
         }
-
+        //# show the basic everything. 
+        //# show the carousel, without active panels
         dashboardPanel.show();
+        //# load the menubutton
         menuButton.show();
+        //# load the profilebutton, customized to our user id
+        //! how is the profileButton created? ++javaxt render?
         profileButton.innerHTML = user.username.substring(0,1);
+        //# show the loading screen until page render processing
         waitmask.show();
 
 
@@ -1151,7 +1167,7 @@ bluewave.Application = function(parent, config) {
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
         console.log("current app is registering as " + currApp.getTitle());
-        console.log(`logging each of the pages state one after another (homepage, explorer, admin) ${isHomepageVisible, isExplorerVisible, isAdminVisible}`);
+        console.log(`logging each of the pages state one after another (homepage, explorer, admin) ${isHomepageVisible} ${isExplorerVisible} ${isAdminVisible}`);
 
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
@@ -1270,6 +1286,7 @@ bluewave.Application = function(parent, config) {
   //** logoff
   //**************************************************************************
     var logoff = function(){
+        //# when logging off the first thing a user sees is the waiting screen
         waitmask.show();
         currUser = null;
 
@@ -1335,6 +1352,7 @@ bluewave.Application = function(parent, config) {
             document.user = null;
             var pageLoader = new javaxt.dhtml.PageLoader();
             pageLoader.loadPage("index.html", function(){
+                //# when the page finishes loading, hide the waitmask
                 waitmask.hide();
             });
         });
