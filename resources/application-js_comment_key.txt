@@ -1,0 +1,9 @@
+//! is for things we want to circle back to
+//@ is for comments i've added
+//# for notes
+//$ for testing potential
+//% possible bug
+//^ added logging (need to go back and refresh on where i've added logging
+
+(currently not used) a feature that is in here but not currently used
+++ additional question

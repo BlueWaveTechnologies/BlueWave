@@ -50,11 +50,26 @@ bluewave.Application = function(parent, config) {
 
       //Set global configuration variables
         if (!config) config = {};
+        //@ build html with javaxt
         if (!config.fx) config.fx = new javaxt.dhtml.Effects();
         if (!config.style) config.style = javaxt.dhtml.style.default;
+        //@ generate global waitmask with javaxt
+        //! what is a waitmask in this event?
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        //@ set current waitmask as global waitmask
         waitmask = config.waitmask;
+
         if (!waitmask.el.parentNode) document.body.appendChild(waitmask.el);
+        //^ show waitmask
+        //! how do you print this to see what it is?
+        console.log(`show waitmask ${waitmask.el.parentNode} `);
+
+        //^ show document body
+        //! how do we show this specific portion of the rendered html?
+        element_to_print = document.body;
+        console.dir(`document body reads as ${element_to_print}`);
+
+        //@ if datastores have not been initialized, initialize them
         if (!config.dataStores) config.dataStores = {};
         appName = config.appName;
         if (!appName){
@@ -116,7 +131,14 @@ bluewave.Application = function(parent, config) {
         me.el = table;
 
         onRender(table, function(){
+            //! what is the table?
+            //^ print table
+            //! cannot print table. it is an HTMLTableElement. How do we print those?
+            //!A print these using the .innerHTML tag
+            console.log(`print table line 136 is ${table.innerHTML}`);
             //carousel.resize();
+            //# note that dashboard back and next are hidden elements of this page and are called in other ways.
+
         });
 
     };
@@ -230,8 +252,9 @@ bluewave.Application = function(parent, config) {
             addShowHide(btn);
             return btn;
         };
-
+        //# review dashboard-back function of createButton
         backButton = createButton("dashboard-back");
+        //! where is the backbutton? I have not seen. What is the backbutton visualized as?
         backButton.onclick = function(){
             var dashboardItems = getDashboardItems();
             for (var i=0; i<dashboardItems.length; i++){
@@ -244,6 +267,8 @@ bluewave.Application = function(parent, config) {
                     else{
                         idx = i-1;
                     }
+                    //! what is idx registering as?
+                    console.log("idx is registering as " + idx);
                     renderDashboard(dashboardItems[idx], true);
                     break;
                 }
@@ -363,6 +388,7 @@ bluewave.Application = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(user){
+        //^
         console.log("update function called of user " + user.username);
         currUser = user;
         me.setTitle("");
@@ -371,20 +397,27 @@ bluewave.Application = function(parent, config) {
 
       //If no user is supplied, then we are running in stand-alone mode
         if (!user){
+            console.log("running without a user");
             menuButton.hide();
+            console.log("hide menubutton");
             profileButton.hide();
+            console.log("hide profile button");
             dashboardPanel.show();
 
           //Create dashboards
             var dashboards = [
             "SupplyChain", "ImportSummary", "EUAMap",
             "ProductPurchases", "GlobalSupplyChain"];
+
+            console.log("create dashboards line 386");
+
             for (var i in dashboards){
+                console.log("create dashboard " + i),
                 dashboards[i] = {
                     id: i,
                     name: dashboards[i],
                     className: "bluewave.dashboards." + dashboards[i]
-                };
+                }
             }
 
 
@@ -392,10 +425,15 @@ bluewave.Application = function(parent, config) {
 
           //Convert the dashboards array into a datastore
             dashboards = new javaxt.dhtml.DataStore(dashboards);
+            console.log("convert dashboard array");
+            //@ storedashboards as locally stored array for dashboards
+            //^
+            console.log(`storing the current dashboards as a datastore: ${dashboards}`);
             config.dataStores["Dashboard"] = dashboards;
 
 
           //Add homepage
+            // console.log("raising the homepage panel 407")
             var homepage = raisePanel(bluewave.Homepage);
             homepage.onClick = function(dashboardItem){
                 renderDashboard(dashboardItem);
@@ -694,7 +732,13 @@ bluewave.Application = function(parent, config) {
    *  @param obj Either a class or an instance of a class
    */
     var raisePanel = function(obj, slideBack){
-
+        //! are we getting passed the dashboard panel object to pull up? yes
+        //! constructor function
+        //^
+        console.log("raise panel function called line 716");
+        //# we are getting passed this object to the raisePanel function. This object is a complete panel that we'd like to show.
+        //# pre-built object (obj)
+        console.log(`the current object we'd like to pull up is ${obj}`);
 
       //Find panels in the carousel
         var currPage, nextPage;
@@ -740,6 +784,7 @@ bluewave.Application = function(parent, config) {
             if (!app){
                 app = new obj(div, config);
                 app.onUpdate = function(){
+                    console.log("setting the current app with onUpdate function "+ app.getTitle());
                     if (app===currApp) me.setTitle(app.getTitle());
                 };
                 app.onDelete = function(){
@@ -766,25 +811,38 @@ bluewave.Application = function(parent, config) {
 
 
         if (app === currApp){
-            //console.log("Already in view!");
+            //@ when the view we are looking to change to (app variable) is already in view we want to just return this view, without using slide
+            //$ this can be tested by going to the homepage and clicking the home button in the top left - also can test each other page
+            //% this only works while on the homepage.
+            console.log("Already in view!");
             me.setTitle(app.getTitle());
             return app;
         }
         else{
-
+            //! does the isNew function validate that the current page is a new page?
+            //@ render the current page. do not change views
             if (!isNew) div.appendChild(app.el);
+            //@ render new view via the carousel functions
             if (div===nextPage){
+                //! what does the carousel.back function do?
                 if (slideBack===true) carousel.back();
+                //! what does the carousel.next function do?
                 else carousel.next();
+                //! check the carousel.onchange function, may be a tool used in carousel.next
                 //Note: title is updated in the carousel.onChange() function
             }
             else{
                 me.setTitle(app.getTitle());
             }
-
+            //@ currApp is app as an object that is instantiated, to later be used and editted.
+            //% this does not show the current app title accurately when swapping off of the homepage view. (functions only on homepage)
             currApp = app;
             console.log("current app is " + currApp.getTitle());
+            console.log("current app is (second attempt) " + app.getTitle());
+
             return app;
+            //! where is this function used?
+            //! where is currApp later used as an object?
         }
     };
 
@@ -797,13 +855,27 @@ bluewave.Application = function(parent, config) {
    *  @param slideBack If true, slides the carousel back. Otherwise, slides
    *  the carousel forward
    */
+    //! when is this function called and where? How can we trigger it for testing. //$
+    //@ dashboard item is the returned (current) dashboard view 
+    //! which sub-functions/variables are linked to dashboardItem? i see .dashboard
     var renderDashboard = function(dashboardItem, slideBack){
+        //^
+        //! what can we add to console loggign that is more specific to identity? //$
+        console.log(`using renderDashboard function to render ${dashboardItem.dashboardItem} |`);
         currDashboardItem = dashboardItem;
         var dashboard = dashboardItem.dashboard;
 
 
         if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
+            //@ if dashboard.app is not initialized
             if (!dashboard.app){
+                //! is slideback a functionality of swapping frames? (review it's code)
+                //!A | slideBack is a true/false variable for determining whether to slide back using the carousel.back function
+                //! dashboard.className is the name of the panel class?
+                //! eval function
+                //! 
+                //^
+                console.log(`dashboard class name of renderDashboard ${dashboard.className}`);
                 dashboard.app = raisePanel(eval(dashboard.className), slideBack);
             }
             else{
@@ -816,7 +888,8 @@ bluewave.Application = function(parent, config) {
 
             get("dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly",{
                 success: function(arr){
-                    console.log("success ... dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly");
+                    //^ show id url
+                    console.log(`success ... dashboardUsers?dashboardID=${dashboard.id}&userID=${currUser.id}&fields=readOnly`);
 
                     if (arr.length===0){
                         waitmask.hide();
@@ -829,6 +902,7 @@ bluewave.Application = function(parent, config) {
 
 
                               //Raise explorer panel
+                              //@ use slideback function
                                 var app = raisePanel(bluewave.Explorer, slideBack);
                                 dashboard.app = app;
 
@@ -846,8 +920,9 @@ bluewave.Application = function(parent, config) {
                     }
                 },
                 failure: function(){
-                    console.log("failure ... dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly");
-
+                    //^ show id url
+                    console.log(`failure ... dashboardUsers?dashboardID=${dashboard.id}&userID=${currUser.id}&fields=readOnly`);
+                    //! what is the functionality of waitmask. ++what is shown/hidden when it is enabled/disabled?
                     waitmask.hide();
                 }
             });
@@ -908,18 +983,19 @@ bluewave.Application = function(parent, config) {
             var div = document.createElement("div");
             div.className = "app-menu";
 
-
+            //@ create menu option for Dashboard Home view'
+            //! what does createMenuOption do? ++Does it utilize java?
             div.appendChild(createMenuOption("Dashboard Home", "home", function(){
+                //@ declare functionality of this menu option
                 me.setTitle("");
+                //@ hide the admin panel from view when it is visible (we want to open the dashboard home)
                 if (adminPanel) adminPanel.hide();
-                console.log("label " + label + " provided");
-                // dashboardPanel.show();
+                //@ hide the explorer panel from view when it is visible (we want to open the dashboard home)
                 if (explorerPanel) explorerPanel.hide();
-                // dashboardPanel.show();
                 raisePanel(bluewave.Homepage);
             }));
 
-
+            //@ create menu option for Create dashboard view
             div.appendChild(createMenuOption("Create Dashboard", "plus-circle", function(label){
                 backButton.hide();
                 nextButton.hide();
@@ -934,12 +1010,12 @@ bluewave.Application = function(parent, config) {
                 }, 800);
             }));
 
-
+            //@ create menu option for editting dashboard (currently not used)
             div.appendChild(createMenuOption("Edit Dashboard", "edit", function(){
                 if (explorerPanel) explorerPanel.setView("Edit");
             }));
 
-
+            //@ create menu option for screenshot (currently not used)
             div.appendChild(createMenuOption("Screenshot", "image", function(){
                 waitmask.show();
                 var delay = 1000;
@@ -947,15 +1023,22 @@ bluewave.Application = function(parent, config) {
 
 
               //Find dashboard associated with the app
+              //@ pull current users accessibile dashboards from database/datastorage  
                 var dashboard;
+                //! what are the config.dataStores parameters?
+                //! what might be returned from showing these
+                //! where does the config.dataStores variable link to?
                 var dashboards = config.dataStores["Dashboard"];
+                //^
+                // console.log(`showing the current dashboards ${dashboards}`);
                 for (var i=0; i<dashboards.length; i++){
+                    //! what are the options of "dashboards"? get is one.
                     if (currApp === dashboards.get(i).app){
                         dashboard = dashboards.get(i);
                     }
                 }
 
-
+                //@ screenshot functionality
                 if (currApp.beforeScreenshot){
                     currApp.beforeScreenshot();
                     delay = 2000;
@@ -987,7 +1070,7 @@ bluewave.Application = function(parent, config) {
             }));
 
 
-
+            //@ add system admin to menu
             div.appendChild(createMenuOption("System Administration", "cog", function(label){
                 dashboardPanel.hide();
                 backButton.hide();
@@ -1011,7 +1094,7 @@ bluewave.Application = function(parent, config) {
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
         console.log("current app is registering as " + currApp.getTitle());
-        console.log("logging each of the pages state one after another (homepage, explorer, admin)" + isHomepageVisible, isExplorerVisible, isAdminVisible)
+        console.log(`logging each of the pages state one after another (homepage, explorer, admin) ${isHomepageVisible, isExplorerVisible, isAdminVisible}`);
 
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
@@ -1166,6 +1249,7 @@ bluewave.Application = function(parent, config) {
 
 
       //Clear datastores
+      //# config.datastores info
         for (var key in config.dataStores) {
             if (config.dataStores.hasOwnProperty(key)){
                 var store = config.dataStores[key];
