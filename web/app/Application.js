@@ -39,6 +39,7 @@ bluewave.Application = function(parent, config) {
 
 
   //Panels
+  //# dashboardPanel appears to be the main panel, and admin/explorer are subpanels controlled within dashboardPanel
     var dashboardPanel, adminPanel, explorerPanel;
 
 
@@ -72,6 +73,10 @@ bluewave.Application = function(parent, config) {
         //@ if datastores have not been initialized, initialize them
         if (!config.dataStores) config.dataStores = {};
         appName = config.appName;
+        //^ log appName 
+        //# when undefined, appName hasn't been declared
+        console.log(`log registered appName ${appName}`);
+        console.log(`log registered config.appName ${config.appName}`);
         if (!appName){
             appName = "";
             config.appName = appName;
@@ -82,7 +87,10 @@ bluewave.Application = function(parent, config) {
                 }
             });
         }
-
+        //^ log appName 
+        console.log(`log registered appName ${appName}`);
+        console.log(`log registered config.appName ${config.appName}`);
+        console.log("when field empty above^^^^^^^^^^, appname is empty quotes");
 
       //Prevent native browser shortcuts (ctrl+a,h,o,p,s,...)
         document.addEventListener("keydown", function(e){
@@ -105,6 +113,7 @@ bluewave.Application = function(parent, config) {
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
+        //# this is where createHeader is called. Within init
         createHeader(td);
 
 
@@ -147,8 +156,11 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
   //** createHeader
   //**************************************************************************
+  //! do we recreate the header anytime we change views? ++when is this function called?
+  //!A called one time when app is initialized | called in init function
     var createHeader = function(parent){
-
+        //v test when this function is called
+        console.log(`create header was called for parent (line 154) ${parent.innerText} `);
         var div = document.createElement("div");
         div.className = "app-header";
         parent.appendChild(div);
@@ -160,10 +172,20 @@ bluewave.Application = function(parent, config) {
         tbody.appendChild(tr);
         var td;
 
-
+        //! when is fn used?
+        //!A fn function is called when using the "BlueWave" return home icon in top left of browser
+        //!A additionally, this function is only used when using that icon. No other pages.
         var fn = function(){
+            //^ log when this function is called
+            //$ opportunity to test functionality with Selenium. Verify we return to homepage
+            console.log("fn function was called");
             if (currUser){
                 if (adminPanel) adminPanel.hide();
+                //! what exactly does showing the dashboardPanel do? ++when raisePanel holds additional functionality
+                //!a comments below
+                //# dashboard panel is a carousel. by using dashboardPanel.show() the carousel it brings it onscreen.
+                //# raisePanel renders a specific panel onscreen, on that carousel.
+                //@ show the carousel onscreen
                 dashboardPanel.show();
                 raisePanel(bluewave.Homepage, true);
             }
@@ -178,6 +200,7 @@ bluewave.Application = function(parent, config) {
         icon.className = "app-header-icon noselect";
         td.appendChild(icon);
         td.style.cursor = "pointer";
+        //# fn function used here
         td.onclick = fn;
 
 
@@ -311,6 +334,7 @@ bluewave.Application = function(parent, config) {
 
 
       //Create carousel
+      //# carousel is javaxt element
         carousel = new javaxt.dhtml.Carousel(body, {
             drag: false,
             loop: true,
@@ -364,7 +388,8 @@ bluewave.Application = function(parent, config) {
 
             }
         };
-
+        //# our dashboardPanel elements are prebuilt carousel objects
+        //! where else is dashboardPanel used?
         dashboardPanel = carousel;
     };
 
@@ -732,7 +757,8 @@ bluewave.Application = function(parent, config) {
    *  @param obj Either a class or an instance of a class
    */
     var raisePanel = function(obj, slideBack){
-        //! are we getting passed the dashboard panel object to pull up? yes
+        //! are we getting passed the dashboard panel object to pull up?
+        //!a yes
         //! constructor function
         //^
         console.log("raise panel function called line 716");
@@ -820,6 +846,7 @@ bluewave.Application = function(parent, config) {
         }
         else{
             //! does the isNew function validate that the current page is a new page?
+            //!a yes
             //@ render the current page. do not change views
             if (!isNew) div.appendChild(app.el);
             //@ render new view via the carousel functions
