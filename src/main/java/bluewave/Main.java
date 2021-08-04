@@ -73,6 +73,9 @@ public class Main {
             Config.initDatabase();
             updatePassword(args);
         }
+        else if (args.containsKey("-download")){
+            download(args);
+        }
         else if (args.containsKey("-import")){
             importFile(args);
         }
@@ -354,11 +357,30 @@ public class Main {
             }
             graph.close();
         }
+        else if (test.equalsIgnoreCase("premier")){
+            bluewave.data.Premier.testConnect(args.get("-username"), args.get("-password"));
+        }
         else{
             console.log("Unsupported test: " + test);
         }
     }
-
+    
+    
+  //**************************************************************************
+  //** download
+  //**************************************************************************
+    private static void download(HashMap<String, String> args) throws Exception {
+        String download = args.get("-download");
+        if (download==null) download = "";
+        if (download.equalsIgnoreCase("Premier")){
+            new bluewave.data.Premier(args.get("-username"), args.get("-password"))
+                    .downloadShards(args.get("-path"));
+        }
+        else{
+            console.log("Unsupported download: " + download);
+        }
+    }
+    
 
   //**************************************************************************
   //** rtrim
