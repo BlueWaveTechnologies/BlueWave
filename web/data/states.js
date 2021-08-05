@@ -45,7 +45,9 @@ bluewave.data.states =
           "id": "01",
           "properties": {
             "name": "Alabama",
-            "code":"AL"
+            "code": "AL",
+            "latitude": 32.318231,
+            "longitude": -86.902298
           }
         },
         {
@@ -740,7 +742,9 @@ bluewave.data.states =
           "id": "02",
           "properties": {
             "name": "Alaska",
-            "code": "AK"
+            "code": "AK",
+            "latitude": 63.588753,
+             "longitude": -154.493062
           }
         },
         {
@@ -757,7 +761,9 @@ bluewave.data.states =
           "id": "04",
           "properties": {
             "name": "Arizona",
-            "code": "AZ"
+            "code": "AZ",
+            "latitude": 34.048928,
+            "longitude": -111.093731
           }
         },
         {
@@ -775,7 +781,9 @@ bluewave.data.states =
           "id": "08",
           "properties": {
             "name": "Colorado",
-            "code": "CO"
+            "code": "CO",
+            "latitude": 39.550051,
+            "longitude": -105.782067
           }
         },
         {
@@ -837,7 +845,9 @@ bluewave.data.states =
           "id": "12",
           "properties": {
             "name": "Florida",
-            "code": "FL"
+            "code": "FL",
+            "latitude": 27.664827,
+            "longitude": -81.515754
           }
         },
         {
@@ -855,7 +865,9 @@ bluewave.data.states =
           "id": "13",
           "properties": {
             "name": "Georgia",
-            "code": "GA"
+            "code": "GA",
+            "latitude": 32.157435,
+            "longitude": -82.907123
           }
         },
         {
@@ -872,7 +884,9 @@ bluewave.data.states =
           "id": "18",
           "properties": {
             "name": "Indiana",
-            "code": "IN"
+            "code": "IN",
+            "latitude": 40.551217,
+            "longitude": -85.602364
           }
         },
         {
@@ -888,7 +902,9 @@ bluewave.data.states =
           "id": "20",
           "properties": {
             "name": "Kansas",
-            "code": "KS"
+            "code": "KS",
+            "latitude": 39.011902,
+            "longitude": -98.484246
           }
         },
         {
@@ -939,7 +955,9 @@ bluewave.data.states =
           "id": "23",
           "properties": {
             "name": "Maine",
-            "code": "ME"
+            "code": "ME",
+            "latitude": 45.253783,
+            "longitude": -69.445469
           }
         },
         {
@@ -971,7 +989,9 @@ bluewave.data.states =
           "id": "25",
           "properties": {
             "name": "Massachusetts",
-            "code": "MA"
+            "code": "MA",
+            "latitude": 42.407211,
+            "longitude": -71.382437
           }
         },
         {
@@ -988,7 +1008,9 @@ bluewave.data.states =
           "id": "27",
           "properties": {
             "name": "Minnesota",
-            "code": "MN"
+            "code": "MN",
+            "latitude": 46.729553,
+            "longitude": -94.6859
           }
         },
         {
@@ -1008,7 +1030,9 @@ bluewave.data.states =
           "id": "34",
           "properties": {
             "name": "New Jersey",
-            "code": "NJ"
+            "code": "NJ",
+            "latitude": 40.058324,
+            "longitude": -74.405661
           }
         },
         {
@@ -1037,7 +1061,9 @@ bluewave.data.states =
           "id": "37",
           "properties": {
             "name": "North Carolina",
-            "code": "NC"
+            "code": "NC",
+            "latitude": 35.759573,
+            "longitude": -79.0193
           }
         },
         {
@@ -1053,7 +1079,9 @@ bluewave.data.states =
           "id": "38",
           "properties": {
             "name": "North Dakota",
-            "code": "ND"
+            "code": "ND",
+            "latitude": 47.551493,
+            "longitude": -101.002012
           }
         },
         {
@@ -1071,7 +1099,9 @@ bluewave.data.states =
           "id": "40",
           "properties": {
             "name": "Oklahoma",
-            "code": "OK"
+            "code": "OK",
+            "latitude": 35.007752,
+            "longitude": -97.092877
           }
         },
         {
@@ -1090,7 +1120,9 @@ bluewave.data.states =
           "id": "42",
           "properties": {
             "name": "Pennsylvania",
-            "code": "PA"
+            "code": "PA",
+            "latitude": 41.203322,
+            "longitude": -77.194525
           }
         },
         {
@@ -1108,7 +1140,9 @@ bluewave.data.states =
           "id": "46",
           "properties": {
             "name": "South Dakota",
-            "code": "SD"
+            "code": "SD",
+            "latitude": 43.969515,
+            "longitude": -99.901813
           }
         },
         {
@@ -1127,7 +1161,9 @@ bluewave.data.states =
           "id": "48",
           "properties": {
             "name": "Texas",
-            "code": "TX"
+            "code": "TX",
+            "latitude": 31.968599,
+            "longitude": -99.901813
           }
         },
         {
@@ -1145,7 +1181,9 @@ bluewave.data.states =
           "id": "56",
           "properties": {
             "name": "Wyoming",
-            "code": "WY"
+            "code": "WY",
+            "latitude": 43.075968,
+            "longitude": -107.290284
           }
         },
         {
@@ -1161,7 +1199,9 @@ bluewave.data.states =
           "id": "09",
           "properties": {
             "name": "Connecticut",
-            "code": "CT"
+            "code": "CT",
+            "latitude": 41.603221,
+            "longitude": -73.087749
           }
         },
         {
@@ -1183,7 +1223,9 @@ bluewave.data.states =
           "id": "29",
           "properties": {
             "name": "Missouri",
-            "code": "MO"
+            "code": "MO",
+            "latitude": 37.964253,
+            "longitude": -91.831833
           }
         },
         {
@@ -1200,7 +1242,9 @@ bluewave.data.states =
           "id": "54",
           "properties": {
             "name": "West Virginia",
-            "code": "WV"
+            "code": "WV",
+            "latitude": 38.597626,
+            "longitude": -80.454903
           }
         },
         {
@@ -1218,7 +1262,9 @@ bluewave.data.states =
           "id": "17",
           "properties": {
             "name": "Illinois",
-            "code": "IL"
+            "code": "IL",
+            "latitude": 40.633125,
+            "longitude": -89.398528
           }
         },
         {
@@ -1235,7 +1281,9 @@ bluewave.data.states =
           "id": "35",
           "properties": {
             "name": "New Mexico",
-            "code": "NM"
+            "code": "NM",
+            "latitude": 34.97273,
+            "longitude": -105.032363
           }
         },
         {
@@ -1255,7 +1303,9 @@ bluewave.data.states =
           "id": "05",
           "properties": {
             "name": "Arkansas",
-            "code": "AR"
+            "code": "AR",
+            "latitude": 35.20105,
+            "longitude": -91.831833
           }
         },
         {
@@ -1314,7 +1364,9 @@ bluewave.data.states =
           "id": "06",
           "properties": {
             "name": "California",
-            "code": "CA"
+            "code": "CA",
+            "latitude": 36.778261,
+            "longitude": -119.417932
           }
         },
         {
@@ -1338,7 +1390,9 @@ bluewave.data.states =
           "id": "10",
           "properties": {
             "name": "Delaware",
-            "code": "DE"
+            "code": "DE",
+            "latitude": 38.910832,
+            "longitude": -75.52767
           }
         },
         {
@@ -1352,7 +1406,9 @@ bluewave.data.states =
           "id": "11",
           "properties": {
             "name": "District of Columbia",
-            "code": "DC"
+            "code": "DC",
+            "latitude": 38.905985,
+            "longitude": -77.033418
           }
         },
         {
@@ -1402,7 +1458,9 @@ bluewave.data.states =
           "id": "15",
           "properties": {
             "name": "Hawaii",
-            "code": "HI"
+            "code": "HI",
+            "latitude": 19.898682,
+            "longitude": -155.665857
           }
         },
         {
@@ -1420,7 +1478,9 @@ bluewave.data.states =
           "id": "19",
           "properties": {
             "name": "Iowa",
-            "code": "IA"
+            "code": "IA",
+            "latitude": 41.878003,
+            "longitude": -93.097702
           }
         },
         {
@@ -1447,7 +1507,9 @@ bluewave.data.states =
           "id": "21",
           "properties": {
             "name": "Kentucky",
-            "code": "KY"
+            "code": "KY",
+            "latitude": 37.839333,
+            "longitude": -84.270018
           }
         },
         {
@@ -1486,7 +1548,9 @@ bluewave.data.states =
           "id": "24",
           "properties": {
             "name": "Maryland",
-            "code": "MD"
+            "code": "MD",
+            "latitude": 39.045755,
+            "longitude": -76.641271
           }
         },
         {
@@ -1563,7 +1627,9 @@ bluewave.data.states =
           "id": "26",
           "properties": {
             "name": "Michigan",
-            "code": "MI"
+            "code": "MI",
+            "latitude": 44.314844,
+            "longitude": -85.602364
           }
         },
         {
@@ -1602,7 +1668,9 @@ bluewave.data.states =
           "id": "28",
           "properties": {
             "name": "Mississippi",
-            "code": "MS"
+            "code": "MS",
+            "latitude": 32.354668,
+            "longitude": -89.398528
           }
         },
         {
@@ -1619,7 +1687,9 @@ bluewave.data.states =
           "id": "30",
           "properties": {
             "name": "Montana",
-            "code": "MT"
+            "code": "MT",
+            "latitude": 46.879682,
+            "longitude": -110.362566
           }
         },
         {
@@ -1636,7 +1706,9 @@ bluewave.data.states =
           "id": "33",
           "properties": {
             "name": "New Hampshire",
-            "code": "NH"
+            "code": "NH",
+            "latitude": 43.193852,
+            "longitude": -71.572395
           }
         },
         {
@@ -1688,7 +1760,9 @@ bluewave.data.states =
           "id": "36",
           "properties": {
             "name": "New York",
-            "code": "NY"
+            "code": "NY",
+            "latitude": 43.299428,
+            "longitude": -74.217933
           }
         },
         {
@@ -1718,7 +1792,9 @@ bluewave.data.states =
           "id": "39",
           "properties": {
             "name": "Ohio",
-            "code": "OH"
+            "code": "OH",
+            "latitude": 40.417287,
+            "longitude": -82.907123
           }
         },
         {
@@ -1737,7 +1813,9 @@ bluewave.data.states =
           "id": "41",
           "properties": {
             "name": "Oregon",
-            "code": "OR"
+            "code": "OR",
+            "latitude": 43.804133,
+            "longitude": -120.554201
           }
         },
         {
@@ -1759,7 +1837,9 @@ bluewave.data.states =
           "id": "47",
           "properties": {
             "name": "Tennessee",
-            "code": "TN"
+            "code": "TN",
+            "latitude": 35.517491,
+            "longitude": -86.580447
           }
         },
         {
@@ -1776,7 +1856,9 @@ bluewave.data.states =
           "id": "49",
           "properties": {
             "name": "Utah",
-            "code": "UT"
+            "code": "UT",
+            "latitude": 39.32098,
+            "longitude": -111.093731
           }
         },
         {
@@ -1815,7 +1897,9 @@ bluewave.data.states =
           "id": "51",
           "properties": {
             "name": "Virginia",
-            "code": "VA"
+            "code": "VA",
+            "latitude": 37.431573,
+            "longitude": -78.656894
           }
         },
         {
@@ -1882,7 +1966,9 @@ bluewave.data.states =
           "id": "53",
           "properties": {
             "name": "Washington",
-            "code": "WA"
+            "code": "WA",
+            "latitude": 47.751074,
+            "longitude": -120.740139
           }
         },
         {
@@ -1956,7 +2042,9 @@ bluewave.data.states =
           "id": "55",
           "properties": {
             "name": "Wisconsin",
-            "code": "WI"
+            "code": "WI",
+            "latitude": 43.78444,
+            "longitude": -88.787868
           }
         },
         {
@@ -2064,7 +2152,9 @@ bluewave.data.states =
           "id": "31",
           "properties": {
             "name": "Nebraska",
-            "code": "NE"
+            "code": "NE",
+            "latitude": 41.492537,
+            "longitude": -99.901813
           }
         },
         {
@@ -2079,7 +2169,9 @@ bluewave.data.states =
           "id": "45",
           "properties": {
             "name": "South Carolina",
-            "code": "SC"
+            "code": "SC",
+            "latitude": 33.836081,
+            "longitude": -81.163725
           }
         },
         {
@@ -2114,7 +2206,9 @@ bluewave.data.states =
           "id": "72",
           "properties": {
             "name": "Puerto Rico",
-            "code": "PR"
+            "code": "PR",
+            "latitude": 18.220833,
+            "longitude": -66.590149
           }
         },
         {
@@ -2158,7 +2252,9 @@ bluewave.data.states =
           "id": "16",
           "properties": {
             "name": "Idaho",
-            "code": "ID"
+            "code": "ID",
+            "latitude": 44.068202,
+            "longitude": -114.742041
           }
         },
         {
@@ -2176,7 +2272,9 @@ bluewave.data.states =
           "id": "32",
           "properties": {
             "name": "Nevada",
-            "code": "NV"
+            "code": "NV",
+            "latitude": 38.80261,
+            "longitude": -116.419389
           }
         },
         {
@@ -2192,7 +2290,9 @@ bluewave.data.states =
           "id": "50",
           "properties": {
             "name": "Vermont",
-            "code": "VT"
+            "code": "VT",
+            "latitude": 44.558803,
+            "longitude": -72.577841
           }
         },
         {
@@ -2245,7 +2345,9 @@ bluewave.data.states =
           "id": "22",
           "properties": {
             "name": "Louisiana",
-            "code": "LA"
+            "code": "LA",
+            "latitude": 31.244823,
+            "longitude": -92.145024
           }
         },
         {
@@ -2283,7 +2385,9 @@ bluewave.data.states =
           "id": "44",
           "properties": {
             "name": "Rhode Island",
-            "code": "RI"
+            "code": "RI",
+            "latitude": 41.580095,
+            "longitude": -71.477429
           }
         }
       ]
