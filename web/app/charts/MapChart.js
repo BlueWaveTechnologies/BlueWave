@@ -197,156 +197,155 @@ bluewave.charts.MapChart = function(parent, config) {
                             });
                         }else if(chartConfig.mapType === "Links"){
                             getData("PortsOfEntry", function(ports){
-                                getData("stateCenters", function(centers){
-                                    mapArea.append("g")
-                                        .attr("class", "boundary")
-                                        .selectAll("boundary")
-                                        .data(countries.features)
-                                        .enter().append("path")
-                                        .attr('d', path)
-                                        .attr('fill', 'lightgray')
-                                        .attr('stroke', 'white');
+                                mapArea.append("g")
+                                    .attr("class", "boundary")
+                                    .selectAll("boundary")
+                                    .data(countries.features)
+                                    .enter().append("path")
+                                    .attr('d', path)
+                                    .attr('fill', 'lightgray')
+                                    .attr('stroke', 'white');
 
-                                    mapArea.append("g")
-                                        .attr("class", "boundary")
-                                        .selectAll("boundary")
-                                        .data(states.features)
-                                        .enter()
-                                        .append("path")
-                                        .attr('d', path)
-                                        .attr('fill', 'lightgray')
-                                        .attr('stroke', 'white')
+                                mapArea.append("g")
+                                    .attr("class", "boundary")
+                                    .selectAll("boundary")
+                                    .data(states.features)
+                                    .enter()
+                                    .append("path")
+                                    .attr('d', path)
+                                    .attr('fill', 'lightgray')
+                                    .attr('stroke', 'white')
 
-                                    var nodes = data.nodes;
-                                    var links = data.links;
-                                    var linkArray = []
-                                    var connections = [];
-                                    var coords = [];
-                                    //Split Links up into the component parts.
-                                    for(link in links){
-                                        if(links.hasOwnProperty(link)){
-                                            var linkage = link.split('->');
-                                            linkage.push(links[link].quantity);
-                                            linkArray.push(linkage);
-                                        }
-                                    };
-                                    linkArray.forEach(function(d){
-                                        var connection = {};
-                                        var stateCodeOne = nodes[d[0]].state;
-                                        var stateCodeTwo = nodes[d[1]].state;
-                                        stateValue = d[2];
-                                        connection.stateCodeOne = stateCodeOne;
-                                        connection.stateCodeTwo = stateCodeTwo;
-                                        connection.quantity = stateValue;
-                                        connections.push(connection);
-                                    });
-                                    connections.forEach(function(d){
-                                        var stateOne = d.stateCodeOne;
-                                        var stateTwo = d.stateCodeTwo;
-                                        var quantity = d.quantity;
-                                        var coordOne = [];
-                                        var coordTwo = [];
-                                        var connectionPath = [];
-                                        for (var i = 0; i < centers.length; i++){
-                                            var center = centers[i];
-                                            if (stateOne === center.state){
-                                                var lat = center.latitude;
-                                                var lon = center.longitude;
-                                                coordOne.push(lat);
-                                                coordOne.push(lon);
-                                                connectionPath.push(coordOne);
-                                                break;
-                                            }
-                                        }
-                                        for(var i = 0; i < centers.length; i++){
-                                            var center = centers[i];
-                                            if(stateTwo === center.state){
-                                                var lat = center.latitude;
-                                                var lon = center.longitude;
-                                                coordTwo.push(lat);
-                                                coordTwo.push(lon);
-                                                connectionPath.push(coordTwo);
-                                                connectionPath.push(quantity);
-                                                break;
-                                            }
-                                        }
-                                        coords.push(connectionPath);
-                                    });
-
-                                    var quantities = [];
-                                    coords.forEach(function(d){
-                                        quantities.push(d[2]);
-                                        console.log(d);
-                                    });
-                                    var thicknessExtent = d3.extent(quantities);
-                                    var thicknessScale = d3.scaleQuantile()
-                                        .domain(thicknessExtent)
-                                        .range([6 ,8, 10, 12, 14]);
-
-                                    mapArea.selectAll("#connection-path").remove();
-                                    mapArea.selectAll("#connection-path")
-                                        .data(coords)
-                                        .enter()
-                                        .append("path")
-                                        .attr("id", "#connection-path")
-                                        .attr("d", function (d) {
-                                            return path({
-                                                type: "LineString",
-                                                coordinates: [
-                                                    [d[0][1], d[0][0]],
-                                                    [d[1][1], d[1][0]],
-                                                ],
-                                            });
-                                        })
-                                        .style("fill", "none")
-                                        .style("stroke-opacity", 0.5)
-                                        .style('stroke-width', (d) =>{
-                                            return thicknessScale(d[2])
-                                        })
-                                        .style('stroke', (d) =>{
-                                            return getColor(d);
-                                        })
-
-                                    mapArea.selectAll("#connection-dot").remove();
-                                    let dots = mapArea
-                                        .append("g")
-                                        .attr("id", "connection-dot")
-                                        .selectAll("#connection-dot")
-                                        .data(coords)
-                                        .enter();
-
-                                    dots.append("circle")
-                                        .attr("cx", function(d){
-                                            let lat = d[0][0];
-                                            let lon = d[0][1];
-                                            return projection([lon, lat])[0];
-                                        })
-                                        .attr("cy", function(d){
-                                            let lat = d[0][0];
-                                            let lon = d[0][1];
-                                            return projection([lon, lat])[1];
-                                        })
-                                        .attr("r", 6)
-                                        .attr("fill", (d) =>{
-                                            return getColor(d);
-                                        });
-
-                                    dots.append("circle")
-                                        .attr("cx", function(d){
-                                            let lat = d[1][0];
-                                            let lon = d[1][1];
-                                            return projection([lon, lat])[0];
-                                        })
-                                        .attr("cy", function(d){
-                                            let lat = d[1][0];
-                                            let lon = d[1][1];
-                                            return projection([lon, lat])[1];
-                                        })
-                                        .attr("r", 6)
-                                        .attr("fill", (d) =>{
-                                            return getColor(d[0]);
-                                        });
+                                var nodes = data.nodes;
+                                var links = data.links;
+                                var linkArray = []
+                                var connections = [];
+                                var coords = [];
+                                //Split Links up into the component parts.
+                                for(link in links){
+                                    if(links.hasOwnProperty(link)){
+                                        var linkage = link.split('->');
+                                        linkage.push(links[link].quantity);
+                                        linkArray.push(linkage);
+                                    }
+                                };
+                                linkArray.forEach(function(d){
+                                    var connection = {};
+                                    var stateCodeOne = nodes[d[0]].state;
+                                    var stateCodeTwo = nodes[d[1]].state;
+                                    stateValue = d[2];
+                                    connection.stateCodeOne = stateCodeOne;
+                                    connection.stateCodeTwo = stateCodeTwo;
+                                    connection.quantity = stateValue;
+                                    connections.push(connection);
                                 });
+                                connections.forEach(function(d){
+                                    var stateOne = d.stateCodeOne;
+                                    var stateTwo = d.stateCodeTwo;
+                                    var quantity = d.quantity;
+                                    var coordOne = [];
+                                    var coordTwo = [];
+                                    var connectionPath = [];
+                                    for (var i = 0; i < states.features.length; i++){
+                                        var stateCenter = states.features[i];
+                                        if (stateOne === stateCenter.properties.code){
+                                            console.log(stateCenter);
+                                            var lat = stateCenter.properties.latitude;
+                                            var lon = stateCenter.properties.longitude;
+                                            coordOne.push(lat);
+                                            coordOne.push(lon);
+                                            connectionPath.push(coordOne);
+                                            break;
+                                        }
+                                    }
+                                    for(var i = 0; i < states.features.length; i++){
+                                        var stateCenter = states.features[i];
+                                        if(stateTwo === stateCenter.properties.code){
+                                            console.log(stateCenter);
+                                            var lat = stateCenter.properties.latitude;
+                                            var lon = stateCenter.properties.longitude;
+                                            coordTwo.push(lat);
+                                            coordTwo.push(lon);
+                                            connectionPath.push(coordTwo);
+                                            connectionPath.push(quantity);
+                                            break;
+                                        }
+                                    }
+                                    coords.push(connectionPath);
+                                });
+
+                                var quantities = [];
+                                coords.forEach(function(d){
+                                    quantities.push(d[2]);
+                                });
+                                var thicknessExtent = d3.extent(quantities);
+                                var thicknessScale = d3.scaleQuantile()
+                                    .domain(thicknessExtent)
+                                    .range([6 ,8, 10, 12, 14]);
+
+                                mapArea.selectAll("#connection-path").remove();
+                                mapArea.selectAll("#connection-path")
+                                    .data(coords)
+                                    .enter()
+                                    .append("path")
+                                    .attr("id", "#connection-path")
+                                    .attr("d", function (d) {
+                                        return path({
+                                            type: "LineString",
+                                            coordinates: [
+                                                [d[0][1], d[0][0]],
+                                                [d[1][1], d[1][0]],
+                                            ],
+                                        });
+                                    })
+                                    .style("fill", "none")
+                                    .style("stroke-opacity", 0.5)
+                                    .style('stroke-width', (d) =>{
+                                        return thicknessScale(d[2])
+                                    })
+                                    .style('stroke', (d) =>{
+                                        return getColor(d);
+                                    })
+
+                                mapArea.selectAll("#connection-dot").remove();
+                                let dots = mapArea
+                                    .append("g")
+                                    .attr("id", "connection-dot")
+                                    .selectAll("#connection-dot")
+                                    .data(coords)
+                                    .enter();
+
+                                dots.append("circle")
+                                    .attr("cx", function(d){
+                                        let lat = d[0][0];
+                                        let lon = d[0][1];
+                                        return projection([lon, lat])[0];
+                                    })
+                                    .attr("cy", function(d){
+                                        let lat = d[0][0];
+                                        let lon = d[0][1];
+                                        return projection([lon, lat])[1];
+                                    })
+                                    .attr("r", 6)
+                                    .attr("fill", (d) =>{
+                                        return getColor(d);
+                                    });
+
+                                dots.append("circle")
+                                    .attr("cx", function(d){
+                                        let lat = d[1][0];
+                                        let lon = d[1][1];
+                                        return projection([lon, lat])[0];
+                                    })
+                                    .attr("cy", function(d){
+                                        let lat = d[1][0];
+                                        let lon = d[1][1];
+                                        return projection([lon, lat])[1];
+                                    })
+                                    .attr("r", 6)
+                                    .attr("fill", (d) =>{
+                                        return getColor(d[0]);
+                                    });
                             });
                         }
                     });
@@ -583,161 +582,159 @@ bluewave.charts.MapChart = function(parent, config) {
                             });
                     }else if(chartConfig.mapType === "Links"){
                         getData("PortsOfEntry", function(ports){
-                            getData("geoCenters", function(centers){
-                                mapArea.selectAll("path")
-                                    .data(countries.features)
-                                    .enter()
-                                    .append("path")
-                                    .attr('d', path)
-                                    .attr('fill', 'lightgray')
-                                    .attr('stroke', 'white');
+                            mapArea.selectAll("path")
+                                .data(countries.features)
+                                .enter()
+                                .append("path")
+                                .attr('d', path)
+                                .attr('fill', 'lightgray')
+                                .attr('stroke', 'white');
 
-                                var nodes = data.nodes;
-                                var links = data.links;
-                                var linkArray = []
-                                var connections = [];
-                                var coords = [];
-                                //Split Links up into the component parts.
-                                for (var link in links){
-                                    if(links.hasOwnProperty(link)){
-                                        var linkage = link.split('->');
-                                        linkage.push(links[link].quantity);
-                                        linkArray.push(linkage);
-                                    }
-                                };
-                                linkArray.forEach(function(d){
-                                    var connection = {};
-                                    var countryCodeOne = nodes[d[0]].country;
-                                    var countryCodeTwo = nodes[d[1]].country;
-                                    var countryValue = d[2];
-                                    if (countryCodeOne && countryCodeTwo){
-                                        connection.countryCodeOne = countryCodeOne;
-                                        connection.countryCodeTwo = countryCodeTwo;
-                                        connection.quantity = countryValue;
-                                        connections.push(connection);
-                                    }
-                                });
-                                connections.forEach(function(d){
-                                    var countryOne = d.countryCodeOne;
-                                    var countryTwo = d.countryCodeTwo;
-                                    var quantity = d.quantity;
-                                    var coordOne = [];
-                                    var coordTwo = [];
-                                    var connectionPath = [];
-                                    if(countryOne !== 'US' && countryTwo === 'US'){
-                                        for(var i = 0; i < ports.length; i++){
-                                            if(countryOne === ports[i].iso2){
-                                                coordOne.push(ports[i].exlatitude);
-                                                coordOne.push(ports[i].exlongitude);
-                                                coordTwo.push(ports[i].imlatitude);
-                                                coordTwo.push(ports[i].imlongitude);
-                                                connectionPath.push(coordOne);
-                                                connectionPath.push(coordTwo);
-                                                connectionPath.push(quantity);
-                                                coords.push(connectionPath)
-                                            }
-                                        }
-                                    }else{
-                                        for (var i = 0; i < centers.length; i++){
-                                            var center = centers[i];
-                                            if (countryOne === center.country){
-                                                var lat = center.latitude;
-                                                var lon = center.longitude;
-                                                coordOne.push(lat);
-                                                coordOne.push(lon);
-                                                connectionPath.push(coordOne);
-                                                break;
-                                            }
-                                        }
-                                        for(var i = 0; i < centers.length; i++){
-                                            var center = centers[i];
-                                            if(countryTwo === center.country){
-                                                var lat = center.latitude;
-                                                var lon = center.longitude;
-                                                coordTwo.push(lat);
-                                                coordTwo.push(lon);
-                                                connectionPath.push(coordTwo);
-                                                connectionPath.push(quantity);
-                                                break;
-                                            }
-                                        }
-                                        coords.push(connectionPath);
-                                    }
-                                });
-                                var quantities = [];
-                                coords.forEach(function(d){
-                                    quantities.push(d[2]);
-                                    console.log(d);
-                                });
-                                var thicknessExtent = d3.extent(quantities);
-                                var thicknessScale = d3.scaleQuantile()
-                                    .domain(thicknessExtent)
-                                    .range([6 ,8, 10, 12, 14]);
-
-                                mapArea.selectAll("#connection-path").remove();
-                                mapArea.selectAll("#connection-path")
-                                    .data(coords)
-                                    .enter()
-                                    .append("path")
-                                    .attr("id", "#connection-path")
-                                    .attr("d", function(d) {
-                                        return path({
-                                            type: "LineString",
-                                            coordinates: [
-                                                [d[0][1], d[0][0]],
-                                                [d[1][1], d[1][0]]
-                                            ],
-                                        });
-                                    })
-                                    .style("fill", "none")
-                                    .style("stroke-opacity", 0.5)
-                                    .style('stroke-width', (d) =>{
-                                        return thicknessScale(d[2])
-                                    })
-                                    .style('stroke', (d) =>{
-                                        return getColor(d);
-                                    })
-
-                                mapArea.selectAll("#connection-dot").remove();
-                                let dots = mapArea
-                                    .append("g")
-                                    .attr("id", "connection-dot")
-                                    .selectAll("#connection-dot")
-                                    .data(coords)
-                                    .enter();
-
-                                dots.append("circle")
-                                    .attr("cx", function(d){
-                                        let lat = d[0][0];
-                                        let lon = d[0][1];
-                                        return projection([lon, lat])[0];
-                                    })
-                                    .attr("cy", function(d){
-                                        let lat = d[0][0];
-                                        let lon = d[0][1];
-                                        return projection([lon, lat])[1];
-                                    })
-                                    .attr("r", 6)
-                                    .attr("fill", (d) =>{
-                                        return getColor(d);
-                                    });
-
-                                dots.append("circle")
-                                    .attr("cx", function(d){
-                                        let lat = d[1][0];
-                                        let lon = d[1][1];
-                                        return projection([lon, lat])[0];
-                                    })
-                                    .attr("cy", function(d){
-                                        let lat = d[1][0];
-                                        let lon = d[1][1];
-                                        return projection([lon, lat])[1];
-                                    })
-                                    .attr("r", 6)
-                                    .attr("fill", (d) =>{
-                                        return getColor(d[0]);
-                                    });
+                            var nodes = data.nodes;
+                            var links = data.links;
+                            var linkArray = []
+                            var connections = [];
+                            var coords = [];
+                            //Split Links up into the component parts.
+                            for (var link in links){
+                                if(links.hasOwnProperty(link)){
+                                    var linkage = link.split('->');
+                                    linkage.push(links[link].quantity);
+                                    linkArray.push(linkage);
+                                }
+                            };
+                            linkArray.forEach(function(d){
+                                var connection = {};
+                                var countryCodeOne = nodes[d[0]].country;
+                                var countryCodeTwo = nodes[d[1]].country;
+                                var countryValue = d[2];
+                                if (countryCodeOne && countryCodeTwo){
+                                    connection.countryCodeOne = countryCodeOne;
+                                    connection.countryCodeTwo = countryCodeTwo;
+                                    connection.quantity = countryValue;
+                                    connections.push(connection);
+                                }
                             });
+                            connections.forEach(function(d){
+                                var countryOne = d.countryCodeOne;
+                                var countryTwo = d.countryCodeTwo;
+                                var quantity = d.quantity;
+                                var coordOne = [];
+                                var coordTwo = [];
+                                var connectionPath = [];
+                                if(countryOne !== 'US' && countryTwo === 'US'){
+                                    for(var i = 0; i < ports.length; i++){
+                                        if(countryOne === ports[i].iso2){
+                                            coordOne.push(ports[i].exlatitude);
+                                            coordOne.push(ports[i].exlongitude);
+                                            coordTwo.push(ports[i].imlatitude);
+                                            coordTwo.push(ports[i].imlongitude);
+                                            connectionPath.push(coordOne);
+                                            connectionPath.push(coordTwo);
+                                            connectionPath.push(quantity);
+                                            coords.push(connectionPath)
+                                        }
+                                    }
+                                }else{
+                                    for (var i = 0; i < countries.features.length; i++){
+                                        var countryCenter = countries.features[i];
+                                        if (countryOne === countryCenter.properties.code){
+                                            var lat = countryCenter.properties.latitude;
+                                            var lon = countryCenter.properties.longitude;
+                                            coordOne.push(lat);
+                                            coordOne.push(lon);
+                                            connectionPath.push(coordOne);
+                                            break;
+                                        }
+                                    }
+                                    for(var i = 0; i < countries.features.length; i++){
+                                        var countryCenter = countries.features[i];
+                                        if(countryTwo === countryCenter.properties.code){
+                                            var lat = countryCenter.properties.latitude;
+                                            var lon = countryCenter.properties.longitude;
+                                            coordTwo.push(lat);
+                                            coordTwo.push(lon);
+                                            connectionPath.push(coordTwo);
+                                            connectionPath.push(quantity);
+                                            break;
+                                        }
+                                    }
+                                    coords.push(connectionPath);
+                                }
+                            });
+                            var quantities = [];
+                            coords.forEach(function(d){
+                                quantities.push(d[2]);
+                                console.log(d);
+                            });
+                            var thicknessExtent = d3.extent(quantities);
+                            var thicknessScale = d3.scaleQuantile()
+                                .domain(thicknessExtent)
+                                .range([6 ,8, 10, 12, 14]);
+
+                            mapArea.selectAll("#connection-path").remove();
+                            mapArea.selectAll("#connection-path")
+                                .data(coords)
+                                .enter()
+                                .append("path")
+                                .attr("id", "#connection-path")
+                                .attr("d", function(d) {
+                                    return path({
+                                        type: "LineString",
+                                        coordinates: [
+                                            [d[0][1], d[0][0]],
+                                            [d[1][1], d[1][0]]
+                                        ],
+                                    });
+                                })
+                                .style("fill", "none")
+                                .style("stroke-opacity", 0.5)
+                                .style('stroke-width', (d) =>{
+                                    return thicknessScale(d[2])
+                                })
+                                .style('stroke', (d) =>{
+                                    return getColor(d);
+                                })
+
+                            mapArea.selectAll("#connection-dot").remove();
+                            let dots = mapArea
+                                .append("g")
+                                .attr("id", "connection-dot")
+                                .selectAll("#connection-dot")
+                                .data(coords)
+                                .enter();
+
+                            dots.append("circle")
+                                .attr("cx", function(d){
+                                    let lat = d[0][0];
+                                    let lon = d[0][1];
+                                    return projection([lon, lat])[0];
+                                })
+                                .attr("cy", function(d){
+                                    let lat = d[0][0];
+                                    let lon = d[0][1];
+                                    return projection([lon, lat])[1];
+                                })
+                                .attr("r", 6)
+                                .attr("fill", (d) =>{
+                                    return getColor(d);
+                                });
+
+                            dots.append("circle")
+                                .attr("cx", function(d){
+                                    let lat = d[1][0];
+                                    let lon = d[1][1];
+                                    return projection([lon, lat])[0];
+                                })
+                                .attr("cy", function(d){
+                                    let lat = d[1][0];
+                                    let lon = d[1][1];
+                                    return projection([lon, lat])[1];
+                                })
+                                .attr("r", 6)
+                                .attr("fill", (d) =>{
+                                    return getColor(d[0]);
+                                });
                         });
                     }
                 });
