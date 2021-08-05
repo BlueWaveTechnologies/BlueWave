@@ -1,5 +1,6 @@
 package bluewave;
 import bluewave.app.User;
+import bluewave.data.Premier;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
 
@@ -77,7 +78,7 @@ public class Main {
             download(args);
         }
         else if (args.containsKey("-import")){
-            importFile(args);
+            importData(args);
         }
         else if (args.containsKey("-delete")){
             Neo4J graph = Config.getGraph();
@@ -244,6 +245,24 @@ public class Main {
         return pw;
     }
 
+    
+  //**************************************************************************
+  //** importData
+  //**************************************************************************
+    private static void importData(HashMap<String, String> args) throws Exception {
+        String str = args.get("-import");
+        if (str.equalsIgnoreCase("Premier")){
+            importPremier(args);
+        }
+        else{
+            java.io.File f = new java.io.File(str);
+            if (f.isFile()) importFile(args);
+            else{
+                //import directory?
+            }
+        }
+    }
+    
 
   //**************************************************************************
   //** importFile
@@ -287,6 +306,20 @@ public class Main {
             String target = args.get("-target");
             bluewave.graph.Import.importJSON(file, nodeType, target, graph);
         }
+        graph.close();
+    }
+    
+    
+  //**************************************************************************
+  //** importPremier
+  //**************************************************************************
+    private static void importPremier(HashMap<String, String> args) throws Exception {
+        String localPath = args.get("-path");
+        javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
+        if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
+        
+        Neo4J graph = Config.getGraph();
+        Premier.importShards(dir, graph);
         graph.close();
     }
 
