@@ -913,9 +913,11 @@ bluewave.Application = function(parent, config) {
                 backButton.hide();
                 nextButton.hide();
                 if (adminPanel) adminPanel.hide();
+                dashboardPanel.show();
                 me.setTitle(label);
                 var app = raisePanel(bluewave.Explorer);
                 if (!explorerPanel) explorerPanel = app;
+                explorerPanel.show();
                 explorerPanel.update();
                 setTimeout(function(){ //update title again in case slider move
                     me.setTitle(label);

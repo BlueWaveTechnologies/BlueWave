@@ -57,8 +57,8 @@ file should include connection information to the neo4j database
         "host" : "localhost:7687",
         "username" : "neo4j",
         "password" : "password",
-        "localCache" : "graph",
-        "localLog" : "graph/logs"
+        "localCache" : "temp/graph",
+        "localLog" : "temp/graph/logs"
     },
 
     "ldap" : {
