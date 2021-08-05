@@ -1,9 +1,24 @@
 package bluewave.data;
-import java.util.*;
+import bluewave.graph.Import;
+import static bluewave.graph.Import.UTF8_BOM;
+import bluewave.graph.Neo4J;
 
 import com.jcraft.jsch.*;
 import com.jcraft.jsch.ChannelSftp.LsEntrySelector;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
+
+import java.util.*;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.util.zip.GZIPInputStream;
+
+import javaxt.json.JSONObject;
+import static javaxt.utils.Console.console;
+import javaxt.utils.ThreadPool;
+import javaxt.express.utils.CSV;
 
 
 //******************************************************************************
@@ -164,6 +179,220 @@ public class Premier {
                 catch(Exception ex){}
             }
             throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** importShards
+  //**************************************************************************   
+    public static void importShards(javaxt.io.Directory dir, Neo4J graph) throws Exception {
+        
+      //Find files and group by date
+        TreeMap<String, LinkedHashMap<String, javaxt.io.File>> index = new TreeMap<>();
+        for (javaxt.io.File file : dir.getFiles("txn_extract_*")){
+            String fileName = file.getName(false);
+            int idx = fileName.indexOf(".");
+            if (idx>0) fileName = fileName.substring(0, idx);
+            
+            String[] arr = fileName.split("_");
+            if (arr.length>2){
+                String date = arr[2];
+                LinkedHashMap<String, javaxt.io.File> entries = index.get(date);
+                if (entries==null){
+                    entries = new LinkedHashMap<>();
+                    index.put(date, entries);
+                }
+                entries.put(fileName, file);
+            }
+        }
+        
+        
+      //Load latest shards
+        for (javaxt.io.File file : index.get(index.lastKey()).values()){
+            importShard(file, graph);
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** importShard
+  //**************************************************************************       
+    public static void importShard(javaxt.io.File file, Neo4J graph) throws Exception {
+        java.io.BufferedReader br = getBufferedReader(file);
+
+      //Parse header
+        LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+        String row = br.readLine();
+        if (row.startsWith(UTF8_BOM)) {
+            row = row.substring(1);
+        }
+        CSV.Columns columns = CSV.getColumns(row, ",");
+        for (int i=0; i<columns.length(); i++){
+            String colName = columns.get(i).toString();
+            header.put(colName, i);
+        }
+        
+        
+      //Create thread used to transfer records to an input stream
+        PipedInputStream in = new PipedInputStream();
+        PipedOutputStream out = new PipedOutputStream(in);
+        List queue = new LinkedList();
+        Thread t = new Thread(
+            new Runnable(){
+                long numRecords = 0;
+                public void run(){
+                    while (true) {
+
+                        Object obj = null;
+                        synchronized (queue) {
+
+                            while (queue.isEmpty()){
+                                try{
+                                    queue.wait();
+                                }
+                                catch(java.lang.InterruptedException e){
+                                    break;
+                                }
+                            }
+                            obj = queue.get(0);
+                            if (obj!=null) queue.remove(0);
+                            queue.notifyAll();
+                        }
+                        
+                        try{
+                            if (obj!=null){
+                                if (numRecords==0) out.write("{\"transactions\":[".getBytes("UTF-8"));
+                                else out.write(',');
+                                out.write((byte[]) obj);
+                                numRecords++;
+                            }
+                            else{
+                                out.write(']');
+                                out.write('}');
+                                out.close();
+                                return;
+                            }
+                        }
+                        catch(Exception e){
+                            e.printStackTrace();
+                            return;
+                        }
+                    }
+                }
+            }
+        );
+        t.start();
+        
+        
+      //Start seperate thread to import the json
+        Thread t2 = new Thread(
+            new Runnable(){
+                public void run(){
+                    try{
+                        Import.importJSON(in, "premier", "transactions", graph);
+                    }
+                    catch(Exception e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        );
+        t2.start();
+        
+        
+      //Create ThreadPool to parse entries in the file
+        ThreadPool pool = new ThreadPool(12, 12){
+            public void process(Object obj){
+                String row = (String) obj;
+                try{
+                    CSV.Columns columns = CSV.getColumns(row, ",");
+                    for (int i=0; i<columns.length(); i++){
+
+
+                        String facilityLocationType = getVal("Location_Type", columns).toString();
+                        
+                        JSONObject json = new JSONObject();
+                        json.set("key", getVal("Record_Key", columns));
+                        String spendPeriod = getVal("Spend_Period", columns).toString();//4 digit year, 1 digit quarter and then two digit month
+                        spendPeriod = spendPeriod.substring(0, 4) + "-" + spendPeriod.substring(5);
+                        json.set("spend_period", spendPeriod);
+                        json.set("landed_spend", getVal("Landed_Spend", columns));
+                        json.set("product", getVal("Contract_Category", columns));
+                        
+                        
+                        JSONObject facility = new JSONObject();
+                        facility.set("code", getVal("Facility_Code", columns));
+                        facility.set("type", getVal("Facility_Type", columns));
+                        facility.set("size", getVal("Size", columns));
+                        facility.set("service", getVal("Facility_Primary_Service_Type", columns));
+                        
+                        JSONObject location = new JSONObject();
+                        location.set("census_region", getVal("Census_Region", columns));
+                        location.set("census_division", getVal("Census_Division", columns));
+                        facility.set("location", location);
+                        
+                        json.set("facility", facility);
+                        
+                        JSONObject vendor = new JSONObject();
+                        json.set("vendor", vendor);
+                        
+                        console.log(json.toString(4));
+                        
+                        byte[] b = json.toString().getBytes("UTF-8");
+                        synchronized (queue) {
+                            queue.add(b);
+                            queue.notify();
+                        }
+                    }
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+                
+            }
+            private javaxt.utils.Value getVal(String colName, CSV.Columns columns){
+                return columns.get(header.get(colName));
+            }
+        }.start();
+        
+        
+      //Insert records
+        while ((row = br.readLine()) != null){
+            pool.add(row);
+        }
+        
+        
+      //Notify the pool that we have finished added records and wait for threads to complete
+        pool.done();
+        pool.join();
+        
+        
+      //Notify the writer that we're done 
+        synchronized (queue) {
+            queue.add(null);
+            queue.notify();
+        }
+        
+        
+      //Wait for writer to finish
+        t.join();
+        t2.join();
+    }
+    
+    
+  //**************************************************************************
+  //** getBufferedReader
+  //**************************************************************************    
+    private static java.io.BufferedReader getBufferedReader(javaxt.io.File file) throws Exception {
+        String ext = file.getExtension();
+        if (ext.equals("gz")){
+            InputStream fileStream = file.getInputStream();
+            InputStream gzipStream = new GZIPInputStream(fileStream);
+            return new BufferedReader(new InputStreamReader(gzipStream, "UTF-8"));
+        }
+        else{
+            return file.getBufferedReader("UTF-8");
         }
     }
     
