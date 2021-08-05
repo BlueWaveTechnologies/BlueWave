@@ -280,6 +280,10 @@ if(!bluewave.charts) bluewave.charts={};
             chartConfig.mapLevel===null)){
             return;
         }
+        if(chartConfig.mapType=="Links" && (chartConfig.mapValue==null ||
+            chartConfig.mapLevel===null)){
+            return;
+        }
         onRender(previewArea, function() {
             var data = inputData[0];
             mapArea.update(chartConfig, data);
