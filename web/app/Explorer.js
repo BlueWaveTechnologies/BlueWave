@@ -1310,6 +1310,7 @@ bluewave.Explorer = function(parent, config) {
         }
 
         dbView.onClose = function(){
+            dbView.hide();
             if (callback) callback.apply(scope, []);
         };
 
