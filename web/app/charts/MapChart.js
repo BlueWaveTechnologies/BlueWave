@@ -243,6 +243,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                     connections.forEach(function(d){
                                         var stateOne = d.stateCodeOne;
                                         var stateTwo = d.stateCodeTwo;
+                                        var quantity = d.quantity;
                                         var coordOne = [];
                                         var coordTwo = [];
                                         var connectionPath = [];
@@ -265,73 +266,86 @@ bluewave.charts.MapChart = function(parent, config) {
                                                 coordTwo.push(lat);
                                                 coordTwo.push(lon);
                                                 connectionPath.push(coordTwo);
+                                                connectionPath.push(quantity);
                                                 break;
                                             }
                                         }
                                         coords.push(connectionPath);
-
-                                        mapArea.selectAll("#connection-path").remove();
-                                        mapArea.selectAll("#connection-path")
-                                            .data(coords)
-                                            .enter()
-                                            .append("path")
-                                            .attr("id", "#connection-path")
-                                            .attr("d", function (d) {
-                                                return path({
-                                                    type: "LineString",
-                                                    coordinates: [
-                                                        [d[0][1], d[0][0]],
-                                                        [d[1][1], d[1][0]],
-                                                    ],
-                                                });
-                                            })
-                                            .style("fill", "none")
-                                            .style("stroke-opacity", 0.5)
-                                            .style("stroke-width", 7)
-                                            .style('stroke', (d) =>{
-                                                return getColor(d);
-                                            })
-
-                                        mapArea.selectAll("#connection-dot").remove();
-                                        let dots = mapArea
-                                            .append("g")
-                                            .attr("id", "connection-dot")
-                                            .selectAll("#connection-dot")
-                                            .data(coords)
-                                            .enter();
-
-                                        dots.append("circle")
-                                            .attr("cx", function(d){
-                                                let lat = d[0][0];
-                                                let lon = d[0][1];
-                                                return projection([lon, lat])[0];
-                                            })
-                                            .attr("cy", function(d){
-                                                let lat = d[0][0];
-                                                let lon = d[0][1];
-                                                return projection([lon, lat])[1];
-                                            })
-                                            .attr("r", 6)
-                                            .attr("fill", (d) =>{
-                                                return getColor(d);
-                                            });
-
-                                        dots.append("circle")
-                                            .attr("cx", function(d){
-                                                let lat = d[1][0];
-                                                let lon = d[1][1];
-                                                return projection([lon, lat])[0];
-                                            })
-                                            .attr("cy", function(d){
-                                                let lat = d[1][0];
-                                                let lon = d[1][1];
-                                                return projection([lon, lat])[1];
-                                            })
-                                            .attr("r", 6)
-                                            .attr("fill", (d) =>{
-                                                return getColor(d[0]);
-                                            });
                                     });
+
+                                    var quantities = [];
+                                    coords.forEach(function(d){
+                                        quantities.push(d[2]);
+                                        console.log(d);
+                                    });
+                                    var thicknessExtent = d3.extent(quantities);
+                                    var thicknessScale = d3.scaleQuantile()
+                                        .domain(thicknessExtent)
+                                        .range([6 ,8, 10, 12, 14]);
+
+                                    mapArea.selectAll("#connection-path").remove();
+                                    mapArea.selectAll("#connection-path")
+                                        .data(coords)
+                                        .enter()
+                                        .append("path")
+                                        .attr("id", "#connection-path")
+                                        .attr("d", function (d) {
+                                            return path({
+                                                type: "LineString",
+                                                coordinates: [
+                                                    [d[0][1], d[0][0]],
+                                                    [d[1][1], d[1][0]],
+                                                ],
+                                            });
+                                        })
+                                        .style("fill", "none")
+                                        .style("stroke-opacity", 0.5)
+                                        .style('stroke-width', (d) =>{
+                                            return thicknessScale(d[2])
+                                        })
+                                        .style('stroke', (d) =>{
+                                            return getColor(d);
+                                        })
+
+                                    mapArea.selectAll("#connection-dot").remove();
+                                    let dots = mapArea
+                                        .append("g")
+                                        .attr("id", "connection-dot")
+                                        .selectAll("#connection-dot")
+                                        .data(coords)
+                                        .enter();
+
+                                    dots.append("circle")
+                                        .attr("cx", function(d){
+                                            let lat = d[0][0];
+                                            let lon = d[0][1];
+                                            return projection([lon, lat])[0];
+                                        })
+                                        .attr("cy", function(d){
+                                            let lat = d[0][0];
+                                            let lon = d[0][1];
+                                            return projection([lon, lat])[1];
+                                        })
+                                        .attr("r", 6)
+                                        .attr("fill", (d) =>{
+                                            return getColor(d);
+                                        });
+
+                                    dots.append("circle")
+                                        .attr("cx", function(d){
+                                            let lat = d[1][0];
+                                            let lon = d[1][1];
+                                            return projection([lon, lat])[0];
+                                        })
+                                        .attr("cy", function(d){
+                                            let lat = d[1][0];
+                                            let lon = d[1][1];
+                                            return projection([lon, lat])[1];
+                                        })
+                                        .attr("r", 6)
+                                        .attr("fill", (d) =>{
+                                            return getColor(d[0]);
+                                        });
                                 });
                             });
                         }
@@ -606,6 +620,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 connections.forEach(function(d){
                                     var countryOne = d.countryCodeOne;
                                     var countryTwo = d.countryCodeTwo;
+                                    var quantity = d.quantity;
                                     var coordOne = [];
                                     var coordTwo = [];
                                     var connectionPath = [];
@@ -618,6 +633,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                                 coordTwo.push(ports[i].imlongitude);
                                                 connectionPath.push(coordOne);
                                                 connectionPath.push(coordTwo);
+                                                connectionPath.push(quantity);
                                                 coords.push(connectionPath)
                                             }
                                         }
@@ -641,12 +657,23 @@ bluewave.charts.MapChart = function(parent, config) {
                                                 coordTwo.push(lat);
                                                 coordTwo.push(lon);
                                                 connectionPath.push(coordTwo);
+                                                connectionPath.push(quantity);
                                                 break;
                                             }
                                         }
                                         coords.push(connectionPath);
                                     }
                                 });
+                                var quantities = [];
+                                coords.forEach(function(d){
+                                    quantities.push(d[2]);
+                                    console.log(d);
+                                });
+                                var thicknessExtent = d3.extent(quantities);
+                                var thicknessScale = d3.scaleQuantile()
+                                    .domain(thicknessExtent)
+                                    .range([6 ,8, 10, 12, 14]);
+
                                 mapArea.selectAll("#connection-path").remove();
                                 mapArea.selectAll("#connection-path")
                                     .data(coords)
@@ -664,7 +691,9 @@ bluewave.charts.MapChart = function(parent, config) {
                                     })
                                     .style("fill", "none")
                                     .style("stroke-opacity", 0.5)
-                                    .style("stroke-width", 7)
+                                    .style('stroke-width', (d) =>{
+                                        return thicknessScale(d[2])
+                                    })
                                     .style('stroke', (d) =>{
                                         return getColor(d);
                                     })
