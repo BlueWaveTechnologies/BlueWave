@@ -20,7 +20,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, scatterArea;
+    var svg, scatterArea, line, regression;
         var xAxis, yAxis;
         var axisWidth, axisHeight;
         var x, y, xBand, yBand;
@@ -53,7 +53,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        scatterArea.selectAll("*").remove();
+        if (scatterArea) scatterArea.selectAll("*").remove();
     };
 
 
@@ -104,6 +104,28 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 yKey2 = chartConfig.yAxis2;
             }
 
+//
+//            regression = regressionCoefficient(d[xKey], d[yKey]);
+//
+//            regressionData.forEach(function (d) {
+//                d.x = +d.x;
+//                d.y = +d.y;
+//                d.yhat = +d.yhat;
+//
+//            });
+//
+//            if(chartConfig.showRegLine) {
+//                line = d3.line()
+//                .x(function(d) {
+//                            return x(d.x);
+//                        })
+//                        .y(function(d) {
+//                            return y(d.yhat);
+//                        });
+//            }
+
+
+
 
             var data1 = data[0];
             var data2 = data[1];
@@ -121,6 +143,9 @@ bluewave.charts.ScatterChart = function(parent, config) {
 //                            return g[yKey];
 //                        });
 //                }).entries(data);
+
+
+
 
                displayAxis(xKey, yKey, data);
 
@@ -173,6 +198,30 @@ bluewave.charts.ScatterChart = function(parent, config) {
                       .on("mouseover", mouseover)
                       .on("mousemove", mousemove)
                       .on("mouseleave", mouseleave);
+//
+//
+//               svg.append("path")
+//                   .datum(regressionData)
+//                   .attr("class", "line")
+//                   .attr("d", line);
+
+
+            var linReg = calculateLinReg(data, xKey, yKey, d3.min(data, function(d) {return d[xKey]}), d3.min(data, function(d) { return d[yKey]}));
+
+            line = d3.line()
+            .x(function(d) { return d[0]})
+            .y(function(d) { return d[1]});
+
+            if (chartConfig.showRegLine) {
+            	 scatterArea.append("path")
+                      .datum(linReg)
+                      .attr("class", "line")
+                      .attr("d", line)
+                      .attr("stroke", function(d) { return "#000000"; })
+                      .attr("stroke-linecap", 'round')
+                      .attr("stroke-width", 500);
+
+            }
 
         });
     };
@@ -320,105 +369,85 @@ bluewave.charts.ScatterChart = function(parent, config) {
         };
     };
 
-//  //**************************************************************************
-//  //** editStyle
-//  //**************************************************************************
-//      var editStyle = function(chartType){
-//
-//          //Create styleEditor as needed
-//            if (!styleEditor){
-//                styleEditor = new javaxt.dhtml.Window(document.body, {
-//                    title: "Edit Style",
-//                    width: 400,
-//                    valign: "top",
-//                    modal: false,
-//                    resizable: false,
-//                    style: config.style.window
-//                });
-//            }
-//
-//
-//          //Update form
-//            var body = styleEditor.getBody();
-//            body.innerHTML = "";
-//            if (chartType==="pieChart"){
-//                var form = new javaxt.dhtml.Form(body, {
-//                    style: config.style.form,
-//                    items: [
-//                        {
-//                            group: "Style",
-//                            items: [
-//                                {
-//                                    name: "color",
-//                                    label: "Color",
-//                                    type: new javaxt.dhtml.ComboBox(
-//                                        document.createElement("div"),
-//                                        {
-//                                            style: config.style.combobox
-//                                        }
-//                                    )
-//                                },
-//                                {
-//                                    name: "cutout",
-//                                    label: "Cutout",
-//                                    type: "text"
-//                                },
-//                                {
-//                                    name: "labels",
-//                                    label: "Labels",
-//                                    type: "radio",
-//                                    alignment: "vertical",
-//                                    options: [
-//                                        {
-//                                            label: "True",
-//                                            value: true
-//                                        },
-//                                        {
-//                                            label: "False",
-//                                            value: false
-//                                        }
-//                                    ]
-//                                }
-//                            ]
-//                        }
-//                    ]
-//                });
-//
-//
-//              //Update cutout field (add slider) and set initial value
-//                createSlider("cutout", form, "%");
-//                var cutout = chartConfig.pieCutout;
-//                if (cutout==null) cutout = 0.65;
-//                chartConfig.pieCutout = cutout;
-//                form.findField("cutout").setValue(cutout*100);
-//
-//
-//              //Tweak height of the label field and set initial value
-//                var labelField = form.findField("labels");
-//                labelField.row.style.height = "68px";
-//                var labels = chartConfig.pieLabels;
-//                labelField.setValue(labels===true ? true : false);
-//
-//
-//              //Process onChange events
-//                form.onChange = function(){
-//                    var settings = form.getData();
-//                    chartConfig.pieCutout = settings.cutout/100;
-//                    if (settings.labels==="true") settings.labels = true;
-//                    else if (settings.labels==="false") settings.labels = false;
-//                    chartConfig.pieLabels = settings.labels;
-//                    createPiePreview();
-//                };
-//            }
-//
-//
-//
-//            styleEditor.showAt(108,57);
-//            form.resize();
-//        };
+  //**************************************************************************
+  //** calculateLinReg
+  //**************************************************************************
+  var calculateLinReg = function(data, xKey, yKey, minX, minY) {
+        // Let n = the number of data points
+        var n = data.length;
+
+        // Get just the points
+        var pts = [];
+        var xAxisData =[];
+        var yAxisData = [];
+
+        data.forEach((val) => {
+          var obj = {};
+          obj.x = parseFloat(val[xKey]);
+          obj.y = parseFloat(val[yKey]);
+          obj.mult = obj.x*obj.y;
+          pts.push(obj);
+
+          xAxisData.push(parseFloat(val[xKey]));
+          yAxisData.push(parseFloat(val[yKey]));
+        });
+
+        var sum_x = 0;
+        var sum_y = 0;
+        var sum_xy = 0;
+        var sum_xx = 0;
+        var count = 0;
+
+
+        var x = 0;
+        var y = 0;
+        var valuesLength = xAxisData.length;
+
+        if (valuesLength != yAxisData.length) {
+            throw new Error('The values in xAxis and yAxis need to have same size!');
+        }
+
+
+        if (valuesLength === 0) {
+            return [ [], [] ];
+        }
+
+        for (var v = 0; v < valuesLength; v++) {
+            x = xAxisData[v];
+            y = yAxisData[v];
+            sum_x += x;
+            sum_y += y;
+            sum_xx += x*x;
+            sum_xy += x*y;
+            count++;
+        }
+
+        var m = (count*sum_xy - sum_x*sum_y) / (count*sum_xx - sum_x*sum_x);
+        var b = (sum_y/count) - (m*sum_x)/count;
+
+        var result_values_x = [];
+        var result_values_y = [];
+        var finalResults = [];
+
+        for (var v = 0; v < valuesLength; v++) {
+            x = xAxisData[v];
+            y = x * m + b;
+            result_values_x.push(x);
+            result_values_y.push(y);
+            finalResults.push([x, y]);
+        }
+
+//        return [result_values_x, result_values_y];
+        return finalResults;
+  }
+
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
+
+    init();
+
+};
