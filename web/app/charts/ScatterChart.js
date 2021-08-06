@@ -104,29 +104,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 yKey2 = chartConfig.yAxis2;
             }
 
-//
-//            regression = regressionCoefficient(d[xKey], d[yKey]);
-//
-//            regressionData.forEach(function (d) {
-//                d.x = +d.x;
-//                d.y = +d.y;
-//                d.yhat = +d.yhat;
-//
-//            });
-//
-//            if(chartConfig.showRegLine) {
-//                line = d3.line()
-//                .x(function(d) {
-//                            return x(d.x);
-//                        })
-//                        .y(function(d) {
-//                            return y(d.yhat);
-//                        });
-//            }
-
-
-
-
             var data1 = data[0];
             var data2 = data[1];
             data = data1;
@@ -134,18 +111,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
             if (data2!==null && data2!==undefined && xKey2 && yKey2){
                 data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
             }
-                let xType = typeOfAxisValue();
-
-//                var scatterData = d3.nest()
-//                    .key(function(d){return d[xKey];})
-//                    .rollup(function(d){
-//                        return d3.sum(d,function(g){
-//                            return g[yKey];
-//                        });
-//                }).entries(data);
-
-
-
+               let xType = typeOfAxisValue();
 
                displayAxis(xKey, yKey, data);
 
@@ -198,12 +164,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
                       .on("mouseover", mouseover)
                       .on("mousemove", mousemove)
                       .on("mouseleave", mouseleave);
-//
-//
-//               svg.append("path")
-//                   .datum(regressionData)
-//                   .attr("class", "line")
-//                   .attr("d", line);
 
 
             var linReg = calculateLinReg(data, xKey, yKey, d3.min(data, function(d) {return d[xKey]}), d3.min(data, function(d) { return d[yKey]}));
@@ -430,19 +390,14 @@ bluewave.charts.ScatterChart = function(parent, config) {
         var m = (count*sum_xy - sum_x*sum_y) / (count*sum_xx - sum_x*sum_x);
         var b = (sum_y/count) - (m*sum_x)/count;
 
-        var result_values_x = [];
-        var result_values_y = [];
         var finalResults = [];
 
         for (var v = 0; v < valuesLength; v++) {
             x = xAxisData[v];
             y = x * m + b;
-            result_values_x.push(x);
-            result_values_y.push(y);
             finalResults.push([x, y]);
         }
 
-//        return [result_values_x, result_values_y];
         return finalResults;
   }
 
