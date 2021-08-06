@@ -208,9 +208,14 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
             var linReg = calculateLinReg(data, xKey, yKey, d3.min(data, function(d) {return d[xKey]}), d3.min(data, function(d) { return d[yKey]}));
 
+            let xTemps = createAxisScale(xKey, 'x', data);
+            let xScale = xTemps.scale;
+            let yTemps = createAxisScale(yKey, 'y', data);
+            let yScale = yTemps.scale;
+
             line = d3.line()
-            .x(function(d) { return d[0]})
-            .y(function(d) { return d[1]});
+            .x(function(d) { return xScale(d[0])})
+            .y(function(d) { return yScale(d[1])});
 
             if (chartConfig.showRegLine) {
             	 scatterArea.append("path")
