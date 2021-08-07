@@ -211,6 +211,7 @@ public class Premier {
       //Load latest shards
         for (javaxt.io.File file : index.get(index.lastKey()).values()){
             importShard(file, graph);
+            if (true) break;
         }
     }
     
@@ -238,6 +239,7 @@ public class Premier {
         PipedInputStream in = new PipedInputStream();
         PipedOutputStream out = new PipedOutputStream(in);
         List queue = new LinkedList();
+        int maxPoolSize = 1;
         Thread t = new Thread(
             new Runnable(){
                 long numRecords = 0;
@@ -255,16 +257,18 @@ public class Premier {
                                     break;
                                 }
                             }
-                            obj = queue.get(0);
-                            if (obj!=null) queue.remove(0);
+                            obj = queue.remove(0);
                             queue.notifyAll();
                         }
+
                         
                         try{
                             if (obj!=null){
                                 if (numRecords==0) out.write("{\"transactions\":[".getBytes("UTF-8"));
                                 else out.write(',');
                                 out.write((byte[]) obj);
+                                out.flush();
+                                System.out.println(new JSONObject(new String((byte[]) obj)).toString(4));
                                 numRecords++;
                             }
                             else{
@@ -302,45 +306,98 @@ public class Premier {
         
         
       //Create ThreadPool to parse entries in the file
-        ThreadPool pool = new ThreadPool(12, 12){
+        ThreadPool pool = new ThreadPool(12){
             public void process(Object obj){
                 String row = (String) obj;
                 try{
                     CSV.Columns columns = CSV.getColumns(row, ",");
                     for (int i=0; i<columns.length(); i++){
 
-
-                        String facilityLocationType = getVal("Location_Type", columns).toString();
-                        
+                      //Create json object
                         JSONObject json = new JSONObject();
+                        
+                        
+                      //Add basic transaction info
                         json.set("key", getVal("Record_Key", columns));
                         String spendPeriod = getVal("Spend_Period", columns).toString();//4 digit year, 1 digit quarter and then two digit month
                         spendPeriod = spendPeriod.substring(0, 4) + "-" + spendPeriod.substring(5);
-                        json.set("spend_period", spendPeriod);
-                        json.set("landed_spend", getVal("Landed_Spend", columns));
                         json.set("product", getVal("Contract_Category", columns));
+                        json.set("week", spendPeriod);
+                        json.set("spend", getVal("Landed_Spend", columns).toBigDecimal());
+                        json.set("transactions", getVal("Transaction_Count", columns).toLong());
+                        json.set("quantity_in_each", getVal("Quantity_In_Eaches", columns).toLong());
+                        json.set("facilities", getVal("Number_of_Facilities_Purchasing", columns).toLong());
+                        json.set("reference_number", getVal("Reference_Number", columns));
                         
                         
+                      //Add facility info
                         JSONObject facility = new JSONObject();
                         facility.set("code", getVal("Facility_Code", columns));
-                        facility.set("type", getVal("Facility_Type", columns));
+                        facility.set("type", getVal("Facility_Primary_Service_Type", columns));
+                        facility.set("subtype", getVal("Location_Type", columns));
+                        facility.set("care", getVal("Facility_Type", columns));
                         facility.set("size", getVal("Size", columns));
-                        facility.set("service", getVal("Facility_Primary_Service_Type", columns));
                         
+                        
+                      //Add location to facility
                         JSONObject location = new JSONObject();
                         location.set("census_region", getVal("Census_Region", columns));
                         location.set("census_division", getVal("Census_Division", columns));
                         facility.set("location", location);
-                        
                         json.set("facility", facility);
                         
+                        
+                      //Add vendor info
                         JSONObject vendor = new JSONObject();
+                        String vendorName = getVal("Vendor_Name", columns).toString();
+                        String vendorCode = getVal("Vendor_Entity_Code", columns).toString();
+                        vendor.set("name", vendorName);
+                        vendor.set("code", vendorCode);
                         json.set("vendor", vendor);
                         
-                        console.log(json.toString(4));
+                        String vendorParentName = getVal("Vendor_Top_Parent_Name", columns).toString();
+                        String vendorParentCode = getVal("Vendor_Top_Parent_Entity_Code", columns).toString();
+                        if (!vendorParentName.equals(vendorName) || !vendorParentCode.equals(vendorCode)){
+                            JSONObject parent = new JSONObject();
+                            parent.set("name", vendorParentName);
+                            parent.set("code", vendorParentCode);
+                            vendor.set("parent", parent);
+                        }
                         
+                        
+                      //Add manufacturer info
+                        JSONObject manufacturer = new JSONObject();
+                        String manufacturerName = getVal("Manufacturer_Name", columns).toString();
+                        String manufacturerCode = getVal("Manufacturer_Entity_Code", columns).toString();
+                        manufacturer.set("name", manufacturerName);
+                        manufacturer.set("code", manufacturerCode);
+                        
+                        String manufacturerParentName = getVal("Manufacturer_Top_Parent_Name", columns).toString();
+                        String manufacturerParentCode = getVal("Manufacturer_Top_Parent_Entity_Code", columns).toString();
+                        if (!manufacturerParentName.equals(manufacturerName) || !manufacturerParentCode.equals(manufacturerCode)){
+                            JSONObject parent = new JSONObject();
+                            parent.set("name", manufacturerParentName);
+                            parent.set("code", manufacturerParentCode);
+                            manufacturer.set("parent", parent);
+                        }
+                        
+                        json.set("manufacturer", manufacturer);                      
+                        
+                        
+                        
+                      //Add entry to the queue
                         byte[] b = json.toString().getBytes("UTF-8");
                         synchronized (queue) {
+                            
+                            while (queue.size()>maxPoolSize){
+                                try{
+                                    queue.wait();
+                                }
+                                catch(java.lang.InterruptedException e){
+                                    break;
+                                }
+                            }
+                            
                             queue.add(b);
                             queue.notify();
                         }
@@ -358,8 +415,11 @@ public class Premier {
         
         
       //Insert records
+        int x = 0;
         while ((row = br.readLine()) != null){
             pool.add(row);
+            x++;
+            if (x==100) break;
         }
         
         
