@@ -81,9 +81,7 @@ public class Main {
             importData(args);
         }
         else if (args.containsKey("-delete")){
-            Neo4J graph = Config.getGraph();
-            bluewave.graph.Maintenance.deleteNodes(args.get("-delete"), graph);
-            graph.close();
+            delete(args);
         }
         else if (args.containsKey("-createIndex")){
             createIndex(args);
@@ -321,6 +319,31 @@ public class Main {
         Neo4J graph = Config.getGraph();
         Premier.importShards(dir, graph);
         graph.close();
+    }
+    
+    
+  //**************************************************************************
+  //** delete
+  //**************************************************************************
+    private static void delete(HashMap<String, String> args) throws Exception {
+        String str = args.get("-delete").toLowerCase();
+        if (str.equals("nodes")){
+            Neo4J graph = Config.getGraph();
+            bluewave.graph.Maintenance.deleteNodes(args.get("-label"), graph);
+            graph.close();
+        }
+        else if (str.equals("dashboard")){
+            Config.initDatabase();
+            for (String s : args.get("-id").split(",")){
+                try{
+                    Long id = Long.parseLong(s);
+                    new bluewave.app.Dashboard(id).delete();
+                }
+                catch(Exception e){
+                    console.log("Failed to delete " + s);
+                }
+            }
+        }
     }
 
 
