@@ -58,6 +58,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
+        
+
+        config.renderers = {
+            drawflowNodes: createDrawflowNode
+        };
 
         sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
         sankeyEditor.getNodeEditor = getNodeEditor;
@@ -868,6 +873,32 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             style: config.style.combobox,
             scrollbar: true
         });
+    };
+    
+
+  //**************************************************************************
+  //** createDrawflowNode
+  //**************************************************************************
+    var createDrawflowNode = function(node){
+        var div = document.createElement("div");
+        
+        var title = document.createElement("div");
+        title.className = "drawflow-node-title";
+        title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
+        div.appendChild(title);
+        var body = document.createElement("div");
+        body.className = "drawflow-node-body";
+        var content = node.content;
+        if (content){
+            if (typeof content === "string"){
+                body.innerHTML = content;
+            }
+            else{
+                body.appendChild(content);
+            }
+        }
+        div.appendChild(body);
+        return div;
     };
 
 
