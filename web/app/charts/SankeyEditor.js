@@ -36,7 +36,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
             }
         },
-        hidePreview: false
+        hidePreview: false,
+        renderers: {
+            drawflowNodes: createDrawflowNode
+        }
     };
 
     var editPanel, previewPanel, waitmask; //primary components
@@ -1067,17 +1070,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             editNode(this);
         };
     };
-
+    
 
   //**************************************************************************
-  //** createNode
+  //** createDrawflowNode
   //**************************************************************************
-    var createNode = function(node){
-
-      //Create content div for a drawflow node
-        var nodeID = new Date().getTime();
+    var createDrawflowNode = function(node){
         var div = document.createElement("div");
-        div.id = "drawflow_node_"+nodeID;
+        
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
@@ -1094,6 +1094,26 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         }
         div.appendChild(body);
+        return div;
+    };
+    
+
+  //**************************************************************************
+  //** createNode
+  //**************************************************************************
+    var createNode = function(node){
+
+      //Create content div for a drawflow node
+        var div;
+        if (config.renderers.drawflowNodes){
+            div = config.renderers.drawflowNodes(node);
+        }
+        else{
+            div = createDrawflowNode(node);
+        }
+        var nodeID = new Date().getTime();
+        div.id = "drawflow_node_"+nodeID;
+
 
 
       //Create drawflow node
