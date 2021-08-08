@@ -1088,7 +1088,8 @@ bluewave.Explorer = function(parent, config) {
                         var grid = dbView.getComponents().grid;
                         var query = dbView.getQuery();
                         if (query.length==0){
-                            //Ignore?
+                            //Ignore when query is empty
+                            dbView.hide();
                         }
                         else{
 
@@ -1302,10 +1303,8 @@ bluewave.Explorer = function(parent, config) {
                                 return a.name.localeCompare(b.name);
                             });
 
-
                           //Add nodes to the tree
                             tree.addNodes(arr);
-
                         },
                         failure: function(request){
                             if (waitmask) waitmask.hide();
