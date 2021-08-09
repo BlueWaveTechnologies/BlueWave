@@ -149,6 +149,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** onChange
   //**************************************************************************
     this.onChange = function(){};
+    
+    
+  //**************************************************************************
+  //** onContextMenu
+  //**************************************************************************
+    this.onContextMenu = function(node){};
 
 
   //**************************************************************************
@@ -362,7 +368,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         .on("click", function() {
             var menu = getLinkMenu();
             menu.label = d3.select(this);
-            showMenu(menu, this);
+            me.showMenu(menu, this);
         });
 
 
@@ -538,7 +544,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         if (previewPanel.isVisible()) toggleButton.setValue("Edit");
         return editPanel;
     };
-
+    
 
   //**************************************************************************
   //** setTitle
@@ -848,7 +854,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         });
 
         drawflow.on('contextmenu', function(e) {
-            console.log("drawflow delete in explorer was called here line 851 SankeyEditor")
             setTimeout(function(){
                 for (var key in nodes) {
                     if (nodes.hasOwnProperty(key)){
@@ -856,17 +861,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         var parentNode = node.parentNode.parentNode;
                         // generate x button from class
                         var deleteDiv = parentNode.getElementsByClassName("drawflow-delete")[0];
-                        try{
-                            console.log(`delete div printout ${deleteDiv.innerHTML}`);
-
-                        }
-                        catch{
-                            console.log(`delete div printout ${deleteDiv}`);
-
-                        }
-                        // console.log(`delete div printout ${deleteDiv}`);
                         if (deleteDiv){
-                            console.log("delete div detected")
+                            me.onContextMenu(node);
                             parentNode.removeChild(deleteDiv);
                             deleteDiv = document.createElement("div");
                             deleteDiv.className = "drawflow-delete2";
@@ -1664,7 +1660,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** showMenu
   //**************************************************************************
-    var showMenu = function(menu, target){
+    this.showMenu = function(menu, target){
 
         var numVisibleItems = 0;
         for (var i=0; i<menu.childNodes.length; i++){
@@ -1675,7 +1671,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             return;
         }
 
-        var callout = getCallout();
+        var callout = me.getCallout();
         var innerDiv = callout.getInnerDiv();
         while (innerDiv.firstChild) {
             innerDiv.removeChild(innerDiv.lastChild);
@@ -1734,7 +1730,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** getCallout
   //**************************************************************************
-    var getCallout = function(){
+    this.getCallout = function(){
         if (callout){
             var parent = callout.el.parentNode;
             if (!parent){
