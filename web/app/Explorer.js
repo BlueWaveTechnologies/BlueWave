@@ -1059,6 +1059,22 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
 
+            case "map":
+
+                var node = createNode({
+                    name: title,
+                    type: nodeType,
+                    icon: icon,
+                    content: i,
+                    position: [pos_x, pos_y],
+                    inputs: 1,
+                    outputs: 0
+                });
+
+                addEventListeners(node);
+
+                break;
+
             default:
 
                 var node = createNode({
