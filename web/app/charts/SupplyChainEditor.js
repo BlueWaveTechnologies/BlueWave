@@ -37,6 +37,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var nodeEditor;
     var waitmask;
     var companyList, facilityList, productList, productTypes;
+    var nodeMenu;
 
 
   //**************************************************************************
@@ -68,6 +69,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         sankeyEditor.getNodeEditor = getNodeEditor;
         sankeyEditor.onChange = function(){
             me.onChange();
+        };
+        sankeyEditor.onContextMenu = function(node){
+            showMenu(node);
         };
     };
 
@@ -886,12 +890,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //**************************************************************************
     var createDrawflowNode = function(node){
 
-
-
         var div = document.createElement("div");
-        div.onclick = function(e){
-            console.log(`onclick was used for div, printing ${e}`);
-        }
 
         // title to overlay
         var title = document.createElement("div");
@@ -946,6 +945,53 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** showMenu
+  //**************************************************************************
+    var showMenu = function(node){
+        var menu = getNodeMenu();
+        sankeyEditor.showMenu(menu, node);
+    };
+    
+    
+  //**************************************************************************
+  //** getNodeMenu
+  //**************************************************************************
+    var getNodeMenu = function(){
+        if (!nodeMenu){
+            var div = document.createElement("div");
+            div.className = "app-menu";
+            div.appendChild(createMenuOption("Edit Color", "edit", function(){
+                console.log("Edit Color!"); //editColor();
+            }));
+            nodeMenu = div;
+        }
+        return nodeMenu;
+    };
+    
+
+  //**************************************************************************
+  //** createMenuOption
+  //**************************************************************************
+    var createMenuOption = function(label, icon, onClick){
+        var div = document.createElement("div");
+        div.className = "app-menu-item noselect";
+        if (icon && icon.length>0){
+            div.innerHTML = '<i class="fas fa-' + icon + '"></i>' + label;
+        }
+        else{
+            div.innerHTML = label;
+        }
+        div.label = label;
+        div.onclick = function(){
+            sankeyEditor.getCallout().hide();
+            onClick.apply(this, [label]);
+        };
+        addShowHide(div);
+        return div;
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
@@ -953,6 +999,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var get = bluewave.utils.get;
     var post = javaxt.dhtml.utils.post;
     var getData = bluewave.utils.getData;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();
 };
