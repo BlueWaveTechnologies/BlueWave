@@ -346,8 +346,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 node.country = data.country.country;
                                 node.state = data.country.state;
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
-                                node.childNodes[1].getElementsByTagName("span")[0].innerHTML = facilityID;
-                                node.childNodes[2].getElementsByTagName("span")[0].innerHTML = productID;
+                                node.childNodes[1].getElementsByTagName("span")[0].innerHTML = facilityName;
+                                node.childNodes[2].getElementsByTagName("span")[0].innerHTML = productName;
+
+                                // document.getElementById(id).style.property = new style
+
                                 nodeEditor.close();
                                 me.onSave();
                             });
@@ -909,7 +912,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             console.log("else")
 
         }
-        <span id="Logo" style="display:none;"></span>
+        // <span id="Logo" style="display:none;"></span>
 
         product_name.innerHTML = "<span>" + node.productID + "</span>";
         div.appendChild(product_name);
