@@ -1,5 +1,6 @@
 package bluewave;
 import bluewave.app.User;
+import bluewave.data.Premier;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
 
@@ -77,12 +78,10 @@ public class Main {
             download(args);
         }
         else if (args.containsKey("-import")){
-            importFile(args);
+            importData(args);
         }
         else if (args.containsKey("-delete")){
-            Neo4J graph = Config.getGraph();
-            bluewave.graph.Maintenance.deleteNodes(args.get("-delete"), graph);
-            graph.close();
+            delete(args);
         }
         else if (args.containsKey("-createIndex")){
             createIndex(args);
@@ -244,6 +243,24 @@ public class Main {
         return pw;
     }
 
+    
+  //**************************************************************************
+  //** importData
+  //**************************************************************************
+    private static void importData(HashMap<String, String> args) throws Exception {
+        String str = args.get("-import");
+        if (str.equalsIgnoreCase("Premier")){
+            importPremier(args);
+        }
+        else{
+            java.io.File f = new java.io.File(str);
+            if (f.isFile()) importFile(args);
+            else{
+                //import directory?
+            }
+        }
+    }
+    
 
   //**************************************************************************
   //** importFile
@@ -288,6 +305,45 @@ public class Main {
             bluewave.graph.Import.importJSON(file, nodeType, target, graph);
         }
         graph.close();
+    }
+    
+    
+  //**************************************************************************
+  //** importPremier
+  //**************************************************************************
+    private static void importPremier(HashMap<String, String> args) throws Exception {
+        String localPath = args.get("-path");
+        javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
+        if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
+        
+        Neo4J graph = Config.getGraph();
+        Premier.importShards(dir, graph);
+        graph.close();
+    }
+    
+    
+  //**************************************************************************
+  //** delete
+  //**************************************************************************
+    private static void delete(HashMap<String, String> args) throws Exception {
+        String str = args.get("-delete").toLowerCase();
+        if (str.equals("nodes")){
+            Neo4J graph = Config.getGraph();
+            bluewave.graph.Maintenance.deleteNodes(args.get("-label"), graph);
+            graph.close();
+        }
+        else if (str.equals("dashboard")){
+            Config.initDatabase();
+            for (String s : args.get("-id").split(",")){
+                try{
+                    Long id = Long.parseLong(s);
+                    new bluewave.app.Dashboard(id).delete();
+                }
+                catch(Exception e){
+                    console.log("Failed to delete " + s);
+                }
+            }
+        }
     }
 
 

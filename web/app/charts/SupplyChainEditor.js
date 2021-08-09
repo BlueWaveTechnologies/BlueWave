@@ -299,7 +299,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 data.facility.country = countryList.getValue().country;
                             }
                             else{
-                                warn("State/Country is required", facilityList);
+                                warn("State/Country is required", countryList);
                                 return;
                             }
 

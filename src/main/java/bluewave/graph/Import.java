@@ -31,7 +31,7 @@ public class Import {
   //** importCSV
   //**************************************************************************
   /** Used to import a CSV file into a node/vertex in a Neo4J instance.
-   *  @param csvFile Accepts files with a .csv or .gz fiel extension. Assumes 
+   *  @param csvFile Accepts files with a .csv or .gz file extension. Assumes 
    *  that the first line in the file contains a header.
    *  @param vertex Label for the nodes that will be created
    *  @param keys Column IDs with unique values used to create a unique 
@@ -45,7 +45,7 @@ public class Import {
         String uniqueColName;
         StringBuilder query = new StringBuilder("CREATE (:" + vertex + " {");
         java.io.BufferedReader br = getBufferedReader(csvFile);
-        String row = br.readLine(); //skip header
+        String row = br.readLine();
         if (row.startsWith(UTF8_BOM)) {
             row = row.substring(1);
         }
@@ -61,7 +61,7 @@ public class Import {
             query.append(colName);
             query.append(": $");
             query.append(colName);
-        }
+        } 
         if (keys==null){
             uniqueColName = null;
         }
@@ -191,7 +191,16 @@ public class Import {
    *  @param database Connection info to the database
    */
     public static void importJSON(File jsonFile, String vertex, String target, Neo4J database) throws Exception {
-
+        JsonReader jr = new JsonReader(jsonFile.getBufferedReader());
+        importJSON(jr, vertex, target, database);
+    }
+    
+    public static void importJSON(InputStream is, String vertex, String target, Neo4J database) throws Exception {
+        JsonReader jr = new JsonReader(new InputStreamReader(is));
+        importJSON(jr, vertex, target, database);
+    }
+    
+    public static void importJSON(JsonReader jr, String vertex, String target, Neo4J database) throws Exception {
         /*
         Session session = null;
         try {
@@ -598,7 +607,6 @@ public class Import {
         }.start();
 
 
-        JsonReader jr = new JsonReader(jsonFile.getBufferedReader());
         pool.add(new Object[]{jr, vertex, target, null, new LinkedHashMap<>(), jobIDs.get()});
         pool.join();
     }

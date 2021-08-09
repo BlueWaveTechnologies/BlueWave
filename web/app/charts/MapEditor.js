@@ -298,7 +298,7 @@ if(!bluewave.charts) bluewave.charts={};
    */
     var createOptions = function() {
         var data = inputData[0];
-        if(typeof data !== 'object'){
+        if(Array.isArray(data)){
             let dataOptions = Object.keys(data[0]);
             chartConfig.isObject = true;
             dataOptions.forEach((val)=>{
