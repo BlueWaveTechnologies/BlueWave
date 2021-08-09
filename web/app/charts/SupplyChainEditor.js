@@ -38,6 +38,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var waitmask;
     var companyList, facilityList, productList, productTypes;
     var nodeMenu;
+    var colorPicker;
 
 
   //**************************************************************************
@@ -948,7 +949,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** showMenu
   //**************************************************************************
     var showMenu = function(node){
-        var menu = getNodeMenu();
+        var menu = getNodeMenu(node);
         sankeyEditor.showMenu(menu, node);
     };
     
@@ -956,16 +957,56 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //**************************************************************************
   //** getNodeMenu
   //**************************************************************************
-    var getNodeMenu = function(){
+    var getNodeMenu = function(node){
         if (!nodeMenu){
             var div = document.createElement("div");
             div.className = "app-menu";
             div.appendChild(createMenuOption("Edit Color", "edit", function(){
-                console.log("Edit Color!"); //editColor();
+                var node = nodeMenu.node;
+                getColorPicker().onChange = function(c){
+                    node.style.backgroundColor = c.hexString;
+                };
             }));
             nodeMenu = div;
         }
+        nodeMenu.node = node;
         return nodeMenu;
+    };
+    
+    
+  //**************************************************************************
+  //** getColorPicker
+  //**************************************************************************
+    var getColorPicker = function(){
+        if (!colorPicker){
+            colorPicker = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Node",
+                width: 340,
+                modal: false,
+                style: config.style.window
+            });
+            
+            var cp = new iro.ColorPicker(colorPicker.getBody(), {
+              width: 320,
+              height: 320,
+              anticlockwise: true,
+              borderWidth: 1,
+              borderColor: "#fff",
+              css: {
+                "#output": {
+                  "background-color": "$color"
+                }
+              }
+            });
+            
+            cp.on("color:change", function(c){
+                colorPicker.onChange(c);
+            });
+            
+            colorPicker.onChange = function(){};
+        }
+        colorPicker.show();
+        return colorPicker;
     };
     
 
