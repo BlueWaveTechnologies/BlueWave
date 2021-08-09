@@ -48,6 +48,10 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
+        mapArea.call(d3.zoom().on("zoom", function () {
+            mapArea.attr("transform", d3.event.transform)
+        }))
+        .append("g")
     };
 
 
