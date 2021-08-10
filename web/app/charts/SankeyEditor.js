@@ -158,6 +158,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** onNodeImport
+  //**************************************************************************
+    this.onNodeImport = function(node){};
+
+
+  //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
@@ -297,6 +303,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
               //Update nodes variable
                 nodes[nodeID] = node;
+
+
+              //Fire event
+                me.onNodeImport(node);
 
             }
         }

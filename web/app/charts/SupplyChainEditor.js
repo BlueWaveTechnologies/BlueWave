@@ -74,6 +74,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         sankeyEditor.onContextMenu = function(node){
             showMenu(node);
         };
+        sankeyEditor.onNodeImport = function(node){
+            updateDrawflowNode(node);
+        };
     };
 
 
@@ -922,6 +925,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         div.appendChild(body);
         return div;
+    };
+
+
+    var updateDrawflowNode = function(node){
+        console.log(node);
     };
 
 
