@@ -327,6 +327,57 @@ public class SupplyChainService extends WebService {
         }
     }
 
+    
+  //**************************************************************************
+  //** getFacility
+  //**************************************************************************
+    public ServiceResponse getFacility(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        Long facilityID = request.getParameter("id").toLong();
+        if (facilityID==null) return new ServiceResponse(400, "ID is required");
+
+        Session session = null;
+        try {
+            session = graph.getSession();
+
+            JSONObject facility = new JSONObject();
+
+            String query = "MATCH (f:facility)\n" +
+            "WHERE id(f)=" + facilityID + "\n" +
+            "OPTIONAL MATCH (f)-[:source]->(n)\n" +
+            "RETURN id(f) as id, " +
+            "properties(f) as facility, " +
+            "properties(n) as registration, " +
+            "o.owner_operator_number as owner_operator_number";
+
+            
+            Result rs = session.run(query);
+            if (rs.hasNext()){
+                Record record = rs.next();
+                facility = getFacility(record);
+            }
+            session.close();
+
+            if (facility.isEmpty()) return new ServiceResponse(404);
+            facility.set("id", facilityID);
+            return new ServiceResponse(facility);
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+    private JSONObject getFacility(Record record){
+        long facilityID = record.get("id").asLong();
+        JSONObject facility = getJson(record.get("registration"));
+        if (facility.isEmpty()){
+            facility = getJson(record.get("facility"));
+        }
+        return facility;
+    }
+    
 
   //**************************************************************************
   //** getFacilities
@@ -366,10 +417,7 @@ public class SupplyChainService extends WebService {
                     while (rs.hasNext()){
                         Record record = rs.next();
                         long facilityID = record.get("id").asLong();
-                        JSONObject facility = getJson(record.get("registration"));
-                        if (facility.isEmpty()){
-                            facility = getJson(record.get("facility"));
-                        }
+                        JSONObject facility = getFacility(record);
 
 
                         Long fei = facility.get("fei_number").toLong();
@@ -627,7 +675,54 @@ public class SupplyChainService extends WebService {
             return new ServiceResponse(e);
         }
     }
+    
 
+  //**************************************************************************
+  //** getProduct
+  //**************************************************************************
+    public ServiceResponse getProduct(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        Long productID = request.getParameter("id").toLong();
+        if (productID==null) return new ServiceResponse(400, "ID is required");
+
+        Session session = null;
+        try {
+            session = graph.getSession();
+
+            JSONObject product = new JSONObject();
+
+            String query = "MATCH (p:product)\n" +
+            "WHERE id(p)=" + productID + "\n" +
+            "OPTIONAL MATCH (f)-[:source]->(n)\n" + //link to registration
+            "RETURN id(p) as id, " +
+            "properties(p) as product, " +
+            "n.fei_number as fei";
+
+            
+            Result rs = session.run(query);
+            if (rs.hasNext()){
+                Record record = rs.next();
+                product = getProduct(record);
+            }
+            session.close();
+
+            if (product.isEmpty()) return new ServiceResponse(404);
+            product.set("id", productID);
+            return new ServiceResponse(product);
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+    
+    
+    private JSONObject getProduct(Record record){
+        JSONObject product = getJson(record.get("product"));
+        return product;
+    }
+    
 
   //**************************************************************************
   //** getProducts
