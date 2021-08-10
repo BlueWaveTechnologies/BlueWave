@@ -110,7 +110,7 @@ if(!bluewave.charts) bluewave.charts={};
             Object.keys(mapConfig).forEach(val=>{
                 chartConfig[val] = mapConfig[val]? mapConfig[val]:null;
             });
-            panel.title.innerHTML = mapConfig.chartTitle;
+            panel.title.innerHTML = (mapConfig.chartTitle || "Untitled");
         }
         inputData = inputs;
         createOptions();
