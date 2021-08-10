@@ -644,7 +644,7 @@ li.tree-node:hover {
 
 
 .drawflow .drawflow-node {
-    background-color: rgb(141, 23, 23);
+    background-color: #fff;
     border: 1px solid #cacaca;
     -webkit-box-shadow: 0 2px 15px 2px #cacaca;
     box-shadow: 0 2px 15px 2px #cacaca;
