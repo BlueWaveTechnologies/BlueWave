@@ -155,7 +155,7 @@ bluewave.ChartEditor = function(parent, config) {
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
             });
-            panel.title.innerHTML = config.chartTitle;
+            panel.title.innerHTML = (config.chartTitle || "Untitled");
         }
         chartConfig.chartType = nodeType;
         createDropDown(optionsDiv);
