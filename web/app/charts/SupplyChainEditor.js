@@ -347,8 +347,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             save(data, function(companyID, facilityID, productID, notes){
                                 var node = nodeEditor.node;
                                 node.name = companyName;
-                                node.facilityName = facilityName;
-                                node.productName = productName;
                                 node.companyID = companyID;
                                 node.facilityID = facilityID;
                                 node.productID = productID;
