@@ -348,8 +348,7 @@ public class SupplyChainService extends WebService {
             "OPTIONAL MATCH (f)-[:source]->(n)\n" +
             "RETURN id(f) as id, " +
             "properties(f) as facility, " +
-            "properties(n) as registration, " +
-            "o.owner_operator_number as owner_operator_number";
+            "properties(n) as registration";
 
             
             Result rs = session.run(query);
