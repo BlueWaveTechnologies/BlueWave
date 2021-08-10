@@ -353,9 +353,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 node.childNodes[1].getElementsByTagName("span")[0].innerHTML = facilityName;
                                 node.childNodes[2].getElementsByTagName("span")[0].innerHTML = productName;
-
-                                // document.getElementById(id).style.property = new style
-
                                 nodeEditor.close();
                                 me.onSave();
                             });
@@ -897,45 +894,28 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
-        console.log(`inner title is ${title.innerHTML}`);
         div.appendChild(title);
 
         // product name to overlay
         var product_name = document.createElement("div");
         product_name.className = "drawflow-node-product-name";
-        //log if this starts with the defined details
-        if (String(node.productID) === "undefined") {
-        console.log("product id is undefined")
-        // when this is undefined we should hide the field
-        }
-        else {
-            console.log("else")
-
-        }
-        // <span id="Logo" style="display:none;"></span>
-
-        product_name.innerHTML = "<span>" + node.productID + "</span>";
+        product_name.innerHTML = "<span>" + node.productName + "</span>";
         div.appendChild(product_name);
 
-        // factory location to overlay
-        var factory_location = document.createElement("div");
-        factory_location.className = "drawflow-node-factory-location";
-        factory_location.innerHTML = "<span>" + node.facilityID + "</span>";
-        console.log(`inner factory_location is ${node.facilityID}`);
-        div.appendChild(factory_location);
+        // facility to overlay
+        var facility_name = document.createElement("div");
+        facility_name.className = "drawflow-node-facility-name";
+        facility_name.innerHTML = "<span>" + node.facilityName + "</span>";
+        div.appendChild(facility_name);
 
         var body = document.createElement("div");
         body.className = "drawflow-node-body";
-        // add new body element to this object
-
         var content = node.content;
         if (content){
             if (typeof content === "string"){
-                console.log("content is string")
                 body.innerHTML = content;
             }
             else{
-                console.log("appending child")
                 body.appendChild(content);
             }
         }
