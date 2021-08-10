@@ -8,6 +8,9 @@ bluewave.utils = {
   /** Used to execute http GET requests and generate json from the response
    */
     get: function(url, config){
+        console.log(`url called for ${url}`)
+        console.log(`our config is reading ${JSON.stringify(config,null,2)}`)
+        console.log(config)
         var get = javaxt.dhtml.utils.get;
         get(url,{
             success: function(response){
@@ -53,6 +56,11 @@ bluewave.utils = {
    *  If reunning as a service, returns data from the REST endpoint.
    */
     getData: function(name, callback){
+        console.log("running get data function")
+        console.log(name)
+        console.log("the name element shoudl be above ^^")
+        console.log(callback)
+        console.log("the callback element shoudl be above ^^")
         if (!bluewave.data) bluewave.data = {};
 
         var url = "data/" + name;
@@ -97,7 +105,7 @@ bluewave.utils = {
   //** addOverflow
   //**************************************************************************
     addOverflow: function(parent, config){
-
+        console.log(`add overflow called for parent ${parent}`)
       //Set default config options
         var defaultConfig = {
             style: {
@@ -208,6 +216,7 @@ bluewave.utils = {
   /** Used to display a warning/error message over a given form field.
    */
     warn: function(msg, field){
+        console.log(`warn function called for ${msg}`);
         var tr = field.row;
         var td;
         if (tr){

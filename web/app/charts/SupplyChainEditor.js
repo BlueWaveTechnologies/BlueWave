@@ -347,12 +347,15 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                             save(data, function(companyID, facilityID, productID, notes){
                                 var node = nodeEditor.node;
                                 node.name = companyName;
+                                node.facilityName = facilityName;
+                                node.productName = productName;
                                 node.companyID = companyID;
                                 node.facilityID = facilityID;
                                 node.productID = productID;
                                 node.notes = notes;
                                 node.country = data.country.country;
                                 node.state = data.country.state;
+
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 node.childNodes[1].getElementsByTagName("span")[0].innerHTML = facilityName;
                                 node.childNodes[2].getElementsByTagName("span")[0].innerHTML = productName;
@@ -901,12 +904,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         // product name to overlay
         var product_name = document.createElement("div");
+        product_name.style.display = "none";
         product_name.className = "drawflow-node-product-name";
         product_name.innerHTML = "<span>" + node.productName + "</span>";
         div.appendChild(product_name);
 
         // facility to overlay
         var facility_name = document.createElement("div");
+        facility_name.style.display = "none";
         facility_name.className = "drawflow-node-facility-name";
         facility_name.innerHTML = "<span>" + node.facilityName + "</span>";
         div.appendChild(facility_name);
@@ -927,9 +932,68 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         return div;
     };
 
-
+ //**************************************************************************
+  //** updateDrawflowNode
+  //**************************************************************************
+    
     var updateDrawflowNode = function(node){
+        console.log("logging our node");
         console.log(node);
+        console.log(node.productName);
+        console.log(node.productID)
+        console.log(node.facilityID);
+        try {console.log(data)}
+        catch {console.log("no data")}
+        var div = document.createElement("div");
+
+
+        if (node.productName) console.log("we got a product name here")
+        else console.log("no product name here")
+
+
+        // add the additional bars when there is a product ID, to support the ID
+        if (node.productID) {
+            console.log("we got a product id here!")
+            // product name to overlay
+            var product_name = document.createElement("div");
+            product_name.className = "drawflow-node-product-name";
+            product_name.innerHTML = "<span>" + node.productName + "</span>";
+            // if (node.productName) product_name.style.display = "initial";
+            // else product_name.style.display = "none";
+            if (node.productName) product_name.style.display = "initial";
+            else product_name.style.display = "none";
+            div.appendChild(product_name);
+
+        }
+        // Skip posting the information field when it is not there
+        else console.log("no product id here!")
+        // add the additional bars when there is a product ID, to support the ID
+        if (node.facilityID) {
+            console.log("we got a facility id here!")
+            // facility to overlay
+            var facility_name = document.createElement("div");
+            // if (node.facilityName) facility_name.style.display = "initial";
+            // else facility_name.style.display = "none";
+            if (node.facilityName) facility_name.style.display = "initial";
+            else facility_name.style.display = "none";
+            facility_name.className = "drawflow-node-facility-name";
+            facility_name.innerHTML = "<span>" + node.facilityName + "</span>";
+            div.appendChild(facility_name);
+        
+        
+
+        }
+        
+        // Skip posting the information field when it is not there
+        else console.log("no facility id here!")
+
+
+
+
+
+
+        return div;
+
     };
 
 
