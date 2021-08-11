@@ -82,7 +82,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             if (!window.x_int) window.x_int, window.x_int = 0
             window.x_int = window.x_int + 1
             console.log(`update drawflownode called ${x_int}`)
-            updateDrawflowNode(node);
+            newNode = updateDrawflowNode(node);
+            return newNode;
         };
     };
 

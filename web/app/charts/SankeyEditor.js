@@ -275,6 +275,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var drawflowNode = drawflow.getNodeFromId(nodeID);
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
+                console.log("found something to log");
+                console.log(drawflowNode.html);
                 var node = document.getElementById(temp.childNodes[0].id);
                 console.log("our props are")
                 console.log(props)
@@ -292,12 +294,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
               //Add inputs
                 node.inputs = {};
-                console.log("logging inputs for this")
-                console.log(drawflowNode.inputs);
-                console.log("1a ^^^")
                 for (var key in drawflowNode.inputs) {
-                    console.log(key)
-                    console.log("key should be above")
                     if (drawflowNode.inputs.hasOwnProperty(key)){
                         var connections = drawflowNode.inputs[key].connections;
                         for (var i in connections){
@@ -309,15 +306,29 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     }
                 }
 
-                console.log("our nodes variable is ")
+                console.log("our nodes variable is ");
                 console.log(node);
-              //Update nodes variable
+                console.log("node should be above ^^");
+                //Update nodes variable
                 nodes[nodeID] = node;
+                console.log("logging the nodes node id");
+                console.log(nodes[nodeID]);
+                console.log("this should be after");
+                console.log("logging all nodes")
+                console.log(nodes);
+                console.log("after the nodes log")
 
 
+                console.log("logging me object")
+                console.log(me)
+                console.log("logged me object ^^")
               //Fire event
-                me.onNodeImport(node);
+              new_node = me.onNodeImport(node);
+              console.log("new node here.")
+              console.log(new_node)
+              console.log("new node above ^^")
 
+                
             }
         }
 
