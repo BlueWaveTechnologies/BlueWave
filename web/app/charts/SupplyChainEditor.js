@@ -45,6 +45,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
+        console.log("loading the init line 48")
 
       //Clone the config so we don't modify the original config object
         var clone = {};
@@ -63,10 +64,12 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         
 
         config.renderers = {
-            drawflowNodes: createDrawflowNode
+            drawflowNodes: createDrawflowNode, updateDrawflowNode
         };
 
+
         sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
+        console.log("created new sankey")
         sankeyEditor.getNodeEditor = getNodeEditor;
         sankeyEditor.onChange = function(){
             me.onChange();
@@ -75,6 +78,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             showMenu(node);
         };
         sankeyEditor.onNodeImport = function(node){
+            // using global x_int variable
+            if (!window.x_int) window.x_int, window.x_int = 0
+            window.x_int = window.x_int + 1
+            console.log(`update drawflownode called ${x_int}`)
             updateDrawflowNode(node);
         };
     };
@@ -935,66 +942,65 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //**************************************************************************
     
     var updateDrawflowNode = function(node){
-        console.log("logging our node");
-        console.log(node);
-        console.log(node.productName);
-        console.log(node.productID)
-        console.log(node.facilityID);
-        try {console.log(data)}
-        catch {console.log("no data")}
+        // console.log(node.productID);
+        // console.log(node.facilityID);
         var div = document.createElement("div");
 
+        // title to overlay
+        var title = document.createElement("div");
+        title.className = "drawflow-node-title";
+        title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
+        div.appendChild(title);
 
-        if (node.productName) console.log("we got a product name here")
-        else console.log("no product name here")
+        // product name to overlay
+        var product_name = document.createElement("div");
+        product_name.className = "drawflow-node-product-name";
+        if (String(node.productID) !== "undefined"){
+            get("SupplyChain/Product?id="+node.productID, {
+                success: function(arr){
+                    obj = JSON.parse(JSON.stringify(arr));
+                    // console.log(`our product name is ${obj.name}`)
+                    loaded_product_name = obj.name;
+                    product_name.innerHTML = "<span>" + loaded_product_name + "</span>";
+                    div.appendChild(product_name);
 
-
-        // add the additional bars when there is a product ID, to support the ID
-        if (node.productID) {
-            console.log("we got a product id here!")
-            // product name to overlay
-            var product_name = document.createElement("div");
-            product_name.className = "drawflow-node-product-name";
-            product_name.innerHTML = "<span>" + node.productName + "</span>";
-            // if (node.productName) product_name.style.display = "initial";
-            // else product_name.style.display = "none";
-            if (node.productName) product_name.style.display = "initial";
-            else product_name.style.display = "none";
-            div.appendChild(product_name);
-
+                }
+            })
         }
-        // Skip posting the information field when it is not there
-        else console.log("no product id here!")
-        // add the additional bars when there is a product ID, to support the ID
-        if (node.facilityID) {
-            console.log("we got a facility id here!")
-            // facility to overlay
-            var facility_name = document.createElement("div");
-            // if (node.facilityName) facility_name.style.display = "initial";
-            // else facility_name.style.display = "none";
-            if (node.facilityName) facility_name.style.display = "initial";
-            else facility_name.style.display = "none";
-            facility_name.className = "drawflow-node-facility-name";
-            facility_name.innerHTML = "<span>" + node.facilityName + "</span>";
-            div.appendChild(facility_name);
-        
-        
 
+        // facility to overlay
+        var facility_name = document.createElement("div");
+        // facility_name.style.display = "none";
+        facility_name.className = "drawflow-node-facility-name";
+        if (String(node.facilityID) !== "undefined"){
+            get("SupplyChain/Facility?id="+node.facilityID, {
+                success: function(arr){
+                    obj = JSON.parse(JSON.stringify(arr));
+                    // console.log(`our facility name is ${obj.name}`)
+                    loaded_facility_name = obj.name;
+                    facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
+                    div.appendChild(facility_name);                    
+                }
+            })
         }
-        
-        // Skip posting the information field when it is not there
-        else console.log("no facility id here!")
+        // facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
+        // div.appendChild(facility_name);
 
+        var body = document.createElement("div");
+        body.className = "drawflow-node-body";
+        var content = node.content;
+        if (content){
+            if (typeof content === "string"){
+                body.innerHTML = content;
+            }
+            else{
+                body.appendChild(content);
+            }
+        }
 
-
-
-
-
+        div.appendChild(body);
         return div;
-
     };
-
-
   //**************************************************************************
   //** showMenu
   //**************************************************************************

@@ -10,7 +10,7 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.SankeyEditor = function(parent, config) {
-
+    console.log("this was called.")
     var me = this;
     var defaultConfig = {
         margin: { top: 10, right: 10, bottom: 10, left: 10 },
@@ -183,7 +183,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     this.update = function(sankeyConfig, inputs){
         me.clear();
-        
+        console.log("update function called sankey 186")
         if (!sankeyConfig) sankeyConfig = {};
 
 
@@ -262,10 +262,13 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             };
             drawflow.import(data);
         }
-
+        console.log("update function called in sankey")
 
       //Update nodes
         for (var nodeID in sankeyConfig.nodes) {
+            console.log("specific update node is called")
+            console.log(nodeID)
+            console.log("for that node id ^^")
             if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
 
               //Get node (dom object)
@@ -273,7 +276,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-
+                console.log("our props are")
+                console.log(props)
               //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
@@ -288,7 +292,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
               //Add inputs
                 node.inputs = {};
+                console.log("logging inputs for this")
+                console.log(drawflowNode.inputs);
+                console.log("1a ^^^")
                 for (var key in drawflowNode.inputs) {
+                    console.log(key)
+                    console.log("key should be above")
                     if (drawflowNode.inputs.hasOwnProperty(key)){
                         var connections = drawflowNode.inputs[key].connections;
                         for (var i in connections){
@@ -300,7 +309,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     }
                 }
 
-
+                console.log("our nodes variable is ")
+                console.log(node);
               //Update nodes variable
                 nodes[nodeID] = node;
 
