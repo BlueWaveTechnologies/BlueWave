@@ -8,9 +8,6 @@ bluewave.utils = {
   /** Used to execute http GET requests and generate json from the response
    */
     get: function(url, config){
-        console.log(`url called for ${url}`)
-        console.log(`our config is reading ${JSON.stringify(config,null,2)}`)
-        console.log(config)
         var get = javaxt.dhtml.utils.get;
         get(url,{
             success: function(response){
