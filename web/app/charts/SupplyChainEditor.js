@@ -77,12 +77,12 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         sankeyEditor.onContextMenu = function(node){
             showMenu(node);
         };
-        sankeyEditor.onNodeImport = function(node){
+        sankeyEditor.onNodeImport = function(node,node_div_id,props){
             // using global x_int variable
             if (!window.x_int) window.x_int, window.x_int = 0
             window.x_int = window.x_int + 1
             console.log(`update drawflownode called ${x_int}`)
-            newNode = updateDrawflowNode(node);
+            newNode = updateDrawflowNode(node,node_div_id,props,icon_class);
             return newNode;
         };
     };
@@ -365,6 +365,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 node.childNodes[1].getElementsByTagName("span")[0].innerHTML = facilityName;
                                 node.childNodes[2].getElementsByTagName("span")[0].innerHTML = productName;
+                                
                                 nodeEditor.close();
                                 me.onSave();
                             });
@@ -942,50 +943,116 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** updateDrawflowNode
   //**************************************************************************
     
-    var updateDrawflowNode = function(node){
+    var updateDrawflowNode = async function(node,node_div_id,props,icon_class){
+        // console.log(`got node div id line 947 ${node_div_id}`);
         // console.log(node.productID);
         // console.log(node.facilityID);
-        var div = document.createElement("div");
+        if (String(node_div_id)==="undefined"){
+            // bug where this can get passed undefined node_div_ids
+            // temporary (patch) bypass
+            return
+
+        }
+        else {
+            var div = document.createElement("div");
+            div.id = node_div_id;
+        }
+
+        console.log(`got node div id line 947 ${node_div_id}`);
+        console.log("passed this node below1")
+        console.log(node)
+        console.log("props are below")
+        console.log(props)
+        console.log("seperate thing")
+        console.log("we have our title  "+ props.name)
+
 
         // title to overlay
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
-        title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
+        title.innerHTML = "<i class=\"" + icon_class + "\"></i><span>" + props.name + "</span>";
         div.appendChild(title);
 
+
+
+
+        if (String(props.facilityID)!=="undefined"){
+            // base log
+            console.log("we have our facilityID  "+ props.facilityID)
+            // get facility name from db
+            // facility to overlay
+            var facility_name = document.createElement("div");
+            // facility_name.style.display = "none";
+            facility_name.className = "drawflow-node-facility-name";
+                get("SupplyChain/Facility?id="+props.facilityID, {
+                    success: function(arr){
+                        obj = JSON.parse(JSON.stringify(arr));
+                        console.log(`our facility name is ${obj.name}`)
+                        loaded_facility_name = obj.name;
+                        facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
+                        div.appendChild(facility_name);    
+                        console.log("things are good here")                
+                    }
+                })
+            
+            // add productid div to the node
+
+        }
+        else console.log("no facility id here")
         // product name to overlay
+        // declare base product div
         var product_name = document.createElement("div");
         product_name.className = "drawflow-node-product-name";
-        if (String(node.productID) !== "undefined"){
-            get("SupplyChain/Product?id="+node.productID, {
+       
+       
+        // update node - product name
+        if (String(props.productID)!=="undefined"){
+            get("SupplyChain/Product?id="+props.productID, {
                 success: function(arr){
                     obj = JSON.parse(JSON.stringify(arr));
-                    // console.log(`our product name is ${obj.name}`)
+                    console.log(`our product name is ${obj.name}`)
                     loaded_product_name = obj.name;
-                    product_name.innerHTML = "<span>" + loaded_product_name + "</span>";
-                    div.appendChild(product_name);
-
                 }
             })
+            // set element as visible
+            product_name.style.display = "initial";
+            product_name.innerHTML = "<span>" + loaded_product_name + "</span>";
+            div.appendChild(product_name);
+        }
+
+        else {
+            // set element as invisible
+            product_name.style.dislay = "none";
+            product_name.innerHTML = "<span>" + "undefined" + "</span>";
+            div.appendChild(product_name)
         }
 
         // facility to overlay
+        // declare base div
         var facility_name = document.createElement("div");
-        // facility_name.style.display = "none";
         facility_name.className = "drawflow-node-facility-name";
+
+        // update node - facility name
         if (String(node.facilityID) !== "undefined"){
-            get("SupplyChain/Facility?id="+node.facilityID, {
+            get("SupplyChain/Facility?id="+props.facilityID, {
                 success: function(arr){
                     obj = JSON.parse(JSON.stringify(arr));
-                    // console.log(`our facility name is ${obj.name}`)
+                    console.log(`our facility name is ${obj.name}`)
                     loaded_facility_name = obj.name;
-                    facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
-                    div.appendChild(facility_name);                    
                 }
             })
+            // set element as visible
+            facility_name.style.display = "initial";
+            facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
+            div.appendChild(facility_name);    
         }
-        // facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
-        // div.appendChild(facility_name);
+        else{
+            // set element as invisible
+            facility_name.style.dislay = "none";
+            facility_name.innerHTML = "<span>" + "undefined" + "</span>";
+            div.appendChild(facility_name);
+        }
+
 
         var body = document.createElement("div");
         body.className = "drawflow-node-body";
@@ -1000,6 +1067,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         }
 
         div.appendChild(body);
+        console.log("our rewritten, resulting div is")
+        console.log(div)
         return div;
     };
   //**************************************************************************
