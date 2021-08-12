@@ -22,6 +22,70 @@ public class Maintenance {
 
 
   //**************************************************************************
+  //** createUser
+  //**************************************************************************
+  /** Used to create a new user account in the graph database
+   */
+    public static void createUser(String username, String password, Neo4J graph) throws Exception {
+        String cmd = "CREATE USER " + username + " IF NOT EXISTS SET PASSWORD '" + password + "'";
+        try{
+            execute(cmd, graph);
+            console.log("Successfully created user: " + cmd);
+        }
+        catch(Exception e){
+            throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** deleteUser
+  //**************************************************************************
+  /** Used to delete a user account in the graph database
+   */
+    public static void deleteUser(String username, Neo4J graph) throws Exception{
+        String cmd = "DROP USER " + username + " IF EXISTS";
+        try{
+            execute(cmd, graph);
+            console.log("Successfully deleted user: " + cmd);
+        }
+        catch(Exception e){
+            throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** setUserRole
+  //**************************************************************************
+    public static void setRole(String username, String role, Neo4J graph) throws Exception{
+        String cmd = "GRANT ROLE " + role + " TO " + username;
+        try{
+            execute(cmd, graph);
+            console.log("Successfully updated user: " + cmd);
+        }
+        catch(Exception e){
+            throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** setPassword
+  //**************************************************************************
+    public static void setPassword(String username, String password, Neo4J graph) throws Exception{
+        String cmd = "ALTER USER " + username + " IF EXISTS SET PASSWORD '" + password + "'";
+        try{
+            execute(cmd, graph);
+            console.log("Successfully updated user: " + cmd);
+        }
+        catch(Exception e){
+            throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
   //** createIndex
   //**************************************************************************
   /** Used to create an index for a property on a node
@@ -29,22 +93,35 @@ public class Maintenance {
     public static void createIndex(String nodeName, String columnName, Neo4J graph) throws Exception {
 
         String indexName = "idx_" + nodeName + "_" + columnName;
-        Session session = null;
         try{
-            session = graph.getSession();
             String cmd = "CREATE INDEX " + indexName + " IF NOT EXISTS FOR (n:" + nodeName + ") ON (";
             cmd += "n." + columnName;
             cmd += ")";
+            execute(cmd, graph);
+            console.log("Successfully created index: " + indexName);
+        }
+        catch(Exception e){
+            throw e;
+        }
+    }
+
+    
+  //**************************************************************************
+  //** execute
+  //**************************************************************************
+    private static void execute(String cmd, Neo4J graph) throws Exception {
+        Session session = null;
+        try{
+            session = graph.getSession();
             session.run(cmd);
             session.close();
-            console.log("Successfully created index: " + indexName);
         }
         catch(Exception e){
             if (session!=null) session.close();
             throw e;
         }
     }
-
+    
 
   //**************************************************************************
   //** deleteNodes
