@@ -45,7 +45,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-        console.log("loading the init line 48")
 
       //Clone the config so we don't modify the original config object
         var clone = {};
@@ -69,7 +68,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
         sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
-        console.log("created new sankey")
         sankeyEditor.getNodeEditor = getNodeEditor;
         sankeyEditor.onChange = function(){
             me.onChange();
@@ -77,11 +75,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         sankeyEditor.onContextMenu = function(node){
             showMenu(node);
         };
+        // function connected to sankeyEditor - generate updated nodes for rendering
         sankeyEditor.onNodeImport = function(node,node_div_id,props){
-            // using global x_int variable
-            if (!window.x_int) window.x_int, window.x_int = 0
-            window.x_int = window.x_int + 1
-            console.log(`update drawflownode called ${x_int}`)
             newNode = updateDrawflowNode(node,node_div_id,props,icon_class);
             return newNode;
         };
@@ -956,14 +951,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             div.id = node_div_id;
         }
 
-        console.log(`got node div id line 947 ${node_div_id}`);
-        console.log("passed this node below1")
-        console.log(node)
-        console.log("props are below")
-        console.log(props)
-        console.log("seperate thing")
-        console.log("we have our title  "+ props.name)
-
         ////////////////////////////////////////////// Title ////////////////////////////////
         // title to overlay
         var title = document.createElement("div");
@@ -1024,7 +1011,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             // set element as invisible - no data
             facility_name.style.display = "none";
             console.log("reading our display status is " + facility_name.style.display)
-            facility_name.style.visibility = "hidden";
 
             facility_name.innerHTML = "<span>" + "undefined" + "</span>";
             div.appendChild(facility_name);
@@ -1033,7 +1019,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         ////////////////////////////////////////////// Body/icon ////////////////////////////////
         var body = document.createElement("div");
         body.className = "drawflow-node-body";
-        var content = node.content;
+        // temporarily replace node.content with base icon
+        // var content = node.content;
+        var content = "<i class=\"" + icon_class + "\"></i>"
+
         if (content){
             if (typeof content === "string"){
                 body.innerHTML = content;

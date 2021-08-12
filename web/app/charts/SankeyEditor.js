@@ -304,8 +304,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 // add logic for replacing this node
                 // we need to pass the node id
                 node_div_id = temp.childNodes[0].id
-                console.log(temp.childNodes[0].id)
-                console.log("nodeid logged above")
+
 
                 
                 
@@ -320,38 +319,15 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
 
                 // get icon class of this div
-                console.log("icon for our node is")
-                console.log(document.getElementById(temp.childNodes[0].id).getElementsByClassName("drawflow-node-title")[0].getElementsByTagName("i")[0].className)
                 icon_class = document.getElementById(temp.childNodes[0].id).getElementsByClassName("drawflow-node-title")[0].getElementsByTagName("i")[0].className;
-                console.log("^^")
-                // pass node_div_id so we can replace it
+               
+                // pass node_div_ID, props, icon_class and node to SupplyChainEditor update function
+                // return updated node
                 new_node = me.onNodeImport(node,node_div_id,props,icon_class);
                 console.log("new node could be ")
                 console.log(new_node)
                 console.log("^^^^^")
 //////////////////////////////////////////////////////////////////////////
-                // console.log("our props are")
-                // console.log(props)
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
               //Add event listeners
                 addEventListeners(node);
@@ -378,9 +354,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 console.log("logging the nodes node id");
                 console.log(nodes[nodeID]);
                 console.log("this should be after");
-                // console.log("logging all nodes")
-                // console.log(nodes);
-                // console.log("after the nodes log")
+                console.log("logging all nodes")
+                console.log(nodes);
+                console.log("after the nodes log")
 
 
                 // console.log("logging me object")
