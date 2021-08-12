@@ -206,9 +206,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
       //Set view
         toggleButton.setValue("Edit");
 
-        console.log("inputs could be something")
-        console.log(inputs)
-        console.log("^^")
       //Special case when inputs are present (e.g. from SupplyChain editor)
         if (inputs && inputs.length){
            
@@ -293,12 +290,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var drawflowNode = drawflow.getNodeFromId(nodeID);
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
-                console.log("found something to log");
-                console.log(drawflowNode.html);
                 var node = document.getElementById(temp.childNodes[0].id);
-                console.log("current node is");
-                console.log(node)
-                console.log("node above ^^");
+
                 
                 
                 // add logic for replacing this node
@@ -318,15 +311,28 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     }
                 }
 
+                console.log("current node is")
+                console.log(node)
+
                 // get icon class of this div
                 icon_class = document.getElementById(temp.childNodes[0].id).getElementsByClassName("drawflow-node-title")[0].getElementsByTagName("i")[0].className;
-               
+                current_body = document.getElementById(temp.childNodes[0].id).getElementsByClassName("drawflow-node-body")[0];
+                console.log("current body is1")
+                console.log(current_body)
                 // pass node_div_ID, props, icon_class and node to SupplyChainEditor update function
                 // return updated node
-                new_node = me.onNodeImport(node,node_div_id,props,icon_class);
+                new_node = me.onNodeImport(node,node_div_id,props,icon_class,current_body);
                 console.log("new node could be ")
                 console.log(new_node)
                 console.log("^^^^^")
+
+
+
+
+
+
+
+
 //////////////////////////////////////////////////////////////////////////
 
               //Add event listeners
@@ -345,28 +351,15 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         }
                     }
                 }
-
-                console.log("our nodes variable is ");
-                console.log(node);
-                console.log("node should be above ^^");
-                //Update nodes variable
+              //Update nodes variable
                 nodes[nodeID] = node;
-                console.log("logging the nodes node id");
-                console.log(nodes[nodeID]);
-                console.log("this should be after");
-                console.log("logging all nodes")
-                console.log(nodes);
-                console.log("after the nodes log")
 
 
-                // console.log("logging me object")
-                // console.log(me)
-                // console.log("logged me object ^^")
+
+
               //Fire event
-              new_node = me.onNodeImport(node);
-              console.log("new node here.")
-              console.log(new_node)
-              console.log("new node above ^^")
+                new_node = me.onNodeImport(node);
+
 
                 
             }

@@ -76,8 +76,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             showMenu(node);
         };
         // function connected to sankeyEditor - generate updated nodes for rendering
-        sankeyEditor.onNodeImport = function(node,node_div_id,props){
-            newNode = updateDrawflowNode(node,node_div_id,props,icon_class);
+        sankeyEditor.onNodeImport = function(node,node_div_id,props,icon_class,current_body){
+            newNode = updateDrawflowNode(node,node_div_id,props,icon_class,current_body);
             return newNode;
         };
     };
@@ -921,6 +921,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         var body = document.createElement("div");
         body.className = "drawflow-node-body";
         var content = node.content;
+        console.log("our content for a newly created node is")
+        console.log(content)
         if (content){
             if (typeof content === "string"){
                 body.innerHTML = content;
@@ -931,6 +933,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         }
 
         div.appendChild(body);
+        console.log("our newly written div is")
+        console.log(div)
         return div;
     };
 
@@ -938,7 +942,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** updateDrawflowNode
   //**************************************************************************
     // async function for synchronous processing (waiting for database response) and access to await command
-    var updateDrawflowNode = async function(node,node_div_id,props,icon_class){
+    var updateDrawflowNode = async function(node,node_div_id,props,icon_class,current_body){
 
         if (String(node_div_id)==="undefined"){
             // bug where this can get passed undefined node_div_ids
@@ -972,12 +976,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     obj = JSON.parse(JSON.stringify(arr));
                     console.log(`our product name is ${obj.name}`)
                     loaded_product_name = obj.name;
+
+                   // set element as visible - data
+                    product_name.style.display = "initial";
+                    product_name.innerHTML = "<span>" + loaded_product_name + "</span>";
+                    div.appendChild(product_name);
                 }
             })
-            // set element as visible - data
-            product_name.style.display = "initial";
-            product_name.innerHTML = "<span>" + loaded_product_name + "</span>";
-            div.appendChild(product_name);
+         
         }
 
         else {
@@ -1000,12 +1006,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     obj = JSON.parse(JSON.stringify(arr));
                     console.log(`our facility name is ${obj.name}`)
                     loaded_facility_name = obj.name;
+                    // set element as visible - data
+                    facility_name.style.display = "initial";
+                    facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
+                    div.appendChild(facility_name); 
                 }
             })
-            // set element as visible - data
-            facility_name.style.display = "initial";
-            facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
-            div.appendChild(facility_name);    
+
+   
         }
         else{
             // set element as invisible - no data
@@ -1019,9 +1027,13 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         ////////////////////////////////////////////// Body/icon ////////////////////////////////
         var body = document.createElement("div");
         body.className = "drawflow-node-body";
-        // temporarily replace node.content with base icon
+        // temporarily replace node.content with body of replaced node
         // var content = node.content;
-        var content = "<i class=\"" + icon_class + "\"></i>"
+        var content = current_body
+        console.log(JSON.stringify(content,null,2));
+        console.log("content logged above")
+        // content = '<i class="fas fa-fill-drip"></i>'
+        content = '<i class="fas fa-fill-drip">::before</i>'
 
         if (content){
             if (typeof content === "string"){
