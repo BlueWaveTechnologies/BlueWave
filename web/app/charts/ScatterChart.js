@@ -20,7 +20,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, scatterArea;
+    var svg, scatterArea, line, regression;
         var xAxis, yAxis;
         var axisWidth, axisHeight;
         var x, y, xBand, yBand;
@@ -53,7 +53,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        scatterArea.selectAll("*").remove();
+        if (scatterArea) scatterArea.selectAll("*").remove();
     };
 
 
@@ -104,7 +104,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 yKey2 = chartConfig.yAxis2;
             }
 
-
             var data1 = data[0];
             var data2 = data[1];
             data = data1;
@@ -112,35 +111,82 @@ bluewave.charts.ScatterChart = function(parent, config) {
             if (data2!==null && data2!==undefined && xKey2 && yKey2){
                 data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
             }
-                let xType = typeOfAxisValue();
+               let xType = typeOfAxisValue();
 
-                var scatterData = d3.nest()
-                    .key(function(d){return d[xKey];})
-                    .rollup(function(d){
-                        return d3.sum(d,function(g){
-                            return g[yKey];
-                        });
-                }).entries(data);
+               displayAxis(xKey, yKey, data);
 
-               displayAxis("key","value",scatterData);
+               var tooltip = d3.select(parent)
+                 .append("div")
+                 .style("opacity", 0)
+                 .attr("class", "tooltip")
+                 .style("background-color", "white")
+                 .style("border", "solid")
+                 .style("border-width", "1px")
+                 .style("border-radius", "5px")
+                 .style("padding", "10px")
 
-               let keyType = typeOfAxisValue(scatterData[0].key);
+               var mouseover = function(d) {
+                  tooltip
+                  .style("opacity", 1)
+               }
+
+               var mousemove = function(d) {
+                  tooltip
+                  .html("X: " + d[xKey]+ "     Y: " + d[yKey])
+                  .style("left", (d3.mouse(this)[0]+90) + "px")
+                  .style("top", (d3.mouse(this)[1]) + "px")
+               }
+
+               var mouseleave = function(d) {
+                  tooltip
+                  .transition()
+                  .duration(200)
+                  .style("opacity", 0)
+               }
+
+               let keyType = typeOfAxisValue(data[0].xKey);
                scatterArea
                    .selectAll("dot")
-                   .data(scatterData)
+                   .data(data)
                    .enter()
                    .append("circle")
                       .attr("cx", function (d) {
                       if(keyType==="date"){
-                        return x(new Date(d.key));
+                        return x(new Date(d[xKey]));
                       } else{
-                        return x(d.key);
+                        return x(d[xKey]);
                       }})
-                      .attr("cy", function (d) { return y(d["value"]); } )
+                      .attr("cy", function (d) { return y(d[yKey]); } )
                       .attr("r", 7)
                       .style("fill", "#12b84c")
                       .style("opacity", 0.3)
-                      .style("stroke", "white");
+                      .style("stroke", "white")
+                      .on("mouseover", mouseover)
+                      .on("mousemove", mousemove)
+                      .on("mouseleave", mouseleave);
+
+
+            var linReg = calculateLinReg(data, xKey, yKey, d3.min(data, function(d) {return d[xKey]}), d3.min(data, function(d) { return d[yKey]}));
+
+            let xTemps = createAxisScale(xKey, 'x', data);
+            let xScale = xTemps.scale;
+            let yTemps = createAxisScale(yKey, 'y', data);
+            let yScale = yTemps.scale;
+
+            line = d3.line()
+            .x(function(d) { return xScale(d[0])})
+            .y(function(d) { return yScale(d[1])});
+
+            if (chartConfig.showRegLine) {
+            	 scatterArea.append("path")
+                      .datum(linReg)
+                      .attr("class", "line")
+                      .attr("d", line)
+                      .attr("stroke", function(d) { return "#000000"; })
+                      .attr("stroke-linecap", 'round')
+                      .attr("stroke-width", 500);
+
+            }
 
         });
     };
@@ -178,13 +224,13 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //** displayAxis
   //**************************************************************************
     var displayAxis = function(xKey,yKey,chartData){
-        let axisTemp = createAxisScale(xKey,'x',chartData);
-        x = axisTemp.scale;
-        xBand = axisTemp.band;
+        let xAxisTemp = createAxisScale(xKey,'x',chartData);
+        x = xAxisTemp.scale;
+        xBand = xAxisTemp.band;
 
-        axisTemp = createAxisScale(yKey,'y',chartData);
-        y = axisTemp.scale;
-        yBand = axisTemp.band;
+        let yAxisTemp = createAxisScale(yKey,'y',chartData);
+        y = yAxisTemp.scale;
+        yBand = yAxisTemp.band;
 
 
         if (xAxis) xAxis.selectAll("*").remove();
@@ -212,6 +258,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
         let band;
         let type = typeOfAxisValue(chartData[0][key]);
         let max = 0;
+        let min = 0;
         let timeRange;
         let axisRange;
         let axisRangePadded;
@@ -265,9 +312,19 @@ bluewave.charts.ScatterChart = function(parent, config) {
                     }
                 });
 
+                min = max;
+
+                chartData.forEach((val) => {
+                    let curVal = parseFloat(val[key]);
+                    if (curVal < min) {
+                        min = curVal;
+                    }
+                });
+
+
                 scale = d3
                     .scaleLinear()
-                    .domain([0, max])
+                    .domain([min, max])
                     .range(axisRange);
                 break;
         }
@@ -278,10 +335,79 @@ bluewave.charts.ScatterChart = function(parent, config) {
     };
 
   //**************************************************************************
+  //** calculateLinReg
+  //**************************************************************************
+  var calculateLinReg = function(data, xKey, yKey, minX, minY) {
+        // Let n = the number of data points
+        var n = data.length;
+
+        // Get just the points
+        var pts = [];
+        var xAxisData =[];
+        var yAxisData = [];
+
+        data.forEach((val) => {
+          var obj = {};
+          obj.x = parseFloat(val[xKey]);
+          obj.y = parseFloat(val[yKey]);
+          obj.mult = obj.x*obj.y;
+          pts.push(obj);
+
+          xAxisData.push(parseFloat(val[xKey]));
+          yAxisData.push(parseFloat(val[yKey]));
+        });
+
+        var sum_x = 0;
+        var sum_y = 0;
+        var sum_xy = 0;
+        var sum_xx = 0;
+        var count = 0;
+
+
+        var x = 0;
+        var y = 0;
+        var valuesLength = xAxisData.length;
+
+        if (valuesLength != yAxisData.length) {
+            throw new Error('The values in xAxis and yAxis need to have same size!');
+        }
+
+
+        if (valuesLength === 0) {
+            return [ [], [] ];
+        }
+
+        for (var v = 0; v < valuesLength; v++) {
+            x = xAxisData[v];
+            y = yAxisData[v];
+            sum_x += x;
+            sum_y += y;
+            sum_xx += x*x;
+            sum_xy += x*y;
+            count++;
+        }
+
+        var m = (count*sum_xy - sum_x*sum_y) / (count*sum_xx - sum_x*sum_x);
+        var b = (sum_y/count) - (m*sum_x)/count;
+
+        var finalResults = [];
+
+        for (var v = 0; v < valuesLength; v++) {
+            x = xAxisData[v];
+            y = x * m + b;
+            finalResults.push([x, y]);
+        }
+
+        return finalResults;
+  }
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
 
     init();
+
 };
