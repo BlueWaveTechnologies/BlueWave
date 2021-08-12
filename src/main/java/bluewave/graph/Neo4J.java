@@ -55,7 +55,7 @@ public class Neo4J implements AutoCloseable {
   //** setUsername
   //**************************************************************************
     public void setUsername(String username){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         this.username = username;
     }
 
@@ -72,7 +72,7 @@ public class Neo4J implements AutoCloseable {
   //** setPassword
   //**************************************************************************
     public void setPassword(String password){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         this.password = password;
     }
 
@@ -89,7 +89,7 @@ public class Neo4J implements AutoCloseable {
   //** setHost
   //**************************************************************************
     public void setHost(String host){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         if (host.contains(":")){
             String[] arr = host.split(":");
             this.host = arr[0];
@@ -113,7 +113,7 @@ public class Neo4J implements AutoCloseable {
   //** setPort
   //**************************************************************************
     public void setPort(int port){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         this.port = port;
     }
 
@@ -167,7 +167,10 @@ public class Neo4J implements AutoCloseable {
   //**************************************************************************
     @Override
     public void close() throws Exception{
-        if (driver!=null) driver.close();
+        if (driver!=null){ 
+            driver.close();
+            driver = null;
+        }
     }
 
 }
