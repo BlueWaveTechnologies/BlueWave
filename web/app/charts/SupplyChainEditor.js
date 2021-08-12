@@ -942,18 +942,16 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
  //**************************************************************************
   //** updateDrawflowNode
   //**************************************************************************
-    
+    // async function for synchronous processing (waiting for database response) and access to await command
     var updateDrawflowNode = async function(node,node_div_id,props,icon_class){
-        // console.log(`got node div id line 947 ${node_div_id}`);
-        // console.log(node.productID);
-        // console.log(node.facilityID);
+
         if (String(node_div_id)==="undefined"){
             // bug where this can get passed undefined node_div_ids
             // temporary (patch) bypass
             return
-
         }
         else {
+            // set div ID - same ID as replacing div
             var div = document.createElement("div");
             div.id = node_div_id;
         }
@@ -966,39 +964,14 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         console.log("seperate thing")
         console.log("we have our title  "+ props.name)
 
-
+        ////////////////////////////////////////////// Title ////////////////////////////////
         // title to overlay
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + icon_class + "\"></i><span>" + props.name + "</span>";
         div.appendChild(title);
 
-
-
-
-        if (String(props.facilityID)!=="undefined"){
-            // base log
-            console.log("we have our facilityID  "+ props.facilityID)
-            // get facility name from db
-            // facility to overlay
-            var facility_name = document.createElement("div");
-            // facility_name.style.display = "none";
-            facility_name.className = "drawflow-node-facility-name";
-                get("SupplyChain/Facility?id="+props.facilityID, {
-                    success: function(arr){
-                        obj = JSON.parse(JSON.stringify(arr));
-                        console.log(`our facility name is ${obj.name}`)
-                        loaded_facility_name = obj.name;
-                        facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
-                        div.appendChild(facility_name);    
-                        console.log("things are good here")                
-                    }
-                })
-            
-            // add productid div to the node
-
-        }
-        else console.log("no facility id here")
+        ////////////////////////////////////////////// Product name ////////////////////////////////
         // product name to overlay
         // declare base product div
         var product_name = document.createElement("div");
@@ -1014,21 +987,22 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     loaded_product_name = obj.name;
                 }
             })
-            // set element as visible
+            // set element as visible - data
             product_name.style.display = "initial";
             product_name.innerHTML = "<span>" + loaded_product_name + "</span>";
             div.appendChild(product_name);
         }
 
         else {
-            // set element as invisible
-            product_name.style.dislay = "none";
+            // set element as invisible - no data
+            product_name.style.display = "none";
             product_name.innerHTML = "<span>" + "undefined" + "</span>";
             div.appendChild(product_name)
         }
 
+        ////////////////////////////////////////////// Facility name ////////////////////////////////
         // facility to overlay
-        // declare base div
+        // declare base facility div
         var facility_name = document.createElement("div");
         facility_name.className = "drawflow-node-facility-name";
 
@@ -1041,19 +1015,22 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     loaded_facility_name = obj.name;
                 }
             })
-            // set element as visible
+            // set element as visible - data
             facility_name.style.display = "initial";
             facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
             div.appendChild(facility_name);    
         }
         else{
-            // set element as invisible
-            facility_name.style.dislay = "none";
+            // set element as invisible - no data
+            facility_name.style.display = "none";
+            console.log("reading our display status is " + facility_name.style.display)
+            facility_name.style.visibility = "hidden";
+
             facility_name.innerHTML = "<span>" + "undefined" + "</span>";
             div.appendChild(facility_name);
         }
 
-
+        ////////////////////////////////////////////// Body/icon ////////////////////////////////
         var body = document.createElement("div");
         body.className = "drawflow-node-body";
         var content = node.content;
@@ -1069,7 +1046,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         div.appendChild(body);
         console.log("our rewritten, resulting div is")
         console.log(div)
-        return div;
+
+        // wait for all database queries to execute and fill the divs before return
+        return await div;
     };
   //**************************************************************************
   //** showMenu
