@@ -10,7 +10,6 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.SankeyEditor = function(parent, config) {
-    console.log("this was called.")
     var me = this;
     var defaultConfig = {
         margin: { top: 10, right: 10, bottom: 10, left: 10 },
@@ -67,6 +66,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        
       //Clone the config so we don't modify the original config object
         var clone = {};
         merge(clone, config);
@@ -183,6 +183,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     this.update = function(sankeyConfig, inputs){
         me.clear();
 
+        if (!sankeyConfig) sankeyConfig = {};
+
       //Clone the config so we don't modify the original config object
         sankeyConfig = JSON.parse(JSON.stringify(sankeyConfig));
 
@@ -209,17 +211,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
           //Generate data to mimic what we need to generate a sankey using drawflow 
             var input = inputs[0];
             for (var nodeID in input.nodes) {
-                // when the nodes are confirmed.. showing that it has this node in its dataset
                 if (input.nodes.hasOwnProperty(nodeID)){
-                    // select node
                     var node = input.nodes[nodeID];
-                    // set node inputs to empty
                     node.inputs = {};
-                    // restore the node
                     nodes[nodeID] = node;
                 }
             }
-            // node connections logic
             for (var linkID in input.links) {
                 if (input.links.hasOwnProperty(linkID)){
                     var link = input.links[linkID];
@@ -267,14 +264,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         for (var nodeID in sankeyConfig.nodes) {
             if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
 
-
               //Get node (dom object)
                 var drawflowNode = drawflow.getNodeFromId(nodeID);
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
 
-                //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
                     if (props.hasOwnProperty(key)){
@@ -299,6 +294,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         }
                     }
                 }
+
+
               //Update nodes variable
                 nodes[nodeID] = node;
 
@@ -306,7 +303,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
               //Fire event
-                me.onNodeImport(node);
+                me.onNodeImport(node,props);
 
 
                 
@@ -871,7 +868,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     if (nodes.hasOwnProperty(key)){
                         var node = nodes[key];
                         var parentNode = node.parentNode.parentNode;
-                        // generate x button from class
                         var deleteDiv = parentNode.getElementsByClassName("drawflow-delete")[0];
                         if (deleteDiv){
                             me.onContextMenu(node);
@@ -880,7 +876,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                             deleteDiv.className = "drawflow-delete2";
                             parentNode.appendChild(deleteDiv);
                             deleteDiv.innerHTML = "&#x2715";
-                            // when the x button is executed
                             deleteDiv.onclick = function(){
                                 var div = this;
                                 confirm("Are you sure you want to delete this node?",{
@@ -1762,9 +1757,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** onSVGRender
   //**************************************************************************
     var onSVGRender = function(el, callback){
-        console.log("renderer called for")
-        console.log(el)
-        console.log("after rendering")
 
         var bbox = el.getBBox();
         var w = bbox.width;

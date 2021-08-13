@@ -910,15 +910,15 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         // product name to overlay
         var product_name = document.createElement("div");
-        // product_name.style.display = "none";
-        
         product_name.className = "drawflow-node-product-name";
         product_name.innerHTML = "<span>" + node.productName + "</span>";
+        addShowHide(product_name);
+        product_name.hide();
         div.appendChild(product_name);
+
 
         // facility to overlay
         var facility_name = document.createElement("div");
-        // facility_name.style.display = "none";
         facility_name.className = "drawflow-node-facility-name";
         facility_name.innerHTML = "<span>" + node.facilityName + "</span>";
         div.appendChild(facility_name);
@@ -943,10 +943,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** updateDrawflowNode
   //**************************************************************************
     // update the dom elements of selected node
-
+    // we only hide the elements when they need to be updated
       var updateDrawflowNode = function(node,props){
-        console.log(node)
-        console.log("the current node is above")
 
         var facilityDiv = null;
         var array = node.getElementsByClassName("drawflow-node-facility-name")
@@ -962,18 +960,30 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         }
         // add phase-in/out effects during div update
         addShowHide(facilityDiv);
-        // hide the element from user view
-        facilityDiv.hide();
 
-        // get facility name from database (use facilityID to resolve)
-        get("SupplyChain/Facility?id="+props.facilityID, {
-            success: function(facility){
-                console.log(facility);
-                console.log("facility object above");
-                facilityDiv.innerHTML = facility.name;
-                facilityDiv.show();
-            }
-        })
+
+        // if div is empty or set as undefined then hide the element and update
+        if (String(facilityDiv) === ("undefined"|"")){
+            // hide the element from user view
+            facilityDiv.hide()
+            // update when needed 
+            // get facility name from database (use facilityID to resolve)
+            get("SupplyChain/Facility?id="+props.facilityID, {
+                success: function(facility){
+                    facilityDiv.innerHTML = facility.name;
+                    facilityDiv.show();
+                }
+            })
+        }
+
+        // if the div is not empty or is set as a defined value -> it is current, don't hide/update
+        else {
+            // up-to-date nodes won't do any processing
+            console.log("node" + props.name + "facility up to date")
+        }
+
+
+   
     
         var productDiv = null;
         var array = node.getElementsByClassName("drawflow-node-product-name")
@@ -987,18 +997,25 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         }
 
         addShowHide(productDiv);
-        productDiv.hide();
-        console.log("got here1")
-        get("SupplyChain/Product?id="+props.productID, {
-            success: function(product){
-                console.log(product);
-                console.log("product object above");
-                productDiv.innerHTML = product.name;
-                productDiv.show();
-            }
-        })
-        console.log("got here2")
-
+        // if div is empty or set as undefined then hide the element and update
+        if (String(facilityDiv) === ("undefined"|"")){
+            // hide the element from user view
+            productDiv.hide();
+            // update when needed 
+            // get facility name from database (use facilityID to resolve)
+            get("SupplyChain/Product?id="+props.productID, {
+                success: function(product){
+                    productDiv.innerHTML = product.name;
+                    productDiv.show();
+                }
+            })
+        }
+        
+        // if the div is not empty or set as defined it is current, don't hide/update
+        else {
+            // up-to-date nodes won't do any processing
+            console.log("node" + props.name + "product up to date")
+        }
 };
   //**************************************************************************
   //** showMenu
