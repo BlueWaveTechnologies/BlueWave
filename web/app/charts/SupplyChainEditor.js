@@ -355,15 +355,16 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 node.notes = notes;
                                 node.country = data.country.country;
                                 node.state = data.country.state;
+                                
+                                facilityDiv = node.getElementsByClassName("drawflow-node-facility-name")[0]
+                                productDiv = node.getElementsByClassName("drawflow-node-product-name")[0]
+                                addShowHide(facilityDiv); addShowHide(productDiv);
+                                facilityDiv.hide(); productDiv.hide();
 
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 node.childNodes[1].getElementsByTagName("span")[0].innerHTML = facilityName;
                                 node.childNodes[2].getElementsByTagName("span")[0].innerHTML = productName;
-                                // node.getElementsByClassName("drawflow-node-facility-name")[0].style.display = "block"
-                                // node.getElementsByClassName("drawflow-node-product-name")[0].style.display = "block"
-                                facilityDiv = node.getElementsByClassName("drawflow-node-facility-name")[0]
-                                productDiv = node.getElementsByClassName("drawflow-node-product-name")[0]
-                                addShowHide(facilityDiv); addShowHide(productDiv);
+
                                 facilityDiv.show(); productDiv.show();
                                 nodeEditor.close();
                                 me.onSave();
@@ -943,7 +944,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
   //** updateDrawflowNode
   //**************************************************************************
     // update the dom elements of selected node
-    // we only hide the elements when they need to be updated
+    // selective updating
       var updateDrawflowNode = function(node,props){
 
         var facilityDiv = null;
@@ -1011,7 +1012,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             })
         }
         
-        // if the div is not empty or set as defined it is current, don't hide/update
+        // if the div is not empty or is set as a defined value -> it is current, don't hide/update
         else {
             // up-to-date nodes won't do any processing
             console.log("node" + props.name + "product up to date")
