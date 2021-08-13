@@ -76,9 +76,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             showMenu(node);
         };
         // function connected to sankeyEditor - generate updated nodes for rendering
-        sankeyEditor.onNodeImport = function(node,node_div_id,props,icon_class,current_body){
-            newNode = updateDrawflowNode(node,node_div_id,props,icon_class,current_body);
-            return newNode;
+        sankeyEditor.onNodeImport = function(node,props){
+            updateDrawflowNode(node,props);
         };
     };
 
@@ -941,116 +940,62 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
  //**************************************************************************
   //** updateDrawflowNode
   //**************************************************************************
-    // async function for synchronous processing (waiting for database response) and access to await command
-    var updateDrawflowNode = async function(node,node_div_id,props,icon_class,current_body){
+    // update the dom elements of selected node
 
-        if (String(node_div_id)==="undefined"){
-            // bug where this can get passed undefined node_div_ids
-            // temporary (patch) bypass
-            return
+      var updateDrawflowNode = function(node,props){
+        console.log(node)
+        console.log("the created node is above")
+
+        var facilityDiv = null;
+        var array = node.getElementsByClassName("drawflow-node-facility-name")
+        // when div is present in current node DOM object, set facilityDiv to this object
+        if(array.length == 1){
+            facilityDiv = array[0]
         }
         else {
-            // set div ID - same ID as replacing div
-            var div = document.createElement("div");
-            div.id = node_div_id;
+            // create new div to display facility name
+            facilityDiv = document.createElement("div")
+            facilityDiv.className = "drawflow-node-facility-name"
+            node.appendChild(facilityDiv)
         }
+        // add phase-in/out effects during div update
+        addShowHide(facilityDiv);
+        // hide the element from user view
+        facilityDiv.hide();
 
-        ////////////////////////////////////////////// Title ////////////////////////////////
-        // title to overlay
-        var title = document.createElement("div");
-        title.className = "drawflow-node-title";
-        title.innerHTML = "<i class=\"" + icon_class + "\"></i><span>" + props.name + "</span>";
-        div.appendChild(title);
-
-        ////////////////////////////////////////////// Product name ////////////////////////////////
-        // product name to overlay
-        // declare base product div
-        var product_name = document.createElement("div");
-        product_name.className = "drawflow-node-product-name";
-       
-       
-        // update node - product name
-        if (String(props.productID)!=="undefined"){
-            get("SupplyChain/Product?id="+props.productID, {
-                success: function(arr){
-                    obj = JSON.parse(JSON.stringify(arr));
-                    console.log(`our product name is ${obj.name}`)
-                    loaded_product_name = obj.name;
-
-                   // set element as visible - data
-                    product_name.style.display = "initial";
-                    product_name.innerHTML = "<span>" + loaded_product_name + "</span>";
-                    div.appendChild(product_name);
-                }
-            })
-         
+        // get facility name from database (use facilityID to resolve)
+        get("SupplyChain/Facility?id="+props.facilityID, {
+            success: function(facility){
+                console.log(facility);
+                console.log("facility object above");
+                facilityDiv.innerHTML = facility.name;
+                facilityDiv.show();
+            }
+        })
+    
+        var productDiv = null;
+        var array = node.getElementsByClassName("drawflow-node-product-name")
+        if(array.length == 1){
+            productDiv = array[0]
         }
-
         else {
-            // set element as invisible - no data
-            product_name.style.display = "none";
-            product_name.innerHTML = "<span>" + "undefined" + "</span>";
-            div.appendChild(product_name)
+            productDiv = document.createElement("div")
+            productDiv.className = "drawflow-node-product-name"
+            node.appendChild(productDiv)
         }
 
-        ////////////////////////////////////////////// Facility name ////////////////////////////////
-        // facility to overlay
-        // declare base facility div
-        var facility_name = document.createElement("div");
-        facility_name.className = "drawflow-node-facility-name";
+        addShowHide(productDiv);
+        productDiv.hide();
 
-        // update node - facility name
-        if (String(node.facilityID) !== "undefined"){
-            get("SupplyChain/Facility?id="+props.facilityID, {
-                success: function(arr){
-                    obj = JSON.parse(JSON.stringify(arr));
-                    console.log(`our facility name is ${obj.name}`)
-                    loaded_facility_name = obj.name;
-                    // set element as visible - data
-                    facility_name.style.display = "initial";
-                    facility_name.innerHTML = "<span>" +loaded_facility_name + "</span>";
-                    div.appendChild(facility_name); 
-                }
-            })
-
-   
-        }
-        else{
-            // set element as invisible - no data
-            facility_name.style.display = "none";
-            console.log("reading our display status is " + facility_name.style.display)
-
-            facility_name.innerHTML = "<span>" + "undefined" + "</span>";
-            div.appendChild(facility_name);
-        }
-
-        ////////////////////////////////////////////// Body/icon ////////////////////////////////
-        var body = document.createElement("div");
-        body.className = "drawflow-node-body";
-        // temporarily replace node.content with body of replaced node
-        // var content = node.content;
-        var content = current_body
-        console.log(JSON.stringify(content,null,2));
-        console.log("content logged above")
-        // content = '<i class="fas fa-fill-drip"></i>'
-        content = '<i class="fas fa-fill-drip">::before</i>'
-
-        if (content){
-            if (typeof content === "string"){
-                body.innerHTML = content;
+        get("SupplyChain/Facility?id="+props.productID, {
+            success: function(product){
+                console.log(product);
+                console.log("product object above");
+                productDiv.innerHTML = product.name;
+                productDiv.show();
             }
-            else{
-                body.appendChild(content);
-            }
-        }
-
-        div.appendChild(body);
-        console.log("our rewritten, resulting div is")
-        console.log(div)
-
-        // wait for all database queries to execute and fill the divs before return
-        return await div;
-    };
+        })
+};
   //**************************************************************************
   //** showMenu
   //**************************************************************************

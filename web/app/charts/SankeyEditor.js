@@ -66,8 +66,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-        console.log("we went here init 69")
-
 
       //Clone the config so we don't modify the original config object
         var clone = {};
@@ -184,11 +182,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     this.update = function(sankeyConfig, inputs){
         me.clear();
-        // console.log("update function called sankey 186")
-        // if (!sankeyConfig) sankeyConfig = {};
-        console.log("update function called sankey 186")
-        if (!sankeyConfig) sankeyConfig = {}, console.log("passed without a sankey config");
-        else console.log("our sankey config is"),console.log(sankeyConfig);
 
       //Clone the config so we don't modify the original config object
         sankeyConfig = JSON.parse(JSON.stringify(sankeyConfig));
@@ -269,21 +262,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             };
             drawflow.import(data);
         }
-        console.log("update function called in sankey")
 
       //Update nodes
         for (var nodeID in sankeyConfig.nodes) {
-            console.log("specific update node is called")
-            console.log(nodeID)
-            console.log("for that node id ^^")
             if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-
 
 
               //Get node (dom object)
@@ -292,16 +274,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
 
-                
-                
-                // add logic for replacing this node
-                // we need to pass the node id
-                node_div_id = temp.childNodes[0].id
-
-
-                
-                
-                
                 //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
@@ -310,30 +282,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         node[key] = val;
                     }
                 }
-
-                console.log("current node is")
-                console.log(node)
-
-                // get icon class of this div
-                icon_class = document.getElementById(temp.childNodes[0].id).getElementsByClassName("drawflow-node-title")[0].getElementsByTagName("i")[0].className;
-                current_body = document.getElementById(temp.childNodes[0].id).getElementsByClassName("drawflow-node-body")[0];
-                console.log("current body is1")
-                console.log(current_body)
-                // pass node_div_ID, props, icon_class and node to SupplyChainEditor update function
-                // return updated node
-                new_node = me.onNodeImport(node,node_div_id,props,icon_class,current_body);
-                console.log("new node could be ")
-                console.log(new_node)
-                console.log("^^^^^")
-
-
-
-
-
-
-
-
-//////////////////////////////////////////////////////////////////////////
 
               //Add event listeners
                 addEventListeners(node);
@@ -358,7 +306,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
               //Fire event
-                new_node = me.onNodeImport(node);
+                me.onNodeImport(node);
 
 
                 
@@ -399,9 +347,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
           //Add text
-          console.log("our passed path is below")
-          console.log(path)
-          console.log("czasd")
             onSVGRender(path, function(){
                 addLabel(this);
             });
