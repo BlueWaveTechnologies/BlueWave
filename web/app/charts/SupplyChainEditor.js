@@ -63,7 +63,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         
 
         config.renderers = {
-            drawflowNodes: createDrawflowNode, updateDrawflowNode
+            drawflowNodes: createDrawflowNode
         };
 
 
@@ -359,7 +359,12 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
                                 node.childNodes[1].getElementsByTagName("span")[0].innerHTML = facilityName;
                                 node.childNodes[2].getElementsByTagName("span")[0].innerHTML = productName;
-                                
+                                // node.getElementsByClassName("drawflow-node-facility-name")[0].style.display = "block"
+                                // node.getElementsByClassName("drawflow-node-product-name")[0].style.display = "block"
+                                facilityDiv = node.getElementsByClassName("drawflow-node-facility-name")[0]
+                                productDiv = node.getElementsByClassName("drawflow-node-product-name")[0]
+                                addShowHide(facilityDiv); addShowHide(productDiv);
+                                facilityDiv.show(); productDiv.show();
                                 nodeEditor.close();
                                 me.onSave();
                             });
@@ -905,14 +910,15 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         // product name to overlay
         var product_name = document.createElement("div");
-        product_name.style.display = "none";
+        // product_name.style.display = "none";
+        
         product_name.className = "drawflow-node-product-name";
         product_name.innerHTML = "<span>" + node.productName + "</span>";
         div.appendChild(product_name);
 
         // facility to overlay
         var facility_name = document.createElement("div");
-        facility_name.style.display = "none";
+        // facility_name.style.display = "none";
         facility_name.className = "drawflow-node-facility-name";
         facility_name.innerHTML = "<span>" + node.facilityName + "</span>";
         div.appendChild(facility_name);
@@ -920,8 +926,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         var body = document.createElement("div");
         body.className = "drawflow-node-body";
         var content = node.content;
-        console.log("our content for a newly created node is")
-        console.log(content)
         if (content){
             if (typeof content === "string"){
                 body.innerHTML = content;
@@ -932,8 +936,6 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         }
 
         div.appendChild(body);
-        console.log("our newly written div is")
-        console.log(div)
         return div;
     };
 
@@ -944,7 +946,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
       var updateDrawflowNode = function(node,props){
         console.log(node)
-        console.log("the created node is above")
+        console.log("the current node is above")
 
         var facilityDiv = null;
         var array = node.getElementsByClassName("drawflow-node-facility-name")
@@ -986,8 +988,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         addShowHide(productDiv);
         productDiv.hide();
-
-        get("SupplyChain/Facility?id="+props.productID, {
+        console.log("got here1")
+        get("SupplyChain/Product?id="+props.productID, {
             success: function(product){
                 console.log(product);
                 console.log("product object above");
@@ -995,6 +997,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                 productDiv.show();
             }
         })
+        console.log("got here2")
+
 };
   //**************************************************************************
   //** showMenu
