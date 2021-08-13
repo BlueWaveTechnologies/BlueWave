@@ -10,6 +10,7 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.SankeyEditor = function(parent, config) {
+
     var me = this;
     var defaultConfig = {
         margin: { top: 10, right: 10, bottom: 10, left: 10 },
@@ -66,7 +67,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        
+
       //Clone the config so we don't modify the original config object
         var clone = {};
         merge(clone, config);
@@ -201,6 +202,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
       //Set view
         toggleButton.setValue("Edit");
 
+
       //Special case when inputs are present (e.g. from SupplyChain editor)
         if (inputs && inputs.length){
            
@@ -260,6 +262,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             drawflow.import(data);
         }
 
+
       //Update nodes
         for (var nodeID in sankeyConfig.nodes) {
             if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
@@ -269,7 +272,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-
+                
+                //add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
                     if (props.hasOwnProperty(key)){

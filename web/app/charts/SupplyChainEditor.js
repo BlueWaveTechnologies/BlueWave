@@ -922,6 +922,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         var facility_name = document.createElement("div");
         facility_name.className = "drawflow-node-facility-name";
         facility_name.innerHTML = "<span>" + node.facilityName + "</span>";
+        addShowHide(facility_name);
+        facility_name.hide();
         div.appendChild(facility_name);
 
         var body = document.createElement("div");
@@ -946,6 +948,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     // update the dom elements of selected node
     // selective updating
       var updateDrawflowNode = function(node,props){
+
+
+        ////////////////////////// update facility name ///////////////////////
 
         var facilityDiv = null;
         var array = node.getElementsByClassName("drawflow-node-facility-name")
@@ -980,12 +985,13 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         // if the div is not empty or is set as a defined value -> it is current, don't hide/update
         else {
             // up-to-date nodes won't do any processing
-            console.log("node" + props.name + "facility up to date")
+            // console.log("node" + props.name + "facility up to date")
         }
 
 
    
-    
+        ////////////////////////// update product name ///////////////////////
+
         var productDiv = null;
         var array = node.getElementsByClassName("drawflow-node-product-name")
         if(array.length == 1){
@@ -1015,7 +1021,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         // if the div is not empty or is set as a defined value -> it is current, don't hide/update
         else {
             // up-to-date nodes won't do any processing
-            console.log("node" + props.name + "product up to date")
+            // console.log("node" + props.name + "product up to date")
         }
 };
   //**************************************************************************
