@@ -313,16 +313,12 @@ bluewave.Application = function(parent, config) {
         
 
         carousel.onChange = function(currPanel){
-            console.log("carousel changed")
-            // console.log(currPanel.title())
-            // console.log(`current panel name is ${currPanel.getTitle()}`)
             if (currApp){
     
 
               //Check if the currPanel is a clone created by the carousel.
               //If so, replace content with the currApp
                 if (currApp.el.parentNode!==currPanel){
-                    console.log(`current app is apparently a clone created by carousel`)
                     currPanel.innerHTML = "";
                     currApp.el.parentNode.removeChild(currApp.el);
                     currPanel.appendChild(currApp.el);
@@ -330,8 +326,7 @@ bluewave.Application = function(parent, config) {
 
 
               //Update title
-                if (currApp.getTitle) me.setTitle(currApp.getTitle()); console.log(`current title is ${currApp.getTitle()}`);
-
+                if (currApp.getTitle) me.setTitle(currApp.getTitle());
 
               //Update buttons
                 if (apps.length>1){
@@ -700,24 +695,19 @@ bluewave.Application = function(parent, config) {
 
       //Find panels in the carousel
         var currPage, nextPage;
-        // we get current carousel panels. lets print em
         var panels = carousel.getPanels();
-        console.log("lets get the current panels")
         for (var i=0; i<panels.length; i++){
             var panel = panels[i];
 
-            console.log(panel.getTitle)
             var el = panel.div;
             if (panel.isVisible){
-                console.log('panel is "visible"')
                 currPage = el;
             }
             else{
-                console.log('panel is not "visible"')
                 nextPage = el;
             }
         }
-        if (!currPage) currPage = panels[0].div; console.log("whats this happening 718"); //strange!
+        if (!currPage) currPage = panels[0].div; //strange!
 
 
       //Select panel to use
@@ -746,14 +736,11 @@ bluewave.Application = function(parent, config) {
 
           //Instantiate class as needed
             if (!app){
-                console.log("if app is not instantiated then do ... ")
                 app = new obj(div, config);
                 app.onUpdate = function(){
-                    console.log("apps update was called")
                     if (app===currApp) me.setTitle(app.getTitle());
                 };
                 app.onDelete = function(){
-                    console.log("apps delete was called")
                     for (var i=0; i<apps.length; i++){
                         if (apps[i].app===app){
                             apps.splice(i, 1);
@@ -773,14 +760,13 @@ bluewave.Application = function(parent, config) {
         // when this class is not newly initialzied, just pass it along.
         // this makes it so that we arent applying the same parameters to a new object, when we can use old.
         else{
-            console.log("else is called")
             app = obj;
         }
 
 
 
         if (app === currApp){
-            console.log("Already in view!");
+            // console.log("Already in view!");
             me.setTitle(app.getTitle());
             return app;
         }
@@ -797,8 +783,7 @@ bluewave.Application = function(parent, config) {
             }
 
             currApp = app;
-            console.log("app object")
-            console.log(app)
+
             return app;
         }
     };
@@ -930,24 +915,14 @@ bluewave.Application = function(parent, config) {
 
 
             div.appendChild(createMenuOption("Create Dashboard", "plus-circle", function(label){
-                // hide back and next button
                 backButton.hide();
                 nextButton.hide();
-                // hide the admin panel if we're on that page currently
-                // note, this does not ever actually detect that we are on the admin panel, currently.
                 if (adminPanel) adminPanel.hide();
-                // show the dashboard panel.. the homepage one, initially.
                 dashboardPanel.show();
-                // set the view title
                 me.setTitle(label);
-                // this is what changes the currApp status. this is what we need. for the admin panel. BUt something breaks.
                 var app = raisePanel(bluewave.Explorer);
-                // the raisePanel changes and sets other variables.. that would then be used. 
-                // if we are currently not on the explorer panel, make the explorerPanel the current app
                 if (!explorerPanel) explorerPanel = app;
-                // show the explorerPanel on screen.
                 explorerPanel.show();
-                // and update the explorer panel according to what the raisePanel function has set.
                 explorerPanel.update();
                 setTimeout(function(){ //update title again in case slider move
                     me.setTitle(label);
@@ -1009,21 +984,11 @@ bluewave.Application = function(parent, config) {
 
 
             div.appendChild(createMenuOption("System Administration", "cog", function(label){
-                // hide the active carousel view
                 dashboardPanel.hide();
-                // hide backbutton and next button, if they're not in view this does nothing. itsacheck
                 backButton.hide();
                 nextButton.hide();
-                // sets the title of the view. we can check this, when we want to. 
                 me.setTitle(label);
-                console.log(`title set is ${label}`)
-                // this creates the adminPanel object, it only runs one time, regardless of how many times this page is called.
-                console.log("these two objects are this")
-                console.log(body)
-                console.log(config)
-                console.log("after that area")
                 if (!adminPanel) adminPanel = new bluewave.AdminPanel(body, config);
-                // open a webSocket - one time only - and it runs the thingy every time a thing yis opened
                 adminPanel.update();
                 adminPanel.show();
             }));
@@ -1041,7 +1006,7 @@ bluewave.Application = function(parent, config) {
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         // get title of page
         var pageTitle = document.getElementsByClassName("dashboard-title noselect")[0].innerHTML 
-        // get the title element of the page to identify Sys admin page
+        // compare page Title to sys admin title to determine if we are on the Sys Admin page
         var isAdminVisible = (pageTitle === "System Administration")
 
         for (var i=0; i<mainMenu.childNodes.length; i++){
@@ -1058,7 +1023,6 @@ bluewave.Application = function(parent, config) {
             }
             if (menuItem.label==="Create Dashboard"){
                 if (isExplorerVisible && pageTitle === "Create Dashboard"){
-                    console.log("hiding it here")
                     menuItem.hide();
                 }
                 else menuItem.show();
