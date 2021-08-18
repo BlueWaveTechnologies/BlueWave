@@ -745,7 +745,7 @@ li.tree-node:hover {
     /* background-color: #f7f7f7; */
     /* border-bottom: 1px solid #e9e9e9; */
     /* border-radius: 4px 4px 0px 0px; */
-    padding-left: 10px;
+    /* padding-left: 10px; */
     overflow: hidden;
 }
 .drawflow-node-facility-name {
@@ -754,7 +754,7 @@ li.tree-node:hover {
     /* background-color: #f7f7f7; */
     /* border-bottom: 1px solid #e9e9e9; */
     /* border-radius: 4px 4px 0px 0px; */
-    padding-left: 1px;
+    /* padding-left: 1px; */
     /* background: rgba(245, 245, 245, 0.1); */
     overflow: hidden;
 }
@@ -776,6 +776,11 @@ li.tree-node:hover {
     /* border-bottom: 1px solid #e9e9e9; */
     /* border-radius: 4px 4px 0px 0px; */
     /* padding-left: 1px; */
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -789,6 +794,7 @@ li.tree-node:hover {
     padding: 5px;
     min-height: 100px;
     text-align: center;
+    position: relative;
 }
 
 .drawflow-node-body .fas {
