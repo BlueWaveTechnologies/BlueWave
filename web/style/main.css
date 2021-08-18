@@ -641,8 +641,6 @@ li.tree-node:hover {
     height: 100%;
 }
 
-
-
 .drawflow .drawflow-node {
     background-color: #fff;
     border: 1px solid #cacaca;
@@ -742,40 +740,16 @@ li.tree-node:hover {
 .drawflow-node-product-name {
     height: 50px;
     line-height: 50px;
-    /* background-color: #f7f7f7; */
-    /* border-bottom: 1px solid #e9e9e9; */
-    /* border-radius: 4px 4px 0px 0px; */
-    /* padding-left: 10px; */
     overflow: hidden;
 }
 .drawflow-node-facility-name {
     height: 50px;
     line-height: 50px;
-    /* background-color: #f7f7f7; */
-    /* border-bottom: 1px solid #e9e9e9; */
-    /* border-radius: 4px 4px 0px 0px; */
-    /* padding-left: 1px; */
-    /* background: rgba(245, 245, 245, 0.1); */
     overflow: hidden;
 }
 
-/* #drawflow-node-body-corners {
-    border-radius: 25px;
-    border: 2px solid #73AD21;
-    padding: 20px; 
-    width: 100%;
-    height:100%;
-} */
-
 .drawflow-node-overlay{
-    /* height: 120px; */
-    /* line-height: 50px; */
     color: #000000;
-    /* font-weight: bold; */
-    /* background-color: #f7f7f7; */
-    /* border-bottom: 1px solid #e9e9e9; */
-    /* border-radius: 4px 4px 0px 0px; */
-    /* padding-left: 1px; */
     position: absolute;
     z-index: 1;
     top: 0;
@@ -802,18 +776,6 @@ li.tree-node:hover {
     font-size:75px;
     margin-top:10px;
 }
-/*
-Set new drawflow overlay text parameters for nodes
-*/
-/* .drawflow-node-overlay-text .fas {
-    color:#eaeaea;
-    font-size:30px;
-    margin-top:10px;
-} */
-
-
-
-
 
 .drawflow-node-title svg {
     position: initial;
@@ -830,8 +792,6 @@ Set new drawflow overlay text parameters for nodes
     margin-bottom: 5px;
 }
 
-
-
 .drawflow .connection .point {
     stroke: #cacaca;
     stroke-width: 2;
@@ -842,7 +802,6 @@ Set new drawflow overlay text parameters for nodes
 .drawflow .connection .point.selected, .drawflow .connection .point:hover {
     fill: #4ea9ff;
 }
-
 
 .drawflow-save {
     height: 32px;
