@@ -909,6 +909,19 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
         div.appendChild(title);
 
+
+        // // body element Overlay
+        // overlayDiv = document.createElement("div");
+        // overlayDiv.className = "drawflow-node-overlay";
+        // addShowHide(overlayDiv);
+        // overlayDiv.hide();
+
+
+        // // body element background 
+        // backgroundDiv = document.createElement("div");
+        // // backgroundDiv
+
+
         // product name to overlay
         var product_name = document.createElement("div");
         product_name.className = "drawflow-node-product-name";
@@ -960,9 +973,11 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
    
         // layer 1
-        wrapper = node.getElementsByClassName("drawflow-node-body")[0]
-        wrapper.className= "drawflow-node-body"
+        var wrapper = node.getElementsByClassName("drawflow-node-body")[0]
+        // wrapper.className= "drawflow-node-body"
         // wrapper.style.position = "relative;"
+        wrapper.style.position = "absolute;"
+
 
         // layer 2 - overlay text
         array = node.getElementsByClassName("drawflow-node-overlay")
@@ -971,17 +986,17 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             for(var i = 0; i < array.length; i++){
                 // console.log(`pass through array ${i} times`)
                 // console.log(array[i])
-                OverlayDiv = array[i]
-                OverlayDiv.id = "drawflow-node-body-corners";
-                wrapper.appendChild(OverlayDiv)
+                overlayDiv = array[i]
+                overlayDiv.id = "drawflow-node-body-corners";
+                wrapper.appendChild(overlayDiv)
 
             }
         }
         else{
-        OverlayDiv = document.createElement("div")
-        OverlayDiv.className = "Drawflow-node-overlay"
-        OverlayDiv.style.position = "relative"
-        OverlayDiv.style.zIndex = "100"
+        var overlayDiv = document.createElement("div")
+        overlayDiv.className = "Drawflow-node-overlay"
+        overlayDiv.style.position = "absolute"
+        overlayDiv.style.zIndex = "3"
 
         console.log("created div and set style")
     } 
@@ -990,10 +1005,10 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         array = node.getElementsByClassName("drawflow-background-logo");
         if (array.length == 1){
             for(var i = 0; i < array.length; i++){
-                backgroundDiv = array[i]
+                var backgroundDiv = array[i]
                 backgroundDiv.style.position = "absolute"
-                backgroundDiv.style.zIndex = "10"
-                backgroundImage = node.getElementsByClassName("drawflow-node-body")[0].getElementsByTagName("i")[0]
+                backgroundDiv.style.zIndex = "2"
+                var backgroundImage = node.getElementsByClassName("drawflow-node-body")[0].getElementsByTagName("i")[0]
                 backgroundDiv.appendChild(backgroundImage)
                 console.log(backgroundImage)
                 wrapper.appendChild(backgroundDiv)
@@ -1002,16 +1017,12 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         else{
             console.log("we did not the background div")
-            BackgroundDiv = document.createElement("div")
-            BackgroundDiv.className = "Drawflow-background-logo"
-            BackgroundDiv.style.position = "absolute"
-            BackgroundDiv.style.zIndex = "10"
-            BackgroundImage = node.getElementsByClassName("drawflow-node-body")[0].getElementsByTagName("i")[0]
-            BackgroundDiv.appendChild(BackgroundImage)
-            console.log(BackgroundImage)
-            console.log("backgorund div next")
-            console.log(BackgroundDiv)
-            wrapper.appendChild(BackgroundDiv)
+            var backgroundImage = node.getElementsByClassName("drawflow-node-body")[0].getElementsByTagName("i")[0]
+            backgroundImage.style.position = "absolute"
+            backgroundImage.style.zIndex = "2"
+            console.log(backgroundImage)
+
+            wrapper.appendChild(backgroundImage)
 
 
         } 
@@ -1029,19 +1040,19 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         // when div is present in current node DOM object, set facilityDiv to this object
         if(array.length == 1){
             facilityDiv = array[0]
-            OverlayDiv.appendChild(facilityDiv)
+            overlayDiv.appendChild(facilityDiv)
             console.log("overlay div print")
-            console.log(OverlayDiv)
-            wrapper.appendChild(OverlayDiv)
+            console.log(overlayDiv)
+            wrapper.appendChild(overlayDiv)
         }
         else {
             // create new div to display facility name
             facilityDiv = document.createElement("div")
             facilityDiv.className = "drawflow-node-facility-name"
             // node.appendChild(facilityDiv)
-            OverlayDiv.appendChild(facilityDiv)
+            overlayDiv.appendChild(facilityDiv)
             console.log("overlay div print")
-            console.log(OverlayDiv)
+            console.log(overlayDiv)
         }
         // add phase-in/out effects during div update
         addShowHide(facilityDiv);
@@ -1049,13 +1060,15 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
         // if div is empty or set as undefined then hide the element and update
         if (String(facilityDiv) === ("undefined"|"")){
+            console.log("updateing facility div")
             // hide the element from user view
             facilityDiv.hide()
             // update when needed 
             // get facility name from database (use facilityID to resolve)
             get("SupplyChain/Facility?id="+props.facilityID, {
                 success: function(facility){
-                    facilityDiv.innerHTML = facility.name;
+                    console.log("got here 1070")
+                    facilityDiv.innerHTML = "Facility: "+facility.name;
                     facilityDiv.show();
                 }
             })
@@ -1075,13 +1088,13 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         var array = node.getElementsByClassName("drawflow-node-product-name")
         if(array.length == 1){
             productDiv = array[0]
-            OverlayDiv.appendChild(productDiv)
-            console.log(OverlayDiv)
+            overlayDiv.appendChild(productDiv)
+            console.log(overlayDiv)
         }
         else {
             productDiv = document.createElement("div")
             productDiv.className = "drawflow-node-product-name"
-            OverlayDiv.appendChild(productDiv)
+            overlayDiv.appendChild(productDiv)
         }
 
         addShowHide(productDiv);
@@ -1093,7 +1106,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             // get facility name from database (use facilityID to resolve)
             get("SupplyChain/Product?id="+props.productID, {
                 success: function(product){
-                    productDiv.innerHTML = product.name;
+                    productDiv.innerHTML = "Product: " + product.name;
                     productDiv.show();
                 }
             })
