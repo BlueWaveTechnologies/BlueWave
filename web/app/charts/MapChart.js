@@ -264,8 +264,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                     }
                                     for(var i = 0; i < states.features.length; i++){
                                         var stateCenter = states.features[i];
-                                        if(stateTwo === stateCenter.properties.code){
-                                            console.log(stateCenter);
+                                        if(stateTwo === stateCenter.properties.code);
                                             var lat = stateCenter.properties.latitude;
                                             var lon = stateCenter.properties.longitude;
                                             coordTwo.push(lat);
@@ -669,7 +668,6 @@ bluewave.charts.MapChart = function(parent, config) {
                             var quantities = [];
                             coords.forEach(function(d){
                                 quantities.push(d[2]);
-                                console.log(d);
                             });
                             var thicknessExtent = d3.extent(quantities);
                             var thicknessScale = d3.scaleQuantile()
