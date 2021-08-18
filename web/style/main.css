@@ -742,19 +742,32 @@ li.tree-node:hover {
 .drawflow-node-product-name {
     height: 50px;
     line-height: 50px;
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #e9e9e9;
-    border-radius: 4px 4px 0px 0px;
+    /* background-color: #f7f7f7; */
+    /* border-bottom: 1px solid #e9e9e9; */
+    /* border-radius: 4px 4px 0px 0px; */
     padding-left: 10px;
     overflow: hidden;
 }
 .drawflow-node-facility-name {
     height: 50px;
     line-height: 50px;
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #e9e9e9;
-    border-radius: 4px 4px 0px 0px;
-    padding-left: 10px;
+    /* background-color: #f7f7f7; */
+    /* border-bottom: 1px solid #e9e9e9; */
+    /* border-radius: 4px 4px 0px 0px; */
+    padding-left: 1px;
+    overflow: hidden;
+}
+
+
+.drawflow-node-overlay{
+    height: 120px;
+    line-height: 50px;
+    color: #008000;
+    font-weight: bold;
+    /* background-color: #f7f7f7; */
+    /* border-bottom: 1px solid #e9e9e9; */
+    /* border-radius: 4px 4px 0px 0px; */
+    padding-left: 1px;
     overflow: hidden;
 }
 
@@ -794,14 +807,12 @@ Set new drawflow overlay text parameters for nodes
 Set icon as background
 */
 .drawflow-background-logo {
-    color:#eaeaea;
+    /* color:#eaeaea; */
     font-size:75px;
-    margin-top:10px;
-    color: #999999;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -100;
+    margin-top:30px;
+    /* color: #999999; */
+    top: 20%;
+    left: 30%;
 }
 
 
