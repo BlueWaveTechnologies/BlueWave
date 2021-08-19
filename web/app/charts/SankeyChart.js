@@ -76,10 +76,8 @@ bluewave.charts.SankeyChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
 
-        console.log("update function of sankey chart called")
-        console.log(`data object is ${data}`) // confirm no data
-        if (!data){ console.log("no data to render");return;}
-        console.log("data was rendered afterall")
+        if (!data)return;
+        
         if (chartConfig){
             if (chartConfig.margin) config.margin = chartConfig.margin;
             if (chartConfig.links) config.links = chartConfig.links;
@@ -218,6 +216,21 @@ bluewave.charts.SankeyChart = function(parent, config) {
                 return d.x1 + 6;
               })
               .attr("text-anchor", "start");
+
+              console.log({
+                widthreport:width,
+                lengthreport:length,
+                linkr:link,
+                sizer:size,
+                sankeyr:sankey,
+                marginr:margin,
+                resultingnode:node,
+
+
+
+
+              })
+              console.log(node)
         });
     };
 
