@@ -48,10 +48,6 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
-        mapArea.call(d3.zoom().on("zoom", function () {
-            mapArea.attr("transform", d3.event.transform)
-        }))
-        .append("g")
     };
 
 
@@ -78,7 +74,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
           //Get isObject boolean.
             var isObject = chartConfig.isObject;
-            //console.log(data);
 
           //Set color scale
             var colorScale = {
@@ -253,7 +248,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                     for (var i = 0; i < states.features.length; i++){
                                         var stateCenter = states.features[i];
                                         if (stateOne === stateCenter.properties.code){
-                                            console.log(stateCenter);
                                             var lat = stateCenter.properties.latitude;
                                             var lon = stateCenter.properties.longitude;
                                             coordOne.push(lat);
@@ -264,7 +258,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                     }
                                     for(var i = 0; i < states.features.length; i++){
                                         var stateCenter = states.features[i];
-                                        if(stateTwo === stateCenter.properties.code);
+                                        if(stateTwo === stateCenter.properties.code){
                                             var lat = stateCenter.properties.latitude;
                                             var lon = stateCenter.properties.longitude;
                                             coordTwo.push(lat);
@@ -555,7 +549,6 @@ bluewave.charts.MapChart = function(parent, config) {
                             if(d.state) {
                                 state = d.state;
                                 aggregateState = aggregateState + parseFloat(d[chartConfig.mapValue]);
-                                //console.log(aggregateState);
                             }
                            if(d.country) country = d.country;
                             for(var i = 0; i < countries.features.length; i++){
