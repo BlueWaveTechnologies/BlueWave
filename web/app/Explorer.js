@@ -16,7 +16,7 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, scatterEditor, mapEditor, userManager; //popup dialogs
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager; //popup dialogs
     var windows = [];
     var zoom = 0;
 
@@ -1186,6 +1186,11 @@ bluewave.Explorer = function(parent, config) {
                     editScatter(this);
                 };
                 break;
+            case "pieChart" :
+
+                node.ondblclick = function(){
+                    editPie(this);
+                };
             case "supplyChain":
 
                 node.ondblclick = function(){
@@ -1633,6 +1638,68 @@ bluewave.Explorer = function(parent, config) {
 
         scatterEditor.update(node.config, data);
         scatterEditor.show();
+    };
+
+  //**************************************************************************
+  //** editPie
+  //**************************************************************************
+    var editPie = function(node){
+        if (!pieEditor){
+            var win = createNodeEditor({
+                 title: "Edit Pie Chart",
+                 width: 1060,
+                 height: 600,
+                 beforeClose: function(){
+                     var scatterConfig = pieEditor.getConfig();
+                     var node = pieEditor.getNode();
+                     var orgConfig = node.config;
+                     if (!orgConfig) orgConfig = {};
+                     if (isDirty(scatterConfig, orgConfig)){
+                         node.config = scatterConfig;
+                         waitmask.show();
+                         var el = pieEditor.getChart();
+                         createPreview(el, function(canvas){
+                             node.preview = canvas.toDataURL("image/png");
+                             createThumbnail(node, canvas);
+                             updateTitle(node, node.config.chartTitle);
+                             win.close();
+                             waitmask.hide();
+                         }, this);
+                     }
+                     else{
+                         win.close();
+                     }
+                 }
+            });
+
+            pieEditor = new bluewave.charts.PieEditor(win.getBody(), config);
+
+            pieEditor.show = function(){
+              win.show();
+            };
+
+            pieEditor.hide = function(){
+              win.hide();
+            };
+        }
+
+
+      //Add custom getNode() method to the scatterEditor to return current node
+        pieEditor.getNode = function(){
+            return node;
+        };
+
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                data.push(csv);
+            }
+        }
+
+        pieEditor.update(node.config, data);
+        pieEditor.show();
     };
 
 
