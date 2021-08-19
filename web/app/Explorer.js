@@ -2411,8 +2411,10 @@ bluewave.Explorer = function(parent, config) {
                     // console.log("chart above")
                     // console.log(data);
                     // console.log("data above")
+                    console.log("data is not sent")
+                    console.log(`data object is ${JSON.stringify(data,null,2)}`) // print obj
 
-                    sankeyChart.update(data);
+                    sankeyChart.update(chartConfig,data);
                     // console.log(dashboardItem.innerDiv)
                     // console.log("yeah - sankey")
                     // console.log("we would have updated the sankey")

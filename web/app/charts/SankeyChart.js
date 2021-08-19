@@ -33,19 +33,30 @@ bluewave.charts.SankeyChart = function(parent, config) {
     var init = function(){
       console.log("init function of sankey chart called")
         config = merge(config, defaultConfig);
+        console.log(`parent is ${parent}`)
+        console.log(parent)
 
 
         if (parent instanceof d3.selection){
             svg = parent;
+            console.log(`parent is ${parent}`)
         }
         else if (parent instanceof SVGElement) {
             svg = d3.select(parent);
         }
         else{
             svg = d3.select(parent).append("svg");
+            onRender(parent, function(){
+              var width = parent.offsetWidth;
+              var height = parent.offsetHeight;
+              svg.attr("width", width);
+              svg.attr("height", height);
+          });
         }
 
+
         sankeyArea = svg.append("g");
+
     };
 
 
@@ -64,10 +75,11 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
+
         console.log("update function of sankey chart called")
-
-        if (!data) return;
-
+        console.log(`data object is ${data}`) // confirm no data
+        if (!data){ console.log("no data to render");return;}
+        console.log("data was rendered afterall")
         if (chartConfig){
             if (chartConfig.margin) config.margin = chartConfig.margin;
             if (chartConfig.links) config.links = chartConfig.links;
