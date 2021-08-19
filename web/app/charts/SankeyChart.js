@@ -31,7 +31,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-
+      console.log("init function of sankey chart called")
         config = merge(config, defaultConfig);
 
 
@@ -53,6 +53,8 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+      console.log("clear function of sankey chart called")
+
         sankeyArea.selectAll("*").remove();
     };
 
@@ -62,6 +64,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
+        console.log("update function of sankey chart called")
 
         if (!data) return;
 
