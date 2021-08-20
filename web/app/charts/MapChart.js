@@ -81,15 +81,24 @@ bluewave.charts.MapChart = function(parent, config) {
                 "red": d3.scaleQuantile(extent, d3.schemeReds[7])
             };
             if (!chartConfig.colorScale) chartConfig.colorScale = "red";
+            if(chartConfig.linkZoom === (width / .8) || chartConfig.linkZoom === width / 2 / Math.PI){
+                delete chartConfig.linkZoom;
+            }
             var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
             if(chartConfig.mapLevel == "states"){
                 getData("states", function(mapData) {
                     getData("countries", function(countryData){
+                        if(!chartConfig.linkZoom) chartConfig.linkZoom = (width / .8);
+                        if(!chartConfig.centerHorizontal) chartConfig.centerHorizontal = (width / 2);
+                        if(!chartConfig.centerVertical) chartConfig.centerVertical = (height / 2);
+                        var zoom = chartConfig.linkZoom;
+                        var horizontal = chartConfig.centerHorizontal;
+                        var vertical = chartConfig.centerVertical;
                         var countries = topojson.feature(countryData, countryData.objects.countries);
                         var states = topojson.feature(mapData, mapData.objects.states);
                         var projection = d3.geoAlbers()
-                            .scale(width / .8)
-                            .translate([width / 2, height / 2]);
+                            .scale(zoom)
+                            .translate([horizontal, vertical]);
                         var path = d3.geoPath().projection(projection);
 
                     mapArea.selectAll('circle').remove();
@@ -479,11 +488,20 @@ bluewave.charts.MapChart = function(parent, config) {
                 });
             }else if(chartConfig.mapLevel == "countries"){
                 getData("countries", function(mapData){
+                    if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
+                    if(!chartConfig.centerLongitude) chartConfig.centerLongitude = 110;
+                    if(!chartConfig.centerLatitude) chartConfig.centerLatitude = 20;
+                    var zoom = chartConfig.linkZoom;
+                    var centerLon = chartConfig.centerLongitude;
+                    var centerLat = chartConfig.centerLatitude;
+                    console.log(zoom);
+                    console.log(centerLon);
+                    console.log(centerLat);
                     var countries = topojson.feature(mapData, mapData.objects.countries);
                     var projection = d3.geoMercator()
-                                    .scale(width / 2 / Math.PI)
-                                    .rotate([110, 0])
-                                    .center([0, 20])
+                                    .scale(zoom)
+                                    .rotate([centerLon, 0])
+                                    .center([0, centerLat])
                                     .translate([width / 2, height / 2]);
 
                     var path = d3.geoPath().projection(projection);

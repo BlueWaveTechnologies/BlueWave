@@ -85,7 +85,7 @@ if(!bluewave.charts) bluewave.charts={};
 
       //Watch for settings
         panel.settings.onclick = function(){
-            if (chartConfig) editStyle(chartConfig.mapType);
+            if (chartConfig) editStyle(chartConfig.mapType, chartConfig.mapLevel);
         };
 
 
@@ -398,8 +398,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(mapType){
-
+    var editStyle = function(mapType, mapLevel){
       //Create styleEditor as needed
         if (!styleEditor){
             styleEditor = new javaxt.dhtml.Window(document.body, {
@@ -487,7 +486,7 @@ if(!bluewave.charts) bluewave.charts={};
             };
         }
         else if (mapType==="Area"){
-
+            console.log("Are we here?");
             var colorField = new javaxt.dhtml.ComboBox(
                 document.createElement("div"),
                 {
@@ -523,6 +522,115 @@ if(!bluewave.charts) bluewave.charts={};
                 chartConfig.colorScale = settings.color;
                 createMapPreview();
             };
+        }
+        else if (mapType==="Links"){
+            if(mapLevel==="states"){
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "zoom",
+                                    label: "Zoom",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerHorizontal",
+                                    label: "Horizontal Center",
+                                    type: "text"
+                                },
+                                 {
+                                     name: "centerVertical",
+                                     label: "Vertical Center",
+                                     type: "text"
+                                 }
+                            ]
+                        }
+                    ]
+                });
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var horizontalField = form.findField("centerHorizontal");
+                var horizontal = chartConfig.centerHorizontal;
+                if(horizontal==null) horizontal = 500;
+                chartConfig.centerHorizontal = horizontal;
+                horizontalField.setValue(horizontal);
+
+                var verticalField = form.findField("centerVertical");
+                var vertical = chartConfig.centerVertical;
+                if(vertical==null) vertical = 500;
+                chartConfig.centerVertical = vertical;
+                verticalField.setValue(vertical);
+
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerHorizontal =  settings.centerHorizontal;
+                    chartConfig.centerVertical = settings.centerVertical;
+                    createMapPreview();
+                };
+            }
+            else if(mapLevel==="countries"){
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "zoom",
+                                    label: "Zoom",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerLongitude",
+                                    label: "Longitudinal Center",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerLatitude",
+                                    label: "Latitudinal Center",
+                                    type: "text"
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var longField = form.findField("centerLongitude");
+                var centerLongitude = chartConfig.centerLongitude;
+                if(centerLongitude==null) centerLongitude = 110;
+                chartConfig.centerLongitude = centerLongitude;
+                longField.setValue(centerLongitude);
+
+                var latField = form.findField("centerLatitude");
+                var centerLatitude = chartConfig.centerLatitude;
+                if(centerLatitude==null) centerLatitude = 20;
+                chartConfig.centerLatitude = centerLatitude;
+                latField.setValue(centerLatitude);
+
+
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerLongitude = settings.centerLongitude;
+                    chartConfig.centerLatitude = settings.centerLatitude;
+                    createMapPreview();
+                };
+            }
         }
 
 
