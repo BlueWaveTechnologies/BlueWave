@@ -494,6 +494,9 @@ bluewave.charts.MapChart = function(parent, config) {
                     var zoom = chartConfig.linkZoom;
                     var centerLon = chartConfig.centerLongitude;
                     var centerLat = chartConfig.centerLatitude;
+                    console.log(zoom);
+                    console.log(centerLon);
+                    console.log(centerLat);
                     var countries = topojson.feature(mapData, mapData.objects.countries);
                     var projection = d3.geoMercator()
                                     .scale(zoom)
