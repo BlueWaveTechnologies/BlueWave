@@ -356,7 +356,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 node.country = data.country.country;
                                 node.state = data.country.state;
                                 
-                                overlayDiv = node.getElementsByClassName("drawflow-node-overlay")[0]
+                                var overlayDiv = node.getElementsByClassName("drawflow-node-overlay")[0];
 
                                 addShowHide(overlayDiv);
                                 overlayDiv.hide();
@@ -911,7 +911,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
 
 
         // body element overlay background
-        overlayDiv = document.createElement("div");
+        var overlayDiv = document.createElement("div");
         overlayDiv.className = "drawflow-node-overlay";
         addShowHide(overlayDiv);
         overlayDiv.hide();
@@ -947,7 +947,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         return div;
     };
 
- //**************************************************************************
+
+  //**************************************************************************
   //** updateDrawflowNode
   //**************************************************************************
     // update the dom elements of selected node
@@ -955,37 +956,21 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
       var updateDrawflowNode = function(node,props){
 
        // layer 1
-        var wrapper = node.getElementsByClassName("drawflow-node-body")[0]
+        var wrapper = node.getElementsByClassName("drawflow-node-body")[0];
 
 
 
         // layer 2 - overlay text
-        array = node.getElementsByClassName("drawflow-node-overlay")
-        if (array.length == 1){
-            for(var i = 0; i < array.length; i++){
-                overlayDiv = array[i]
-                wrapper.appendChild(overlayDiv)
-            }
+        var overlayDiv;
+        var array = node.getElementsByClassName("drawflow-node-overlay");
+        if (array.length === 1){
+            overlayDiv = array[0];
         }
         else{
-        var overlayDiv = document.createElement("div")
-        overlayDiv.className = "Drawflow-node-overlay"
-        wrapper.appendChild(overlayDiv)
+            overlayDiv = document.createElement("div");
+            overlayDiv.className = "drawflow-node-overlay";
+            wrapper.appendChild(overlayDiv);
         }
-        
-        // layer 2 - background image
-        array = node.getElementsByClassName("drawflow-background-logo");
-        if (array.length == 1){
-            for(var i = 0; i < array.length; i++){
-                var backgroundImage = node.getElementsByClassName("drawflow-node-body")[0].getElementsByTagName("i")[0]
-                wrapper.appendChild(backgroundImage)
-            }
-        }
-
-        else{
-            var backgroundImage = node.getElementsByClassName("drawflow-node-body")[0].getElementsByTagName("i")[0]
-            wrapper.appendChild(backgroundImage)
-        } 
 
 
         ////////////////////////// update facility name ///////////////////////
@@ -1055,7 +1040,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                     productDiv.innerHTML = "<b>Product:</b> " + product.name;
                     productDiv.show();
                 }
-            })
+            });
         }
         
         // if the div is not empty or is set as a defined value -> it is current, don't hide/update
@@ -1063,8 +1048,9 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             // up-to-date nodes won't do any processing
             // console.log("node" + props.name + "product up to date")
         }
-
-};
+    };
+    
+    
   //**************************************************************************
   //** showMenu
   //**************************************************************************

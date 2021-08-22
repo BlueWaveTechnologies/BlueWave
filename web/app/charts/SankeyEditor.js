@@ -273,7 +273,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
                 
-                //add props to node
+              //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
                     if (props.hasOwnProperty(key)){
@@ -304,13 +304,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 nodes[nodeID] = node;
 
 
-
-
               //Fire event
                 me.onNodeImport(node,props);
-
-
-                
             }
         }
 
