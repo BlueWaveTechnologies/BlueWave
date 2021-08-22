@@ -97,7 +97,6 @@ bluewave.utils = {
   //** addOverflow
   //**************************************************************************
     addOverflow: function(parent, config){
-
       //Set default config options
         var defaultConfig = {
             style: {
