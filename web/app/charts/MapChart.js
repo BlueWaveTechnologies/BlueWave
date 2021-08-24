@@ -74,7 +74,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
           //Get isObject boolean.
             var isObject = chartConfig.isObject;
-            //console.log(data);
 
           //Set color scale
             var colorScale = {
@@ -82,15 +81,24 @@ bluewave.charts.MapChart = function(parent, config) {
                 "red": d3.scaleQuantile(extent, d3.schemeReds[7])
             };
             if (!chartConfig.colorScale) chartConfig.colorScale = "red";
+            if(chartConfig.linkZoom === (width / .8) || chartConfig.linkZoom === width / 2 / Math.PI){
+                delete chartConfig.linkZoom;
+            }
             var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
             if(chartConfig.mapLevel == "states"){
                 getData("states", function(mapData) {
                     getData("countries", function(countryData){
+                        if(!chartConfig.linkZoom) chartConfig.linkZoom = (width / .8);
+                        if(!chartConfig.centerHorizontal) chartConfig.centerHorizontal = (width / 2);
+                        if(!chartConfig.centerVertical) chartConfig.centerVertical = (height / 2);
+                        var zoom = chartConfig.linkZoom;
+                        var horizontal = chartConfig.centerHorizontal;
+                        var vertical = chartConfig.centerVertical;
                         var countries = topojson.feature(countryData, countryData.objects.countries);
                         var states = topojson.feature(mapData, mapData.objects.states);
                         var projection = d3.geoAlbers()
-                            .scale(width / .8)
-                            .translate([width / 2, height / 2]);
+                            .scale(zoom)
+                            .translate([horizontal, vertical]);
                         var path = d3.geoPath().projection(projection);
 
                     mapArea.selectAll('circle').remove();
@@ -249,7 +257,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                     for (var i = 0; i < states.features.length; i++){
                                         var stateCenter = states.features[i];
                                         if (stateOne === stateCenter.properties.code){
-                                            console.log(stateCenter);
                                             var lat = stateCenter.properties.latitude;
                                             var lon = stateCenter.properties.longitude;
                                             coordOne.push(lat);
@@ -261,7 +268,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                     for(var i = 0; i < states.features.length; i++){
                                         var stateCenter = states.features[i];
                                         if(stateTwo === stateCenter.properties.code){
-                                            console.log(stateCenter);
                                             var lat = stateCenter.properties.latitude;
                                             var lon = stateCenter.properties.longitude;
                                             coordTwo.push(lat);
@@ -482,11 +488,17 @@ bluewave.charts.MapChart = function(parent, config) {
                 });
             }else if(chartConfig.mapLevel == "countries"){
                 getData("countries", function(mapData){
+                    if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
+                    if(!chartConfig.centerLongitude) chartConfig.centerLongitude = 110;
+                    if(!chartConfig.centerLatitude) chartConfig.centerLatitude = 20;
+                    var zoom = chartConfig.linkZoom;
+                    var centerLon = chartConfig.centerLongitude;
+                    var centerLat = chartConfig.centerLatitude;
                     var countries = topojson.feature(mapData, mapData.objects.countries);
                     var projection = d3.geoMercator()
-                                    .scale(width / 2 / Math.PI)
-                                    .rotate([110, 0])
-                                    .center([0, 20])
+                                    .scale(zoom)
+                                    .rotate([centerLon, 0])
+                                    .center([0, centerLat])
                                     .translate([width / 2, height / 2]);
 
                     var path = d3.geoPath().projection(projection);
@@ -552,7 +564,6 @@ bluewave.charts.MapChart = function(parent, config) {
                             if(d.state) {
                                 state = d.state;
                                 aggregateState = aggregateState + parseFloat(d[chartConfig.mapValue]);
-                                //console.log(aggregateState);
                             }
                            if(d.country) country = d.country;
                             for(var i = 0; i < countries.features.length; i++){
@@ -665,7 +676,6 @@ bluewave.charts.MapChart = function(parent, config) {
                             var quantities = [];
                             coords.forEach(function(d){
                                 quantities.push(d[2]);
-                                console.log(d);
                             });
                             var thicknessExtent = d3.extent(quantities);
                             var thicknessScale = d3.scaleQuantile()
