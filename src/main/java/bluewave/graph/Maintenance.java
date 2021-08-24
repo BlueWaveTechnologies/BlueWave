@@ -27,10 +27,11 @@ public class Maintenance {
   /** Used to create a new user account in the graph database
    */
     public static void createUser(String username, String password, Neo4J graph) throws Exception {
-        String cmd = "CREATE USER " + username + " IF NOT EXISTS SET PASSWORD '" + password + "'";
+        String cmd = "CREATE USER " + username + " IF NOT EXISTS SET PASSWORD '" + 
+        password + "' CHANGE NOT REQUIRED";
         try{
             execute(cmd, graph);
-            console.log("Successfully created user: " + cmd);
+            log("Successfully created user: " + username);
         }
         catch(Exception e){
             throw e;
@@ -47,7 +48,7 @@ public class Maintenance {
         String cmd = "DROP USER " + username + " IF EXISTS";
         try{
             execute(cmd, graph);
-            console.log("Successfully deleted user: " + cmd);
+            log("Successfully deleted user: " + username);
         }
         catch(Exception e){
             throw e;
@@ -56,13 +57,30 @@ public class Maintenance {
     
     
   //**************************************************************************
-  //** setUserRole
+  //** addRole
   //**************************************************************************
-    public static void setRole(String username, String role, Neo4J graph) throws Exception{
+    public static void addRole(String username, String role, Neo4J graph) throws Exception{
+        if (!graph.getEdition().equals("enterprise")) return;
         String cmd = "GRANT ROLE " + role + " TO " + username;
         try{
             execute(cmd, graph);
-            console.log("Successfully updated user: " + cmd);
+            log("Successfully updated user: " + username);
+        }
+        catch(Exception e){
+            throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** removeRole
+  //**************************************************************************
+    public static void removeRole(String username, String role, Neo4J graph) throws Exception{
+        if (!graph.getEdition().equals("enterprise")) return;
+        String cmd = "REVOKE ROLE " + role + " FROM " + username;
+        try{
+            execute(cmd, graph);
+            log("Successfully updated user: " + username);
         }
         catch(Exception e){
             throw e;
@@ -77,10 +95,25 @@ public class Maintenance {
         String cmd = "ALTER USER " + username + " IF EXISTS SET PASSWORD '" + password + "'";
         try{
             execute(cmd, graph);
-            console.log("Successfully updated user: " + cmd);
+            log("Successfully updated user: " + username);
         }
         catch(Exception e){
             throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** syncUsers
+  //**************************************************************************
+    public static void syncUsers(Neo4J graph) throws Exception {
+        for (bluewave.app.User user : bluewave.app.User.find("active=",true)){
+            String[] credentials = user.getGraphCredentials();
+            String username = credentials[0];
+            String password = credentials[1];
+            String role = bluewave.app.User.getGraphRole(user.getAccessLevel());
+            createUser(username, password, graph);
+            addRole(username, role, graph);
         }
     }
     
@@ -98,7 +131,7 @@ public class Maintenance {
             cmd += "n." + columnName;
             cmd += ")";
             execute(cmd, graph);
-            console.log("Successfully created index: " + indexName);
+            log("Successfully created index: " + indexName);
         }
         catch(Exception e){
             throw e;
@@ -151,7 +184,7 @@ public class Maintenance {
 
             for (String node : nodes){
                 String cmd = "MATCH (n:" + node + ") DETACH DELETE n";
-                console.log(cmd);
+                log(cmd);
                 session.run(cmd);
             }
 
@@ -199,4 +232,29 @@ public class Maintenance {
         return(s.toString());
     }
 
+    
+  //**************************************************************************
+  //** log
+  //**************************************************************************
+    private static void log(Object... obj){
+        boolean print = false;
+        try{
+            throw new Exception();
+        }
+        catch(Exception e){
+            StackTraceElement[] stacktrace = e.getStackTrace();
+            for (int i=0; i<stacktrace.length; i++){
+                StackTraceElement el = stacktrace[i];
+                String className = el.getClassName();
+                if (!el.getClassName().equals("bluewave.graph.Maintenance")){
+                    el = stacktrace[i+1];
+                    if (el.getClassName().equals("bluewave.Main")){
+                        print = true;
+                    }
+                    break;
+                }
+            }
+        }
+        if (print) console.log(obj);
+    }
 }
