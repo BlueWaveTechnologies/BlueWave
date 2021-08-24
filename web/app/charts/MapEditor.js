@@ -85,7 +85,7 @@ if(!bluewave.charts) bluewave.charts={};
 
       //Watch for settings
         panel.settings.onclick = function(){
-            if (chartConfig) editStyle(chartConfig.mapType);
+            if (chartConfig) editStyle(chartConfig.mapType, chartConfig.mapLevel);
         };
 
 
@@ -398,8 +398,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(mapType){
-
+    var editStyle = function(mapType, mapLevel){
       //Create styleEditor as needed
         if (!styleEditor){
             styleEditor = new javaxt.dhtml.Window(document.body, {
@@ -418,111 +417,570 @@ if(!bluewave.charts) bluewave.charts={};
         var body = styleEditor.getBody();
         body.innerHTML = "";
         if (mapType==="Point"){
-            form = new javaxt.dhtml.Form(body, {
-                style: config.style.form,
-                items: [
-                    {
-                        group: "Style",
-                        items: [
-                            {
-                                name: "color",
-                                label: "Color",
-                                type: new javaxt.dhtml.ComboBox(
-                                    document.createElement("div"),
-                                    {
-                                        style: config.style.combobox
-                                    }
-                                )
-                            },
-                            {
-                                name: "radius",
-                                label: "Radius",
-                                type: "text"
-                            },
-                            {
-                                name: "labels",
-                                label: "Labels",
-                                type: "radio",
-                                alignment: "vertical",
-                                options: [
-                                    {
-                                        label: "True",
-                                        value: true
-                                    },
-                                    {
-                                        label: "False",
-                                        value: false
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            });
+            if(mapLevel==="states"){
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "color",
+                                    label: "Color",
+                                    type: new javaxt.dhtml.ComboBox(
+                                        document.createElement("div"),
+                                        {
+                                            style: config.style.combobox
+                                        }
+                                    )
+                                },
+                                {
+                                    name: "radius",
+                                    label: "Radius",
+                                    type: "text"
+                                },
+                                {
+                                    name: "labels",
+                                    label: "Labels",
+                                    type: "radio",
+                                    alignment: "vertical",
+                                    options: [
+                                        {
+                                            label: "True",
+                                            value: true
+                                        },
+                                        {
+                                            label: "False",
+                                            value: false
+                                        }
+                                    ]
+                                },
+                                {
+                                     name: "zoom",
+                                     label: "Zoom",
+                                     type: "text"
+                                },
+                                {
+                                     name: "centerHorizontal",
+                                     label: "Horizontal Center",
+                                     type: "text"
+                                },
+                                {
+                                     name: "centerVertical",
+                                     label: "Vertical Center",
+                                     type: "text"
+                                }
+                            ]
+                        }
+                    ]
+                });
 
 
-          //Update cutout field (add slider) and set initial value
-            createSlider("radius", form, "%");
-            var radius = chartConfig.pointRadius;
-            if (radius==null) radius = 0.65;
-            chartConfig.pointRadius = radius;
-            form.findField("radius").setValue(radius*100);
+              //Update cutout field (add slider) and set initial value
+                createSlider("radius", form, "%");
+                var radius = chartConfig.pointRadius;
+                if (radius==null) radius = 0.65;
+                chartConfig.pointRadius = radius;
+                form.findField("radius").setValue(radius*100);
 
 
-          //Tweak height of the label field and set initial value
-            var labelField = form.findField("labels");
-            labelField.row.style.height = "68px";
-            var labels = chartConfig.pieLabels;
-            labelField.setValue(labels===true ? true : false);
+              //Tweak height of the label field and set initial value
+                var labelField = form.findField("labels");
+                labelField.row.style.height = "68px";
+                var labels = chartConfig.pieLabels;
+                labelField.setValue(labels===true ? true : false);
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var horizontalField = form.findField("centerHorizontal");
+                var horizontal = chartConfig.centerHorizontal;
+                if(horizontal==null) horizontal = 500;
+                chartConfig.centerHorizontal = horizontal;
+                horizontalField.setValue(horizontal);
+
+                var verticalField = form.findField("centerVertical");
+                var vertical = chartConfig.centerVertical;
+                if(vertical==null) vertical = 500;
+                chartConfig.centerVertical = vertical;
+                verticalField.setValue(vertical);
 
 
-          //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
-                chartConfig.pointRadius = settings.radius/100;
-                if (settings.labels==="true") settings.labels = true;
-                else if (settings.labels==="false") settings.labels = false;
-                chartConfig.pointLabels = settings.labels;
-                createMapPreview();
-            };
+              //Process onChange events
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.pointRadius = settings.radius/100;
+                    if (settings.labels==="true") settings.labels = true;
+                    else if (settings.labels==="false") settings.labels = false;
+                    chartConfig.pointLabels = settings.labels;
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerHorizontal =  settings.centerHorizontal;
+                    chartConfig.centerVertical = settings.centerVertical;
+                    createMapPreview();
+                };
+            }
+            else if(mapLevel==="countries"){
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "color",
+                                    label: "Color",
+                                    type: new javaxt.dhtml.ComboBox(
+                                        document.createElement("div"),
+                                        {
+                                            style: config.style.combobox
+                                        }
+                                    )
+                                },
+                                {
+                                    name: "radius",
+                                    label: "Radius",
+                                    type: "text"
+                                },
+                                {
+                                    name: "labels",
+                                    label: "Labels",
+                                    type: "radio",
+                                    alignment: "vertical",
+                                    options: [
+                                        {
+                                            label: "True",
+                                            value: true
+                                        },
+                                        {
+                                            label: "False",
+                                            value: false
+                                        }
+                                    ]
+                                },
+                                {
+                                     name: "zoom",
+                                     label: "Zoom",
+                                     type: "text"
+                                },
+                                {
+                                     name: "centerLongitude",
+                                     label: "Longitudinal Center",
+                                     type: "text"
+                                },
+                                {
+                                     name: "centerLatitude",
+                                     label: "Latitudinal Center",
+                                     type: "text"
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+
+              //Update cutout field (add slider) and set initial value
+                createSlider("radius", form, "%");
+                var radius = chartConfig.pointRadius;
+                if (radius==null) radius = 0.65;
+                chartConfig.pointRadius = radius;
+                form.findField("radius").setValue(radius*100);
+
+
+              //Tweak height of the label field and set initial value
+                var labelField = form.findField("labels");
+                labelField.row.style.height = "68px";
+                var labels = chartConfig.pieLabels;
+                labelField.setValue(labels===true ? true : false);
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var horizontalField = form.findField("centerLongitude");
+                var horizontal = chartConfig.centerLongitude;
+                if(horizontal==null) horizontal = 500;
+                chartConfig.centerLongitude = horizontal;
+                horizontalField.setValue(horizontal);
+
+                var verticalField = form.findField("centerLatitude");
+                var vertical = chartConfig.centerLatitude;
+                if(vertical==null) vertical = 500;
+                chartConfig.centerLatitude = vertical;
+                verticalField.setValue(vertical);
+
+
+              //Process onChange events
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.pointRadius = settings.radius/100;
+                    if (settings.labels==="true") settings.labels = true;
+                    else if (settings.labels==="false") settings.labels = false;
+                    chartConfig.pointLabels = settings.labels;
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerLongitude =  settings.centerLongitude;
+                    chartConfig.centerLatitude = settings.centerLatitude;
+                    createMapPreview();
+                };
+            }
+            else if(mapLevel==="counties"){
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "color",
+                                    label: "Color",
+                                    type: new javaxt.dhtml.ComboBox(
+                                        document.createElement("div"),
+                                        {
+                                            style: config.style.combobox
+                                        }
+                                    )
+                                },
+                                {
+                                    name: "radius",
+                                    label: "Radius",
+                                    type: "text"
+                                },
+                                {
+                                    name: "labels",
+                                    label: "Labels",
+                                    type: "radio",
+                                    alignment: "vertical",
+                                    options: [
+                                        {
+                                            label: "True",
+                                            value: true
+                                        },
+                                        {
+                                            label: "False",
+                                            value: false
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                //Update cutout field (add slider) and set initial value
+                createSlider("radius", form, "%");
+                var radius = chartConfig.pointRadius;
+                if (radius==null) radius = 0.65;
+                chartConfig.pointRadius = radius;
+                form.findField("radius").setValue(radius*100);
+
+
+                //Tweak height of the label field and set initial value
+                var labelField = form.findField("labels");
+                labelField.row.style.height = "68px";
+                var labels = chartConfig.pieLabels;
+                labelField.setValue(labels===true ? true : false);
+
+                //Process onChange events
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.pointRadius = settings.radius/100;
+                    if (settings.labels==="true") settings.labels = true;
+                    else if (settings.labels==="false") settings.labels = false;
+                    chartConfig.pointLabels = settings.labels;
+                    createMapPreview();
+                };
+            }
         }
         else if (mapType==="Area"){
-
-            var colorField = new javaxt.dhtml.ComboBox(
-                document.createElement("div"),
-                {
-                    style: config.style.combobox
-                }
-            );
-            colorField.add("Red", "red");
-            colorField.add("Blue", "blue");
-
-
-            form = new javaxt.dhtml.Form(body, {
-                style: config.style.form,
-                items: [
+            if(mapLevel==="states"){
+                var colorField = new javaxt.dhtml.ComboBox(
+                    document.createElement("div"),
                     {
-                        group: "Style",
-                        items: [
-                            {
-                                name: "color",
-                                label: "Color",
-                                type: colorField
-                            }
-                        ]
+                        style: config.style.combobox
                     }
-                ]
-            });
+                );
+                colorField.add("Red", "red");
+                colorField.add("Blue", "blue");
 
 
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "color",
+                                    label: "Color",
+                                    type: colorField
+                                },
+                                {
+                                    name: "zoom",
+                                    label: "Zoom",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerHorizontal",
+                                    label: "Horizontal Center",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerVertical",
+                                    label: "Vertical Center",
+                                    type: "text"
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var horizontalField = form.findField("centerHorizontal");
+                var horizontal = chartConfig.centerHorizontal;
+                if(horizontal==null) horizontal = 500;
+                chartConfig.centerHorizontal = horizontal;
+                horizontalField.setValue(horizontal);
+
+                var verticalField = form.findField("centerVertical");
+                var vertical = chartConfig.centerVertical;
+                if(vertical==null) vertical = 500;
+                chartConfig.centerVertical = vertical;
+                verticalField.setValue(vertical);
 
 
-          //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
-                chartConfig.colorScale = settings.color;
-                createMapPreview();
-            };
+              //Process onChange events
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.colorScale = settings.color;
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerHorizontal =  settings.centerHorizontal;
+                    chartConfig.centerVertical = settings.centerVertical;
+                    createMapPreview();
+                };
+            }
+            else if(mapLevel==="countries"){
+
+                var colorField = new javaxt.dhtml.ComboBox(
+                    document.createElement("div"),
+                    {
+                        style: config.style.combobox
+                    }
+                );
+                colorField.add("Red", "red");
+                colorField.add("Blue", "blue");
+
+
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "color",
+                                    label: "Color",
+                                    type: colorField
+                                },
+                                {
+                                    name: "zoom",
+                                    label: "Zoom",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerLongitude",
+                                    label: "Longitudinal Center",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerLatitude",
+                                    label: "Latitudinal Center",
+                                    type: "text"
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var horizontalField = form.findField("centerLongitude");
+                var horizontal = chartConfig.centerLongitude;
+                if(horizontal==null) horizontal = 500;
+                chartConfig.centerLongitude = horizontal;
+                horizontalField.setValue(horizontal);
+
+                var verticalField = form.findField("centerLatitude");
+                var vertical = chartConfig.centerLatitude;
+                if(vertical==null) vertical = 500;
+                chartConfig.centerLatitude = vertical;
+                verticalField.setValue(vertical);
+
+
+              //Process onChange events
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.colorScale = settings.color;
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerLongitude =  settings.centerLongitude;
+                    chartConfig.centerLatitude = settings.centerLatitude;
+                    createMapPreview();
+                };
+            }
+            else if(mapLevel==="counties"){
+                var colorField = new javaxt.dhtml.ComboBox(
+                    document.createElement("div"),
+                    {
+                        style: config.style.combobox
+                    }
+                );
+                colorField.add("Red", "red");
+                colorField.add("Blue", "blue");
+
+
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "color",
+                                    label: "Color",
+                                    type: colorField
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.colorScale = settings.color;
+                    createMapPreview();
+                };
+            }
+        }
+        else if (mapType==="Links"){
+            if(mapLevel==="states"){
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "zoom",
+                                    label: "Zoom",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerHorizontal",
+                                    label: "Horizontal Center",
+                                    type: "text"
+                                },
+                                 {
+                                     name: "centerVertical",
+                                     label: "Vertical Center",
+                                     type: "text"
+                                 }
+                            ]
+                        }
+                    ]
+                });
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var horizontalField = form.findField("centerHorizontal");
+                var horizontal = chartConfig.centerHorizontal;
+                if(horizontal==null) horizontal = 500;
+                chartConfig.centerHorizontal = horizontal;
+                horizontalField.setValue(horizontal);
+
+                var verticalField = form.findField("centerVertical");
+                var vertical = chartConfig.centerVertical;
+                if(vertical==null) vertical = 500;
+                chartConfig.centerVertical = vertical;
+                verticalField.setValue(vertical);
+
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerHorizontal =  settings.centerHorizontal;
+                    chartConfig.centerVertical = settings.centerVertical;
+                    createMapPreview();
+                };
+            }
+            else if(mapLevel==="countries"){
+                form = new javaxt.dhtml.Form(body, {
+                    style: config.style.form,
+                    items: [
+                        {
+                            group: "Style",
+                            items: [
+                                {
+                                    name: "zoom",
+                                    label: "Zoom",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerLongitude",
+                                    label: "Longitudinal Center",
+                                    type: "text"
+                                },
+                                {
+                                    name: "centerLatitude",
+                                    label: "Latitudinal Center",
+                                    type: "text"
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                var zoomField = form.findField("zoom");
+                var zoom = chartConfig.linkZoom;
+                if (zoom==null) zoom = 800;
+                chartConfig.linkZoom = zoom;
+                zoomField.setValue(zoom);
+
+                var longField = form.findField("centerLongitude");
+                var centerLongitude = chartConfig.centerLongitude;
+                if(centerLongitude==null) centerLongitude = 110;
+                chartConfig.centerLongitude = centerLongitude;
+                longField.setValue(centerLongitude);
+
+                var latField = form.findField("centerLatitude");
+                var centerLatitude = chartConfig.centerLatitude;
+                if(centerLatitude==null) centerLatitude = 20;
+                chartConfig.centerLatitude = centerLatitude;
+                latField.setValue(centerLatitude);
+
+
+                form.onChange = function(){
+                    var settings = form.getData();
+                    chartConfig.linkZoom = settings.zoom;
+                    chartConfig.centerLongitude = settings.centerLongitude;
+                    chartConfig.centerLatitude = settings.centerLatitude;
+                    createMapPreview();
+                };
+            }
         }
 
 
@@ -538,15 +996,10 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
-    var isNumber = javaxt.dhtml.utils.isNumber;
-    var round = javaxt.dhtml.utils.round;
-    var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-    var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addTextEditor = bluewave.utils.addTextEditor;
     var createSlider = bluewave.utils.createSlider;
-    var warn = bluewave.utils.warn;
 
     init();
  };

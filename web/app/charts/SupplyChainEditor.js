@@ -37,6 +37,8 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var nodeEditor;
     var waitmask;
     var companyList, facilityList, productList, productTypes;
+    var nodeMenu;
+    var colorPicker;
 
 
   //**************************************************************************
@@ -58,11 +60,24 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
+        
+
+        config.renderers = {
+            drawflowNodes: createDrawflowNode
+        };
+
 
         sankeyEditor = new bluewave.charts.SankeyEditor(parent, config);
         sankeyEditor.getNodeEditor = getNodeEditor;
         sankeyEditor.onChange = function(){
             me.onChange();
+        };
+        sankeyEditor.onContextMenu = function(node){
+            showMenu(node);
+        };
+        // function connected to sankeyEditor - generate updated nodes for rendering
+        sankeyEditor.onNodeImport = function(node,props){
+            updateDrawflowNode(node,props);
         };
     };
 
@@ -340,7 +355,17 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
                                 node.notes = notes;
                                 node.country = data.country.country;
                                 node.state = data.country.state;
-                                node.childNodes[0].getElementsByTagName("span")[0].innerHTML = companyName;
+                                
+                                var overlayDiv = node.getElementsByClassName("drawflow-node-overlay")[0];
+
+                                addShowHide(overlayDiv);
+                                overlayDiv.hide();
+
+                                node.getElementsByClassName("drawflow-node-title")[0].getElementsByTagName("span")[0].innerHTML = companyName;
+                                node.getElementsByClassName("drawflow-node-facility-name")[0].innerHTML = "<b>Facility:</b> "+ facilityName;
+                                node.getElementsByClassName("drawflow-node-product-name")[0].innerHTML = "<b>Product:</b> "+productName;
+
+                                overlayDiv.show()
                                 nodeEditor.close();
                                 me.onSave();
                             });
@@ -869,6 +894,248 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
             scrollbar: true
         });
     };
+    
+
+  //**************************************************************************
+  //** createDrawflowNode
+  //**************************************************************************
+    var createDrawflowNode = function(node){
+
+        var div = document.createElement("div");
+
+        // title to overlay
+        var title = document.createElement("div");
+        title.className = "drawflow-node-title";
+        title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
+        div.appendChild(title);
+
+
+        // body element overlay background
+        var overlayDiv = document.createElement("div");
+        overlayDiv.className = "drawflow-node-overlay";
+        addShowHide(overlayDiv);
+        overlayDiv.hide();
+
+
+        // product name to overlay
+        var productName = document.createElement("div");
+        productName.className = "drawflow-node-product-name";
+        productName.innerHTML = "<span>" + node.productName + "</span>";
+        overlayDiv.appendChild(productName);
+
+
+        // facility name to overlay
+        var facilityName = document.createElement("div");
+        facilityName.className = "drawflow-node-facility-name";
+        facilityName.innerHTML = "<span>" + node.facilityName + "</span>";
+        overlayDiv.appendChild(facilityName);
+
+        var body = document.createElement("div");
+        body.className = "drawflow-node-body";
+        var content = node.content;
+        if (content){
+            if (typeof content === "string"){
+                body.innerHTML = content;
+            }
+            else{
+                body.appendChild(content);
+            }
+            body.appendChild(overlayDiv);
+        }
+
+        div.appendChild(body);
+        return div;
+    };
+
+
+  //**************************************************************************
+  //** updateDrawflowNode
+  //**************************************************************************
+    // update the dom elements of selected node
+    // selective updating
+      var updateDrawflowNode = function(node,props){
+
+       // layer 1
+        var wrapper = node.getElementsByClassName("drawflow-node-body")[0];
+
+
+
+        // layer 2 - overlay text
+        var overlayDiv;
+        var array = node.getElementsByClassName("drawflow-node-overlay");
+        if (array.length === 1){
+            overlayDiv = array[0];
+        }
+        else{
+            overlayDiv = document.createElement("div");
+            overlayDiv.className = "drawflow-node-overlay";
+            wrapper.appendChild(overlayDiv);
+        }
+
+
+        ////////////////////////// update facility name ///////////////////////
+
+        var facilityDiv = null;
+        var array = node.getElementsByClassName("drawflow-node-facility-name")
+        // when div is present in current node DOM object, set facilityDiv to this object
+        if(array.length == 1){
+            var facilityDiv = array[0]
+            overlayDiv.appendChild(facilityDiv)
+        }
+        else {
+            // create new div to display facility name
+            var facilityDiv = document.createElement("div")
+            facilityDiv.className = "drawflow-node-facility-name"
+            overlayDiv.appendChild(facilityDiv)
+        }
+        // add phase-in/out effects during div update
+        addShowHide(facilityDiv);
+
+
+        // if div is empty or set as undefined then hide the element and update
+        if (String(facilityDiv) === ("undefined"|"")){
+            // hide the element from user view
+            facilityDiv.hide()
+            // update when needed 
+            // get facility name from database (use facilityID to resolve)
+            get("SupplyChain/Facility?id="+props.facilityID, {
+                success: function(facility){
+                    facilityDiv.innerHTML = "<b>Facility:</b> "+facility.name;
+                    facilityDiv.show();
+                }
+            })
+        }
+
+        // if the div is not empty or is set as a defined value -> it is current, don't hide/update
+        else {
+            // up-to-date nodes won't do any processing
+            // console.log("node" + props.name + "facility up to date")
+        }
+
+
+   
+        ////////////////////////// update product name ///////////////////////
+
+        var productDiv = null;
+        var array = node.getElementsByClassName("drawflow-node-product-name")
+        if(array.length == 1){
+            productDiv = array[0]
+            overlayDiv.appendChild(productDiv)
+        }
+        else {
+            productDiv = document.createElement("div")
+            productDiv.className = "drawflow-node-product-name"
+            overlayDiv.appendChild(productDiv)
+        }
+
+        addShowHide(productDiv);
+        // if div is empty or set as undefined then hide the element and update
+        if (String(productDiv) === ("undefined"|"")){
+            // hide the element from user view
+            productDiv.hide();
+            // update when needed 
+            // get facility name from database (use facilityID to resolve)
+            get("SupplyChain/Product?id="+props.productID, {
+                success: function(product){
+                    productDiv.innerHTML = "<b>Product:</b> " + product.name;
+                    productDiv.show();
+                }
+            });
+        }
+        
+        // if the div is not empty or is set as a defined value -> it is current, don't hide/update
+        else {
+            // up-to-date nodes won't do any processing
+            // console.log("node" + props.name + "product up to date")
+        }
+    };
+    
+    
+  //**************************************************************************
+  //** showMenu
+  //**************************************************************************
+    var showMenu = function(node){
+        var menu = getNodeMenu(node);
+        sankeyEditor.showMenu(menu, node);
+    };
+    
+    
+  //**************************************************************************
+  //** getNodeMenu
+  //**************************************************************************
+    var getNodeMenu = function(node){
+        if (!nodeMenu){
+            var div = document.createElement("div");
+            div.className = "app-menu";
+            div.appendChild(createMenuOption("Edit Color", "edit", function(){
+                var node = nodeMenu.node;
+                getColorPicker().onChange = function(c){
+                    node.style.backgroundColor = c.hexString;
+                };
+            }));
+            nodeMenu = div;
+        }
+        nodeMenu.node = node;
+        return nodeMenu;
+    };
+    
+    
+  //**************************************************************************
+  //** getColorPicker
+  //**************************************************************************
+    var getColorPicker = function(){
+        if (!colorPicker){
+            colorPicker = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Node",
+                width: 340,
+                modal: false,
+                style: config.style.window
+            });
+            
+            var cp = new iro.ColorPicker(colorPicker.getBody(), {
+              width: 320,
+              height: 320,
+              anticlockwise: true,
+              borderWidth: 1,
+              borderColor: "#fff",
+              css: {
+                "#output": {
+                  "background-color": "$color"
+                }
+              }
+            });
+            
+            cp.on("color:change", function(c){
+                colorPicker.onChange(c);
+            });
+            
+            colorPicker.onChange = function(){};
+        }
+        colorPicker.show();
+        return colorPicker;
+    };
+    
+
+  //**************************************************************************
+  //** createMenuOption
+  //**************************************************************************
+    var createMenuOption = function(label, icon, onClick){
+        var div = document.createElement("div");
+        div.className = "app-menu-item noselect";
+        if (icon && icon.length>0){
+            div.innerHTML = '<i class="fas fa-' + icon + '"></i>' + label;
+        }
+        else{
+            div.innerHTML = label;
+        }
+        div.label = label;
+        div.onclick = function(){
+            sankeyEditor.getCallout().hide();
+            onClick.apply(this, [label]);
+        };
+        addShowHide(div);
+        return div;
+    };
 
 
   //**************************************************************************
@@ -879,6 +1146,7 @@ bluewave.charts.SupplyChainEditor = function(parent, config) {
     var get = bluewave.utils.get;
     var post = javaxt.dhtml.utils.post;
     var getData = bluewave.utils.getData;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();
 };
