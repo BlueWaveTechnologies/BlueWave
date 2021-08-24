@@ -5,7 +5,6 @@ import javaxt.encryption.BCrypt;
 
 //Graph stuff
 import bluewave.graph.Neo4J;
-import org.neo4j.driver.Session;
 
 //******************************************************************************
 //**  User Class
@@ -295,8 +294,13 @@ public class User extends javaxt.sql.Model
   //**************************************************************************
   //** getGraphCredentials
   //**************************************************************************
+  /** Returns graph username/password associated with this user
+   */
     public String[] getGraphCredentials() {
-        String username = "bu" + getID();
+        String hostname = ""; 
+        try{ hostname = java.net.InetAddress.getLocalHost().getHostName() + "-";}
+        catch(Exception e){};
+        String username = "bu-" + hostname + getID();
         String password = this.password;
         if (password.length()>8) password = password.substring(0, 8);
         return new String[]{username, password};
