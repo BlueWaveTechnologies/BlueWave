@@ -996,15 +996,10 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
-    var isNumber = javaxt.dhtml.utils.isNumber;
-    var round = javaxt.dhtml.utils.round;
-    var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-    var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addTextEditor = bluewave.utils.addTextEditor;
     var createSlider = bluewave.utils.createSlider;
-    var warn = bluewave.utils.warn;
 
     init();
  };

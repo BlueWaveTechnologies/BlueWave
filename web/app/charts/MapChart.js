@@ -230,7 +230,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var connections = [];
                                 var coords = [];
                                 //Split Links up into the component parts.
-                                for(link in links){
+                                for(var link in links){
                                     if(links.hasOwnProperty(link)){
                                         var linkage = link.split('->');
                                         linkage.push(links[link].quantity);
@@ -241,7 +241,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                     var connection = {};
                                     var stateCodeOne = nodes[d[0]].state;
                                     var stateCodeTwo = nodes[d[1]].state;
-                                    stateValue = d[2];
+                                    var stateValue = d[2];
                                     connection.stateCodeOne = stateCodeOne;
                                     connection.stateCodeTwo = stateCodeTwo;
                                     connection.quantity = stateValue;
