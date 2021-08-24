@@ -30,7 +30,6 @@ import javaxt.http.websocket.WebSocketListener;
 
 public class QueryService extends WebService {
 
-    private Neo4J graph;
     private javaxt.io.Directory jobDir;
     private javaxt.io.Directory logDir;
     private Map<String, QueryJob> jobs = new ConcurrentHashMap<>();
@@ -46,7 +45,7 @@ public class QueryService extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public QueryService(Neo4J graph, JSONObject webConfig){
+    public QueryService(JSONObject webConfig){
 
 
       //Set path to the jobs directory
@@ -128,8 +127,6 @@ public class QueryService extends WebService {
 
 
 
-      //Set graph
-        this.graph = graph;
 
 
       //Websocket stuff
@@ -270,8 +267,8 @@ public class QueryService extends WebService {
 
 
           //Create job
-            User user = (User) request.getUser();
-            QueryJob job = new QueryJob(user.getID(), query, offset, limit, params);
+            bluewave.app.User user = (bluewave.app.User) request.getUser();
+            QueryJob job = new QueryJob(user, query, offset, limit, params);
             String key = job.getKey();
             job.log();
             notify(job);
@@ -725,6 +722,7 @@ public class QueryService extends WebService {
     public class QueryJob {
 
         private String id;
+        private bluewave.app.User user;
         private long userID;
         private String query;
         private Long offset;
@@ -738,9 +736,10 @@ public class QueryService extends WebService {
 
 
 
-        public QueryJob(long userID, String query, Long offset, Long limit, JSONObject params) {
+        public QueryJob(bluewave.app.User user, String query, Long offset, Long limit, JSONObject params) {
             this.id = UUID.randomUUID().toString();
-            this.userID = userID;
+            this.user = user;
+            this.userID = user.getID();
 
             StringBuilder str = new StringBuilder();
             for (String row : query.split("\n")){
@@ -781,6 +780,10 @@ public class QueryService extends WebService {
             if (params.has("metadata")){
                 addMetadata = params.get("metadata").toBoolean();
             }
+        }
+        
+        public bluewave.app.User getUser(){
+            return user;
         }
 
         public Long getLimit(){
@@ -1044,6 +1047,7 @@ public class QueryService extends WebService {
 
 
                               //Open database connection and execute query
+                                Neo4J graph = bluewave.Config.getGraph(job.getUser());
                                 session = graph.getSession(true);
                                 Result rs = session.run(query);
                                 while (rs.hasNext()){

@@ -60,8 +60,8 @@ public class GraphService extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public GraphService(Neo4J graph){
-        this.graph = graph;
+    public GraphService(){
+        this.graph = bluewave.Config.getGraph(null);
         this.cache = new ConcurrentHashMap<>();
         Properties properties = graph.getProperties();
 
