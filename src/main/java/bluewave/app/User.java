@@ -224,11 +224,12 @@ public class User extends javaxt.sql.Model
                 graph = bluewave.Config.getGraph(null);
                 if (user==null){
                     bluewave.graph.Maintenance.createUser(username, password, graph);
-                    bluewave.graph.Maintenance.setRole(username, getGraphRole(accessLevel), graph);
+                    bluewave.graph.Maintenance.addRole(username, getGraphRole(accessLevel), graph);
                 }
                 else{
                     if (accessLevel != user.getAccessLevel()){
-                        bluewave.graph.Maintenance.setRole(username, getGraphRole(accessLevel), graph);
+                        bluewave.graph.Maintenance.removeRole(username, getGraphRole(user.getAccessLevel()), graph);
+                        bluewave.graph.Maintenance.addRole(username, getGraphRole(accessLevel), graph);
                     }
                     if (!this.password.equals(user.password)){
                         bluewave.graph.Maintenance.setPassword(username, password, graph);
@@ -275,7 +276,7 @@ public class User extends javaxt.sql.Model
   //**************************************************************************
   /** Used to map an accessLevel to a role in the graph
    */
-    private String getGraphRole(int accessLevel){
+    public static String getGraphRole(int accessLevel){
         String role;
         switch (accessLevel) {
             case 3:  role = "editor";
@@ -298,9 +299,10 @@ public class User extends javaxt.sql.Model
    */
     public String[] getGraphCredentials() {
         String hostname = ""; 
-        try{ hostname = java.net.InetAddress.getLocalHost().getHostName() + "-";}
+        try{ hostname = java.net.InetAddress.getLocalHost().getHostName() + "_";}
         catch(Exception e){};
-        String username = "bu-" + hostname + getID();
+        String username = "bw_" + hostname + getID();
+        username = username.replace("-", "_");
         String password = this.password;
         if (password.length()>8) password = password.substring(0, 8);
         return new String[]{username, password};
