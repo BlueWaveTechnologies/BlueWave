@@ -47,7 +47,9 @@ bluewave.data.states =
             "name": "Alabama",
             "code": "AL",
             "latitude": 32.318231,
-            "longitude": -86.902298
+            "longitude": -86.902298,
+            "censusRegion": 3,
+            "censusDivision": 6
           }
         },
         {
@@ -744,7 +746,9 @@ bluewave.data.states =
             "name": "Alaska",
             "code": "AK",
             "latitude": 63.588753,
-             "longitude": -154.493062
+            "longitude": -154.493062,
+            "censusRegion": 4,
+            "censusDivision": 9
           }
         },
         {
@@ -763,7 +767,9 @@ bluewave.data.states =
             "name": "Arizona",
             "code": "AZ",
             "latitude": 34.048928,
-            "longitude": -111.093731
+            "longitude": -111.093731,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -783,7 +789,9 @@ bluewave.data.states =
             "name": "Colorado",
             "code": "CO",
             "latitude": 39.550051,
-            "longitude": -105.782067
+            "longitude": -105.782067,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -847,7 +855,9 @@ bluewave.data.states =
             "name": "Florida",
             "code": "FL",
             "latitude": 27.664827,
-            "longitude": -81.515754
+            "longitude": -81.515754,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -867,7 +877,9 @@ bluewave.data.states =
             "name": "Georgia",
             "code": "GA",
             "latitude": 32.157435,
-            "longitude": -82.907123
+            "longitude": -82.907123,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -886,7 +898,9 @@ bluewave.data.states =
             "name": "Indiana",
             "code": "IN",
             "latitude": 40.551217,
-            "longitude": -85.602364
+            "longitude": -85.602364,
+            "censusRegion": 2,
+            "censusDivision": 3
           }
         },
         {
@@ -904,7 +918,9 @@ bluewave.data.states =
             "name": "Kansas",
             "code": "KS",
             "latitude": 39.011902,
-            "longitude": -98.484246
+            "longitude": -98.484246,
+            "censusRegion": 2,
+            "censusDivision": 4
           }
         },
         {
@@ -957,7 +973,9 @@ bluewave.data.states =
             "name": "Maine",
             "code": "ME",
             "latitude": 45.253783,
-            "longitude": -69.445469
+            "longitude": -69.445469,
+            "censusRegion": 1,
+            "censusDivision": 1
           }
         },
         {
@@ -991,7 +1009,9 @@ bluewave.data.states =
             "name": "Massachusetts",
             "code": "MA",
             "latitude": 42.407211,
-            "longitude": -71.382437
+            "longitude": -71.382437,
+            "censusRegion": 1,
+            "censusDivision": 1
           }
         },
         {
@@ -1010,7 +1030,9 @@ bluewave.data.states =
             "name": "Minnesota",
             "code": "MN",
             "latitude": 46.729553,
-            "longitude": -94.6859
+            "longitude": -94.6859,
+            "censusRegion": 2,
+            "censusDivision": 4
           }
         },
         {
@@ -1032,7 +1054,9 @@ bluewave.data.states =
             "name": "New Jersey",
             "code": "NJ",
             "latitude": 40.058324,
-            "longitude": -74.405661
+            "longitude": -74.405661,
+            "censusRegion": 1,
+            "censusDivision": 2
           }
         },
         {
@@ -1063,7 +1087,9 @@ bluewave.data.states =
             "name": "North Carolina",
             "code": "NC",
             "latitude": 35.759573,
-            "longitude": -79.0193
+            "longitude": -79.0193,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -1081,7 +1107,9 @@ bluewave.data.states =
             "name": "North Dakota",
             "code": "ND",
             "latitude": 47.551493,
-            "longitude": -101.002012
+            "longitude": -101.002012,
+            "censusRegion": 2,
+            "censusDivision": 4
           }
         },
         {
@@ -1101,7 +1129,9 @@ bluewave.data.states =
             "name": "Oklahoma",
             "code": "OK",
             "latitude": 35.007752,
-            "longitude": -97.092877
+            "longitude": -97.092877,
+            "censusRegion": 3,
+            "censusDivision": 7
           }
         },
         {
@@ -1122,7 +1152,9 @@ bluewave.data.states =
             "name": "Pennsylvania",
             "code": "PA",
             "latitude": 41.203322,
-            "longitude": -77.194525
+            "longitude": -77.194525,
+            "censusRegion": 1,
+            "censusDivision": 2
           }
         },
         {
@@ -1142,7 +1174,9 @@ bluewave.data.states =
             "name": "South Dakota",
             "code": "SD",
             "latitude": 43.969515,
-            "longitude": -99.901813
+            "longitude": -99.901813,
+            "censusRegion": 2,
+            "censusDivision": 4
           }
         },
         {
@@ -1163,7 +1197,9 @@ bluewave.data.states =
             "name": "Texas",
             "code": "TX",
             "latitude": 31.968599,
-            "longitude": -99.901813
+            "longitude": -99.901813,
+            "censusRegion": 3,
+            "censusDivision": 7
           }
         },
         {
@@ -1183,7 +1219,9 @@ bluewave.data.states =
             "name": "Wyoming",
             "code": "WY",
             "latitude": 43.075968,
-            "longitude": -107.290284
+            "longitude": -107.290284,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -1201,7 +1239,9 @@ bluewave.data.states =
             "name": "Connecticut",
             "code": "CT",
             "latitude": 41.603221,
-            "longitude": -73.087749
+            "longitude": -73.087749,
+            "censusRegion": 1,
+            "censusDivision": 1
           }
         },
         {
@@ -1225,7 +1265,9 @@ bluewave.data.states =
             "name": "Missouri",
             "code": "MO",
             "latitude": 37.964253,
-            "longitude": -91.831833
+            "longitude": -91.831833,
+            "censusRegion": 2,
+            "censusDivision": 4
           }
         },
         {
@@ -1244,7 +1286,9 @@ bluewave.data.states =
             "name": "West Virginia",
             "code": "WV",
             "latitude": 38.597626,
-            "longitude": -80.454903
+            "longitude": -80.454903,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -1264,7 +1308,9 @@ bluewave.data.states =
             "name": "Illinois",
             "code": "IL",
             "latitude": 40.633125,
-            "longitude": -89.398528
+            "longitude": -89.398528,
+            "censusRegion": 2,
+            "censusDivision": 3
           }
         },
         {
@@ -1283,7 +1329,9 @@ bluewave.data.states =
             "name": "New Mexico",
             "code": "NM",
             "latitude": 34.97273,
-            "longitude": -105.032363
+            "longitude": -105.032363,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -1305,7 +1353,9 @@ bluewave.data.states =
             "name": "Arkansas",
             "code": "AR",
             "latitude": 35.20105,
-            "longitude": -91.831833
+            "longitude": -91.831833,
+            "censusRegion": 3,
+            "censusDivision": 7
           }
         },
         {
@@ -1366,7 +1416,9 @@ bluewave.data.states =
             "name": "California",
             "code": "CA",
             "latitude": 36.778261,
-            "longitude": -119.417932
+            "longitude": -119.417932,
+            "censusRegion": 4,
+            "censusDivision": 9
           }
         },
         {
@@ -1392,7 +1444,9 @@ bluewave.data.states =
             "name": "Delaware",
             "code": "DE",
             "latitude": 38.910832,
-            "longitude": -75.52767
+            "longitude": -75.52767,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -1408,7 +1462,9 @@ bluewave.data.states =
             "name": "District of Columbia",
             "code": "DC",
             "latitude": 38.905985,
-            "longitude": -77.033418
+            "longitude": -77.033418,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -1460,7 +1516,9 @@ bluewave.data.states =
             "name": "Hawaii",
             "code": "HI",
             "latitude": 19.898682,
-            "longitude": -155.665857
+            "longitude": -155.665857,
+            "censusRegion": 4,
+            "censusDivision": 9
           }
         },
         {
@@ -1480,7 +1538,9 @@ bluewave.data.states =
             "name": "Iowa",
             "code": "IA",
             "latitude": 41.878003,
-            "longitude": -93.097702
+            "longitude": -93.097702,
+            "censusRegion": 2,
+            "censusDivision": 4
           }
         },
         {
@@ -1509,7 +1569,9 @@ bluewave.data.states =
             "name": "Kentucky",
             "code": "KY",
             "latitude": 37.839333,
-            "longitude": -84.270018
+            "longitude": -84.270018,
+            "censusRegion": 3,
+            "censusDivision": 6
           }
         },
         {
@@ -1550,7 +1612,9 @@ bluewave.data.states =
             "name": "Maryland",
             "code": "MD",
             "latitude": 39.045755,
-            "longitude": -76.641271
+            "longitude": -76.641271,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -1629,7 +1693,9 @@ bluewave.data.states =
             "name": "Michigan",
             "code": "MI",
             "latitude": 44.314844,
-            "longitude": -85.602364
+            "longitude": -85.602364,
+            "censusRegion": 2,
+            "censusDivision": 3
           }
         },
         {
@@ -1670,7 +1736,9 @@ bluewave.data.states =
             "name": "Mississippi",
             "code": "MS",
             "latitude": 32.354668,
-            "longitude": -89.398528
+            "longitude": -89.398528,
+            "censusRegion": 3,
+            "censusDivision": 6
           }
         },
         {
@@ -1689,7 +1757,9 @@ bluewave.data.states =
             "name": "Montana",
             "code": "MT",
             "latitude": 46.879682,
-            "longitude": -110.362566
+            "longitude": -110.362566,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -1708,7 +1778,9 @@ bluewave.data.states =
             "name": "New Hampshire",
             "code": "NH",
             "latitude": 43.193852,
-            "longitude": -71.572395
+            "longitude": -71.572395,
+            "censusRegion": 1,
+            "censusDivision": 1
           }
         },
         {
@@ -1762,7 +1834,9 @@ bluewave.data.states =
             "name": "New York",
             "code": "NY",
             "latitude": 43.299428,
-            "longitude": -74.217933
+            "longitude": -74.217933,
+            "censusRegion": 1,
+            "censusDivision": 2
           }
         },
         {
@@ -1794,7 +1868,9 @@ bluewave.data.states =
             "name": "Ohio",
             "code": "OH",
             "latitude": 40.417287,
-            "longitude": -82.907123
+            "longitude": -82.907123,
+            "censusRegion": 2,
+            "censusDivision": 3
           }
         },
         {
@@ -1815,7 +1891,9 @@ bluewave.data.states =
             "name": "Oregon",
             "code": "OR",
             "latitude": 43.804133,
-            "longitude": -120.554201
+            "longitude": -120.554201,
+            "censusRegion": 4,
+            "censusDivision": 9
           }
         },
         {
@@ -1839,7 +1917,9 @@ bluewave.data.states =
             "name": "Tennessee",
             "code": "TN",
             "latitude": 35.517491,
-            "longitude": -86.580447
+            "longitude": -86.580447,
+            "censusRegion": 3,
+            "censusDivision": 6
           }
         },
         {
@@ -1858,7 +1938,9 @@ bluewave.data.states =
             "name": "Utah",
             "code": "UT",
             "latitude": 39.32098,
-            "longitude": -111.093731
+            "longitude": -111.093731,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -1899,7 +1981,9 @@ bluewave.data.states =
             "name": "Virginia",
             "code": "VA",
             "latitude": 37.431573,
-            "longitude": -78.656894
+            "longitude": -78.656894,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -1968,7 +2052,9 @@ bluewave.data.states =
             "name": "Washington",
             "code": "WA",
             "latitude": 47.751074,
-            "longitude": -120.740139
+            "longitude": -120.740139,
+            "censusRegion": 4,
+            "censusDivision": 9
           }
         },
         {
@@ -2044,7 +2130,9 @@ bluewave.data.states =
             "name": "Wisconsin",
             "code": "WI",
             "latitude": 43.78444,
-            "longitude": -88.787868
+            "longitude": -88.787868,
+            "censusRegion": 2,
+            "censusDivision": 3
           }
         },
         {
@@ -2069,7 +2157,9 @@ bluewave.data.states =
           "id": "60",
           "properties": {
             "name": "American Samoa",
-            "code": "AS"
+            "code": "AS",
+            "censusRegion": "N/A",
+            "censusDivision": "N/A"
           }
         },
         {
@@ -2084,7 +2174,9 @@ bluewave.data.states =
           "id": "66",
           "properties": {
             "name": "Guam",
-            "code": "GU"
+            "code": "GU",
+            "censusRegion": "N/A",
+            "censusDivision": "N/A"
           }
         },
         {
@@ -2134,7 +2226,9 @@ bluewave.data.states =
           "id": "69",
           "properties": {
             "name": "Commonwealth of the Northern Mariana Islands",
-            "code": "MP"
+            "code": "MP",
+            "censusRegion": "N/A",
+            "censusDivision": "N/A"
           }
         },
         {
@@ -2154,7 +2248,9 @@ bluewave.data.states =
             "name": "Nebraska",
             "code": "NE",
             "latitude": 41.492537,
-            "longitude": -99.901813
+            "longitude": -99.901813,
+            "censusRegion": 2,
+            "censusDivision": 4
           }
         },
         {
@@ -2171,7 +2267,9 @@ bluewave.data.states =
             "name": "South Carolina",
             "code": "SC",
             "latitude": 33.836081,
-            "longitude": -81.163725
+            "longitude": -81.163725,
+            "censusRegion": 3,
+            "censusDivision": 5
           }
         },
         {
@@ -2208,7 +2306,9 @@ bluewave.data.states =
             "name": "Puerto Rico",
             "code": "PR",
             "latitude": 18.220833,
-            "longitude": -66.590149
+            "longitude": -66.590149,
+            "censusRegion": "N/A",
+            "censusDivision": "N/A"
           }
         },
         {
@@ -2233,7 +2333,9 @@ bluewave.data.states =
           "id": "78",
           "properties": {
             "name": "United States Virgin Islands",
-            "code": "VI"
+            "code": "VI",
+            "censusRegion": "N/A",
+            "censusDivision": "N/A"
           }
         },
         {
@@ -2254,7 +2356,9 @@ bluewave.data.states =
             "name": "Idaho",
             "code": "ID",
             "latitude": 44.068202,
-            "longitude": -114.742041
+            "longitude": -114.742041,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -2274,7 +2378,9 @@ bluewave.data.states =
             "name": "Nevada",
             "code": "NV",
             "latitude": 38.80261,
-            "longitude": -116.419389
+            "longitude": -116.419389,
+            "censusRegion": 4,
+            "censusDivision": 8
           }
         },
         {
@@ -2292,7 +2398,9 @@ bluewave.data.states =
             "name": "Vermont",
             "code": "VT",
             "latitude": 44.558803,
-            "longitude": -72.577841
+            "longitude": -72.577841,
+            "censusRegion": 1,
+            "censusDivision": 1
           }
         },
         {
@@ -2347,7 +2455,9 @@ bluewave.data.states =
             "name": "Louisiana",
             "code": "LA",
             "latitude": 31.244823,
-            "longitude": -92.145024
+            "longitude": -92.145024,
+            "censusRegion": 3,
+            "censusDivision": 7
           }
         },
         {
@@ -2387,7 +2497,9 @@ bluewave.data.states =
             "name": "Rhode Island",
             "code": "RI",
             "latitude": 41.580095,
-            "longitude": -71.477429
+            "longitude": -71.477429,
+            "censusRegion": 1,
+            "censusDivision": 1
           }
         }
       ]
