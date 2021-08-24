@@ -38,7 +38,7 @@ bluewave.ChartEditor = function(parent, config) {
         group:null
     };
     var projectionOptions;
-    var chartConfig = {
+    var chartConfig = {        
         pieKey:null,
         pieValue:null,
         xAxis:null,
@@ -46,6 +46,11 @@ bluewave.ChartEditor = function(parent, config) {
         chartType:null,
         chartTitle:null,
         nodeId:null,
+        lineColor:null,
+        lineWidth:null,
+        opacity:null,
+        fillArea:null,
+        gridLines:null,
     };
     var margin = {
         top: 15,
@@ -502,7 +507,147 @@ bluewave.ChartEditor = function(parent, config) {
             };
         }
 
+        //line chart style edit
+        if (chartType==="lineChart"){
 
+            //create color dropdown
+            var colorField = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox
+                }
+            );
+
+            //add all colors to dropdown
+            var colorPalette = getColorPalette();
+
+            colorPalette.forEach((c)=>{
+                colorField.add(c, c);
+            });
+
+            //add style options
+            var form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            {
+                                name: "color",
+                                label: "Color",
+                                type: colorField
+                            },
+                            {
+                                name: "lineThickness",
+                                label: "Line Thickness",
+                                type: "text"
+                            },
+                            {
+                                name: "opacity",
+                                label: "Opacity",
+                                type: "text"
+                            },
+                            {
+                                name: "area",
+                                label: "Area Chart",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "true",
+                                        value: true
+                                    },
+                                    {
+                                        label: "false",
+                                        value: false
+                                    },
+                                    
+                                    
+                                ]
+                            },
+                            {
+                                name: "gridLines",
+                                label: "Grid Lines",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "true",
+                                        value: true
+                                    },
+                                    {
+                                        label: "false",
+                                        value: false
+                                    },
+                                    
+                                    
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+          //set default dropdown value
+            form.findField("color").setValue(chartConfig.lineColor || "#6699CC");
+            var colorOption = form.findField("color").row.querySelectorAll(".form-input-menu-item");
+
+            //change background color for each item in color dropdown
+            colorOption.forEach((item)=>{
+                item.style.backgroundColor = item.textContent;
+                item.onmouseover = ()=> item.style.opacity = .8;
+                item.onmouseout = ()=> item.style.opacity = 1;
+            });
+
+          //Update lineWidth field (add slider) and set initial value
+            createSlider("lineThickness", form);
+            var thickness = chartConfig.lineWidth;
+            if (thickness==null) thickness = 1.5;
+            chartConfig.lineWidth = thickness;
+            form.findField("lineThickness").setValue(thickness*10);
+
+            //add opacity slider
+            createSlider("opacity", form, "%");
+            var opacity = chartConfig.opacity;
+            if (opacity==null) opacity = .95;
+            chartConfig.opacity = opacity;
+            form.findField("opacity").setValue(opacity*100);
+            
+
+          //Tweak height of the area field and set initial value
+            var areaField = form.findField("area");
+            areaField.row.style.height = "68px";
+            var fillArea = chartConfig.fillArea;
+            areaField.setValue(fillArea===true ? true : false);
+
+            //Tweak height of the gridline field and set initial value
+            var gridLineField = form.findField("gridLines");
+            gridLineField.row.style.height = "68px";
+            var gridlines = chartConfig.gridLines;
+            gridLineField.setValue(gridlines===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+                
+                if (settings.area==="true") settings.area = true;
+                else if (settings.area==="false") settings.area = false;
+
+                if (settings.gridLines==="true") settings.gridLines = true;
+                else if (settings.gridLines==="false") settings.gridLines = false;
+
+                //update config values
+                chartConfig.lineColor = settings.color;
+                chartConfig.lineWidth = settings.lineThickness/10;
+                chartConfig.opacity = settings.opacity/100;
+                chartConfig.fillArea = settings.area;
+                chartConfig.gridLines = settings.gridLines;
+                createLinePreview();
+            };
+
+
+        }
 
         styleEditor.showAt(108,57);
         form.resize();
@@ -518,6 +663,7 @@ bluewave.ChartEditor = function(parent, config) {
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
+    var getColorPalette = bluewave.utils.getColorPalette;
 
     init();
 };
