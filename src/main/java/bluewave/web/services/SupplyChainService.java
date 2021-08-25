@@ -1,5 +1,4 @@
 package bluewave.web.services;
-import bluewave.graph.Neo4J;
 
 import java.util.*;
 import java.io.IOException;
@@ -30,16 +29,7 @@ import com.google.gson.GsonBuilder;
 
 public class SupplyChainService extends WebService {
 
-    private Neo4J graph;
-
-  //**************************************************************************
-  //** Constructor
-  //**************************************************************************
-    public SupplyChainService(Neo4J graph){
-        this.graph = graph;
-    }
-
-
+    
   //**************************************************************************
   //** getCompany
   //**************************************************************************
@@ -51,7 +41,7 @@ public class SupplyChainService extends WebService {
 
         Session session = null;
         try {
-            session = graph.getSession();
+            session = getSession(request);
 
             JSONObject company = new JSONObject();
 
@@ -101,7 +91,7 @@ public class SupplyChainService extends WebService {
       //Execute queries and return response
         Session session = null;
         try {
-            session = graph.getSession();
+            session = getSession(request);
 
 
             TreeMap<String, JSONObject> companies = new TreeMap<>();
@@ -244,7 +234,7 @@ public class SupplyChainService extends WebService {
       //Create or update company
         Session session = null;
         try{
-            session = graph.getSession();
+            session = getSession(request);
 
 
             if (companyID==null){
@@ -327,6 +317,56 @@ public class SupplyChainService extends WebService {
         }
     }
 
+    
+  //**************************************************************************
+  //** getFacility
+  //**************************************************************************
+    public ServiceResponse getFacility(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        Long facilityID = request.getParameter("id").toLong();
+        if (facilityID==null) return new ServiceResponse(400, "ID is required");
+
+        Session session = null;
+        try {
+            session = getSession(request);
+
+            JSONObject facility = new JSONObject();
+
+            String query = "MATCH (f:facility)\n" +
+            "WHERE id(f)=" + facilityID + "\n" +
+            "OPTIONAL MATCH (f)-[:source]->(n)\n" +
+            "RETURN id(f) as id, " +
+            "properties(f) as facility, " +
+            "properties(n) as registration";
+
+            
+            Result rs = session.run(query);
+            if (rs.hasNext()){
+                Record record = rs.next();
+                facility = getFacility(record);
+            }
+            session.close();
+
+            if (facility.isEmpty()) return new ServiceResponse(404);
+            facility.set("id", facilityID);
+            return new ServiceResponse(facility);
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+    private JSONObject getFacility(Record record){
+        long facilityID = record.get("id").asLong();
+        JSONObject facility = getJson(record.get("registration"));
+        if (facility.isEmpty()){
+            facility = getJson(record.get("facility"));
+        }
+        return facility;
+    }
+    
 
   //**************************************************************************
   //** getFacilities
@@ -361,15 +401,12 @@ public class SupplyChainService extends WebService {
                     LinkedHashMap<Long, JSONObject> facilities = new LinkedHashMap<>();
                     Long ownerOperatorID = null;
 
-                    session = graph.getSession();
+                    session = getSession(request);
                     Result rs = session.run(query);
                     while (rs.hasNext()){
                         Record record = rs.next();
                         long facilityID = record.get("id").asLong();
-                        JSONObject facility = getJson(record.get("registration"));
-                        if (facility.isEmpty()){
-                            facility = getJson(record.get("facility"));
-                        }
+                        JSONObject facility = getFacility(record);
 
 
                         Long fei = facility.get("fei_number").toLong();
@@ -420,7 +457,7 @@ public class SupplyChainService extends WebService {
 
                 Session session = null;
                 try{
-                    session = graph.getSession();
+                    session = getSession(request);
                     JSONArray arr = getFacilities(ownerOperatorID, session);
                     session.close();
                     return new ServiceResponse(arr);
@@ -517,7 +554,7 @@ public class SupplyChainService extends WebService {
       //Create or update facility
         Session session = null;
         try{
-            session = graph.getSession();
+            session = getSession(request);
 
 
             if (facilityID==null){
@@ -627,7 +664,54 @@ public class SupplyChainService extends WebService {
             return new ServiceResponse(e);
         }
     }
+    
 
+  //**************************************************************************
+  //** getProduct
+  //**************************************************************************
+    public ServiceResponse getProduct(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        Long productID = request.getParameter("id").toLong();
+        if (productID==null) return new ServiceResponse(400, "ID is required");
+
+        Session session = null;
+        try {
+            session = getSession(request);
+
+            JSONObject product = new JSONObject();
+
+            String query = "MATCH (p:product)\n" +
+            "WHERE id(p)=" + productID + "\n" +
+            "OPTIONAL MATCH (f)-[:source]->(n)\n" + //link to registration
+            "RETURN id(p) as id, " +
+            "properties(p) as product, " +
+            "n.fei_number as fei";
+
+            
+            Result rs = session.run(query);
+            if (rs.hasNext()){
+                Record record = rs.next();
+                product = getProduct(record);
+            }
+            session.close();
+
+            if (product.isEmpty()) return new ServiceResponse(404);
+            product.set("id", productID);
+            return new ServiceResponse(product);
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+    
+    
+    private JSONObject getProduct(Record record){
+        JSONObject product = getJson(record.get("product"));
+        return product;
+    }
+    
 
   //**************************************************************************
   //** getProducts
@@ -655,7 +739,7 @@ public class SupplyChainService extends WebService {
 
             Session session = null;
             try{
-                session = graph.getSession();
+                session = getSession(request);
 
               //Get products associated with the facility
                 Result rs = session.run(query);
@@ -725,7 +809,7 @@ public class SupplyChainService extends WebService {
 
                 Session session = null;
                 try{
-                    session = graph.getSession();
+                    session = getSession(request);
                     JSONArray arr = getProducts(fei, session);
                     session.close();
                     return new ServiceResponse(arr);
@@ -748,7 +832,7 @@ public class SupplyChainService extends WebService {
 
                 Session session = null;
                 try{
-                    session = graph.getSession();
+                    session = getSession(request);
 
                     TreeMap<String, JSONObject> uniqueProducts = new TreeMap<>();
 
@@ -939,7 +1023,7 @@ public class SupplyChainService extends WebService {
       //Create or update product
         Session session = null;
         try{
-            session = graph.getSession();
+            session = getSession(request);
 
             if (productID==null){
                 List<String> properties = new ArrayList<>();
@@ -1065,5 +1149,15 @@ public class SupplyChainService extends WebService {
             }
         }
         return str;
+    }
+    
+    
+  //**************************************************************************
+  //** getSession
+  //**************************************************************************
+    private Session getSession(ServiceRequest request){
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        bluewave.graph.Neo4J graph = bluewave.Config.getGraph(user);
+        return graph.getSession();
     }
 }

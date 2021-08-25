@@ -70,7 +70,7 @@ public class Main {
             Config.initDatabase();
             addUser(args);
         }
-        if (args.containsKey("-updatePassword")){
+        else if (args.containsKey("-updatePassword")){
             Config.initDatabase();
             updatePassword(args);
         }
@@ -296,7 +296,7 @@ public class Main {
 
 
       //Import file
-        Neo4J graph = Config.getGraph();
+        Neo4J graph = Config.getGraph(null);
         if (fileType.equals("csv")){
             bluewave.graph.Import.importCSV(file, nodeType, keys, graph);
         }
@@ -316,7 +316,7 @@ public class Main {
         javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
         if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
         
-        Neo4J graph = Config.getGraph();
+        Neo4J graph = Config.getGraph(null);
         Premier.importShards(dir, graph);
         graph.close();
     }
@@ -328,7 +328,7 @@ public class Main {
     private static void delete(HashMap<String, String> args) throws Exception {
         String str = args.get("-delete").toLowerCase();
         if (str.equals("nodes")){
-            Neo4J graph = Config.getGraph();
+            Neo4J graph = Config.getGraph(null);
             bluewave.graph.Maintenance.deleteNodes(args.get("-label"), graph);
             graph.close();
         }
@@ -356,7 +356,7 @@ public class Main {
         String nodeName = arr[0];
         String field = arr[1];
 
-        Neo4J graph = Config.getGraph();
+        Neo4J graph = Config.getGraph(null);
         try{
             bluewave.graph.Maintenance.createIndex(nodeName, field, graph);
         }
@@ -374,7 +374,7 @@ public class Main {
         String test = args.get("-test");
         if (test==null) test = "";
         if (test.equalsIgnoreCase("neo4j")){
-            Neo4J graph = Config.getGraph();
+            Neo4J graph = Config.getGraph(null);
             Session session = null;
             try{
                 session = graph.getSession();

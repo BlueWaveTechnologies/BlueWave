@@ -36,7 +36,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
             }
         },
-        hidePreview: false
+        hidePreview: false,
+        renderers: {
+            drawflowNodes: createDrawflowNode
+        }
     };
 
     var editPanel, previewPanel, waitmask; //primary components
@@ -146,6 +149,18 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** onChange
   //**************************************************************************
     this.onChange = function(){};
+    
+    
+  //**************************************************************************
+  //** onContextMenu
+  //**************************************************************************
+    this.onContextMenu = function(node){};
+
+
+  //**************************************************************************
+  //** onNodeImport
+  //**************************************************************************
+    this.onNodeImport = function(node){};
 
 
   //**************************************************************************
@@ -168,9 +183,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     this.update = function(sankeyConfig, inputs){
         me.clear();
-        
-        if (!sankeyConfig) sankeyConfig = {};
 
+        if (!sankeyConfig) sankeyConfig = {};
 
       //Clone the config so we don't modify the original config object
         sankeyConfig = JSON.parse(JSON.stringify(sankeyConfig));
@@ -258,7 +272,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-
+                
               //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
@@ -289,6 +303,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
               //Update nodes variable
                 nodes[nodeID] = node;
 
+
+              //Fire event
+                me.onNodeImport(node,props);
             }
         }
 
@@ -359,7 +376,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         .on("click", function() {
             var menu = getLinkMenu();
             menu.label = d3.select(this);
-            showMenu(menu, this);
+            me.showMenu(menu, this);
         });
 
 
@@ -535,7 +552,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         if (previewPanel.isVisible()) toggleButton.setValue("Edit");
         return editPanel;
     };
-
+    
 
   //**************************************************************************
   //** setTitle
@@ -852,6 +869,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                         var parentNode = node.parentNode.parentNode;
                         var deleteDiv = parentNode.getElementsByClassName("drawflow-delete")[0];
                         if (deleteDiv){
+                            me.onContextMenu(node);
                             parentNode.removeChild(deleteDiv);
                             deleteDiv = document.createElement("div");
                             deleteDiv.className = "drawflow-delete2";
@@ -1067,17 +1085,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             editNode(this);
         };
     };
-
+    
 
   //**************************************************************************
-  //** createNode
+  //** createDrawflowNode
   //**************************************************************************
-    var createNode = function(node){
-
-      //Create content div for a drawflow node
-        var nodeID = new Date().getTime();
+    var createDrawflowNode = function(node){
         var div = document.createElement("div");
-        div.id = "drawflow_node_"+nodeID;
+        
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
@@ -1094,6 +1109,26 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         }
         div.appendChild(body);
+        return div;
+    };
+    
+
+  //**************************************************************************
+  //** createNode
+  //**************************************************************************
+    var createNode = function(node){
+
+      //Create content div for a drawflow node
+        var div;
+        if (config.renderers.drawflowNodes){
+            div = config.renderers.drawflowNodes(node);
+        }
+        else{
+            div = createDrawflowNode(node);
+        }
+        var nodeID = new Date().getTime();
+        div.id = "drawflow_node_"+nodeID;
+
 
 
       //Create drawflow node
@@ -1631,7 +1666,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** showMenu
   //**************************************************************************
-    var showMenu = function(menu, target){
+    this.showMenu = function(menu, target){
 
         var numVisibleItems = 0;
         for (var i=0; i<menu.childNodes.length; i++){
@@ -1642,7 +1677,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             return;
         }
 
-        var callout = getCallout();
+        var callout = me.getCallout();
         var innerDiv = callout.getInnerDiv();
         while (innerDiv.firstChild) {
             innerDiv.removeChild(innerDiv.lastChild);
@@ -1701,7 +1736,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** getCallout
   //**************************************************************************
-    var getCallout = function(){
+    this.getCallout = function(){
         if (callout){
             var parent = callout.el.parentNode;
             if (!parent){
@@ -1721,6 +1756,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** onSVGRender
   //**************************************************************************
     var onSVGRender = function(el, callback){
+
         var bbox = el.getBBox();
         var w = bbox.width;
         if (w===0 || isNaN(w)){
