@@ -19,6 +19,8 @@ public class Neo4J implements AutoCloseable {
     private String username;
     private String password;
     private Properties properties;
+    private String edition;
+    private String version;
 
 
   //**************************************************************************
@@ -39,6 +41,7 @@ public class Neo4J implements AutoCloseable {
         neo4j.username = username;
         neo4j.password = password;
         neo4j.properties = (Properties) properties.clone();
+        neo4j.edition = edition;
         return neo4j;
     }
 
@@ -171,6 +174,54 @@ public class Neo4J implements AutoCloseable {
             driver.close();
             driver = null;
         }
+        version = edition = null;
     }
-
+    
+    
+  //**************************************************************************
+  //** getVersion
+  //**************************************************************************
+  /** Returns the version number of the Neo4J server
+   */
+    public String getVersion() throws Exception {
+        if (version==null) getServerInfo();
+        return version;
+    }
+    
+    
+  //**************************************************************************
+  //** getEdition
+  //**************************************************************************
+  /** Returns the edition name of the Neo4J server (e.g. enterprise, community)
+   */
+    public String getEdition() throws Exception {
+        if (edition==null) getServerInfo();
+        return edition;
+    }
+    
+    
+  //**************************************************************************
+  //** getServerInfo
+  //**************************************************************************
+  /** Executes query to get the edition and version of the Neo4J server
+   */
+    private void getServerInfo() throws Exception {
+        Session session = null;
+        try{
+            session = getSession();
+            Result rs = session.run("call dbms.components() yield versions, edition " + 
+            "unwind versions as version return version, edition");
+            while (rs.hasNext()){
+                org.neo4j.driver.Record r = rs.next();
+                version = r.get(0).asString();
+                edition = r.get(1).asString().toLowerCase();
+            }
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+            throw e;
+        }
+    }
+    
 }
