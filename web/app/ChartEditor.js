@@ -37,7 +37,6 @@ bluewave.ChartEditor = function(parent, config) {
         yAxis2:null,
         group:null
     };
-    var projectionOptions;
     var chartConfig = {        
         pieKey:null,
         pieValue:null,
@@ -50,7 +49,7 @@ bluewave.ChartEditor = function(parent, config) {
         lineWidth:null,
         opacity:null,
         fillArea:null,
-        gridLines:null,
+        gridLines:null
     };
     var margin = {
         top: 15,
@@ -66,25 +65,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        // Setup Map Projection Options
-        // Set Scale here
-        projectionOptions = [
-//            {name: "Azimuthal Equal Area", projection: d3.geoAzimuthalEqualArea()},
-//            {name: "Stereographic", projection: d3.geoStereographic()},
-            {name: "Equal Earth", projection: d3.geoEqualEarth()},
-            {name: "Ablers USA", projection: d3.geoAlbers()
-                            .rotate([96, 0])
-                            .center([-.6, 38.7])
-                            .parallels([29.5, 45.5])
-                            .scale(1000)
-                            .precision(.1)
-            },
-            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)},
-            {name: "Mercator", projection: d3.geoMercator()
-                        .scale(this.width/2/Math.PI)
 
-            }
-        ];
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -506,11 +487,9 @@ bluewave.ChartEditor = function(parent, config) {
                 createPiePreview();
             };
         }
+        else if (chartType==="lineChart"){
 
-        //line chart style edit
-        if (chartType==="lineChart"){
-
-            //create color dropdown
+          //Create color dropdown
             var colorField = new javaxt.dhtml.ComboBox(
                 document.createElement("div"),
                 {
@@ -518,14 +497,14 @@ bluewave.ChartEditor = function(parent, config) {
                 }
             );
 
-            //add all colors to dropdown
+          //Add all colors to dropdown
             var colorPalette = getColorPalette();
 
             colorPalette.forEach((c)=>{
                 colorField.add(c, c);
             });
 
-            //add style options
+          //Add style options
             var form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
@@ -588,11 +567,11 @@ bluewave.ChartEditor = function(parent, config) {
                 ]
             });
 
-          //set default dropdown value
+          //Set default dropdown value
             form.findField("color").setValue(chartConfig.lineColor || "#6699CC");
             var colorOption = form.findField("color").row.querySelectorAll(".form-input-menu-item");
 
-            //change background color for each item in color dropdown
+          //Change background color for each item in color dropdown
             colorOption.forEach((item)=>{
                 item.style.backgroundColor = item.textContent;
                 item.onmouseover = ()=> item.style.opacity = .8;
@@ -606,7 +585,7 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.lineWidth = thickness;
             form.findField("lineThickness").setValue(thickness*10);
 
-            //add opacity slider
+          //Add opacity slider
             createSlider("opacity", form, "%");
             var opacity = chartConfig.opacity;
             if (opacity==null) opacity = .95;
@@ -614,15 +593,13 @@ bluewave.ChartEditor = function(parent, config) {
             form.findField("opacity").setValue(opacity*100);
             
 
-          //Tweak height of the area field and set initial value
+          //Set initial value of the area field
             var areaField = form.findField("area");
-            areaField.row.style.height = "68px";
             var fillArea = chartConfig.fillArea;
             areaField.setValue(fillArea===true ? true : false);
 
-            //Tweak height of the gridline field and set initial value
+          //Set initial value of the gridline field 
             var gridLineField = form.findField("gridLines");
-            gridLineField.row.style.height = "68px";
             var gridlines = chartConfig.gridLines;
             gridLineField.setValue(gridlines===true ? true : false);
 
@@ -645,12 +622,30 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.gridLines = settings.gridLines;
                 createLinePreview();
             };
-
-
         }
 
+
+      //Render the styleEditor popup and resize the form 
         styleEditor.showAt(108,57);
         form.resize();
+        
+        
+        
+      //Form resize doesn't seem to be working correctly for the linechart.
+      //It might have something to do with the custom sliders. Probably a 
+      //timing issue. The following is a workaround.
+        if (chartType==="lineChart"){
+            
+            setTimeout(function(){
+                var arr = body.getElementsByClassName("form-groupbox");
+                for (var i=0; i<arr.length; i++){
+                    var el = arr[i];
+                    var h = parseFloat(el.style.height);
+                    el.style.height = h+30 + "px";
+                }
+            }, 100);
+        }
+        
     };
 
 
@@ -659,7 +654,6 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
-    var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
