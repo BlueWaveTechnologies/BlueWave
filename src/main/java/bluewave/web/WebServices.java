@@ -50,6 +50,10 @@ public class WebServices extends WebService {
         }
 
 
+      //Sync bluewave user accounts with the graph database
+        bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
+        
+        
       //Get database
         database = Config.getDatabase();
 
