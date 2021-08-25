@@ -70,7 +70,7 @@ public class Main {
             Config.initDatabase();
             addUser(args);
         }
-        if (args.containsKey("-updatePassword")){
+        else if (args.containsKey("-updatePassword")){
             Config.initDatabase();
             updatePassword(args);
         }
