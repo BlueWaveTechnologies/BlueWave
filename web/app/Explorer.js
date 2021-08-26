@@ -977,6 +977,7 @@ bluewave.Explorer = function(parent, config) {
      //Get toolbar button associated with the nodeType
         var btn = button[nodeType];
         if (!btn){
+            console.log("Unsupported Node Type: " + nodeType);
             return;
         }
 
@@ -994,7 +995,6 @@ bluewave.Explorer = function(parent, config) {
         }
 
 
-    // there are a few different forms of data that are used to generate a new chart and edit a new chart
       //Create node
         switch (nodeType) {
             case "addData":
@@ -1080,6 +1080,7 @@ bluewave.Explorer = function(parent, config) {
     var addEventListeners = function(node){
         switch (node.type) {
             case "addData":
+
                 node.ondblclick = function(){
                     showQuery(this.config.query, function(){
                         var grid = dbView.getComponents().grid;
@@ -1155,6 +1156,7 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
             case "sankeyChart":
+
                 node.ondblclick = function(){
                     editSankey(this);
                 };
@@ -1181,6 +1183,7 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
             case "map":
+
                 node.ondblclick = function(){
                     editMap(this);
                 };
@@ -1515,6 +1518,7 @@ bluewave.Explorer = function(parent, config) {
 
 
             sankeyEditor = new bluewave.charts.SankeyEditor(win.getBody(), config);
+
             sankeyEditor.show = function(){
                 win.show();
             };
@@ -2227,6 +2231,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var updateDashboard = function(){
 
+
       //Find layout node
         var layoutNode;
         for (var key in nodes) {
@@ -2303,7 +2308,7 @@ bluewave.Explorer = function(parent, config) {
                         var temp = document.createElement("div");
                         addShowHide(temp);
 
-                      // hide the resulting DOM object from view
+                      // hide the resulting DOM object from users' view
                         temp.hide();
                         parent.appendChild(temp);
 
@@ -2346,7 +2351,6 @@ bluewave.Explorer = function(parent, config) {
                     if (node.type==="pieChart"){
                         var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
                         pieChart.update(chartConfig, data);
-
                     }
                     else if (node.type==="barChart"){
                         var barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
@@ -2374,10 +2378,6 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
-
-
-
-
   //**************************************************************************
   //** getSankeyInputs
   //**************************************************************************
@@ -2394,8 +2394,8 @@ bluewave.Explorer = function(parent, config) {
   
               }
           }
-  return inputs;
-  }
+        return inputs;
+    }
   //**************************************************************************
   //** createToggleButton
   //**************************************************************************
