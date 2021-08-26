@@ -15,7 +15,7 @@ bluewave.GraphAdmin = function(parent, config) {
 
     };
 
-    var connectionInfo, cacheInfo, activityInfo; //dashboard items
+    var connectionInfo, cacheInfo, activityInfo, nodeView; //dashboard items
 
 
   //**************************************************************************
@@ -68,6 +68,7 @@ bluewave.GraphAdmin = function(parent, config) {
         connectionInfo.clear();
         cacheInfo.clear();
         activityInfo.clear();
+        nodeView.clear();
     };
 
 
@@ -107,6 +108,8 @@ bluewave.GraphAdmin = function(parent, config) {
                 });
             }
         });
+        
+        nodeView.update();
     };
     
 
@@ -136,6 +139,7 @@ bluewave.GraphAdmin = function(parent, config) {
         createConnectionInfo(parent);
         createCacheInfo(parent);
         createActivityInfo(parent);
+        createNodeView(parent);
     };
 
 
@@ -297,7 +301,10 @@ bluewave.GraphAdmin = function(parent, config) {
         connectionInfo.update = function(graph){
 
           //Update props
-            propPanel.addRow("Graph", "Neo4J");
+            var graphLabel = "Neo4J";
+            if (graph.version) graphLabel+= " " + graph.version;
+            if (graph.edition) graphLabel+= " (" + graph.edition + ")";
+            propPanel.addRow("Graph", graphLabel);
             propPanel.addRow("Host", graph.host);
             propPanel.addRow("Port", graph.port);
             propPanel.addRow("User", graph.username);
@@ -384,6 +391,21 @@ bluewave.GraphAdmin = function(parent, config) {
         activityInfo.clear = function(){
 
         };
+    };
+    
+    
+  //**************************************************************************
+  //** createNodeView
+  //**************************************************************************
+    var createNodeView = function(parent){
+        
+        var panel = createDashboardItem(parent, {
+            width: (360*3)+(2*40)+4, //3 panels wide + padding btw panels + border width
+            height: 360,
+            title: "Nodes"
+        });
+        
+        nodeView = new bluewave.NodeView(panel.innerDiv, config);
     };
 
 

@@ -147,8 +147,10 @@ bluewave.NodeView = function(parent, config) {
             tooltip.show();
             tooltip.innerHTML = "<b>" + d.node + "</b><br>" +
             formatNumber(d[key]) + " " + (key=="count"? "nodes" : key);
-            tooltip.style.left = event.pageX+20 + "px";
-            tooltip.style.top = event.pageY + "px";
+    
+            var box = tooltip.parentNode.getBoundingClientRect();
+            tooltip.style.left = (d3.event.pageX-box.left)+20 + "px";
+            tooltip.style.top = (d3.event.pageY-box.top) + "px";
         })
         .on("mouseleave", function(){
             this.style.strokeWidth=0;

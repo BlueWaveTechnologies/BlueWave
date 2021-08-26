@@ -3,6 +3,7 @@ import java.util.logging.Level;
 import org.neo4j.driver.*;
 import static org.neo4j.driver.SessionConfig.builder;
 import java.util.Properties;
+import javaxt.json.JSONObject;
 
 //******************************************************************************
 //**  Neo4J
@@ -183,7 +184,7 @@ public class Neo4J implements AutoCloseable {
   //**************************************************************************
   /** Returns the version number of the Neo4J server
    */
-    public String getVersion() throws Exception {
+    public String getVersion() {
         if (version==null) getServerInfo();
         return version;
     }
@@ -194,7 +195,7 @@ public class Neo4J implements AutoCloseable {
   //**************************************************************************
   /** Returns the edition name of the Neo4J server (e.g. enterprise, community)
    */
-    public String getEdition() throws Exception {
+    public String getEdition() {
         if (edition==null) getServerInfo();
         return edition;
     }
@@ -205,7 +206,7 @@ public class Neo4J implements AutoCloseable {
   //**************************************************************************
   /** Executes query to get the edition and version of the Neo4J server
    */
-    private void getServerInfo() throws Exception {
+    private void getServerInfo() {
         Session session = null;
         try{
             session = getSession();
@@ -220,8 +221,25 @@ public class Neo4J implements AutoCloseable {
         }
         catch(Exception e){
             if (session!=null) session.close();
-            throw e;
+            //throw e;
         }
+    }
+    
+    
+  //**************************************************************************
+  //** toJson
+  //**************************************************************************
+  /** Returns a json representation of this object
+   */
+    public JSONObject toJson(){
+        JSONObject json = new JSONObject();
+        json.set("username", getUsername());
+        json.set("password", getPassword());
+        json.set("host", getHost());
+        json.set("port", getPort());
+        json.set("version", getVersion());
+        json.set("edition", getEdition());
+        return json;
     }
     
 }
