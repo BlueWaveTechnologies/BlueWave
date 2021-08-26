@@ -3,6 +3,7 @@ import java.util.logging.Level;
 import org.neo4j.driver.*;
 import static org.neo4j.driver.SessionConfig.builder;
 import java.util.Properties;
+import javaxt.json.JSONObject;
 
 //******************************************************************************
 //**  Neo4J
@@ -19,6 +20,8 @@ public class Neo4J implements AutoCloseable {
     private String username;
     private String password;
     private Properties properties;
+    private String edition;
+    private String version;
 
 
   //**************************************************************************
@@ -39,6 +42,7 @@ public class Neo4J implements AutoCloseable {
         neo4j.username = username;
         neo4j.password = password;
         neo4j.properties = (Properties) properties.clone();
+        neo4j.edition = edition;
         return neo4j;
     }
 
@@ -55,7 +59,7 @@ public class Neo4J implements AutoCloseable {
   //** setUsername
   //**************************************************************************
     public void setUsername(String username){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         this.username = username;
     }
 
@@ -72,7 +76,7 @@ public class Neo4J implements AutoCloseable {
   //** setPassword
   //**************************************************************************
     public void setPassword(String password){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         this.password = password;
     }
 
@@ -89,7 +93,7 @@ public class Neo4J implements AutoCloseable {
   //** setHost
   //**************************************************************************
     public void setHost(String host){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         if (host.contains(":")){
             String[] arr = host.split(":");
             this.host = arr[0];
@@ -113,7 +117,7 @@ public class Neo4J implements AutoCloseable {
   //** setPort
   //**************************************************************************
     public void setPort(int port){
-        if (driver!=null) driver = null;
+        if (driver!=null) driver.close();
         this.port = port;
     }
 
@@ -167,7 +171,75 @@ public class Neo4J implements AutoCloseable {
   //**************************************************************************
     @Override
     public void close() throws Exception{
-        if (driver!=null) driver.close();
+        if (driver!=null){ 
+            driver.close();
+            driver = null;
+        }
+        version = edition = null;
     }
-
+    
+    
+  //**************************************************************************
+  //** getVersion
+  //**************************************************************************
+  /** Returns the version number of the Neo4J server
+   */
+    public String getVersion() {
+        if (version==null) getServerInfo();
+        return version;
+    }
+    
+    
+  //**************************************************************************
+  //** getEdition
+  //**************************************************************************
+  /** Returns the edition name of the Neo4J server (e.g. enterprise, community)
+   */
+    public String getEdition() {
+        if (edition==null) getServerInfo();
+        return edition;
+    }
+    
+    
+  //**************************************************************************
+  //** getServerInfo
+  //**************************************************************************
+  /** Executes query to get the edition and version of the Neo4J server
+   */
+    private void getServerInfo() {
+        Session session = null;
+        try{
+            session = getSession();
+            Result rs = session.run("call dbms.components() yield versions, edition " + 
+            "unwind versions as version return version, edition");
+            while (rs.hasNext()){
+                org.neo4j.driver.Record r = rs.next();
+                version = r.get(0).asString();
+                edition = r.get(1).asString().toLowerCase();
+            }
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+            //throw e;
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** toJson
+  //**************************************************************************
+  /** Returns a json representation of this object
+   */
+    public JSONObject toJson(){
+        JSONObject json = new JSONObject();
+        json.set("username", getUsername());
+        json.set("password", getPassword());
+        json.set("host", getHost());
+        json.set("port", getPort());
+        json.set("version", getVersion());
+        json.set("edition", getEdition());
+        return json;
+    }
+    
 }

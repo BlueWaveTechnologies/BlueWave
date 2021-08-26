@@ -109,6 +109,12 @@ bluewave.charts.LineChart = function(parent, config) {
                 xKey2 = chartConfig.xAxis2;
                 yKey2 = chartConfig.yAxis2;
             }
+            //set default values if not instantiated
+            if (chartConfig.lineColor==null) chartConfig.lineColor = "#6699CC";
+            if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1.5;
+            if (chartConfig.opacity==null) chartConfig.opacity = .95;
+            if (chartConfig.fillArea==null) chartConfig.fillArea = false;
+            if (chartConfig.gridLines==null) chartConfig.gridLines = false;
 
 
             var data1 = data[0];
@@ -138,8 +144,9 @@ bluewave.charts.LineChart = function(parent, config) {
                     .enter()
                     .append("path")
                     .attr("fill", "none")
-                    .attr("stroke", "steelblue")
-                    .attr("stroke-width", 1.5)
+                    .attr("stroke", chartConfig.lineColor)
+                    .attr("stroke-width", chartConfig.lineWidth)
+                    .attr("opacity", chartConfig.opacity)
                     .attr(
                         "d",function(d){
                         return d3
@@ -173,8 +180,9 @@ bluewave.charts.LineChart = function(parent, config) {
                     .append("path")
                     .datum(sumData)
                     .attr("fill", "none")
-                    .attr("stroke", "steelblue")
-                    .attr("stroke-width", 1.5)
+                    .attr("stroke", chartConfig.lineColor)
+                    .attr("stroke-width", chartConfig.lineWidth)
+                    .attr("opacity", chartConfig.opacity)
                     .attr(
                         "d",d3.line()
                         .x(function(d){
@@ -188,6 +196,36 @@ bluewave.charts.LineChart = function(parent, config) {
                             return y(d["value"]);
                         })
                     );
+            //define and fill area under line
+            if(chartConfig.fillArea === true){
+                plotArea
+                    .append("path")
+                    .datum(sumData)
+                    .attr("fill", chartConfig.lineColor)
+                    .attr("opacity", chartConfig.opacity)
+                    .attr(
+                        "d", d3.area()
+                        .x(function(d){
+                            if(keyType==="date"){
+                                return x(new Date(d.key));
+                            }else{
+                                return x(d.key);
+                            }
+                        })
+                        .y0(plotHeight)
+                        .y1(function(d){
+                            return y(d["value"])
+                        })
+                    
+                    );
+                }
+
+            //draw grid lines if option is checked
+            if(chartConfig.gridLines === true){
+               drawGridlines(plotArea, x, y, axisHeight, axisWidth);
+            }
+
+ 
             }
         });
     };
@@ -355,6 +393,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
+    var drawGridlines = bluewave.utils.drawGridlines;
 
     init();
 };
