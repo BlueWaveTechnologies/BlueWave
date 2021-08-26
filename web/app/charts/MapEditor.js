@@ -469,6 +469,22 @@ if(!bluewave.charts) bluewave.charts={};
                                      name: "centerVertical",
                                      label: "Vertical Center",
                                      type: "text"
+                                },
+                                {
+                                     name: "censusData",
+                                     label: "Use Census Regions/Divisions",
+                                     type: "radio",
+                                     alignment: "vertical",
+                                     options: [
+                                         {
+                                             label: "True",
+                                             value: true
+                                         },
+                                         {
+                                             label: "False",
+                                             value: false
+                                         }
+                                     ]
                                 }
                             ]
                         }
@@ -507,6 +523,11 @@ if(!bluewave.charts) bluewave.charts={};
                 if(vertical==null) vertical = 500;
                 chartConfig.centerVertical = vertical;
                 verticalField.setValue(vertical);
+
+                var censusData = form.findField("censusData");
+                censusData.row.style.height = "68px";
+                var census = chartConfig.censusData;
+                censusData.setValue(labels===true ? true : false);
 
 
               //Process onChange events
