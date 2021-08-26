@@ -413,7 +413,6 @@ bluewave.Explorer = function(parent, config) {
   //** getTitle
   //**************************************************************************
     this.getTitle = function(){
-        // console.log("if this variable returns empty then we will set it as untitled: ",name)
         return name ? name : "Untitled";
     };
 
@@ -423,8 +422,6 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   /** */
     this.setView = function(name){
-        // console.log("this set view called, editting name?")
-        // console.log(`name editting is ${name}`)
         if (!name) name = "Edit";
         if (name==="Edit"){
             toggleButton.setValue("Edit");
@@ -476,7 +473,6 @@ bluewave.Explorer = function(parent, config) {
   //** setReadOnly
   //**************************************************************************
     this.setReadOnly = function(readOnly){
-        // console.log("this is setting something as readonly")
         if (readOnly===true){
             if (me.isReadOnly()) return;
             drawflow.editor_mode = "view";
@@ -493,8 +489,6 @@ bluewave.Explorer = function(parent, config) {
   //** isReadOnly
   //**************************************************************************
     this.isReadOnly = function(){
-        // console.log("checking whether this is read only")
-        // console.log(`the status is ${drawflow.editor_mode==="view"}`)
         return (drawflow.editor_mode==="view");
     };
 
@@ -503,11 +497,6 @@ bluewave.Explorer = function(parent, config) {
   //** save
   //**************************************************************************
     this.save = function(){
-
-        console.log("trying out this print.. save function was called on an object, printing object in json array for organization",{
-            printedobj:me,
-        })
-
         // if this is in readOnly mode, do not save
         if (me.isReadOnly()) return;
 
@@ -576,8 +565,6 @@ bluewave.Explorer = function(parent, config) {
   //** saveThumbnail
   //**************************************************************************
     var saveThumbnail = function(id, callback){
-        console.log("save thumbnail called (probably when the thing is closed)")
-
       //Convert base64 encoded string into a binary object
         var data = thumbnail;
         var type = data.substring(data.indexOf(":")+1, data.indexOf(";"));
@@ -605,10 +592,7 @@ bluewave.Explorer = function(parent, config) {
   //** createEditPanel
   //**************************************************************************
     var createEditPanel = function(parent){
-        console.log("create edit panel for this obj",{object_printed:parent})
-        console.log(`lets try printing this another way`)
-        console.log(parent)
-        console.log("other way above")
+
       //Create main table
         var table = createTable();
         var tbody = table.firstChild;
@@ -795,7 +779,6 @@ bluewave.Explorer = function(parent, config) {
             
           //Ensure that Map can only be connected by addData or supplyChain nodes
             if (node.type === "map"){
-                // console.log("this map thingy diggy is called 795")
                 if (inputNode.type != "addData" && inputNode.type != "supplyChain"){
                    drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
                    return;
@@ -884,7 +867,6 @@ bluewave.Explorer = function(parent, config) {
   //** setZoom
   //**************************************************************************
     var setZoom = function(z){
-        // console.log("set zoom function called here ")
         z = parseInt(z);
         if (isNaN(z) || z===zoom) return;
         var d = Math.abs(z, zoom);
@@ -903,7 +885,6 @@ bluewave.Explorer = function(parent, config) {
   //** zoomIn
   //**************************************************************************
     var zoomIn = function(){
-        // console.log(`zoom in function called, should be spammy.`)
         drawflow.zoom_in();
         zoom++;
     };
@@ -913,7 +894,6 @@ bluewave.Explorer = function(parent, config) {
   //** zoomOut
   //**************************************************************************
     var zoomOut = function(){
-        // console.log(`zoom out function called, should be spammy.`)
         drawflow.zoom_out();
         zoom--;
     };
@@ -923,7 +903,6 @@ bluewave.Explorer = function(parent, config) {
   //** drag
   //**************************************************************************
     var drag = function(ev) {
-        console.log(`drag function called with this obj`, {object_printed:ev})
         if (ev.type === "touchstart") {
             /*
             mobile_item_selec = ev.target
@@ -944,7 +923,6 @@ bluewave.Explorer = function(parent, config) {
   //** drop
   //**************************************************************************
     var drop = function(ev) {
-        console.log(`drop fucntion called to place the node probably `,{ev_object:ev})
         if (ev.type === "touchend") {
             /*
             let parentdrawflow = document
@@ -975,13 +953,11 @@ bluewave.Explorer = function(parent, config) {
   //** addNodeToDrawFlow
   //**************************************************************************
     var addNodeToDrawFlow = function (nodeType, pos_x, pos_y) {
-        console.log(`add drawflow node to canvas`)
       //Don't add node if the view is "fixed"
         if (drawflow.editor_mode === "fixed")  return false;
 
 
       //Update x/y position
-      console.log(`retrieving x/y coordinates for this node to be placed`)
         pos_x =
             pos_x *
                 (drawflow.precanvas.clientWidth /
@@ -997,12 +973,10 @@ bluewave.Explorer = function(parent, config) {
                 (drawflow.precanvas.clientHeight /
                     (drawflow.precanvas.clientHeight * drawflow.zoom));
 
-        console.log("the resulting variable values are", {x:pos_x,y:pos_y})
 
      //Get toolbar button associated with the nodeType
         var btn = button[nodeType];
         if (!btn){
-            console.log("Unsupported Node Type: " + nodeType);
             return;
         }
 
@@ -1104,12 +1078,9 @@ bluewave.Explorer = function(parent, config) {
   //** addEventListeners
   //**************************************************************************
     var addEventListeners = function(node){
-        // console.log("add event listeners called")
         switch (node.type) {
             case "addData":
-                console.log("addData case noted")
                 node.ondblclick = function(){
-                    console.log("addData node clicked- event listener")
                     showQuery(this.config.query, function(){
                         var grid = dbView.getComponents().grid;
                         var query = dbView.getQuery();
@@ -1284,7 +1255,6 @@ bluewave.Explorer = function(parent, config) {
   //** showQuery
   //**************************************************************************
     var showQuery = function(query, callback, scope){
-        console.log("show query called")
         if (!dbView){
 
             var win = createNodeEditor({
@@ -1430,7 +1400,6 @@ bluewave.Explorer = function(parent, config) {
   /** Updates the title of a drawflow node
    */
     var updateTitle = function(node, title) {
-        console.log("updating the title of drawflow node 1432")
         if (title) {
             node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
         }
@@ -1441,7 +1410,6 @@ bluewave.Explorer = function(parent, config) {
   //** editMap
   //**************************************************************************
     var editMap = function(node){
-        console.log('edit map called')
         if(!mapEditor){
             var win = createNodeEditor({
                 title: "Edit Map",
@@ -1513,7 +1481,6 @@ bluewave.Explorer = function(parent, config) {
   //** editSankey
   //**************************************************************************
     var editSankey = function(node){
-        console.log("edit sankey called")
         if (!sankeyEditor){
             var win = createNodeEditor({
                 title: "Edit Sankey",
@@ -1930,7 +1897,6 @@ bluewave.Explorer = function(parent, config) {
         };
 
         var resize = function(canvas){
-            console.log("resize window called")
             width = canvas.width;
             height = canvas.height;
 
@@ -2467,7 +2433,6 @@ bluewave.Explorer = function(parent, config) {
   //** createMask
   //**************************************************************************
     var createMask = function(parent){
-        // console.log("mask is being called ")
         var div = document.createElement("div");
         div.style.position = "absolute";
         div.style.zIndex = 3;

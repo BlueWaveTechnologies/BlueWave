@@ -31,27 +31,16 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-      console.log("init function of sankey chart called")
         config = merge(config, defaultConfig);
-        console.log(`parent is ${parent}`)
-        console.log(parent)
-
 
         if (parent instanceof d3.selection){
             svg = parent;
-            console.log(`parent is ${parent}`)
         }
         else if (parent instanceof SVGElement) {
             svg = d3.select(parent);
         }
         else{
             svg = d3.select(parent).append("svg");
-            onRender(parent, function(){
-              var width = parent.offsetWidth;
-              var height = parent.offsetHeight;
-              svg.attr("width", width);
-              svg.attr("height", height);
-          });
         }
 
 
@@ -64,8 +53,6 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-      console.log("clear function of sankey chart called")
-
         sankeyArea.selectAll("*").remove();
     };
 
@@ -217,20 +204,6 @@ bluewave.charts.SankeyChart = function(parent, config) {
               })
               .attr("text-anchor", "start");
 
-              console.log({
-                widthreport:width,
-                lengthreport:length,
-                linkr:link,
-                sizer:size,
-                sankeyr:sankey,
-                marginr:margin,
-                resultingnode:node,
-
-
-
-
-              })
-              console.log(node)
         });
     };
 
