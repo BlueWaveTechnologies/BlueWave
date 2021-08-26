@@ -1547,24 +1547,12 @@ bluewave.Explorer = function(parent, config) {
             });
 
 
-            console.log("here a new sankey is getting rendered ")
-            console.log(config)
-            console.log("config ^")
-            console.log(win.getBody())
-            console.log("body above ")
-
             sankeyEditor = new bluewave.charts.SankeyEditor(win.getBody(), config);
-            console.log("attempt to grab the sankeyEditor object")
-            console.log(sankeyEditor)
-            console.log()
             sankeyEditor.show = function(){
-                console.log("show command called for sankey")
                 win.show();
             };
 
             sankeyEditor.hide = function(){
-                console.log("hide command called for sankey")
-
                 win.hide();
             };
         }
@@ -1574,24 +1562,12 @@ bluewave.Explorer = function(parent, config) {
             return node;
         };
 
-
+      // get inputs/data used to update sankeyChart in editor panel
+        inputs = getSankeyInputs(node);
         
-      //Special for supply chain inputs
-        var inputs = [];
-        for (var key in node.inputs) {
-            if (node.inputs.hasOwnProperty(key)){
-                var inputNode = node.inputs[key];
-                if (inputNode.type==="supplyChain"){
-                    var inputConfig = inputNode.config;
-                    if (inputConfig) inputs.push(inputConfig);
-                }
-
-            }
-        }
-        
-
-
+      // update sankeyChart data object of editor panel
         sankeyEditor.update(node.config, inputs);
+      // show editor to user
         sankeyEditor.show();
     };
 
@@ -2284,7 +2260,6 @@ bluewave.Explorer = function(parent, config) {
   //** updateDashboard
   //**************************************************************************
     var updateDashboard = function(){
-        console.log("update dashboard called")
 
       //Find layout node
         var layoutNode;
@@ -2357,70 +2332,43 @@ bluewave.Explorer = function(parent, config) {
                         grid.load(rows, 1);
                     }
                 }
-                else if (node.type==="sankeyChart" || node.type==="supplyChain"){
-                    // console.log("detected that the node is sankey chart")
-                    var data = {
-                        nodes: [],
-                        links: []
-                    };
-                    var nodetyper = node.type
-                    var sankeyConfig = chartConfig;
-                    for (var nodeID in sankeyConfig.nodes) {
-                        if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
-                            var node = sankeyConfig.nodes[nodeID];
-                            data.nodes.push({
-                                name: node.name,
-                                group: node.type
-                            });
-                        }
-                    }
-                    console.log({
-                        nodes_requested:sankeyConfig.nodes,
-                        nodes_rendered:data.nodes,
-                        node_type:nodetyper,
-                        chartconfig:chartConfig,
-                        links:sankeyConfig.links,
+                else if (node.type==="sankeyChart" || node.type==="supplyChain"){  
+                    // create makeshift/temporary DOM object for sankeyEditor class to bind to                 
+                        var temp = document.createElement("div");
+                        addShowHide(temp);
+
+                      // hide the resulting DOM object from view
+                        temp.hide();
+                        parent.appendChild(temp);
+
+                      // get the sankey inputs 
+                        inputs = getSankeyInputs(node);
+
+
+                      // create sankeyEditor object, for reference of its class methods
+                        var sankeyEditor = new bluewave.charts.SankeyEditor(temp,config);
+                        sankeyEditor.update(chartConfig,inputs);
+
+                      // get SankeyEditor identical config 
+                        sankeyConfig = sankeyEditor.getConfig();
+
+
+                      // call the class method for getting the data
+                        var data = sankeyEditor.getSankeyData();
+        
                         
+                      // clear the DOM object that was used for referencing
+                        parent.removeChild(temp);
+                        temp = null;
 
 
+                      // initialize true sankeyChart (this object is visualized in dashboard view)
+                        var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
+                        sankeyChart.update(sankeyConfig.style,data);
 
-                    })
-                    
-                    for (var key in sankeyConfig.links) {
-                        if (sankeyConfig.links.hasOwnProperty(key)){
-                            var link = sankeyConfig.links[key];
-                            var idx = key.indexOf("->");
-                            var source = key.substring(0,idx);
-                            var target = key.substring(idx+2);
-                            data.links.push({
-                                source: sankeyConfig.nodes[source].name,
-                                target: sankeyConfig.nodes[target].name,
-                                value: link.quantity
-                            });
-                        }
+                        
                     }
-                    // console.log("got to 2350")
-                    // console.log("current dashboard item is")
-                    // console.log(dashboardItem)
-                    // console.log("dashboard item above")
-                    // console.log(dashboardItem.innerDiv)
-
-                    var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,{});
-                    // console.log("we created the sankey")
-                    // console.log(sankeyChart);
-                    // console.log("chart above")
-                    // console.log(data);
-                    // console.log("data above")
-                    console.log("data is not sent")
-                    console.log(`data object is ${JSON.stringify(data,null,2)}`) // print obj
-
-                    sankeyChart.update(chartConfig,data);
-                    // console.log(dashboardItem.innerDiv)
-                    // console.log("yeah - sankey")
-                    // console.log("we would have updated the sankey")
-                }
                 else{
-
                     var data = [];
                     for (var key in node.inputs) {
                         if (node.inputs.hasOwnProperty(key)){
@@ -2430,20 +2378,9 @@ bluewave.Explorer = function(parent, config) {
                     }
 
                     if (node.type==="pieChart"){
-                        // console.log("logging the difference of piechart")
-                        // console.log(dashboardItem)
-                        // console.log("dashboard item above")
-                        // var run1 = dashboardItem.innerDiv // "save " the current state of the dom to an object
-                        // console.log(run1)
-                        // return
                         var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
                         pieChart.update(chartConfig, data);
-                        // console.log("loggign the after the effects of piechart dashboard item")
-                        // console.log(dashboardItem)
-                        // console.log("new dashboard item above")
-                        // var run2 = dashboardItem.innerDiv // "save " the current state of the dom to an object
-                        // console.log(run2)
-                        // console.log("yeah - piechart")
+
                     }
                     else if (node.type==="barChart"){
                         var barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
@@ -2462,7 +2399,6 @@ bluewave.Explorer = function(parent, config) {
                         mapChart.update(chartConfig,data);
                     }
                     else{
-                        console.log(`map thing that is not being shown is (${node.type})<--- this here `)
                         console.log(node.type + " preview not implemented!");
                     }
                 }
@@ -2472,6 +2408,28 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+
+
+
+
+  //**************************************************************************
+  //** getSankeyInputs
+  //**************************************************************************
+    var getSankeyInputs = function(node){
+        //Special for supply chain inputs
+          var inputs = [];
+          for (var key in node.inputs) {
+              if (node.inputs.hasOwnProperty(key)){
+                  var inputNode = node.inputs[key];
+                  if (inputNode.type==="supplyChain"){
+                      var inputConfig = inputNode.config;
+                      if (inputConfig) inputs.push(inputConfig);
+                  }
+  
+              }
+          }
+  return inputs;
+  }
   //**************************************************************************
   //** createToggleButton
   //**************************************************************************
