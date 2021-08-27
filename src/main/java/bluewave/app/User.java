@@ -3,6 +3,9 @@ import javaxt.json.*;
 import java.sql.SQLException;
 import javaxt.encryption.BCrypt;
 
+//Graph stuff
+import bluewave.graph.Neo4J;
+
 //******************************************************************************
 //**  User Class
 //******************************************************************************
@@ -180,6 +183,129 @@ public class User extends javaxt.sql.Model
 
     public void setInfo(JSONObject info){
         this.info = info;
+    }
+    
+    
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+  /** Custom save method
+   */
+    public void save() throws SQLException {
+        
+      //Check whether we need to update the graph
+        boolean updateGraph = false;
+        User user = null;
+        Long id = getID();
+        if (id==null) updateGraph = true;
+        else{
+            user = new User(id);
+            if (accessLevel != user.getAccessLevel()){
+                updateGraph = true;
+            }
+            if (!this.password.equals(user.password)){
+                updateGraph = true;
+            }
+        }
+        
+        
+      //Save user in the app database
+        super.save();
+        
+        
+      //Update the graph as needed
+        if (updateGraph){
+            String[] credentials = getGraphCredentials();
+            String username = credentials[0];
+            String password = credentials[1];
+
+            Neo4J graph = null;
+            try{
+                graph = bluewave.Config.getGraph(null);
+                if (user==null){
+                    bluewave.graph.Maintenance.createUser(username, password, graph);
+                    bluewave.graph.Maintenance.addRole(username, getGraphRole(accessLevel), graph);
+                }
+                else{
+                    if (accessLevel != user.getAccessLevel()){
+                        bluewave.graph.Maintenance.removeRole(username, getGraphRole(user.getAccessLevel()), graph);
+                        bluewave.graph.Maintenance.addRole(username, getGraphRole(accessLevel), graph);
+                    }
+                    if (!this.password.equals(user.password)){
+                        bluewave.graph.Maintenance.setPassword(username, password, graph);
+                    }
+                }
+                
+                graph.close();
+            }
+            catch(Exception e){
+                if (graph!=null) try{graph.close();}catch(Exception ex){}
+            }
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** delete
+  //**************************************************************************
+  /** Custom delete method
+   */
+    public void delete() throws SQLException {
+        Long id = getID();
+        super.delete();
+        if (id!=null){
+            
+            String[] credentials = getGraphCredentials();
+            String username = credentials[0];
+
+            Neo4J graph = null;
+            try{
+                graph = bluewave.Config.getGraph(null);
+                bluewave.graph.Maintenance.deleteUser(username, graph);
+                graph.close();
+            }
+            catch(Exception e){
+                if (graph!=null) try{graph.close();}catch(Exception ex){}
+            }
+        }
+    }
+    
+    
+  //**************************************************************************
+  //** getGraphRole
+  //**************************************************************************
+  /** Used to map an accessLevel to a role in the graph
+   */
+    public static String getGraphRole(int accessLevel){
+        String role;
+        switch (accessLevel) {
+            case 3:  role = "editor";
+                     break;
+            case 4:  role = "architect";
+                     break;
+            case 5:  role = "admin";
+                     break;
+            default: role = "reader";
+                     break;
+        }
+        return role;
+    }
+    
+    
+  //**************************************************************************
+  //** getGraphCredentials
+  //**************************************************************************
+  /** Returns graph username/password associated with this user
+   */
+    public String[] getGraphCredentials() {
+        String hostname = ""; 
+        try{ hostname = java.net.InetAddress.getLocalHost().getHostName() + "_";}
+        catch(Exception e){};
+        String username = "bw_" + hostname + getID();
+        username = username.replace("-", "_");
+        String password = this.password;
+        if (password.length()>8) password = password.substring(0, 8);
+        return new String[]{username, password};
     }
 
 

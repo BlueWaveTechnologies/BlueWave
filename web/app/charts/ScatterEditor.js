@@ -37,7 +37,8 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         xAxis:null,
         yAxis:null,
         chartTitle:null,
-        nodeId:null
+        nodeId:null,
+        showRegLine: null
     };
     var margin = {
         top: 15,
@@ -78,7 +79,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         panel = createDashboardItem(td,{
             width: "100%",
             height: "100%",
-            title: "Untitled",
+            title: "Scatter Chart",
             settings: true
         });
         previewArea = panel.innerDiv;
@@ -275,28 +276,88 @@ bluewave.charts.ScatterEditor = function(parent, config) {
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(){
+      var editStyle = function(){
 
-      //Create styleEditor as needed
-        if (!styleEditor){
-            styleEditor = new javaxt.dhtml.Window(document.body, {
-                title: "Edit Style",
-                width: 400,
-                valign: "top",
-                modal: false,
-                resizable: false,
-                style: config.style.window
-            });
-        }
+          //Create styleEditor as needed
+            if (!styleEditor){
+                styleEditor = new javaxt.dhtml.Window(document.body, {
+                    title: "Edit Style",
+                    width: 400,
+                    valign: "top",
+                    modal: false,
+                    resizable: false,
+                    style: config.style.window
+                });
+            }
 
 
-      //Update form
-        var body = styleEditor.getBody();
-        body.innerHTML = "";
+          //Update form
+          var form;
+          var body = styleEditor.getBody();
+          body.innerHTML = "";
 
-        styleEditor.showAt(108,57);
-        //form.resize();
-    };
+          var checkbox = document.createElement('input');
+          checkbox.type = "checkbox";
+          checkbox.name = "regression";
+          checkbox.value = "value";
+          checkbox.id = "regression";
+          checkbox.style.appearance = "auto";
+
+          var label = document.createElement('label')
+          label.htmlFor = "regression";
+          label.appendChild(document.createTextNode('Enable Regression Line'));
+
+          body.appendChild(checkbox);
+          body.appendChild(label);
+
+
+
+         checkbox.addEventListener('change', (event) => {
+           if (event.currentTarget.checked) {
+             chartConfig.showRegLine = true;
+             scatterChart.update(chartConfig, inputData);
+           } else {
+             chartConfig.showRegLine = false;
+             scatterChart.update(chartConfig, inputData);
+           }
+         });
+
+//          checkbox.onChange = function(checked) {
+//            if (checkbox.checked) {
+//                chartConfig.showRegLine = true;
+//                scatterChart.update(chartConfig, inputData);
+//            }
+//            else {
+//                chartConfig.showRegLine = false;
+//                scatterChart.update(chartConfig, inputData);
+//            }
+//          }
+
+
+//
+//              //Process onChange events
+//                form.onChange = function(){
+//                    var settings = form.getData();
+//                    if (settings.labels==="true") settings.labels = true;
+//                    else if (settings.labels==="false") settings.labels = false;
+//                    createRegressionLine();
+//                };
+//
+//
+//
+
+            styleEditor.showAt(108,57);
+//            form.resize();
+        };
+
+  //**************************************************************************
+  //** CreateRegressionLine
+  //**************************************************************************
+
+  var createRegressionLine = function() {
+
+  }
+
 
   //**************************************************************************
   //** Utils

@@ -11,16 +11,6 @@ import javaxt.sql.Database;
 public class ImportService extends WebService {
 
 
-    private Neo4J graph;
-
-  //**************************************************************************
-  //** Constructor
-  //**************************************************************************
-    public ImportService(Neo4J graph){
-        this.graph = graph;
-    }
-
-
   //**************************************************************************
   //** getServiceResponse
   //**************************************************************************
@@ -69,6 +59,7 @@ public class ImportService extends WebService {
 
       //Import file
         try{
+            bluewave.graph.Neo4J graph = bluewave.Config.getGraph(user);
             if (fileType.equals("csv")){
                 bluewave.graph.Import.importCSV(file, nodeType, keys, graph);
             }

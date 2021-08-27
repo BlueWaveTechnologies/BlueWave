@@ -727,7 +727,6 @@ li.tree-node:hover {
     top: -15px;
 }
 
-
 .drawflow-node-title {
     height: 50px;
     line-height: 50px;
@@ -737,26 +736,27 @@ li.tree-node:hover {
     padding-left: 10px;
     overflow: hidden;
 }
-.drawflow-node-product-name {
-    height: 50px;
-    line-height: 50px;
-    overflow: hidden;
-}
-.drawflow-node-facility-name {
-    height: 50px;
-    line-height: 50px;
-    overflow: hidden;
-}
 
 .drawflow-node-overlay{
-    color: #000000;
     position: absolute;
     z-index: 1;
     top: 0;
     left: 0;
     height: 100%;
+    width: 100%;
+    
+    text-align: left;
     overflow: hidden;
 }
+
+.drawflow-node-overlay div {
+    background-color:rgba(255,255,255,0.5);
+    padding: 5px 10px 0 10px;
+    color: #5a5a5a;
+    text-shadow: 3px 3px 5px white;
+    font-size: 12px;
+}
+
 
 .drawflow-node-title .fas {
     margin: 0 5px 0 0;
@@ -765,7 +765,6 @@ li.tree-node:hover {
 
 .drawflow-node-body {
     width: 100%;
-    padding: 5px;
     min-height: 100px;
     text-align: center;
     position: relative;

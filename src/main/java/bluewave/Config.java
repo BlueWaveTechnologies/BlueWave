@@ -1,5 +1,6 @@
 package bluewave;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import javaxt.express.utils.DbUtils;
 import static javaxt.utils.Console.console;
 import javaxt.json.*;
@@ -138,23 +139,58 @@ public class Config {
   //**************************************************************************
   //** getGraph
   //**************************************************************************
-    public static bluewave.graph.Neo4J getGraph(){
+    public static bluewave.graph.Neo4J getGraph(bluewave.app.User user){
         String key = "graph";
         JSONValue val = get(key);
         if (val==null) return null;
-        if (val.toObject() instanceof bluewave.graph.Neo4J){
-            return (bluewave.graph.Neo4J) val.toObject();
+        
+        
+        String[] credentials;
+        if (user!=null) credentials = user.getGraphCredentials();
+        else credentials = new String[]{"neo4j"};
+        String username = credentials[0];
+        
+        
+        if (val.toObject() instanceof ConcurrentHashMap){
+            ConcurrentHashMap map = (ConcurrentHashMap) val.toObject();
+
+            Object obj = map.get(username);
+            if (obj==null){
+                bluewave.graph.Neo4J neo4j = ((bluewave.graph.Neo4J) map.get("neo4j")).clone();
+                neo4j.setUsername(username);
+                neo4j.setPassword(credentials[1]);
+                synchronized(map){
+                    map.put(username, neo4j);
+                    map.notify();
+                }
+                return neo4j;
+            } 
+            else{
+                return (bluewave.graph.Neo4J) obj;
+            }
         }
         else{
-            bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
+            
             JSONObject json = get(key).toJSONObject();
+            bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             neo4j.setHost(json.get("host").toString());
             neo4j.setUsername(json.get("username").toString());
             neo4j.setPassword(json.get("password").toString());
             Properties properties = neo4j.getProperties();
             properties.put("localLog", json.get("localLog"));
             properties.put("localCache", json.get("localCache"));
-            config.set(key, neo4j);
+            
+            ConcurrentHashMap<String, bluewave.graph.Neo4J> map = new ConcurrentHashMap<>();
+            map.put("neo4j", neo4j);
+            config.set(key, map);
+            
+            if (user!=null){
+                neo4j = neo4j.clone();
+                neo4j.setUsername(username);
+                neo4j.setPassword(credentials[1]);
+                map.put(username, neo4j);
+            }
+            
             return neo4j;
         }
     }

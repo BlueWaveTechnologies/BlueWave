@@ -1,5 +1,4 @@
 package bluewave.web.services;
-import bluewave.graph.Neo4J;
 
 import java.util.*;
 import java.io.IOException;
@@ -30,16 +29,7 @@ import com.google.gson.GsonBuilder;
 
 public class SupplyChainService extends WebService {
 
-    private Neo4J graph;
-
-  //**************************************************************************
-  //** Constructor
-  //**************************************************************************
-    public SupplyChainService(Neo4J graph){
-        this.graph = graph;
-    }
-
-
+    
   //**************************************************************************
   //** getCompany
   //**************************************************************************
@@ -51,7 +41,7 @@ public class SupplyChainService extends WebService {
 
         Session session = null;
         try {
-            session = graph.getSession();
+            session = getSession(request);
 
             JSONObject company = new JSONObject();
 
@@ -101,7 +91,7 @@ public class SupplyChainService extends WebService {
       //Execute queries and return response
         Session session = null;
         try {
-            session = graph.getSession();
+            session = getSession(request);
 
 
             TreeMap<String, JSONObject> companies = new TreeMap<>();
@@ -244,7 +234,7 @@ public class SupplyChainService extends WebService {
       //Create or update company
         Session session = null;
         try{
-            session = graph.getSession();
+            session = getSession(request);
 
 
             if (companyID==null){
@@ -339,7 +329,7 @@ public class SupplyChainService extends WebService {
 
         Session session = null;
         try {
-            session = graph.getSession();
+            session = getSession(request);
 
             JSONObject facility = new JSONObject();
 
@@ -411,7 +401,7 @@ public class SupplyChainService extends WebService {
                     LinkedHashMap<Long, JSONObject> facilities = new LinkedHashMap<>();
                     Long ownerOperatorID = null;
 
-                    session = graph.getSession();
+                    session = getSession(request);
                     Result rs = session.run(query);
                     while (rs.hasNext()){
                         Record record = rs.next();
@@ -467,7 +457,7 @@ public class SupplyChainService extends WebService {
 
                 Session session = null;
                 try{
-                    session = graph.getSession();
+                    session = getSession(request);
                     JSONArray arr = getFacilities(ownerOperatorID, session);
                     session.close();
                     return new ServiceResponse(arr);
@@ -564,7 +554,7 @@ public class SupplyChainService extends WebService {
       //Create or update facility
         Session session = null;
         try{
-            session = graph.getSession();
+            session = getSession(request);
 
 
             if (facilityID==null){
@@ -687,7 +677,7 @@ public class SupplyChainService extends WebService {
 
         Session session = null;
         try {
-            session = graph.getSession();
+            session = getSession(request);
 
             JSONObject product = new JSONObject();
 
@@ -749,7 +739,7 @@ public class SupplyChainService extends WebService {
 
             Session session = null;
             try{
-                session = graph.getSession();
+                session = getSession(request);
 
               //Get products associated with the facility
                 Result rs = session.run(query);
@@ -819,7 +809,7 @@ public class SupplyChainService extends WebService {
 
                 Session session = null;
                 try{
-                    session = graph.getSession();
+                    session = getSession(request);
                     JSONArray arr = getProducts(fei, session);
                     session.close();
                     return new ServiceResponse(arr);
@@ -842,7 +832,7 @@ public class SupplyChainService extends WebService {
 
                 Session session = null;
                 try{
-                    session = graph.getSession();
+                    session = getSession(request);
 
                     TreeMap<String, JSONObject> uniqueProducts = new TreeMap<>();
 
@@ -1033,7 +1023,7 @@ public class SupplyChainService extends WebService {
       //Create or update product
         Session session = null;
         try{
-            session = graph.getSession();
+            session = getSession(request);
 
             if (productID==null){
                 List<String> properties = new ArrayList<>();
@@ -1159,5 +1149,15 @@ public class SupplyChainService extends WebService {
             }
         }
         return str;
+    }
+    
+    
+  //**************************************************************************
+  //** getSession
+  //**************************************************************************
+    private Session getSession(ServiceRequest request){
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        bluewave.graph.Neo4J graph = bluewave.Config.getGraph(user);
+        return graph.getSession();
     }
 }
