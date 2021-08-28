@@ -497,9 +497,7 @@ bluewave.Explorer = function(parent, config) {
   //** save
   //**************************************************************************
     this.save = function(){
-        // if this is in readOnly mode, do not save
         if (me.isReadOnly()) return;
-
       
 
         waitmask.show(500);
@@ -980,6 +978,7 @@ bluewave.Explorer = function(parent, config) {
             console.log("Unsupported Node Type: " + nodeType);
             return;
         }
+        
 
       //Get button icon and title to decorate the node
         var icon = btn.el.dataset["icon"];
@@ -1528,17 +1527,14 @@ bluewave.Explorer = function(parent, config) {
             };
         }
 
-      //Add custom getNode() method to the layoutEditor to return current node
+      //Add custom getNode() method to the sankeyEditor to return current node
         sankeyEditor.getNode = function(){
             return node;
         };
 
-      // get inputs/data used to update sankeyChart in editor panel
-        inputs = getSankeyInputs(node);
-        
-      // update sankeyChart data object of editor panel
-        sankeyEditor.update(node.config, inputs);
-      // show editor to user
+
+      //Update and render sankeyEditor
+        sankeyEditor.update(node.config, getSankeyInputs(node));
         sankeyEditor.show();
     };
 
@@ -2304,41 +2300,35 @@ bluewave.Explorer = function(parent, config) {
                     }
                 }
                 else if (node.type==="sankeyChart" || node.type==="supplyChain"){  
-                    // create makeshift/temporary DOM object for sankeyEditor class to bind to                 
-                        var temp = document.createElement("div");
-                        addShowHide(temp);
-
-                      // hide the resulting DOM object from users' view
-                        temp.hide();
-                        parent.appendChild(temp);
-
-                      // get the sankey inputs 
-                        inputs = getSankeyInputs(node);
+                    
+                  //Create temporary DOM object for sankeyEditor               
+                    var temp = document.createElement("div");
+                    addShowHide(temp);
+                    temp.hide();
+                    parent.appendChild(temp);
 
 
-                      // create sankeyEditor object, for reference of its class methods
-                        var sankeyEditor = new bluewave.charts.SankeyEditor(temp,config);
-                        sankeyEditor.update(chartConfig,inputs);
-
-                      // get SankeyEditor identical config 
-                        sankeyConfig = sankeyEditor.getConfig();
+                  //Instantiate sankeyEditor
+                    var sankeyEditor = new bluewave.charts.SankeyEditor(temp, config);
+                    sankeyEditor.update(chartConfig, getSankeyInputs(node));
 
 
-                      // call the class method for getting the data
-                        var data = sankeyEditor.getSankeyData();
-        
-                        
-                      // clear the DOM object that was used for referencing
-                        parent.removeChild(temp);
-                        temp = null;
+                  //Get sankey config and data
+                    var sankeyConfig = sankeyEditor.getConfig();
+                    var data = sankeyEditor.getSankeyData();
 
 
-                      // initialize true sankeyChart (this object is visualized in dashboard view)
-                        var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
-                        sankeyChart.update(sankeyConfig.style,data);
+                  //Remove sankeyEditor and temporary DOM object
+                    destroy(sankeyEditor);
+                    parent.removeChild(temp);
+                    temp = null;
 
-                        
-                    }
+
+                  //Render sankeyChart
+                    var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
+                    sankeyChart.update(sankeyConfig.style,data);
+
+                }
                 else{
                     var data = [];
                     for (var key in node.inputs) {
@@ -2381,8 +2371,9 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** getSankeyInputs
   //**************************************************************************
+  /** Used to convert supplyChain data into sankey inputs
+   */
     var getSankeyInputs = function(node){
-        //Special for supply chain inputs
           var inputs = [];
           for (var key in node.inputs) {
               if (node.inputs.hasOwnProperty(key)){
@@ -2390,12 +2381,13 @@ bluewave.Explorer = function(parent, config) {
                   if (inputNode.type==="supplyChain"){
                       var inputConfig = inputNode.config;
                       if (inputConfig) inputs.push(inputConfig);
-                  }
-  
+                  }  
               }
           }
         return inputs;
-    }
+    };
+    
+    
   //**************************************************************************
   //** createToggleButton
   //**************************************************************************
@@ -2465,6 +2457,7 @@ bluewave.Explorer = function(parent, config) {
     var post = javaxt.dhtml.utils.post;
     var del = javaxt.dhtml.utils.delete;
     var get = bluewave.utils.get;
+    var destroy = javaxt.dhtml.utils.destroy;
 
 
     init();

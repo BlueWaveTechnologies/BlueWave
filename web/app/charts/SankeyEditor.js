@@ -273,7 +273,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
                 
-                //add props to node
+              //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
                     if (props.hasOwnProperty(key)){
@@ -299,18 +299,11 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     }
                 }
 
-
               //Update nodes variable
                 nodes[nodeID] = node;
 
-
-
-
               //Fire event
                 me.onNodeImport(node,props);
-
-
-                
             }
         }
 
@@ -1520,15 +1513,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** updateSankey
   //**************************************************************************
     var updateSankey = function(){
-
         var data = me.getSankeyData();
         sankeyChart.update(config.sankey.style, data);
     };
 
+
   //**************************************************************************
   //** getSankeyData
-  //**************************************************************************
-  
+  //**************************************************************************  
     this.getSankeyData = function(){
         var data = {
             nodes: [],
@@ -1550,7 +1542,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     if (inputs.hasOwnProperty(k)){
                         var n = nodes[k];
                         var v = quantities[k + "->" + key];
-                        //console.log(k + "->" + key, );
                         data.links.push({
                             source: n.name,
                             target: name,
@@ -1561,7 +1552,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         }
         return data;
-    }
+    };
 
 
   //**************************************************************************
