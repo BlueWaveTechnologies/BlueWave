@@ -35,6 +35,7 @@ if(!bluewave.charts) bluewave.charts={};
         long:null,
         mapValue:null,
         mapLevel:null,
+        censusData:null,
         colorScale:null
     };
     var mapProjection;
@@ -135,9 +136,10 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var createMapDropDown = function(tbody){
         dropdownItem(tbody,"mapType","Map Type",showHideDropDowns,mapInputs,"mapType");
-        dropdownItem(tbody,"mapLevel","Map Level",createMapPreview,mapInputs,"mapLevel");
+        dropdownItem(tbody,"mapLevel","Map Level",showHideDropDowns,mapInputs,"mapLevel");
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
+        dropdownItem(tbody,"censusData","Census Divisions",createMapPreview,mapInputs,"censusData");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
 
         var tr, tr2, td;
@@ -174,6 +176,8 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.long.row.hide();
         mapInputs.mapValue.hide();
         mapInputs.mapValue.row.hide();
+        mapInputs.censusData.hide();
+        mapInputs.censusData.row.hide();
 
     };
 
@@ -221,23 +225,33 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
+            if(chartConfig.censusData !== null) chartConfig.censusData = null;
 
             //Show the combox box inputs
             mapInputs.lat.show();
             mapInputs.long.show();
             mapInputs.mapValue.show();
+            mapInputs.censusData.hide();
 
             //Show the table row objects
             mapInputs.lat.row.show();
             mapInputs.long.row.show();
             mapInputs.mapValue.row.show();
+            mapInputs.censusData.row.hide();
         };
         if(chartConfig.mapType==="Area"){
 
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
+            if(chartConfig.censusData !== null) chartConfig.censusData = null;
+            if(chartConfig.mapLevel == "States") {
+                mapInputs.censusData.show();
+                mapInputs.censusData.row.show();
+            } else {
+                mapInputs.censusData.hide();
+                mapInputs.censusData.row.hide();
+            }
 
             mapInputs.lat.hide();
             mapInputs.long.hide();
@@ -252,13 +266,16 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
+            if(chartConfig.censusData !== null) chartConfig.censusData = null;
 
             mapInputs.lat.hide();
             mapInputs.long.hide();
+            mapInputs.censusData.hide();
             mapInputs.mapValue.show();
 
             mapInputs.lat.row.hide();
             mapInputs.long.row.hide();
+            mapInputs.censusData.row.hide();
             mapInputs.mapValue.row.show();
         }
     };
@@ -319,12 +336,19 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapType.add(val,val);
         });
         const mapLevel = [
-            "counties",
-            "states",
-            "countries"
+            "Counties",
+            "States",
+            "World"
         ];
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
+        });
+        const censusData = [
+            "true",
+            "false"
+        ]
+        censusData.forEach((val)=>{
+            mapInputs.censusData.add(val, val);
         });
 
         mapInputs.mapType.setValue(chartConfig.mapType, true);
@@ -332,6 +356,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.lat.setValue(chartConfig.latitude, true);
         mapInputs.long.setValue(chartConfig.longitude, true);
         mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
+        mapInputs.censusData.setValue(chartConfig.censusData, true);
         createMapPreview();
     };
 
@@ -417,7 +442,7 @@ if(!bluewave.charts) bluewave.charts={};
         var body = styleEditor.getBody();
         body.innerHTML = "";
         if (mapType==="Point"){
-            if(mapLevel==="states"){
+            if(mapLevel==="States"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -469,22 +494,6 @@ if(!bluewave.charts) bluewave.charts={};
                                      name: "centerVertical",
                                      label: "Vertical Center",
                                      type: "text"
-                                },
-                                {
-                                     name: "censusData",
-                                     label: "Use Census Regions/Divisions",
-                                     type: "radio",
-                                     alignment: "vertical",
-                                     options: [
-                                         {
-                                             label: "True",
-                                             value: true
-                                         },
-                                         {
-                                             label: "False",
-                                             value: false
-                                         }
-                                     ]
                                 }
                             ]
                         }
@@ -524,12 +533,6 @@ if(!bluewave.charts) bluewave.charts={};
                 chartConfig.centerVertical = vertical;
                 verticalField.setValue(vertical);
 
-                var censusData = form.findField("censusData");
-                censusData.row.style.height = "68px";
-                var census = chartConfig.censusData;
-                censusData.setValue(labels===true ? true : false);
-
-
               //Process onChange events
                 form.onChange = function(){
                     var settings = form.getData();
@@ -543,7 +546,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="countries"){
+            else if(mapLevel==="World"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -648,7 +651,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="counties"){
+            else if(mapLevel==="Counties"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -717,7 +720,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (mapType==="Area"){
-            if(mapLevel==="states"){
+            if(mapLevel==="States"){
                 var colorField = new javaxt.dhtml.ComboBox(
                     document.createElement("div"),
                     {
@@ -777,7 +780,6 @@ if(!bluewave.charts) bluewave.charts={};
                 chartConfig.centerVertical = vertical;
                 verticalField.setValue(vertical);
 
-
               //Process onChange events
                 form.onChange = function(){
                     var settings = form.getData();
@@ -788,7 +790,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="countries"){
+            else if(mapLevel==="World"){
 
                 var colorField = new javaxt.dhtml.ComboBox(
                     document.createElement("div"),
@@ -860,7 +862,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="counties"){
+            else if(mapLevel==="Counties"){
                 var colorField = new javaxt.dhtml.ComboBox(
                     document.createElement("div"),
                     {
@@ -895,7 +897,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (mapType==="Links"){
-            if(mapLevel==="states"){
+            if(mapLevel==="States"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -948,7 +950,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="countries"){
+            else if(mapLevel==="World"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [

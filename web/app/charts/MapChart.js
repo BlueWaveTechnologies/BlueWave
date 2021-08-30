@@ -66,6 +66,8 @@ bluewave.charts.MapChart = function(parent, config) {
         this.clear();
         var parent = svg.node().parentNode;
         onRender(parent, function(){
+            console.log(chartConfig);
+            console.log(data);
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
 
@@ -85,7 +87,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 delete chartConfig.linkZoom;
             }
             var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-            if(chartConfig.mapLevel == "states"){
+            if(chartConfig.mapLevel === "States"){
                 getData("states", function(mapData) {
                     getData("countries", function(countryData){
                         if(!chartConfig.linkZoom) chartConfig.linkZoom = (width / .8);
@@ -94,6 +96,10 @@ bluewave.charts.MapChart = function(parent, config) {
                         var zoom = chartConfig.linkZoom;
                         var horizontal = chartConfig.centerHorizontal;
                         var vertical = chartConfig.centerVertical;
+                        var useCensusData = (chartConfig.censusData === "true");
+                        if(useCensusData == null){
+                            useCensusData = false;
+                        }
                         var countries = topojson.feature(countryData, countryData.objects.countries);
                         var states = topojson.feature(mapData, mapData.objects.states);
                         var projection = d3.geoAlbers()
@@ -169,11 +175,25 @@ bluewave.charts.MapChart = function(parent, config) {
 
                     }else if(chartConfig.mapType === "Area"){
                         data.forEach(function(d){
-                            var state = d.state;
-                            for(var i = 0; i < states.features.length; i++){
-                                if(state == states.features[i].properties.code){
-                                    states.features[i].properties.inData = true;
-                                    states.features[i].properties.mapValue = d[chartConfig.mapValue];
+                            if(useCensusData){
+                                var location = d[chartConfig.mapValue];
+                                var locations = location.split(",");
+                                var censusDivision = locations[1];
+                                censusDivision = censusDivision.replace(/\D/g, "");
+                                censusDivision = parseInt(censusDivision);
+                                for(var i = 0; i < states.features.length; i++){
+                                    if(censusDivision == states.features[i].properties.censusDivision){
+                                        states.features[i].properties.inData = true;
+                                        states.features[i].properties.mapValue = d.id;
+                                    }
+                                }
+                            } else {
+                                var state = d.state;
+                                for(var i = 0; i < states.features.length; i++){
+                                    if(state == states.features[i].properties.code){
+                                        states.features[i].properties.inData = true;
+                                        states.features[i].properties.mapValue = d[chartConfig.mapValue];
+                                    }
                                 }
                             }
                         });
@@ -356,7 +376,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         }
                     });
                 });
-            }else if(chartConfig.mapLevel == "counties"){
+            }else if(chartConfig.mapLevel === "Counties"){
                 getData("states", function(mapData) {
                     getData("counties", function(mapData){
                         var counties = topojson.feature(mapData, mapData.objects.counties);
@@ -486,7 +506,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         }
                     });
                 });
-            }else if(chartConfig.mapLevel == "countries"){
+            }else if(chartConfig.mapLevel === "World"){
                 getData("countries", function(mapData){
                     if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
                     if(!chartConfig.centerLongitude) chartConfig.centerLongitude = 110;
