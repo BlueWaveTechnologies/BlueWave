@@ -302,7 +302,7 @@ public class User extends javaxt.sql.Model
         try{ hostname = java.net.InetAddress.getLocalHost().getHostName() + "_";}
         catch(Exception e){};
         String username = "bw_" + hostname + getID();
-        username = username.replace("-", "_");
+        username = username.replace("-", "_").replace(".", "_");
         String password = this.password;
         if (password.length()>8) password = password.substring(0, 8);
         return new String[]{username, password};
