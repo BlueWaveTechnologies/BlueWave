@@ -307,7 +307,7 @@ bluewave.utils = {
                 for (var i=0; i<div.childNodes.length; i++){
                     div.childNodes[i].className = "toggle-button";
                 }
-                this.className="toggle-button-active";
+                btn.className="toggle-button-active";
                 if (config.onChange) config.onChange.apply(btn, [btn.innerHTML]);
             };
             btn.onclick = function(){
