@@ -218,7 +218,7 @@ bluewave.Explorer = function(parent, config) {
 
 
               //Create thumbnail
-                if (props.preview) createThumbnail(node, props.preview);
+                if (props.preview && view!=="Dashboard") createThumbnail(node, props.preview);
 
 
 
@@ -1910,7 +1910,7 @@ bluewave.Explorer = function(parent, config) {
                 if (height>maxHeight) setHeight();
             }
 
-
+            if (width===0 || height===0) return;
             resizeCanvas(canvas, width, height, true);
             var base64image = canvas.toDataURL("image/png");
 
