@@ -193,6 +193,7 @@ bluewave.Explorer = function(parent, config) {
 
       //Update nodes
         var csvRequests = [];
+        var thumbnails = [];
         for (var nodeID in dashboard.info.nodes) {
             if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
@@ -217,8 +218,11 @@ bluewave.Explorer = function(parent, config) {
                 if (props.config.chartTitle) updateTitle(node, props.config.chartTitle);
 
 
-              //Create thumbnail
-                if (props.preview && view!=="Dashboard") createThumbnail(node, props.preview);
+              //Check if there's a thumbnail/preview. If so, we'll render it later 
+                if (props.preview) thumbnails.push({
+                    node: node,
+                    thumbnail: props.preview
+                }); 
 
 
 
@@ -284,6 +288,20 @@ bluewave.Explorer = function(parent, config) {
             updateButtons();
             setZoom(dashboard.info.zoom);
             me.setView(view);
+            
+          //Get view (may not be what we requested in setView)
+          //If the view is not a Dashboard, render thumbnails
+            view = me.getView(); 
+            if (view!=="Dashboard"){
+                for (var i=0; i<thumbnails.length; i++){
+                    (function (t) {
+                        var el = t.node.childNodes[1];
+                        onRender(el, function(){
+                            createThumbnail(t.node, t.thumbnail);
+                        });
+                    })(thumbnails[i]);
+                }
+            }
             mask.hide();
         };
 
@@ -317,7 +335,6 @@ bluewave.Explorer = function(parent, config) {
                 }
                 else{
                     clearTimeout(timer);
-                    onReady.apply(me, []);
                 }
             };
             timer = setTimeout(checkMask, 100);
@@ -424,8 +441,15 @@ bluewave.Explorer = function(parent, config) {
     this.setView = function(name){
         if (!name) name = "Edit";
         if (name==="Edit"){
-            toggleButton.setValue("Edit");
-            toggleButton.show();
+            
+            if (me.getView()==="Dashboard"){
+                var dashboard = getDashboard(name);
+                me.update(dashboard, false, "Edit");
+            } 
+            else{
+                toggleButton.setValue("Edit");
+                toggleButton.show();
+            }
         }
         else if (name==="Preview"){
             toggleButton.show();
@@ -494,6 +518,38 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** getDashboard
+  //**************************************************************************
+    var getDashboard = function(name){
+        var dashboard = {
+            id: id,
+            name: name,
+            className: name,
+            //thumbnail: thumbnail,
+            info: {
+                layout: drawflow.export().drawflow.Home.data,
+                nodes: {},
+                zoom: zoom
+            }
+        };
+
+
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                dashboard.info.nodes[key] = {
+                    name: node.name,
+                    type: node.type,
+                    config: node.config,
+                    preview: node.preview
+                };
+            }
+        };
+        return dashboard;
+    };
+
+
+  //**************************************************************************
   //** save
   //**************************************************************************
     this.save = function(){
@@ -505,30 +561,7 @@ bluewave.Explorer = function(parent, config) {
             name = formInputs.name;
 
 
-            var dashboard = {
-                id: id,
-                name: name,
-                className: name,
-                //thumbnail: thumbnail,
-                info: {
-                    layout: drawflow.export().drawflow.Home.data,
-                    nodes: {},
-                    zoom: zoom
-                }
-            };
-
-
-            for (var key in nodes) {
-                if (nodes.hasOwnProperty(key)){
-                    var node = nodes[key];
-                    dashboard.info.nodes[key] = {
-                        name: node.name,
-                        type: node.type,
-                        config: node.config,
-                        preview: node.preview
-                    };
-                }
-            };
+            var dashboard = getDashboard(name);
 
 
             post("dashboard", JSON.stringify(dashboard),{
@@ -1916,7 +1949,6 @@ bluewave.Explorer = function(parent, config) {
 
             var img = document.createElement('img');
             img.className = "noselect";
-            img.style.width = "100%";
             img.onload = function() {
                 el.appendChild(this);
             };
