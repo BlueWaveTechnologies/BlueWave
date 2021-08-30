@@ -201,7 +201,7 @@ bluewave.Explorer = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-
+    
 
               //Add props to node
                 var props = dashboard.info.nodes[nodeID];
@@ -282,9 +282,9 @@ bluewave.Explorer = function(parent, config) {
 
         var onReady = function(){
             updateButtons();
+            setZoom(dashboard.info.zoom);
             me.setView(view);
             mask.hide();
-            setZoom(dashboard.info.zoom);
         };
 
 
@@ -295,10 +295,10 @@ bluewave.Explorer = function(parent, config) {
                 var node = csvRequests.pop();
                 getCSV(node.config.query, function(csv){
                     this.csv = csv;
-                    if (csvRequests.length===0){
+                    if (csvRequests.length===0){          
                         showMask = false;
                         waitmask.hide();
-                        onReady.apply(me, []);
+                        onReady.apply(me, []); 
                     }
                     else{
                         updateNodes();
@@ -1482,7 +1482,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** editSankey
   //**************************************************************************
-    var editSankey = function(node){
+    var editSankey = function(node, hide){
         if (!sankeyEditor){
             var win = createNodeEditor({
                 title: "Edit Sankey",
@@ -1535,6 +1535,7 @@ bluewave.Explorer = function(parent, config) {
 
       //Update and render sankeyEditor
         sankeyEditor.update(node.config, getSankeyInputs(node));
+        if (hide===true) return;
         sankeyEditor.show();
     };
 
@@ -2300,30 +2301,15 @@ bluewave.Explorer = function(parent, config) {
                     }
                 }
                 else if (node.type==="sankeyChart" || node.type==="supplyChain"){  
+
+                  //Instantiate sankeyEditor as needed
+                    if (!sankeyEditor) editSankey(node, true);
                     
-                  //Create temporary DOM object for sankeyEditor               
-                    var temp = document.createElement("div");
-                    addShowHide(temp);
-                    temp.hide();
-                    parent.appendChild(temp);
-
-
-                  //Instantiate sankeyEditor
-                    var sankeyEditor = new bluewave.charts.SankeyEditor(temp, config);
-                    sankeyEditor.update(chartConfig, getSankeyInputs(node));
-
-
                   //Get sankey config and data
+                    sankeyEditor.update(node.config, getSankeyInputs(node));
                     var sankeyConfig = sankeyEditor.getConfig();
                     var data = sankeyEditor.getSankeyData();
-
-
-                  //Remove sankeyEditor and temporary DOM object
-                    destroy(sankeyEditor);
-                    parent.removeChild(temp);
-                    temp = null;
-
-
+                    
                   //Render sankeyChart
                     var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
                     sankeyChart.update(sankeyConfig.style,data);
@@ -2334,7 +2320,9 @@ bluewave.Explorer = function(parent, config) {
                     for (var key in node.inputs) {
                         if (node.inputs.hasOwnProperty(key)){
                             var csv = node.inputs[key].csv;
-                            data.push(d3.csvParse(csv));
+                            if (csv){
+                                data.push(d3.csvParse(csv));
+                            }
                         }
                     }
 
