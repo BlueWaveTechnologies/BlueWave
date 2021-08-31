@@ -125,9 +125,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
                 return (d.opacity=config.links.opacity);
               })
               .style("stroke", function (d) {
-                  var color = config.links.color;
-                  if (color==="source") return d.source.color;
-                  return color;
+                  return config.links.color;
               })
               .on('mouseover', function(d){
                   var opacity = Math.min(1, config.links.opacity*1.3);
@@ -176,7 +174,16 @@ bluewave.charts.SankeyChart = function(parent, config) {
 
 
 
-
+          //Update link color AFTER node color is set
+            if (config.links.color==="source"){
+                link.each(function() {
+                    var path = d3.select(this);
+                    path.style("stroke", function (d) {
+                        return d.source.color;
+                    });
+                });
+            }
+            
 
 
           //Add link labels
