@@ -220,13 +220,13 @@ bluewave.charts.LineChart = function(parent, config) {
                     );
                 }
 
-            //draw grid lines if option is checked
-            if(chartConfig.gridLines === true){
-               drawGridlines(plotArea, x, y, axisHeight, axisWidth);
-            }
 
- 
+            };
+            //Draw grid lines if option is checked
+            if(chartConfig.gridLines === true){
+               drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.gridLines, chartConfig.gridLines);
             }
+            
         });
     };
 
