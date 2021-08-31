@@ -61,7 +61,7 @@ bluewave.ChartEditor = function(parent, config) {
         bottom: 65,
         left: 82
     };
-    var styleEditor;
+    var styleEditor, colorPicker;
 
 
   //**************************************************************************
@@ -632,6 +632,19 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if(chartType==="barChart"){
                 
+          //Create color dropdown
+            var chartLayout = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox
+                }
+            );
+            chartLayout.add("Vertical", "vertical");
+            chartLayout.add("Horizontal", "horizontal");
+            chartLayout.setValue("vertical");
+
+            
+            
             form = new javaxt.dhtml.Form(body, { 
                 style: config.style.form, 
                 items: [ 
@@ -642,33 +655,17 @@ bluewave.ChartEditor = function(parent, config) {
                             { 
                                 name: "layout", 
                                 label: "Chart Layout", 
-                                type: "radio", 
-                                alignment: "horizontal", 
-                                options: [ 
-                                    { 
-                                        label: "Vertical", 
-                                        value: true 
-                                    }, 
-                                    { 
-                                        label: "Horizontal", 
-                                        value: false 
-                                    } 
-                                ] 
+                                type: chartLayout 
                             },  
                             { 
                                 name: "legend", 
                                 label: "Display Legend", 
-                                type: "radio", 
-                                alignment: "horizontal", 
+                                type: "checkbox", 
                                 options: [ 
                                     { 
-                                        label: "true", 
+                                        label: "", 
                                         value: true 
-                                    }, 
-                                    { 
-                                        label: "false", 
-                                        value: false 
-                                    } 
+                                    }
                                      
                                 ] 
                             }
@@ -762,9 +759,10 @@ bluewave.ChartEditor = function(parent, config) {
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
+                console.log(settings);
 
-                if (settings.layout==="Vertical") settings.xGrid = true;
-                else if (settings.layout==="Horizontal") settings.xGrid = false;
+                if (settings.layout==="vertical") settings.xGrid = true;
+                else if (settings.layout==="horizontal") settings.xGrid = false;
 
                 if (settings.xGrid==="true") settings.xGrid = true;
                 else if (settings.xGrid==="false") settings.xGrid = false;
@@ -813,6 +811,7 @@ bluewave.ChartEditor = function(parent, config) {
         }
         
     };
+    
 
   //**************************************************************************
   //** getColorPicker
