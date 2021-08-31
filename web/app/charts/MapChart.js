@@ -66,8 +66,6 @@ bluewave.charts.MapChart = function(parent, config) {
         this.clear();
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-            console.log(chartConfig);
-            console.log(data);
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
 
@@ -222,8 +220,6 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr('fill', function(d){
                                 var inData = d.properties.inData;
                                 var inCensus = d.properties.censusData;
-                                console.log(d);
-                                console.log(inCensus)
                                 if(inData || inCensus){
                                     return colorScale[chartConfig.colorScale](d.properties.mapValue);
                                 }else{
