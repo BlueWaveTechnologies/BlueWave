@@ -99,6 +99,7 @@ if(!bluewave.charts) bluewave.charts={};
   //** update
   //**************************************************************************
     this.update = function(mapConfig, inputs){
+        console.log("123")
         me.clear();
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
@@ -268,6 +269,9 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapPreview
   //**************************************************************************
     var createMapPreview = function(){
+        console.log("123")
+
+        // console.log("map preview type is ", chartConfig.mapType)
         if(chartConfig.mapType===null){
             return;
         }
@@ -340,6 +344,8 @@ if(!bluewave.charts) bluewave.charts={};
   //** clear
   //**************************************************************************
     this.clear = function(){
+        console.log("123")
+
         inputData = [];
         chartConfig = {};
         panel.title.innerHTML = "Untitled";
@@ -363,6 +369,8 @@ if(!bluewave.charts) bluewave.charts={};
   //** initializeChartSpace
   //**************************************************************************
     var initializeChartSpace = function(){
+        console.log("123")
+
         var width = previewArea.offsetWidth;
         var height = previewArea.offsetHeight;
 
@@ -373,7 +381,16 @@ if(!bluewave.charts) bluewave.charts={};
         mapArea = new bluewave.charts.MapChart(svg, {
             margin: margin
         });
+        console.log("current object of mapChart is ", mapArea)
     };
+
+
+//   //**************************************************************************
+//   //** getNodes
+//   //**************************************************************************
+//     this.getNodes = function(){
+//         return nodes;
+//     };
 
 
   //**************************************************************************
@@ -382,6 +399,8 @@ if(!bluewave.charts) bluewave.charts={};
   /** Return chart configuration file
    */
     this.getConfig = function(){
+        console.log("123")
+
         let copy = Object.assign({},chartConfig);
         return copy;
     };
@@ -391,8 +410,31 @@ if(!bluewave.charts) bluewave.charts={};
   //** getChart
   //**************************************************************************
     this.getChart = function(){
+        console.log("123 - i think this is the one that we need ")
         return previewArea;
     };
+  
+
+  //**************************************************************************
+  //** getMapData
+  //**************************************************************************
+  this.getMapData = function(node){
+      console.log(node)
+    var data = [];
+    for (var key in node.inputs) {
+        if (node.inputs.hasOwnProperty(key)){
+            var csv = node.inputs[key].csv;
+            if(csv === undefined){
+                var inputConfig = node.inputs[key].config;
+                data.push(inputConfig);
+            }else {
+                data.push(csv);
+            }
+        }
+    }
+  
+    return data;
+};
 
 
   //**************************************************************************
