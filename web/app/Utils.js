@@ -987,26 +987,28 @@ bluewave.utils = {
   //**************************************************************************
   //** drawGridlines
   //**************************************************************************
-    drawGridlines: function(svg, xScale, yScale, height, width){
+    drawGridlines: function(svg, xScale, yScale, height, width, xGrid, yGrid){
 
+        if(yGrid){
          svg.append("g")
-            .attr("class", "gridLines")
+            .attr("class", "grid")
             .attr("transform", "translate(0," + height + ")")
             .call(d3.axisBottom(xScale)
             .tickSize(-height)
             .tickFormat("")
             )
-            .style("stroke-opacity", ".2")
+            // .style("stroke-opacity", ".2")
+        }
 
-        
+        if(xGrid){
          svg.append("g")
-            .attr("class", "gridLines")
+            .attr("class", "grid")
             .call(d3.axisLeft(yScale)
             .tickSize(-width)
             .tickFormat("")
             )
-            .style("stroke-opacity", ".2")       
-        
+            // .style("stroke-opacity", ".2")       
+        }
     }
 
 };
