@@ -367,6 +367,16 @@ bluewave.ChartEditor = function(parent, config) {
         barChart = new bluewave.charts.BarChart(svg, {
             margin: margin
         });
+        barChart.onDblClick = function(bar, bars){
+
+            var cp = getColorPicker();
+            cp.onChange = function(c){
+                for (var i=0; i<bars.length; i++){
+                    var bar = d3.select(bars[i]);
+                    bar.attr("fill", c.hexString);
+                }
+            };
+        };
 
     };
 
@@ -816,37 +826,37 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** getColorPicker
   //**************************************************************************
-  var getColorPicker = function(){
-    if (!colorPicker){
-        colorPicker = new javaxt.dhtml.Window(document.body, {
-            title: "Edit Node",
-            width: 340,
-            modal: false,
-            style: config.style.window
-        });
-        
-        var cp = new iro.ColorPicker(colorPicker.getBody(), {
-          width: 320,
-          height: 320,
-          anticlockwise: true,
-          borderWidth: 1,
-          borderColor: "#fff",
-          css: {
-            "#output": {
-              "background-color": "$color"
+    var getColorPicker = function(){
+      if (!colorPicker){
+          colorPicker = new javaxt.dhtml.Window(document.body, {
+              title: "Edit Color",
+              width: 340,
+              modal: false,
+              style: config.style.window
+          });
+
+          var cp = new iro.ColorPicker(colorPicker.getBody(), {
+            width: 320,
+            height: 320,
+            anticlockwise: true,
+            borderWidth: 1,
+            borderColor: "#fff",
+            css: {
+              "#output": {
+                "background-color": "$color"
+              }
             }
-          }
-        });
-        
-        cp.on("color:change", function(c){
-            colorPicker.onChange(c);
-        });
-        
-        colorPicker.onChange = function(){};
-    }
-    colorPicker.show();
-    return colorPicker;
-};
+          });
+
+          cp.on("color:change", function(c){
+              colorPicker.onChange(c);
+          });
+
+          colorPicker.onChange = function(c){};
+      }
+      colorPicker.show();
+      return colorPicker;
+  };
 
 
   //**************************************************************************
