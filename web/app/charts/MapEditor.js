@@ -41,7 +41,6 @@ if(!bluewave.charts) bluewave.charts={};
     var mapProjection;
     var styleEditor;
 
-
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -95,7 +94,6 @@ if(!bluewave.charts) bluewave.charts={};
         });
     };
 
-
   //**************************************************************************
   //** update
   //**************************************************************************
@@ -117,7 +115,6 @@ if(!bluewave.charts) bluewave.charts={};
         createOptions();
     };
 
-
   //**************************************************************************
   //** createDropDown
   //**************************************************************************
@@ -129,7 +126,6 @@ if(!bluewave.charts) bluewave.charts={};
         parent.appendChild(table);
         createMapDropDown(tbody);
     };
-
 
   //**************************************************************************
   //** createMapDropDown
@@ -181,7 +177,6 @@ if(!bluewave.charts) bluewave.charts={};
 
     };
 
-
   //**************************************************************************
   //** dropdownItem
   //**************************************************************************
@@ -212,7 +207,6 @@ if(!bluewave.charts) bluewave.charts={};
             callBack();
         };
     };
-
 
   //**************************************************************************
   //** showHideDropDowns
@@ -280,7 +274,6 @@ if(!bluewave.charts) bluewave.charts={};
         }
     };
 
-
   //**************************************************************************
   //** createMapPreview
   //**************************************************************************
@@ -306,7 +299,6 @@ if(!bluewave.charts) bluewave.charts={};
             mapArea.update(chartConfig, data);
         });
     };
-
 
   //**************************************************************************
   //** createOptions
@@ -360,7 +352,6 @@ if(!bluewave.charts) bluewave.charts={};
         createMapPreview();
     };
 
-
   //**************************************************************************
   //** clear
   //**************************************************************************
@@ -383,7 +374,6 @@ if(!bluewave.charts) bluewave.charts={};
        //if (mapLayer) mapLayer.selectAll("circle").remove();
     };
 
-
   //**************************************************************************
   //** initializeChartSpace
   //**************************************************************************
@@ -400,7 +390,6 @@ if(!bluewave.charts) bluewave.charts={};
         });
     };
 
-
   //**************************************************************************
   //** getConfig
   //**************************************************************************
@@ -411,14 +400,12 @@ if(!bluewave.charts) bluewave.charts={};
         return copy;
     };
 
-
   //**************************************************************************
   //** getChart
   //**************************************************************************
     this.getChart = function(){
         return previewArea;
     };
-
 
   //**************************************************************************
   //** editStyle
@@ -435,7 +422,6 @@ if(!bluewave.charts) bluewave.charts={};
                 style: config.style.window
             });
         }
-
 
       //Create form
         var form;
@@ -500,14 +486,12 @@ if(!bluewave.charts) bluewave.charts={};
                     ]
                 });
 
-
               //Update cutout field (add slider) and set initial value
                 createSlider("radius", form, "%");
                 var radius = chartConfig.pointRadius;
                 if (radius==null) radius = 0.65;
                 chartConfig.pointRadius = radius;
                 form.findField("radius").setValue(radius*100);
-
 
               //Tweak height of the label field and set initial value
                 var labelField = form.findField("labels");
@@ -604,14 +588,12 @@ if(!bluewave.charts) bluewave.charts={};
                     ]
                 });
 
-
               //Update cutout field (add slider) and set initial value
                 createSlider("radius", form, "%");
                 var radius = chartConfig.pointRadius;
                 if (radius==null) radius = 0.65;
                 chartConfig.pointRadius = radius;
                 form.findField("radius").setValue(radius*100);
-
 
               //Tweak height of the label field and set initial value
                 var labelField = form.findField("labels");
@@ -636,7 +618,6 @@ if(!bluewave.charts) bluewave.charts={};
                 if(vertical==null) vertical = 500;
                 chartConfig.centerLatitude = vertical;
                 verticalField.setValue(vertical);
-
 
               //Process onChange events
                 form.onChange = function(){
@@ -701,7 +682,6 @@ if(!bluewave.charts) bluewave.charts={};
                 chartConfig.pointRadius = radius;
                 form.findField("radius").setValue(radius*100);
 
-
                 //Tweak height of the label field and set initial value
                 var labelField = form.findField("labels");
                 labelField.row.style.height = "68px";
@@ -729,7 +709,6 @@ if(!bluewave.charts) bluewave.charts={};
                 );
                 colorField.add("Red", "red");
                 colorField.add("Blue", "blue");
-
 
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
