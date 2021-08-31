@@ -108,6 +108,37 @@ bluewave.charts.SankeyChart = function(parent, config) {
             var getColor = d3.scaleOrdinal(d3.schemeCategory10);
 
 
+
+          //Add the links
+            var link = sankeyArea
+              .append("g")
+              .selectAll(".link")
+              .data(graph.links)
+              .enter()
+              .append("path")
+              .attr("class", "sankey-link")
+              .attr("d", d3.sankeyLinkHorizontal())
+              .attr("stroke-width", function (d) {
+                return d.width;
+              })
+              .style("stroke-opacity", function (d) {
+                return (d.opacity=config.links.opacity);
+              })
+              .style("stroke", function (d) {
+                  var color = config.links.color;
+                  if (color==="source") return d.source.color;
+                  return color;
+              })
+              .on('mouseover', function(d){
+                  var opacity = Math.min(1, config.links.opacity*1.3);
+                  d3.select(this).style("stroke-opacity", opacity);
+              })
+              .on('mouseout', function(d){
+                d3.select(this).style("stroke-opacity", d.opacity);
+              });
+
+
+
           //Add the nodes
             var node = sankeyArea
               .append("g")
@@ -145,33 +176,6 @@ bluewave.charts.SankeyChart = function(parent, config) {
 
 
 
-          //Add the links
-            var link = sankeyArea
-              .append("g")
-              .selectAll(".link")
-              .data(graph.links)
-              .enter()
-              .append("path")
-              .attr("class", "sankey-link")
-              .attr("d", d3.sankeyLinkHorizontal())
-              .attr("stroke-width", function (d) {
-                return d.width;
-              })
-              .style("stroke-opacity", function (d) {
-                return (d.opacity=config.links.opacity);
-              })
-              .style("stroke", function (d) {
-                  var color = config.links.color;
-                  if (color==="source") return d.source.color;
-                  return color;
-              })
-              .on('mouseover', function(d){
-                  var opacity = Math.min(1, config.links.opacity*1.3);
-                  d3.select(this).style("stroke-opacity", opacity);
-              })
-              .on('mouseout', function(d){
-                d3.select(this).style("stroke-opacity", d.opacity);
-              });
 
 
 
