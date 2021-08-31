@@ -104,7 +104,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 xKey2 = chartConfig.xAxis2;
                 yKey2 = chartConfig.yAxis2;
             }
-
+            
 
             var data1 = data[0];
             var data2 = data[1];
@@ -123,6 +123,10 @@ bluewave.charts.BarChart = function(parent, config) {
             }).entries(data);
 
 
+            var getBarColor = function(d){
+                //TODO: check which dataset this belongs to and call getColor()
+                return "#6699CC";
+            };
 
 
 
@@ -155,11 +159,12 @@ bluewave.charts.BarChart = function(parent, config) {
                     .attr("width", function (d) {
                         return x.bandwidth ? x.bandwidth() : x(d["key"]);
                     })
-                    .attr("fill", "#69b3a2");
+                    .attr("fill", getBarColor);
             }
             else {
 
                 if (timeAxis === "x") {
+
                     plotArea
                         .selectAll("mybar")
                         .data(sumData)
@@ -180,8 +185,10 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return width/sumData.length-5;
                         })
-                        .attr("fill", "#69b3a2");
-                } else if (timeAxis === "y") {
+                        .attr("fill", getBarColor);
+                } 
+                else if (timeAxis === "y") {
+                    
                     plotArea
                         .selectAll("mybar")
                         .data(data)
@@ -199,19 +206,38 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return x(d[xKey]);
                         })
-                        .attr("fill", "#69b3a2");
+                        .attr("fill", getBarColor);
                 }
             }
+            
+            
+            
             //Create d3 event listeners for bars
-            var allRects = plotArea.selectAll("rect").data(data);
-            allRects.on("mouseover", function(){
-                
+            var bars = plotArea.selectAll("rect").data(data);
+            bars.on("mouseover", function(){ 
                 d3.select(this).transition().duration(100).attr("opacity", "0.8")
-            })
+            });
 
-            allRects.on("mouseout", function(){
+            bars.on("mouseout", function(){
                 d3.select(this).transition().duration(100).attr("opacity", "1.0")
-            })
+            });
+            
+            var getSiblings = function(bar){
+                var arr = [];
+                bars.each(function() { 
+                    arr.push(this);
+                }); 
+                return arr;
+            };
+            
+            bars.on("click", function(){
+                me.onClick(this, getSiblings(this));
+            });
+            
+            bars.on("dblclick", function(){
+                me.onDblClick(this, getSiblings(this));
+            });
+            
             
             //Draw grid lines
             if(chartConfig.xGrid || chartConfig.yGrid){
@@ -269,6 +295,11 @@ bluewave.charts.BarChart = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** onClick
+  //**************************************************************************
+    this.onClick = function(bar, bars){};
+    this.onDblClick = function(bar, bars){};
 
   //**************************************************************************
   //** displayAxis
