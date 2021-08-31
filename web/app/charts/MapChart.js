@@ -176,15 +176,17 @@ bluewave.charts.MapChart = function(parent, config) {
                     }else if(chartConfig.mapType === "Area"){
                         data.forEach(function(d){
                             if(useCensusData){
-                                var location = d[chartConfig.mapValue];
+                                var location = d.premier_facility_location;
                                 var locations = location.split(",");
                                 var censusDivision = locations[1];
                                 censusDivision = censusDivision.replace(/\D/g, "");
                                 censusDivision = parseInt(censusDivision);
                                 for(var i = 0; i < states.features.length; i++){
                                     if(censusDivision == states.features[i].properties.censusDivision){
-                                        states.features[i].properties.inData = true;
-                                        states.features[i].properties.mapValue = d.id;
+                                        states.features[i].properties.censusData = true;
+                                        states.features[i].properties.mapValue = d[chartConfig.mapValue];
+                                    }else if(states.features[i].properties.inData){
+                                        states.features[i].properties.inData = false;
                                     }
                                 }
                             } else {
@@ -193,6 +195,8 @@ bluewave.charts.MapChart = function(parent, config) {
                                     if(state == states.features[i].properties.code){
                                         states.features[i].properties.inData = true;
                                         states.features[i].properties.mapValue = d[chartConfig.mapValue];
+                                    }else if(states.features[i].properties.censusData){
+                                        states.features[i].properties.censusData = false;
                                     }
                                 }
                             }
@@ -217,7 +221,10 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr('stroke', 'white')
                             .attr('fill', function(d){
                                 var inData = d.properties.inData;
-                                if(inData){
+                                var inCensus = d.properties.censusData;
+                                console.log(d);
+                                console.log(inCensus)
+                                if(inData || inCensus){
                                     return colorScale[chartConfig.colorScale](d.properties.mapValue);
                                 }else{
                                     return "lightgrey";
