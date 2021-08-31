@@ -422,8 +422,9 @@ bluewave.ChartEditor = function(parent, config) {
       //Update form
         var body = styleEditor.getBody();
         body.innerHTML = "";
+        var form;
         if (chartType==="pieChart"){
-            var form = new javaxt.dhtml.Form(body, {
+            form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
                     {
@@ -509,7 +510,7 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
           //Add style options
-            var form = new javaxt.dhtml.Form(body, {
+            form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
                     {
@@ -628,86 +629,114 @@ bluewave.ChartEditor = function(parent, config) {
             };
 
 
-        }else if(chartType==="barChart"){
-            var form = new javaxt.dhtml.Form(body, {
-                style: config.style.form,
-                items: [
-                    {
-                        group: "Style",
-                        items: [
-                            
-                            
-                            {
-                                name: "layout",
-                                label: "Chart Layout",
-                                type: "radio",
-                                alignment: "horizontal",
-                                options: [
-                                    {
-                                        label: "Vertical",
-                                        value: true
-                                    },
-                                    {
-                                        label: "Horizontal",
-                                        value: false
+        }
+        else if(chartType==="barChart"){
+                
+            form = new javaxt.dhtml.Form(body, { 
+                style: config.style.form, 
+                items: [ 
+                    { 
+                        group: "General", 
+                        items: [ 
+
+                            { 
+                                name: "layout", 
+                                label: "Chart Layout", 
+                                type: "radio", 
+                                alignment: "horizontal", 
+                                options: [ 
+                                    { 
+                                        label: "Vertical", 
+                                        value: true 
+                                    }, 
+                                    { 
+                                        label: "Horizontal", 
+                                        value: false 
+                                    } 
+                                ] 
+                            },  
+                            { 
+                                name: "legend", 
+                                label: "Display Legend", 
+                                type: "radio", 
+                                alignment: "horizontal", 
+                                options: [ 
+                                    { 
+                                        label: "true", 
+                                        value: true 
+                                    }, 
+                                    { 
+                                        label: "false", 
+                                        value: false 
+                                    } 
+                                     
+                                ] 
+                            }
+                        ] 
+                    },
+                    
+                    { 
+                        group: "X-Axis", 
+                        items: [ 
+                            { 
+                                name: "xLabel", 
+                                label: "Show Labels", 
+                                type: "checkbox",
+                                options: [ 
+                                    { 
+                                        label: "", 
+                                        value: true 
                                     }
-                                ]
-                            }, 
-                            {
-                                name: "legend",
-                                label: "Display Legend",
-                                type: "radio",
-                                alignment: "horizontal",
-                                options: [
-                                    {
-                                        label: "true",
-                                        value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
-                                    }
-                                    
-                                ]
+                                     
+                                ] 
                             },
-                            {
-                                name: "xGrid",
-                                label: "X-Axis",
-                                type: "radio",
-                                alignment: "horizontal",
-                                options: [
-                                    {
-                                        label: "true",
-                                        value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
+                            { 
+                                name: "xGrid", 
+                                label: "Show Grid Lines", 
+                                type: "checkbox",
+                                options: [ 
+                                    { 
+                                        label: "", 
+                                        value: true 
                                     }
-                                    
-                                ]
+                                     
+                                ] 
+                            }
+                        ]
+                    },
+                    
+                    { 
+                        group: "Y-Axis", 
+                        items: [ 
+                            { 
+                                name: "yLabel", 
+                                label: "Show Labels", 
+                                type: "checkbox",
+                                options: [ 
+                                    { 
+                                        label: "", 
+                                        value: true 
+                                    }
+                                     
+                                ] 
                             },
-                            {
-                                name: "yGrid",
-                                label: "Y-Axis",
-                                type: "radio",
-                                alignment: "horizontal",
-                                options: [
-                                    {
-                                        label: "true",
-                                        value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
+                            { 
+                                name: "yGrid", 
+                                label: "Show Grid Lines", 
+                                type: "checkbox",
+                                options: [ 
+                                    { 
+                                        label: "", 
+                                        value: true 
                                     }
-                                    
-                                ]
+                                     
+                                ] 
                             }
                         ]
                     }
-                ]
-            });
+                    
+                ] 
+            }); 
 
             //Set initial value for layout
             var layoutField = form.findField("layout");
