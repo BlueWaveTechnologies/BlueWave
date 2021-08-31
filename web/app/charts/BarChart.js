@@ -202,6 +202,69 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("fill", "#69b3a2");
                 }
             }
+            //Create d3 event listeners for bars
+            var allRects = plotArea.selectAll("rect").data(data);
+            allRects.on("mouseover", function(){
+                
+                d3.select(this).transition().duration(100).attr("opacity", "0.8")
+            })
+
+            allRects.on("mouseout", function(){
+                d3.select(this).transition().duration(100).attr("opacity", "1.0")
+            })
+            
+            //Draw grid lines
+            if(chartConfig.xGrid || chartConfig.yGrid){
+                drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+            }
+            
+            //Display legend
+            // var legendContainer = document.querySelector(".bar-legend");
+            if(chartConfig.barLegend && !document.querySelector(".bar-legend")){
+                 
+                var div = d3.select(parent).append("div");
+
+                div
+                 .attr("class", "bar-legend")
+                 .html("<div>Data Set</div>")
+                 .style("background-color", "white")
+                 .style("border-radius", "2px")
+                 .style("padding", "10px")
+                 .style("display", "flex")
+                 .style("justify-content", "center")
+                 .style("align-items", "center")
+                 .style("position", "absolute")
+                 .attr("draggable", "true")
+                 .style("left", plotWidth/2 + "px")
+                 .style("top", 0 + "px")
+                 .style("cursor", "move")
+                 .style("text-align", "center")
+                
+                
+                //Temporary drag function - will make a better one
+                 .call(d3.drag()
+                    .on('start.interrupt', function () {
+                    div.interrupt();
+                })
+                .on('start drag', function () {             
+                    div.style('top', d3.event.y  + 'px')
+                    div.style('left', d3.event.x  + 'px')
+                }))
+
+                //Add legend color
+                 div.insert("div", ":first-child")
+                 .style("background-color", "red")
+                 .style("height", "1.618em")
+                 .style("width", "1.618em")
+                 .style("margin", "auto 10px auto 0px")
+                 .style("border-radius", "2px")
+                 
+
+            }else if(!chartConfig.barLegend){
+                let legendContainer = document.querySelector(".bar-legend");
+                if(legendContainer) legendContainer.remove();
+            }
+            
         });
     };
 
@@ -368,6 +431,7 @@ bluewave.charts.BarChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
+    var drawGridlines = bluewave.utils.drawGridlines;
 
     init();
 };

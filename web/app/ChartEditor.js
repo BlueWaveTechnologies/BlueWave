@@ -49,7 +49,11 @@ bluewave.ChartEditor = function(parent, config) {
         lineWidth:null,
         opacity:null,
         fillArea:null,
-        gridLines:null
+        gridLines:null,
+        xGrid:null,
+        yGrid:null,
+        barLayout: null,
+        barLegend:null
     };
     var margin = {
         top: 15,
@@ -574,8 +578,8 @@ bluewave.ChartEditor = function(parent, config) {
           //Change background color for each item in color dropdown
             colorOption.forEach((item)=>{
                 item.style.backgroundColor = item.textContent;
-                item.onmouseover = ()=> item.style.opacity = .8;
-                item.onmouseout = ()=> item.style.opacity = 1;
+                item.onmouseover = () => item.style.opacity = .8;
+                item.onmouseout = () => item.style.opacity = 1;
             });
 
           //Update lineWidth field (add slider) and set initial value
@@ -622,6 +626,133 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.gridLines = settings.gridLines;
                 createLinePreview();
             };
+
+
+        }else if(chartType==="barChart"){
+            var form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            
+                            
+                            {
+                                name: "layout",
+                                label: "Chart Layout",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "Vertical",
+                                        value: true
+                                    },
+                                    {
+                                        label: "Horizontal",
+                                        value: false
+                                    }
+                                ]
+                            }, 
+                            {
+                                name: "legend",
+                                label: "Display Legend",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "true",
+                                        value: true
+                                    },
+                                    {
+                                        label: "false",
+                                        value: false
+                                    }
+                                    
+                                ]
+                            },
+                            {
+                                name: "xGrid",
+                                label: "X-Axis",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "true",
+                                        value: true
+                                    },
+                                    {
+                                        label: "false",
+                                        value: false
+                                    }
+                                    
+                                ]
+                            },
+                            {
+                                name: "yGrid",
+                                label: "Y-Axis",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "true",
+                                        value: true
+                                    },
+                                    {
+                                        label: "false",
+                                        value: false
+                                    }
+                                    
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+            //Set initial value for layout
+            var layoutField = form.findField("layout");
+            var layout = chartConfig.barLayout;
+            layoutField.setValue(layout===true ? true : false);
+
+           //Set initial value for X-gridline
+            var xGridField = form.findField("xGrid");
+            var xGrid = chartConfig.xGrid;
+            xGridField.setValue(xGrid===true ? true : false);
+
+           //Set initial value for Y-gridline
+            var yGridField = form.findField("yGrid");
+            var yGrid = chartConfig.yGrid;
+            yGridField.setValue(yGrid===true ? true : false);
+
+            //Set intial value for legend display
+            var legendField = form.findField("legend");
+            var legend = chartConfig.barLegend;
+            legendField.setValue(legend===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+
+                if (settings.layout==="Vertical") settings.xGrid = true;
+                else if (settings.layout==="Horizontal") settings.xGrid = false;
+
+                if (settings.xGrid==="true") settings.xGrid = true;
+                else if (settings.xGrid==="false") settings.xGrid = false;
+
+                if (settings.yGrid==="true") settings.yGrid = true;
+                else if (settings.yGrid==="false") settings.yGrid = false;
+
+                if (settings.legend==="true") settings.legend = true;
+                else if (settings.legend==="false") settings.legend = false;
+
+                
+                chartConfig.barLayout = settings.layout;
+                chartConfig.barLegend = settings.legend;
+                chartConfig.xGrid = settings.xGrid;
+                chartConfig.yGrid = settings.yGrid;
+                createBarPreview();
+            };
         }
 
 
@@ -645,8 +776,49 @@ bluewave.ChartEditor = function(parent, config) {
                 }
             }, 100);
         }
+
+        // Workaround for bar chart legend until editor is split up
+        if(chartType !== "barChart"){
+            let legendContainer = document.querySelector(".bar-legend");
+            if(legendContainer) legendContainer.remove();
+        }
         
     };
+
+  //**************************************************************************
+  //** getColorPicker
+  //**************************************************************************
+  var getColorPicker = function(){
+    if (!colorPicker){
+        colorPicker = new javaxt.dhtml.Window(document.body, {
+            title: "Edit Node",
+            width: 340,
+            modal: false,
+            style: config.style.window
+        });
+        
+        var cp = new iro.ColorPicker(colorPicker.getBody(), {
+          width: 320,
+          height: 320,
+          anticlockwise: true,
+          borderWidth: 1,
+          borderColor: "#fff",
+          css: {
+            "#output": {
+              "background-color": "$color"
+            }
+          }
+        });
+        
+        cp.on("color:change", function(c){
+            colorPicker.onChange(c);
+        });
+        
+        colorPicker.onChange = function(){};
+    }
+    colorPicker.show();
+    return colorPicker;
+};
 
 
   //**************************************************************************
