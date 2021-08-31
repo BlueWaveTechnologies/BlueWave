@@ -194,6 +194,7 @@ bluewave.Explorer = function(parent, config) {
       //Update nodes
         var csvRequests = [];
         var thumbnails = [];
+        var connectionNodes = [];
         for (var nodeID in dashboard.info.nodes) {
             if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
@@ -241,6 +242,7 @@ bluewave.Explorer = function(parent, config) {
                             var inputID = connection.node;
                             var inputNode = nodes[inputID];
                             node.inputs[inputID] = inputNode;
+                            connectionNodes.push(inputID);
                         }
                     }
                 }
@@ -289,10 +291,15 @@ bluewave.Explorer = function(parent, config) {
             setZoom(dashboard.info.zoom);
             me.setView(view);
             
-          //Get view (may not be what we requested in setView)
-          //If the view is not a Dashboard, render thumbnails
-            view = me.getView(); 
-            if (view!=="Dashboard"){
+            if (me.getView()!=="Dashboard"){
+                
+              //Update connections
+                for (var i=0; i<connectionNodes.length; i++){
+                    var inputID = connectionNodes[i];
+                    drawflow.updateConnectionNodes("node-"+inputID);
+                }
+            
+              //Update thumbnails
                 for (var i=0; i<thumbnails.length; i++){
                     (function (t) {
                         var el = t.node.childNodes[1];
