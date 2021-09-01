@@ -129,8 +129,21 @@ bluewave.charts.BarChart = function(parent, config) {
             };
 
 
+            //Set intitial value for layout to vertical
+            if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
+            var layout = chartConfig.barLayout;
 
-            displayAxis("key","value",sumData);
+            //Flip axis if layout is horizontal
+            let leftLabel, bottomLabel;
+            if(layout === "vertical"){
+                displayAxis("key", "value", sumData);
+                leftLabel = chartConfig.yAxis;
+                bottomLabel = chartConfig.xAxis;
+            }else if(layout === "horizontal"){
+                displayAxis("value", "key", sumData);
+                leftLabel = chartConfig.xAxis;
+                bottomLabel = chartConfig.yAxis;
+            } 
 
             width = plotWidth;
             height = plotHeight;
@@ -162,8 +175,8 @@ bluewave.charts.BarChart = function(parent, config) {
                     .attr("fill", getBarColor);
             }
             else {
-
-                if (timeAxis === "x") {
+                // if(timeAxis === "x")
+                if (chartConfig.barLayout === "vertical") {
 
                     plotArea
                         .selectAll("mybar")
@@ -187,24 +200,25 @@ bluewave.charts.BarChart = function(parent, config) {
                         })
                         .attr("fill", getBarColor);
                 } 
-                else if (timeAxis === "y") {
-                    
+                // else if(timeAxis === "y")
+                else if (chartConfig.barLayout === "horizontal") {
+
                     plotArea
                         .selectAll("mybar")
-                        .data(data)
+                        .data(sumData)
                         .enter()
                         .append("rect")
                         .attr("x", function (d) {
                             return 0;
                         })
                         .attr("y", function (d) {
-                            return y(d[yKey]) - height/data.length / 2;
+                            return y(d["key"]) - height/data.length / 2;
                         })
                         .attr("height", function (d) {
                             return height/data.length-5;
                         })
                         .attr("width", function (d) {
-                            return x(d[xKey]);
+                            return x(d["value"]);
                         })
                         .attr("fill", getBarColor);
                 }
@@ -297,7 +311,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 .attr("x", width/2)
                 .attr("y", height+margin.bottom - 2)
                 .style("text-anchor", "middle")
-                .text(chartConfig.xAxis);
+                .text(bottomLabel);
             }
 
             //Add Y-axis label
@@ -308,7 +322,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 .attr("y", 0 - margin.left)    
                 .attr("dy", "1em")
                 .style("text-anchor", "middle")
-                .text(chartConfig.yAxis);
+                .text(leftLabel);
             }
 
             

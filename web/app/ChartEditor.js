@@ -751,7 +751,7 @@ bluewave.ChartEditor = function(parent, config) {
             //Set initial value for layout
             var layoutField = form.findField("layout");
             var layout = chartConfig.barLayout;
-            layoutField.setValue(layout===true ? true : false);
+            // layoutField.setValue(layout===true ? true : false);
 
            //Set initial value for X-gridline
             var xGridField = form.findField("xGrid");
@@ -813,7 +813,6 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.yGrid = settings.yGrid;
                 chartConfig.xLabel = settings.xLabel;
                 chartConfig.yLabel = settings.yLabel;
-                console.log(chartConfig)
                 createBarPreview();
             };
         }
