@@ -271,9 +271,7 @@ if(!bluewave.charts) bluewave.charts={};
         if(chartConfig.mapType===null){
             return;
         }
-        if(chartConfig.mapType=="Point" && (
-            chartConfig.mapValue===null ||
-            chartConfig.mapLevel===null)){
+        if(chartConfig.mapType=="Point" && chartConfig.mapLevel===null){
             return;
         }
         if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
