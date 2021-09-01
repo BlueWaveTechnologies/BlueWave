@@ -688,9 +688,6 @@ bluewave.Application = function(parent, config) {
    *  @param obj Either a class or an instance of a class
    */
     var raisePanel = function(obj, slideBack){
-        // we get a slideback reference.. a panel to slide back to
-        // we get the object we are raising a panel for
-
 
 
       //Find panels in the carousel
@@ -757,8 +754,6 @@ bluewave.Application = function(parent, config) {
                 isNew = true;
             }
         }
-        // when this class is not newly initialzied, just pass it along.
-        // this makes it so that we arent applying the same parameters to a new object, when we can use old.
         else{
             app = obj;
         }
