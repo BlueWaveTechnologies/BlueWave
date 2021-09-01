@@ -10,7 +10,7 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.MapChart = function(parent, config) {
-    console.log("rendering mapchart")
+
     var me = this;
     var defaultConfig = {
         style: {
@@ -44,7 +44,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 var height = parent.offsetHeight;
                 svg.attr("width", width);
                 svg.attr("height", height);
-                console.log("onrender called mapchart")
             });
         }
 
@@ -56,7 +55,6 @@ bluewave.charts.MapChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        console.log("clear function called")
         if (mapArea) mapArea.selectAll("*").remove();
     };
 
@@ -65,9 +63,6 @@ bluewave.charts.MapChart = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
-        console.log("we are getting this data", data)
-        console.log("we are getting this config", chartConfig)
-        console.log("the current maptype is ", chartConfig.mapType)
         this.clear();
         var parent = svg.node().parentNode;
         onRender(parent, function(){
@@ -76,6 +71,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
           //Get min/max values
             var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
+
           //Get isObject boolean.
             var isObject = chartConfig.isObject;
 
@@ -86,23 +82,16 @@ bluewave.charts.MapChart = function(parent, config) {
             };
             if (!chartConfig.colorScale) chartConfig.colorScale = "red";
             if(chartConfig.linkZoom === (width / .8) || chartConfig.linkZoom === width / 2 / Math.PI){
-                console.log("chartzoom thing triggered")
                 delete chartConfig.linkZoom;
             }
             var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
             if(chartConfig.mapLevel == "states"){
-                console.log("####################################################")
-
                 getData("states", function(mapData) {
                     getData("countries", function(countryData){
                         if(!chartConfig.linkZoom) chartConfig.linkZoom = (width / .8);
                         if(!chartConfig.centerHorizontal) chartConfig.centerHorizontal = (width / 2);
                         if(!chartConfig.centerVertical) chartConfig.centerVertical = (height / 2);
                         var zoom = chartConfig.linkZoom;
-                        // console.log("zoom ratio getting passed in is", zoom, "lets set it to 300")
-                        // zoom = 100;
-                        // var horizontal = 100;
-                        // var vertical = 150;
                         var horizontal = chartConfig.centerHorizontal;
                         var vertical = chartConfig.centerVertical;
                         var countries = topojson.feature(countryData, countryData.objects.countries);
@@ -114,8 +103,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
-                        console.log("####################################################")
-
                         mapArea.append("g")
                             .attr("class", "boundary")
                             .selectAll("boundary")
@@ -181,8 +168,6 @@ bluewave.charts.MapChart = function(parent, config) {
                         }
 
                     }else if(chartConfig.mapType === "Area"){
-                        console.log("####################################################")
-
                         data.forEach(function(d){
                             var state = d.state;
                             for(var i = 0; i < states.features.length; i++){
@@ -219,11 +204,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 }
                             });
                         }else if(chartConfig.mapType === "Links"){
-                            console.log("links is called")
-                            console.log("####################################################")
-                            
                             getData("PortsOfEntry", function(ports){
-                                console.log("ports of links are ", ports)
                                 mapArea.append("g")
                                     .attr("class", "boundary")
                                     .selectAll("boundary")
@@ -246,7 +227,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var nodes = data.nodes;
                                 var links = data.links;
                                 var linkArray = []
-                                console.log(linkArray)
                                 var connections = [];
                                 var coords = [];
                                 //Split Links up into the component parts.
@@ -267,7 +247,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                     connection.quantity = stateValue;
                                     connections.push(connection);
                                 });
-                                console.log("linkArray variable ", linkArray)
                                 connections.forEach(function(d){
                                     var stateOne = d.stateCodeOne;
                                     var stateTwo = d.stateCodeTwo;
@@ -309,7 +288,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var thicknessScale = d3.scaleQuantile()
                                     .domain(thicknessExtent)
                                     .range([6 ,8, 10, 12, 14]);
-                                console.log("quantities at this point", quantities)
+
                                 mapArea.selectAll("#connection-path").remove();
                                 mapArea.selectAll("#connection-path")
                                     .data(coords)
@@ -378,7 +357,6 @@ bluewave.charts.MapChart = function(parent, config) {
                     });
                 });
             }else if(chartConfig.mapLevel == "counties"){
-                
                 getData("states", function(mapData) {
                     getData("counties", function(mapData){
                         var counties = topojson.feature(mapData, mapData.objects.counties);
@@ -388,7 +366,6 @@ bluewave.charts.MapChart = function(parent, config) {
                         mapArea.selectAll('circle').remove();
 
                         if (chartConfig.mapType === "Point"){
-                            console.log("####################################################")
 
                           //Add counties
                             mapArea.selectAll("path")
@@ -463,7 +440,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
                         }
                         else if(chartConfig.mapType === "Area"){
-                            console.log("####################################################")
 
                             data.forEach(function(d){
                                 var county = d.county;
@@ -516,9 +492,6 @@ bluewave.charts.MapChart = function(parent, config) {
                     if(!chartConfig.centerLongitude) chartConfig.centerLongitude = 110;
                     if(!chartConfig.centerLatitude) chartConfig.centerLatitude = 20;
                     var zoom = chartConfig.linkZoom;
-                    console.log("ZOOM",chartConfig.linkZoom)
-                    var zoom = 300;
-
                     var centerLon = chartConfig.centerLongitude;
                     var centerLat = chartConfig.centerLatitude;
                     var countries = topojson.feature(mapData, mapData.objects.countries);
@@ -531,8 +504,6 @@ bluewave.charts.MapChart = function(parent, config) {
                     var path = d3.geoPath().projection(projection);
                     mapArea.selectAll('circle').remove();
                     if(chartConfig.mapType === "Point"){
-                        console.log("####################################################")
-
                         mapArea.selectAll("path")
                             .data(countries.features)
                             .enter()
@@ -586,8 +557,6 @@ bluewave.charts.MapChart = function(parent, config) {
                         }
 
                     }else if(chartConfig.mapType === "Area"){
-                        console.log("####################################################")
-
                         var aggregateState = 0;
                         data.forEach(function(d){
                             var state;
@@ -623,9 +592,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                 }
                             });
                     }else if(chartConfig.mapType === "Links"){
-                        console.log("####################################################");
-                        console.log("links is called 623");
-                        console.log("data here is",data);
                         getData("PortsOfEntry", function(ports){
                             mapArea.selectAll("path")
                                 .data(countries.features)
@@ -636,9 +602,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 .attr('stroke', 'white');
 
                             var nodes = data.nodes;
-                            console.log("nodes", nodes);
                             var links = data.links;
-                            console.log("links",links);
                             var linkArray = []
                             var connections = [];
                             var coords = [];
@@ -650,8 +614,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                     linkArray.push(linkage);
                                 }
                             };
-                            console.log("links array",linkArray);
-
                             linkArray.forEach(function(d){
                                 var connection = {};
                                 var countryCodeOne = nodes[d[0]].country;
