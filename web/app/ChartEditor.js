@@ -69,7 +69,6 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -165,6 +164,9 @@ bluewave.ChartEditor = function(parent, config) {
         if (pieChart) pieChart.clear();
         if (lineChart) lineChart.clear();
         if (barChart) barChart.clear();
+        
+        if (colorPicker) colorPicker.hide();
+        if (styleEditor) styleEditor.hide();
     };
 
 
@@ -368,9 +370,8 @@ bluewave.ChartEditor = function(parent, config) {
             margin: margin
         });
         barChart.onDblClick = function(bar, bars){
-
-            var cp = getColorPicker();
-            cp.onChange = function(c){
+            var currColor = d3.select(bar).attr("fill");
+            getColorPicker(currColor).onChange = function(c){
                 for (var i=0; i<bars.length; i++){
                     var bar = d3.select(bars[i]);
                     bar.attr("fill", c.hexString);
@@ -826,7 +827,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** getColorPicker
   //**************************************************************************
-    var getColorPicker = function(){
+    var getColorPicker = function(initialColor){
       if (!colorPicker){
           colorPicker = new javaxt.dhtml.Window(document.body, {
               title: "Edit Color",
@@ -853,8 +854,16 @@ bluewave.ChartEditor = function(parent, config) {
           });
 
           colorPicker.onChange = function(c){};
+          
+          colorPicker.setColor = function(c){
+              cp.color.set(c);
+          };
       }
-      colorPicker.show();
+      
+      if (initialColor) colorPicker.setColor(initialColor);
+      
+      
+      colorPicker.showAt(108+20,57+20);
       return colorPicker;
   };
 
