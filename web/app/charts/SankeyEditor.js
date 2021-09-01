@@ -299,10 +299,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     }
                 }
 
-
               //Update nodes variable
                 nodes[nodeID] = node;
-
 
               //Fire event
                 me.onNodeImport(node,props);
@@ -1515,13 +1513,19 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** updateSankey
   //**************************************************************************
     var updateSankey = function(){
+        var data = me.getSankeyData();
+        sankeyChart.update(config.sankey.style, data);
+    };
 
+
+  //**************************************************************************
+  //** getSankeyData
+  //**************************************************************************  
+    this.getSankeyData = function(){
         var data = {
             nodes: [],
             links: []
         };
-
-
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
@@ -1538,8 +1542,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     if (inputs.hasOwnProperty(k)){
                         var n = nodes[k];
                         var v = quantities[k + "->" + key];
-                        //console.log(k + "->" + key, );
-
                         data.links.push({
                             source: n.name,
                             target: name,
@@ -1549,9 +1551,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
             }
         }
-
-
-        sankeyChart.update(config.sankey.style, data);
+        return data;
     };
 
 

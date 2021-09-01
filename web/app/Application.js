@@ -818,18 +818,23 @@ bluewave.Application = function(parent, config) {
                         var readOnly = arr[0].readOnly;
                         get("dashboard?id="+dashboard.id,{
                             success: function(d){
-                                waitmask.hide();
-
 
                               //Raise explorer panel
                                 var app = raisePanel(bluewave.Explorer, slideBack);
+                                if (!explorerPanel) explorerPanel = app;
+                                explorerPanel.hide();
                                 dashboard.app = app;
 
 
-                              //Update explorer panel
-                                if (!explorerPanel) explorerPanel = app;
-                                explorerPanel.update(d, readOnly, "Dashboard");
-                                me.setTitle(explorerPanel.getTitle());
+                              //Update explorer panel after a slight delay giving
+                              //the carousel time to finish it's animation
+                                setTimeout(function(){
+                                    waitmask.hide();
+                                    explorerPanel.update(d, readOnly, "Dashboard");
+                                    explorerPanel.show();
+                                    me.setTitle(explorerPanel.getTitle());
+                                    
+                                }, 800);
 
                             },
                             failure: function(){
