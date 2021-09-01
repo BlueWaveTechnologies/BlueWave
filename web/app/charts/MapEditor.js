@@ -240,7 +240,7 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
 
-            if(chartConfig.mapLevel == "Census Regions") {
+            if(chartConfig.mapLevel === "Census Regions") {
                 mapInputs.censusRegion.show();
                 mapInputs.censusRegion.row.show();
             } else {
@@ -272,7 +272,12 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.long.row.hide();
             mapInputs.censusRegion.row.hide();
             mapInputs.mapValue.row.show();
-        }
+        };
+        if(chartConfig.mapLevel === "States" && inputData[0].state == null){
+            warn("No State Data detected", mapInputs.mapLevel);
+        }else{
+            createMapPreview();
+        };
     };
 
   //**************************************************************************
@@ -1018,6 +1023,7 @@ if(!bluewave.charts) bluewave.charts={};
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addTextEditor = bluewave.utils.addTextEditor;
     var createSlider = bluewave.utils.createSlider;
+    var warn = bluewave.utils.warn;
 
     init();
  };

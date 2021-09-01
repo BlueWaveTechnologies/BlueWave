@@ -88,10 +88,6 @@ bluewave.charts.MapChart = function(parent, config) {
             if(chartConfig.mapLevel === "States" || chartConfig.mapLevel === "Census Regions"){
                 getData("states", function(mapData) {
                     getData("countries", function(countryData){
-                        if(chartConfig.mapLevel === "States" && data.states == null){
-                            alert("You are attempting to use the State map level without proper state data. " +
-                            "Please check your data for a states field, or use one of the other map levels instead.");
-                        }
                         if(!chartConfig.linkZoom) chartConfig.linkZoom = (width / .8);
                         if(!chartConfig.centerHorizontal) chartConfig.centerHorizontal = (width / 2);
                         if(!chartConfig.centerVertical) chartConfig.centerVertical = (height / 2);

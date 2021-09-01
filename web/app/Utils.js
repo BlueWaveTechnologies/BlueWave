@@ -211,13 +211,14 @@ bluewave.utils = {
         var td;
         if (tr){
             td = tr.childNodes[2];
+        }else{
+            td = field.el.parentNode;
         }
-        else{
+        if(td == null){
             td = field.el.parentNode;
         }
         var getRect = javaxt.dhtml.utils.getRect;
         var rect = getRect(td);
-
 
         var inputs = td.getElementsByTagName("input");
         if (inputs.length==0) inputs = td.getElementsByTagName("textarea");
