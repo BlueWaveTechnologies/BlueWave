@@ -1452,7 +1452,6 @@ bluewave.Explorer = function(parent, config) {
   //** editMap
   //**************************************************************************
     var editMap = function(node,hide){
-        console.log("edit map is running")
         if(!mapEditor){
             var win = createNodeEditor({
                 title: "Edit Map",
@@ -1498,7 +1497,7 @@ bluewave.Explorer = function(parent, config) {
 
         };
 
-        //Add custom getNode() method to the mapEditor to return current node
+      //Add custom getNode() method to the mapEditor to return current node
         mapEditor.getNode = function(){
         return node;
           };
@@ -1506,21 +1505,10 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update and render mapEditor
-        // mapEditor.update(node.config,getSupplyChainInputs(node));
-        // console.log("node config of the edit is ", JSON.stringify(node.config,null,2))
-        // console.log("node print",node)
-        // data = mapEditor.getMapData(node);
-        console.log("data reads in editor as ", mapEditor.getMapData(node))
-
         mapEditor.update(node.config,mapEditor.getMapData(node));
         mapConfig = mapEditor.getConfig();
-        // console.log("map config of the mapchart update is ", JSON.stringify(mapConfig,null,2))
-        console.log("map config reads in editor as ", mapConfig)
-        // console.log("node config of the edit is ", JSON.stringify(node.config,null,2))
-        if (hide===true) {console.log("hide was true"); return;}
-      // show mapEditor when we are in the editor view
-        // addShowHide(mapEditor);
-        // console.log("map editor show called")
+        if (hide===true) return;
+      // show mapEditor when we are in editor view
         mapEditor.show();
 
     };
@@ -2353,7 +2341,6 @@ bluewave.Explorer = function(parent, config) {
                     if (!sankeyEditor) editSankey(node, true);
                     
                   //Get sankey config and data
-                    // sankeyEditor.update(node.config, getSankeyInputs(node));
                     sankeyEditor.update(node.config, getSupplyChainInputs(node));
                     var sankeyConfig = sankeyEditor.getConfig();
                     var data = sankeyEditor.getSankeyData();
@@ -2391,32 +2378,15 @@ bluewave.Explorer = function(parent, config) {
                         scatterChart.update(chartConfig, data);
                     }
                     else if (node.type==="map"){
-                        // console.log("node config of the edit is ", JSON.stringify(node.config,null,2))
-
-                  //Instantiate mapEditor as needed
-                    if (!mapEditor) {console.log("map editor run"),editMap(node, true)};
+                    //Instantiate mapEditor as needed
+                      if (!mapEditor) editMap(node, true);
                     
-                    // get the data to pass in to mapEditor
-                    // var data = mapEditor.getMapData(node);
-
-
-
                     //Get map config and data
-                    //   mapEditor.update(node.config, getSupplyChainInputs(node));
-                    //   mapEditor.update(node.config, data);
                       mapEditor.update(node.config, mapEditor.getMapData(node));
 
-                      var mapConfig = mapEditor.getConfig();
-                    //   console.log("map config of the mapchart update is ", JSON.stringify(mapConfig,null,2))
-                    //   var data = mapEditor.getMapData();
-                      
-                      console.log("data data ",mapEditor.getMapData(node))
                     //Render mapChart
                       var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
-                      console.log("data reads in dashboard as ", mapEditor.getMapData(node))
-
-                      console.log("map config reads in dashboard as ", mapConfig)
-                      mapChart.update(mapConfig,mapEditor.getMapData(node)[0]);
+                      mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
                     }
                     else{
                         console.log(node.type + " preview not implemented!");
@@ -2434,18 +2404,18 @@ bluewave.Explorer = function(parent, config) {
   /** Used to convert supplyChain data into inputs for MapChart & Sankey
    */
    var getSupplyChainInputs = function(node){
-    var inputs = [];
-    for (var key in node.inputs) {
-        if (node.inputs.hasOwnProperty(key)){
-            var inputNode = node.inputs[key];
-            if (inputNode.type==="supplyChain"){
-                var inputConfig = inputNode.config;
-                if (inputConfig) inputs.push(inputConfig);
-            }  
+        var inputs = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var inputNode = node.inputs[key];
+                if (inputNode.type==="supplyChain"){
+                    var inputConfig = inputNode.config;
+                    if (inputConfig) inputs.push(inputConfig);
+                }  
+            }
         }
-    }
-  return inputs;
-};
+    return inputs;
+    };
 
 
 
