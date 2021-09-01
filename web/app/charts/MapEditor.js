@@ -137,7 +137,7 @@ if(!bluewave.charts) bluewave.charts={};
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
         dropdownItem(tbody,"censusData","Census Information",createMapPreview,mapInputs,"censusData");
-        dropdownItem(tbody,"censusRegion","Census Value",createMapPreview,mapInputs,"censusRegion");
+        dropdownItem(tbody,"censusRegion","Census Location Field",createMapPreview,mapInputs,"censusRegion");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
 
         var tr, tr2, td;
