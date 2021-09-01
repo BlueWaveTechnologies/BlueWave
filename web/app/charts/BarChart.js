@@ -125,7 +125,8 @@ bluewave.charts.BarChart = function(parent, config) {
 
             var getBarColor = function(d){
                 //TODO: check which dataset this belongs to and call getColor()
-                return "#6699CC";
+                
+                return (chartConfig.barColor || "#6699CC");
             };
 
 

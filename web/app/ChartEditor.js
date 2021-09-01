@@ -54,6 +54,7 @@ bluewave.ChartEditor = function(parent, config) {
         yGrid:null,
         barLayout: null,
         barLegend:null,
+        barColor:null,
         xLabel:null,
         yLabel:null
     };
@@ -377,6 +378,7 @@ bluewave.ChartEditor = function(parent, config) {
                 for (var i=0; i<bars.length; i++){
                     var bar = d3.select(bars[i]);
                     bar.attr("fill", c.hexString);
+                    chartConfig.barColor = c.hexString;
                 }
             };
         };
@@ -748,10 +750,13 @@ bluewave.ChartEditor = function(parent, config) {
                 ] 
             }); 
 
-            //Set initial value for layout
+ 
+            //Set form value for bar layout
+            // form.findField("layout").setValue(chartConfig.layout);
+            // console.log(chartConfig.barLayout)
             var layoutField = form.findField("layout");
             var layout = chartConfig.barLayout;
-            // layoutField.setValue(layout===true ? true : false);
+            layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
 
            //Set initial value for X-gridline
             var xGridField = form.findField("xGrid");
