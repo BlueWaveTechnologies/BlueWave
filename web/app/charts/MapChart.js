@@ -174,7 +174,7 @@ bluewave.charts.MapChart = function(parent, config) {
                     }else if(chartConfig.mapType === "Area"){
                         data.forEach(function(d){
                             if(useCensusData){
-                                var location = d.premier_facility_location;
+                                var location = d[chartConfig.censusRegion];
                                 var locations = location.split(",");
                                 var censusDivision = locations[1];
                                 censusDivision = censusDivision.replace(/\D/g, "");
