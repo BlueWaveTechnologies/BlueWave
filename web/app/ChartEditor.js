@@ -53,7 +53,9 @@ bluewave.ChartEditor = function(parent, config) {
         xGrid:null,
         yGrid:null,
         barLayout: null,
-        barLegend:null
+        barLegend:null,
+        xLabel:null,
+        yLabel:null
     };
     var margin = {
         top: 15,
@@ -765,14 +767,24 @@ bluewave.ChartEditor = function(parent, config) {
             var legend = chartConfig.barLegend;
             legendField.setValue(legend===true ? true : false);
 
+            //Set intial value for xLabel
+            var xLabelField = form.findField("xLabel");
+            var xLabel = chartConfig.xLabel;
+            xLabelField.setValue(xLabel===true ? true : false);
+
+            //Set intial value for yLabel
+            var yLabelField = form.findField("yLabel");
+            var yLabel = chartConfig.yLabel;
+            yLabelField.setValue(yLabel===true ? true : false);
+
 
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
-                console.log(settings);
-
-                if (settings.layout==="vertical") settings.xGrid = true;
-                else if (settings.layout==="horizontal") settings.xGrid = false;
+                
+                
+                // if (settings.layout==="vertical") settings.layout = false;
+                // else if (settings.layout==="horizontal") {settings.xGrid = false}
 
                 if (settings.xGrid==="true") settings.xGrid = true;
                 else if (settings.xGrid==="false") settings.xGrid = false;
@@ -783,11 +795,24 @@ bluewave.ChartEditor = function(parent, config) {
                 if (settings.legend==="true") settings.legend = true;
                 else if (settings.legend==="false") settings.legend = false;
 
+                if (settings.xLabel==="true") settings.xLabel = true;
+                else if (settings.xLabel==="false") settings.xLabel = false;
+
+                if (settings.yLabel==="true") settings.yLabel = true;
+                else if (settings.yLabel==="false") settings.yLabel = false;
+
+                //Disable gridlines parallel to bars
+                if (settings.layout==="vertical") {settings.yGrid = false}
+                else if (settings.layout==="horizontal") {settings.xGrid = false}
+
                 
                 chartConfig.barLayout = settings.layout;
                 chartConfig.barLegend = settings.legend;
                 chartConfig.xGrid = settings.xGrid;
                 chartConfig.yGrid = settings.yGrid;
+                chartConfig.xLabel = settings.xLabel;
+                chartConfig.yLabel = settings.yLabel;
+                console.log(chartConfig)
                 createBarPreview();
             };
         }

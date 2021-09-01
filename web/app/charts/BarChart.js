@@ -279,7 +279,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
                 //Add legend color
                  div.insert("div", ":first-child")
-                 .style("background-color", "red")
+                 .style("background-color", getBarColor)
                  .style("height", "1.618em")
                  .style("width", "1.618em")
                  .style("margin", "auto 10px auto 0px")
@@ -290,6 +290,27 @@ bluewave.charts.BarChart = function(parent, config) {
                 let legendContainer = document.querySelector(".bar-legend");
                 if(legendContainer) legendContainer.remove();
             }
+
+            //Add X-axis label
+            if(chartConfig.xLabel){
+                plotArea.append("text")             
+                .attr("x", width/2)
+                .attr("y", height+margin.bottom - 2)
+                .style("text-anchor", "middle")
+                .text(chartConfig.xAxis);
+            }
+
+            //Add Y-axis label
+            if(chartConfig.yLabel){
+                plotArea.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", 0 - (height/2))
+                .attr("y", 0 - margin.left)    
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text(chartConfig.yAxis);
+            }
+
             
         });
     };
