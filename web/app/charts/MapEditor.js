@@ -396,6 +396,26 @@ if(!bluewave.charts) bluewave.charts={};
 
 
   //**************************************************************************
+  //** getMapData
+  //**************************************************************************
+    this.getMapData = function(node){
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
+            }
+        }
+        return data;
+    };
+
+
+  //**************************************************************************
   //** editStyle
   //**************************************************************************
     var editStyle = function(mapType, mapLevel){

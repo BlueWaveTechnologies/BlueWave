@@ -302,13 +302,16 @@ bluewave.utils = {
             btn.className = "toggle-button";
             if (config.options[i]==config.defaultValue) btn.className+="-active";
             btn.innerHTML = config.options[i];
-            btn.onclick = function(){
-                if (this.className==="toggle-button-active") return;
+            var onClick = function(btn){
+                if (btn.className==="toggle-button-active") return;
                 for (var i=0; i<div.childNodes.length; i++){
                     div.childNodes[i].className = "toggle-button";
                 }
-                this.className="toggle-button-active";
-                if (config.onChange) config.onChange.apply(this, [this.innerHTML]);
+                btn.className="toggle-button-active";
+                if (config.onChange) config.onChange.apply(btn, [btn.innerHTML]);
+            };
+            btn.onclick = function(){
+                onClick(this);
             };
             div.appendChild(btn);
         }
@@ -317,7 +320,7 @@ bluewave.utils = {
             for (var i=0; i<div.childNodes.length; i++){
                 var btn = div.childNodes[i];
                 if (btn.innerText===val){
-                    btn.click();
+                    onClick(btn);
                     break;
                 }
             }
