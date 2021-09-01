@@ -35,7 +35,6 @@ if(!bluewave.charts) bluewave.charts={};
         long:null,
         mapValue:null,
         mapLevel:null,
-        censusData:null,
         censusRegion:null,
         colorScale:null
     };
@@ -136,7 +135,6 @@ if(!bluewave.charts) bluewave.charts={};
         dropdownItem(tbody,"mapLevel","Map Level",showHideDropDowns,mapInputs,"mapLevel");
         dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
         dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
-        dropdownItem(tbody,"censusData","Census Information",createMapPreview,mapInputs,"censusData");
         dropdownItem(tbody,"censusRegion","Census Location Field",createMapPreview,mapInputs,"censusRegion");
         dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
 
@@ -174,8 +172,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.long.row.hide();
         mapInputs.mapValue.hide();
         mapInputs.mapValue.row.hide();
-        mapInputs.censusData.hide();
-        mapInputs.censusData.row.hide();
         mapInputs.censusRegion.hide();
         mapInputs.censusRegion.row.hide();
 
@@ -223,21 +219,18 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
-            if(chartConfig.censusData !== null) chartConfig.censusData = null;
             if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
 
             //Show the combox box inputs
             mapInputs.lat.show();
             mapInputs.long.show();
             mapInputs.mapValue.show();
-            mapInputs.censusData.hide();
             mapInputs.censusRegion.hide();
 
             //Show the table row objects
             mapInputs.lat.row.show();
             mapInputs.long.row.show();
             mapInputs.mapValue.row.show();
-            mapInputs.censusData.row.hide();
             mapInputs.censusRegion.row.hide();
         };
         if(chartConfig.mapType==="Area"){
@@ -245,17 +238,12 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.latitude !== null) chartConfig.latitude = null;
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.censusData !== null) chartConfig.censusData = null;
             if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
 
-            if(chartConfig.mapLevel == "States") {
-                mapInputs.censusData.show();
-                mapInputs.censusData.row.show();
+            if(chartConfig.mapLevel == "Census Regions") {
                 mapInputs.censusRegion.show();
                 mapInputs.censusRegion.row.show();
             } else {
-                mapInputs.censusData.hide();
-                mapInputs.censusData.row.hide();
                 mapInputs.censusRegion.hide();
                 mapInputs.censusRegion.row.hide();
             }
@@ -273,18 +261,15 @@ if(!bluewave.charts) bluewave.charts={};
             if(chartConfig.longitude !== null) chartConfig.longitude = null;
             if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
             if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
-            if(chartConfig.censusData !== null) chartConfig.censusData = null;
             if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
 
             mapInputs.lat.hide();
             mapInputs.long.hide();
-            mapInputs.censusData.hide();
-            mapInputs.censusData.row.hide();
             mapInputs.mapValue.show();
+            mapInputs.censusRegion.hide();
 
             mapInputs.lat.row.hide();
             mapInputs.long.row.hide();
-            mapInputs.censusData.row.hide();
             mapInputs.censusRegion.row.hide();
             mapInputs.mapValue.row.show();
         }
@@ -347,17 +332,11 @@ if(!bluewave.charts) bluewave.charts={};
         const mapLevel = [
             "Counties",
             "States",
+            "Census Regions",
             "World"
         ];
         mapLevel.forEach((val)=>{
             mapInputs.mapLevel.add(val, val);
-        });
-        const censusData = [
-            "true",
-            "false"
-        ]
-        censusData.forEach((val)=>{
-            mapInputs.censusData.add(val, val);
         });
 
         mapInputs.mapType.setValue(chartConfig.mapType, true);
@@ -365,7 +344,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.lat.setValue(chartConfig.latitude, true);
         mapInputs.long.setValue(chartConfig.longitude, true);
         mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
-        mapInputs.censusData.setValue(chartConfig.censusData, true);
+        mapInputs.censusRegion.setValue(chartConfig.censusRegion, true);
         createMapPreview();
     };
 

@@ -85,17 +85,23 @@ bluewave.charts.MapChart = function(parent, config) {
                 delete chartConfig.linkZoom;
             }
             var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-            if(chartConfig.mapLevel === "States"){
+            if(chartConfig.mapLevel === "States" || chartConfig.mapLevel === "Census Regions"){
                 getData("states", function(mapData) {
                     getData("countries", function(countryData){
+                        if(chartConfig.mapLevel === "States" && data.states == null){
+                            alert("You are attempting to use the State map level without proper state data. " +
+                            "Please check your data for a states field, or use one of the other map levels instead.");
+                        }
                         if(!chartConfig.linkZoom) chartConfig.linkZoom = (width / .8);
                         if(!chartConfig.centerHorizontal) chartConfig.centerHorizontal = (width / 2);
                         if(!chartConfig.centerVertical) chartConfig.centerVertical = (height / 2);
                         var zoom = chartConfig.linkZoom;
                         var horizontal = chartConfig.centerHorizontal;
                         var vertical = chartConfig.centerVertical;
-                        var useCensusData = (chartConfig.censusData === "true");
-                        if(useCensusData == null){
+                        var useCensusData;
+                        if(chartConfig.mapLevel === "Census Regions"){
+                            useCensusData = true;
+                        } else {
                             useCensusData = false;
                         }
                         var countries = topojson.feature(countryData, countryData.objects.countries);
