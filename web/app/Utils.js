@@ -785,14 +785,18 @@ bluewave.utils = {
                 if (!colorPicker.colorWheel){
 
                     var callout = new javaxt.dhtml.Callout(document.body,{
-                        style: config.style.callout
+                        style: {
+                            panel: "color-picker-callout-panel",
+                            arrow: "color-picker-callout-arrow"
+                        }
                     });
 
                     var innerDiv = callout.getInnerDiv();
                     innerDiv.style.padding = "5px";
+                    innerDiv.style.backgroundColor = "#fff";
                     var cp = new iro.ColorPicker(innerDiv, {
-                      width: 320,
-                      height: 320,
+                      width: 280,
+                      height: 280,
                       anticlockwise: true,
                       borderWidth: 1,
                       borderColor: "#fff",
@@ -819,8 +823,8 @@ bluewave.utils = {
 
                 var div = this;
                 var rect = javaxt.dhtml.utils.getRect(div);
-                var x = rect.x + (rect.width);
-                var y = rect.y + (rect.height/2)+5;
+                var x = rect.x + rect.width + 5;
+                var y = rect.y + (rect.height/2);
                 colorPicker.colorWheel.target = div;
                 colorPicker.colorWheel.showAt(x, y, "right", "middle");
                 colorPicker.colorWheel.onHide = function(){

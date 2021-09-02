@@ -737,7 +737,10 @@ bluewave.ChartEditor = function(parent, config) {
 
       //Create popup
         var popup = new javaxt.dhtml.Callout(document.body,{
-            style: config.style.callout
+            style: {
+                panel: "color-picker-callout-panel",
+                arrow: "color-picker-callout-arrow"
+            }
         });
         var innerDiv = popup.getInnerDiv();
 
