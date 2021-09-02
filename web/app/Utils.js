@@ -671,19 +671,22 @@ bluewave.utils = {
     getColorPalette: function(fixedColors){
         if (fixedColors===true)
         return [
-            ...[
-                //darker
-                "#6699CC", //blue
-                "#FF8C42", //orange
-                "#933ed5", //purple
-                "#bebcc1", //gray
-                //lighter
-                "#9DBEDE",
-                "#C6EDD3",
-                "#FF8280",
-                "#FFB586",
-            ],
-            ...d3.schemeCategory10,
+
+          //darker
+            "#6699CC", //blue
+            "#98DFAF", //green
+            "#FF3C38", //red
+            "#FF8C42", //orange
+            "#933ed5", //purple
+            "#bebcc1", //gray
+
+          //lighter
+            "#9DBEDE",
+            "#C6EDD3",
+            "#FF8280",
+            "#FFB586",
+            "#cda5eb",
+            "#dedde0"
         ];
 
 
@@ -702,6 +705,146 @@ bluewave.utils = {
             ...d3.schemeCategory10
         ];
 
+    },
+
+
+  //**************************************************************************
+  //** createColorPicker
+  //**************************************************************************
+  /** Returns a panel used to select a color from the list of standard colors
+   *  or to define a new color using a color wheel
+   */
+    createColorPicker: function(parent, config){
+        if (!config) config = {};
+        if (!config.style) config.style = javaxt.dhtml.style.default;
+
+        var colorPicker = {
+            onChange: function(c){},
+            setColor: function(c){},
+            colorWheel: null
+        };
+
+
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+
+        var checkbox = document.createElement("div");
+        checkbox.innerHTML = '<i class="fas fa-check"></i>';
+
+
+        var div = document.createElement("div");
+        div.className = "color-picker-header";
+        div.innerHTML = "Theme Colors";
+        td.appendChild(div);
+        bluewave.utils.getColorPalette(true).forEach((c)=>{
+            div = document.createElement("div");
+            div.className = "color-picker-option";
+            div.style.backgroundColor = c;
+            div.onclick = function(){
+                if (checkbox.parentNode === this) return;
+                if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                this.appendChild(checkbox);
+                colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+            };
+            td.appendChild(div);
+        });
+
+
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+        var div = document.createElement("div");
+        div.className = "color-picker-header noselect";
+        div.innerHTML = "Custom Colors";
+        td.appendChild(div);
+
+        var createNewColor = function(){
+
+            div = document.createElement("div");
+            div.className = "color-picker-option";
+            div.onclick = function(){
+                if (checkbox.parentNode === this) return;
+                if (this.innerHTML === ""){
+                    if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                    this.appendChild(checkbox);
+                    colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+                    return;
+                }
+
+                if (!colorPicker.colorWheel){
+
+                    var callout = new javaxt.dhtml.Callout(document.body,{
+                        style: {
+                            panel: "color-picker-callout-panel",
+                            arrow: "color-picker-callout-arrow"
+                        }
+                    });
+
+                    var innerDiv = callout.getInnerDiv();
+                    innerDiv.style.padding = "5px";
+                    innerDiv.style.backgroundColor = "#fff";
+                    var cp = new iro.ColorPicker(innerDiv, {
+                      width: 280,
+                      height: 280,
+                      anticlockwise: true,
+                      borderWidth: 1,
+                      borderColor: "#fff",
+                      css: {
+                        "#output": {
+                          "background-color": "$color"
+                        }
+                      }
+                    });
+
+                    colorPicker.colorWheel = callout;
+                    colorPicker.colorWheel.getColor = function(){
+                        return cp.color.hexString;
+                    };
+
+                    cp.on("color:change", function(c){
+                        var div = colorPicker.colorWheel.target;
+                        div.innerHTML = "";
+                        div.style.backgroundColor = colorPicker.colorWheel.getColor();
+                    });
+
+                }
+
+
+                var div = this;
+                var rect = javaxt.dhtml.utils.getRect(div);
+                var x = rect.x + rect.width + 5;
+                var y = rect.y + (rect.height/2);
+                colorPicker.colorWheel.target = div;
+                colorPicker.colorWheel.showAt(x, y, "right", "middle");
+                colorPicker.colorWheel.onHide = function(){
+                    if (table.getElementsByClassName("color-picker-new-option").length>0) return;
+                    createNewColor();
+                };
+
+            };
+            td.appendChild(div);
+            var innerDiv = document.createElement("div");
+            innerDiv.className = "color-picker-new-option";
+            innerDiv.innerHTML = "<i class=\"fas fa-plus\"></i>";
+            div.appendChild(innerDiv);
+
+        };
+
+        createNewColor();
+
+        parent.appendChild(table);
+        return colorPicker;
     },
 
 
@@ -1001,15 +1144,15 @@ bluewave.utils = {
             )
             .style("stroke-opacity", ".2")
 
-        
+
          svg.append("g")
             .attr("class", "gridLines")
             .call(d3.axisLeft(yScale)
             .tickSize(-width)
             .tickFormat("")
             )
-            .style("stroke-opacity", ".2")       
-        
+            .style("stroke-opacity", ".2")
+
     }
 
 };
