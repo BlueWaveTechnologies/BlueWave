@@ -55,10 +55,11 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
 
               //Parse credentials
                 String credentials = decode(authorization.substring(idx+1));
-                String username = credentials.substring(0, credentials.indexOf(":")).toLowerCase();
+                String username = credentials.substring(0, credentials.indexOf(":"));
                 String password = credentials.substring(credentials.indexOf(":")+1);
                 this.credentials = new String[]{username, password};
 
+                username = username.toLowerCase();
                 if (username.equals("logout") && password.equals("logout")) return;
 
 
@@ -90,7 +91,7 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
                 if (authenticate){
                     boolean authenticated = false;
                     try{
-                        user = getUser(username);
+                        user = getUser(this.credentials[0]);
                         if (user!=null){
                             authenticated = user.authenticate(password);
                         }

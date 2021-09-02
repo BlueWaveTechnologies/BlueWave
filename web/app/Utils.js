@@ -302,13 +302,16 @@ bluewave.utils = {
             btn.className = "toggle-button";
             if (config.options[i]==config.defaultValue) btn.className+="-active";
             btn.innerHTML = config.options[i];
-            btn.onclick = function(){
-                if (this.className==="toggle-button-active") return;
+            var onClick = function(btn){
+                if (btn.className==="toggle-button-active") return;
                 for (var i=0; i<div.childNodes.length; i++){
                     div.childNodes[i].className = "toggle-button";
                 }
-                this.className="toggle-button-active";
-                if (config.onChange) config.onChange.apply(this, [this.innerHTML]);
+                btn.className="toggle-button-active";
+                if (config.onChange) config.onChange.apply(btn, [btn.innerHTML]);
+            };
+            btn.onclick = function(){
+                onClick(this);
             };
             div.appendChild(btn);
         }
@@ -317,7 +320,7 @@ bluewave.utils = {
             for (var i=0; i<div.childNodes.length; i++){
                 var btn = div.childNodes[i];
                 if (btn.innerText===val){
-                    btn.click();
+                    onClick(btn);
                     break;
                 }
             }
@@ -514,7 +517,7 @@ bluewave.utils = {
   //**************************************************************************
   /** Creates a custom form input using a text field
    */
-    createSlider: function(inputName, form){
+    createSlider: function(inputName, form, endCharacter = ""){
 
       //Add row under the given input
         var input = form.findField(inputName);
@@ -545,7 +548,7 @@ bluewave.utils = {
         var setValue = input.setValue;
         input.setValue = function(val){
             val = parseFloat(val);
-            setValue(val + "%");
+            setValue(val + `${endCharacter}`);
             slider.value = round(val/5)+1;
         };
 
@@ -982,6 +985,31 @@ bluewave.utils = {
         }
 
         return new Blob(byteArrays, {type: mime});
+    },
+
+  //**************************************************************************
+  //** drawGridlines
+  //**************************************************************************
+    drawGridlines: function(svg, xScale, yScale, height, width){
+
+         svg.append("g")
+            .attr("class", "gridLines")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(xScale)
+            .tickSize(-height)
+            .tickFormat("")
+            )
+            .style("stroke-opacity", ".2")
+
+        
+         svg.append("g")
+            .attr("class", "gridLines")
+            .call(d3.axisLeft(yScale)
+            .tickSize(-width)
+            .tickFormat("")
+            )
+            .style("stroke-opacity", ".2")       
+        
     }
 
 };
