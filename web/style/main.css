@@ -744,7 +744,7 @@ li.tree-node:hover {
     left: 0;
     height: 100%;
     width: 100%;
-    
+
     text-align: left;
     overflow: hidden;
 }
@@ -973,6 +973,65 @@ li.tree-node:hover {
 }
 
 
+/**************************************************************************/
+/** Color Picker
+/**************************************************************************/
+
+.color-picker-header {
+    padding: 10px 0 4px;
+}
+
+.color-picker-option {
+    width: 50px;
+    height: 50px;
+    float: left;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.color-picker-option:hover {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+.color-picker-option .fas.fa-check {
+    color:#fff;
+    font-size: 25px;
+    padding: 13px;
+}
+
+.color-picker-new-option {
+    background-color: #fff;
+    border: 2px dashed #ccc;
+    height: 46px;
+}
+
+.color-picker-new-option .fas.fa-plus {
+    font-size: 30px;
+    color: #ccc;
+    margin: 8px 0 0 10px;
+}
+
+.color-picker-callout-panel, .color-picker-callout-arrow {
+    border: 1px solid #adadad;
+    background: #fff;
+    cursor: pointer;
+}
+
+.color-picker-callout-panel {
+    overflow: hidden;
+    background: none;
+    border: 0px none;
+    border-radius: 5px;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.color-picker-callout-arrow {
+    width: 12px;
+    height: 12px;
+    padding: 12px;
+}
 
 
 /**************************************************************************/
