@@ -174,7 +174,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.long.row.hide();
         mapInputs.mapValue.hide();
         mapInputs.mapValue.row.hide();
-
     };
 
 
@@ -316,6 +315,9 @@ if(!bluewave.charts) bluewave.charts={};
         mapOptions.forEach((val)=>{
             mapInputs.mapType.add(val,val);
         });
+        if(!Array.isArray(inputData[0])){
+            mapInputs.mapType.setValue("Links");
+        }
         const mapLevel = [
             "counties",
             "states",
