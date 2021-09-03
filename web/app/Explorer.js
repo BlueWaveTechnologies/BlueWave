@@ -1191,6 +1191,7 @@ bluewave.Explorer = function(parent, config) {
                 node.ondblclick = function(){
                     editPie(this);
                 };
+                break;
             case "supplyChain":
 
                 node.ondblclick = function(){
@@ -1650,12 +1651,12 @@ bluewave.Explorer = function(parent, config) {
                  width: 1060,
                  height: 600,
                  beforeClose: function(){
-                     var scatterConfig = pieEditor.getConfig();
+                     var pieConfig = pieEditor.getConfig();
                      var node = pieEditor.getNode();
                      var orgConfig = node.config;
                      if (!orgConfig) orgConfig = {};
-                     if (isDirty(scatterConfig, orgConfig)){
-                         node.config = scatterConfig;
+                     if (isDirty(pieConfig, orgConfig)){
+                         node.config = pieConfig;
                          waitmask.show();
                          var el = pieEditor.getChart();
                          createPreview(el, function(canvas){
@@ -1684,17 +1685,23 @@ bluewave.Explorer = function(parent, config) {
         }
 
 
-      //Add custom getNode() method to the scatterEditor to return current node
+      //Add custom getNode() method to the pieEditor to return current node
         pieEditor.getNode = function(){
             return node;
         };
+
 
 
         var data = [];
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
-                data.push(csv);
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
             }
         }
 

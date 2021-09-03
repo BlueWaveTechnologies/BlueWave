@@ -17,7 +17,7 @@ if(!bluewave) var bluewave={};
  *      pie chart creation.
  ******************************************************************************/
 
-bluewave.PieEditor = function(parent, config) {
+bluewave.charts.PieEditor = function(parent, config) {
     var me = this;
     var currentNode;
     var panel;
@@ -117,9 +117,9 @@ bluewave.PieEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(nodeType, config, inputs, node){
+    this.update = function(nodeType, inputs){
         me.clear();
-        currentNode = node;
+
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
             if (input!=null) inputs[i] = d3.csvParse(input);
@@ -193,7 +193,7 @@ bluewave.PieEditor = function(parent, config) {
         pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
         pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
 
-        }
+
     };
 
 
