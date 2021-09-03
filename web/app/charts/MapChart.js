@@ -163,9 +163,13 @@ bluewave.charts.MapChart = function(parent, config) {
                             var val = coord[2];
                             if (isNaN(val) || val<=0) continue;
                             var p = val/extent[1];
-                            var maxSize = 30;
+                            var maxSize = 20;
                             if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
-                            var r = maxSize*p;
+                            if(p > 0){
+                                var r = maxSize*p;
+                            }else{
+                                var r = maxSize*.25;
+                            }
                             mapArea.append("circle")
                                 .attr("cx", coord[0])
                                 .attr("cy", coord[1])
@@ -453,9 +457,13 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var val = coord[2];
                                 if (isNaN(val) || val<=0) continue;
                                 var p = val/extent[1];
-                                var maxSize = 30;
+                                var maxSize = 20;
                                 if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
-                                var r = maxSize*p;
+                                if(p > 0){
+                                    var r = maxSize*p;
+                                }else{
+                                    var r = maxSize*.25;
+                                }
                                 mapArea.append("circle")
                                     .attr("cx", coord[0])
                                     .attr("cy", coord[1])
@@ -571,9 +579,13 @@ bluewave.charts.MapChart = function(parent, config) {
                             var val = coord[2];
                             if (isNaN(val) || val<=0) continue;
                             var p = val/extent[1];
-                            var maxSize = 30;
+                            var maxSize = 20;
                             if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
-                            var r = maxSize*p;
+                            if(p > 0){
+                                var r = maxSize*p;
+                            }else{
+                                var r = maxSize*.25;
+                            }
                             mapArea.append("circle")
                                 .attr("cx", coord[0])
                                 .attr("cy", coord[1])
