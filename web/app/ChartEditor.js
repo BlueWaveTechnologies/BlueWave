@@ -37,7 +37,6 @@ bluewave.ChartEditor = function(parent, config) {
         yAxis2:null,
         group:null
     };
-    var projectionOptions;
     var chartConfig = {
         pieKey:null,
         pieValue:null,
@@ -46,6 +45,11 @@ bluewave.ChartEditor = function(parent, config) {
         chartType:null,
         chartTitle:null,
         nodeId:null,
+        lineColor:null,
+        lineWidth:null,
+        opacity:null,
+        fillArea:null,
+        gridLines:null
     };
     var margin = {
         top: 15,
@@ -53,7 +57,7 @@ bluewave.ChartEditor = function(parent, config) {
         bottom: 65,
         left: 82
     };
-    var styleEditor;
+    var styleEditor, colorPicker;
 
 
   //**************************************************************************
@@ -61,25 +65,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        // Setup Map Projection Options
-        // Set Scale here
-        projectionOptions = [
-//            {name: "Azimuthal Equal Area", projection: d3.geoAzimuthalEqualArea()},
-//            {name: "Stereographic", projection: d3.geoStereographic()},
-            {name: "Equal Earth", projection: d3.geoEqualEarth()},
-            {name: "Ablers USA", projection: d3.geoAlbers()
-                            .rotate([96, 0])
-                            .center([-.6, 38.7])
-                            .parallels([29.5, 45.5])
-                            .scale(1000)
-                            .precision(.1)
-            },
-            {name: "Ablers", projection: d3.geoAlbers().scale(this.width/1.3/Math.PI)},
-            {name: "Mercator", projection: d3.geoMercator()
-                        .scale(this.width/2/Math.PI)
 
-            }
-        ];
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -373,6 +359,9 @@ bluewave.ChartEditor = function(parent, config) {
         lineChart = new bluewave.charts.LineChart(svg, {
             margin: margin
         });
+        lineChart.onDblClick = function(line){
+            editStyle("line");
+        };
 
         barChart = new bluewave.charts.BarChart(svg, {
             margin: margin
@@ -432,8 +421,9 @@ bluewave.ChartEditor = function(parent, config) {
       //Update form
         var body = styleEditor.getBody();
         body.innerHTML = "";
+        var form;
         if (chartType==="pieChart"){
-            var form = new javaxt.dhtml.Form(body, {
+            form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
                     {
@@ -501,11 +491,299 @@ bluewave.ChartEditor = function(parent, config) {
                 createPiePreview();
             };
         }
+        else if (chartType==="lineChart"){
+
+          //Add style options
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Style",
+                        items: [
+                            {
+                                name: "area",
+                                label: "Area Chart",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "true",
+                                        value: true
+                                    },
+                                    {
+                                        label: "false",
+                                        value: false
+                                    },
+
+
+                                ]
+                            },
+                            {
+                                name: "gridLines",
+                                label: "Grid Lines",
+                                type: "radio",
+                                alignment: "horizontal",
+                                options: [
+                                    {
+                                        label: "true",
+                                        value: true
+                                    },
+                                    {
+                                        label: "false",
+                                        value: false
+                                    },
+
+
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+          //Set initial value of the area field
+            var areaField = form.findField("area");
+            var fillArea = chartConfig.fillArea;
+            areaField.setValue(fillArea===true ? true : false);
+
+          //Set initial value of the gridline field
+            var gridLineField = form.findField("gridLines");
+            var gridlines = chartConfig.gridLines;
+            gridLineField.setValue(gridlines===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+
+                if (settings.area==="true") settings.area = true;
+                else if (settings.area==="false") settings.area = false;
+
+                if (settings.gridLines==="true") settings.gridLines = true;
+                else if (settings.gridLines==="false") settings.gridLines = false;
+
+                //update config values
+                chartConfig.fillArea = settings.area;
+                chartConfig.gridLines = settings.gridLines;
+                createLinePreview();
+            };
+        }
+        else if (chartType==="line"){
+
+          //Add style options
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Line Style",
+                        items: [
+                            {
+                                name: "lineColor",
+                                label: "Color",
+                                type: new javaxt.dhtml.ComboBox(
+                                    document.createElement("div"),
+                                    {
+                                        style: config.style.combobox
+                                    }
+                                )
+                            },
+                            {
+                                name: "lineThickness",
+                                label: "Thickness",
+                                type: "text"
+                            },
+                            {
+                                name: "lineOpacity",
+                                label: "Opacity",
+                                type: "text"
+                            }
+                        ]
+                    },
+                    {
+                        group: "Fill Style",
+                        items: [
+                            {
+                                name: "fillColor",
+                                label: "Color",
+                                type: new javaxt.dhtml.ComboBox(
+                                    document.createElement("div"),
+                                    {
+                                        style: config.style.combobox
+                                    }
+                                )
+                            },
+                            {
+                                name: "fillOpacity",
+                                label: "Opacity",
+                                type: "text"
+                            }
+                        ]
+                    }
+                ]
+            });
 
 
 
+
+          //Update color field (add colorPicker) and set initial value
+            createColorOptions("lineColor", form);
+            form.findField("lineColor").setValue(chartConfig.lineColor || "#6699CC");
+
+
+          //Update lineWidth field (add slider) and set initial value
+            createSlider("lineThickness", form);
+            var thickness = chartConfig.lineWidth;
+            if (thickness==null) thickness = 1.5;
+            chartConfig.lineWidth = thickness;
+            form.findField("lineThickness").setValue(thickness*10);
+
+          //Add opacity slider
+            createSlider("lineOpacity", form, "%");
+            var opacity = chartConfig.opacity;
+            if (opacity==null) opacity = .95;
+            chartConfig.opacity = opacity;
+            form.findField("lineOpacity").setValue(opacity*100);
+
+
+            createColorOptions("fillColor", form);
+            createSlider("fillOpacity", form, "%");
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+
+
+                //update config values
+                chartConfig.lineColor = settings.lineColor;
+                chartConfig.lineWidth = settings.lineThickness/10;
+                chartConfig.opacity = settings.lineOpacity/100;
+                createLinePreview();
+            };
+        }
+
+
+      //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);
         form.resize();
+
+
+
+      //Form resize doesn't seem to be working correctly for the linechart.
+      //It might have something to do with the custom sliders. Probably a
+      //timing issue. The following is a workaround.
+        if (chartType==="line"){
+
+            setTimeout(function(){
+                var arr = body.getElementsByClassName("form-groupbox");
+                for (var i=0; i<arr.length; i++){
+                    var el = arr[i];
+                    var h = parseFloat(el.style.height);
+                    el.style.height = h+30 + "px";
+                }
+            }, 100);
+        }
+
+    };
+
+
+  //**************************************************************************
+  //** createColorOptions
+  //**************************************************************************
+  /** Creates a custom form input using a combobox
+   */
+    var createColorOptions = function(inputName, form){
+
+        var colorField = form.findField(inputName);
+        var colorPreview = colorField.getButton();
+        colorPreview.className = colorPreview.className.replace("pulldown-button-icon", "");
+        colorPreview.style.boxShadow = "none";
+        colorPreview.setColor = function(color){
+            colorPreview.style.backgroundColor =
+            colorPreview.style.borderColor = color;
+        };
+        colorField.setValue = function(color){
+            //color = getHexColor(getColor(color));
+            colorPreview.setColor(color);
+            colorField.getInput().value = color;
+            form.onChange(colorField, color);
+        };
+        colorField.getValue = function(){
+            return colorField.getInput().value;
+        };
+        colorPreview.onclick = function(){
+            if (!colorPicker) colorPicker = createColorPicker();
+            var rect = javaxt.dhtml.utils.getRect(colorField.row);
+            var x = rect.x + rect.width + 15;
+            var y = rect.y + (rect.height/2);
+            colorPicker.showAt(x, y, "right", "middle");
+
+            colorPicker.setColor(colorField.getValue());
+
+            colorPicker.onChange = function(color){
+                colorField.setValue(color);
+            };
+        };
+    };
+
+
+  //**************************************************************************
+  //** createColorPicker
+  //**************************************************************************
+  /** Returns a callout with a color picker
+   */
+    var createColorPicker = function(){
+
+      //Create popup
+        var popup = new javaxt.dhtml.Callout(document.body,{
+            style: {
+                panel: "color-picker-callout-panel",
+                arrow: "color-picker-callout-arrow"
+            }
+        });
+        var innerDiv = popup.getInnerDiv();
+
+
+      //Create title div
+        var title = "Select Color";
+        var titleDiv = document.createElement("div");
+        titleDiv.className = "window-header";
+        titleDiv.innerHTML = "<div class=\"window-title\">" + title + "</div>";
+        innerDiv.appendChild(titleDiv);
+
+
+      //Create content div
+        var contentDiv = document.createElement("div");
+        contentDiv.style.padding = "0 15px 15px";
+        contentDiv.style.width = "325px";
+        contentDiv.style.backgroundColor = "#fff";
+        innerDiv.appendChild(contentDiv);
+
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr = document.createElement('tr');
+        tbody.appendChild(tr);
+
+
+
+        var td = document.createElement('td');
+        tr.appendChild(td);
+        var cp = bluewave.utils.createColorPicker(td, config);
+
+
+        popup.onChange = function(color){};
+        popup.setColor = function(color){
+            cp.setColor(color);
+        };
+
+        cp.onChange = function(color){
+            popup.onChange(color);
+        };
+
+        contentDiv.appendChild(table);
+        return popup;
     };
 
 
@@ -514,10 +792,10 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
-    var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
+    var getColorPalette = bluewave.utils.getColorPalette;
 
     init();
 };

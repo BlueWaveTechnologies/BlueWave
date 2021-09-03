@@ -641,8 +641,6 @@ li.tree-node:hover {
     height: 100%;
 }
 
-
-
 .drawflow .drawflow-node {
     background-color: #fff;
     border: 1px solid #cacaca;
@@ -662,6 +660,7 @@ li.tree-node:hover {
 .drawflow .drawflow-node.selected .drawflow-node-title {
     color: #22598c;
 }
+
 
 .drawflow .connection .main-path {
     stroke: #4ea9ff;
@@ -728,7 +727,6 @@ li.tree-node:hover {
     top: -15px;
 }
 
-
 .drawflow-node-title {
     height: 50px;
     line-height: 50px;
@@ -739,15 +737,37 @@ li.tree-node:hover {
     overflow: hidden;
 }
 
+.drawflow-node-overlay{
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+
+    text-align: left;
+    overflow: hidden;
+}
+
+.drawflow-node-overlay div {
+    background-color:rgba(255,255,255,0.5);
+    padding: 5px 10px 0 10px;
+    color: #5a5a5a;
+    text-shadow: 3px 3px 5px white;
+    font-size: 12px;
+}
+
+
 .drawflow-node-title .fas {
     margin: 0 5px 0 0;
     font-size: 16px;
 }
 
 .drawflow-node-body {
-    padding: 5px;
+    width: 100%;
     min-height: 100px;
     text-align: center;
+    position: relative;
 }
 
 .drawflow-node-body .fas {
@@ -771,8 +791,6 @@ li.tree-node:hover {
     margin-bottom: 5px;
 }
 
-
-
 .drawflow .connection .point {
     stroke: #cacaca;
     stroke-width: 2;
@@ -783,7 +801,6 @@ li.tree-node:hover {
 .drawflow .connection .point.selected, .drawflow .connection .point:hover {
     fill: #4ea9ff;
 }
-
 
 .drawflow-save {
     height: 32px;
@@ -956,6 +973,65 @@ li.tree-node:hover {
 }
 
 
+/**************************************************************************/
+/** Color Picker
+/**************************************************************************/
+
+.color-picker-header {
+    padding: 10px 0 4px;
+}
+
+.color-picker-option {
+    width: 50px;
+    height: 50px;
+    float: left;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.color-picker-option:hover {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+.color-picker-option .fas.fa-check {
+    color:#fff;
+    font-size: 25px;
+    padding: 13px;
+}
+
+.color-picker-new-option {
+    background-color: #fff;
+    border: 2px dashed #ccc;
+    height: 46px;
+}
+
+.color-picker-new-option .fas.fa-plus {
+    font-size: 30px;
+    color: #ccc;
+    margin: 8px 0 0 10px;
+}
+
+.color-picker-callout-panel, .color-picker-callout-arrow {
+    border: 1px solid #adadad;
+    background: #fff;
+    cursor: pointer;
+}
+
+.color-picker-callout-panel {
+    overflow: hidden;
+    background: none;
+    border: 0px none;
+    border-radius: 5px;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.color-picker-callout-arrow {
+    width: 12px;
+    height: 12px;
+    padding: 12px;
+}
 
 
 /**************************************************************************/

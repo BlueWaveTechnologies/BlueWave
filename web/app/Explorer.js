@@ -193,6 +193,8 @@ bluewave.Explorer = function(parent, config) {
 
       //Update nodes
         var csvRequests = [];
+        var thumbnails = [];
+        var connectionNodes = [];
         for (var nodeID in dashboard.info.nodes) {
             if (dashboard.info.nodes.hasOwnProperty(nodeID)){
 
@@ -201,7 +203,7 @@ bluewave.Explorer = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-
+    
 
               //Add props to node
                 var props = dashboard.info.nodes[nodeID];
@@ -217,8 +219,11 @@ bluewave.Explorer = function(parent, config) {
                 if (props.config.chartTitle) updateTitle(node, props.config.chartTitle);
 
 
-              //Create thumbnail
-                if (props.preview) createThumbnail(node, props.preview);
+              //Check if there's a thumbnail/preview. If so, we'll render it later 
+                if (props.preview) thumbnails.push({
+                    node: node,
+                    thumbnail: props.preview
+                }); 
 
 
 
@@ -237,6 +242,7 @@ bluewave.Explorer = function(parent, config) {
                             var inputID = connection.node;
                             var inputNode = nodes[inputID];
                             node.inputs[inputID] = inputNode;
+                            connectionNodes.push(inputID);
                         }
                     }
                 }
@@ -282,9 +288,28 @@ bluewave.Explorer = function(parent, config) {
 
         var onReady = function(){
             updateButtons();
-            me.setView(view);
-            mask.hide();
             setZoom(dashboard.info.zoom);
+            me.setView(view);
+            
+            if (me.getView()!=="Dashboard"){
+                
+              //Update connections
+                for (var i=0; i<connectionNodes.length; i++){
+                    var inputID = connectionNodes[i];
+                    drawflow.updateConnectionNodes("node-"+inputID);
+                }
+            
+              //Update thumbnails
+                for (var i=0; i<thumbnails.length; i++){
+                    (function (t) {
+                        var el = t.node.childNodes[1];
+                        onRender(el, function(){
+                            createThumbnail(t.node, t.thumbnail);
+                        });
+                    })(thumbnails[i]);
+                }
+            }
+            mask.hide();
         };
 
 
@@ -295,10 +320,10 @@ bluewave.Explorer = function(parent, config) {
                 var node = csvRequests.pop();
                 getCSV(node.config.query, function(csv){
                     this.csv = csv;
-                    if (csvRequests.length===0){
+                    if (csvRequests.length===0){          
                         showMask = false;
                         waitmask.hide();
-                        onReady.apply(me, []);
+                        onReady.apply(me, []); 
                     }
                     else{
                         updateNodes();
@@ -317,7 +342,6 @@ bluewave.Explorer = function(parent, config) {
                 }
                 else{
                     clearTimeout(timer);
-                    onReady.apply(me, []);
                 }
             };
             timer = setTimeout(checkMask, 100);
@@ -424,8 +448,15 @@ bluewave.Explorer = function(parent, config) {
     this.setView = function(name){
         if (!name) name = "Edit";
         if (name==="Edit"){
-            toggleButton.setValue("Edit");
-            toggleButton.show();
+            
+            if (me.getView()==="Dashboard"){
+                var dashboard = getDashboard(name);
+                me.update(dashboard, false, "Edit");
+            } 
+            else{
+                toggleButton.setValue("Edit");
+                toggleButton.show();
+            }
         }
         else if (name==="Preview"){
             toggleButton.show();
@@ -494,42 +525,50 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** getDashboard
+  //**************************************************************************
+    var getDashboard = function(name){
+        var dashboard = {
+            id: id,
+            name: name,
+            className: name,
+            //thumbnail: thumbnail,
+            info: {
+                layout: drawflow.export().drawflow.Home.data,
+                nodes: {},
+                zoom: zoom
+            }
+        };
+
+
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                dashboard.info.nodes[key] = {
+                    name: node.name,
+                    type: node.type,
+                    config: node.config,
+                    preview: node.preview
+                };
+            }
+        };
+        return dashboard;
+    };
+
+
+  //**************************************************************************
   //** save
   //**************************************************************************
     this.save = function(){
-
         if (me.isReadOnly()) return;
-
+      
 
         waitmask.show(500);
         getName(function(formInputs){
             name = formInputs.name;
 
 
-            var dashboard = {
-                id: id,
-                name: name,
-                className: name,
-                //thumbnail: thumbnail,
-                info: {
-                    layout: drawflow.export().drawflow.Home.data,
-                    nodes: {},
-                    zoom: zoom
-                }
-            };
-
-
-            for (var key in nodes) {
-                if (nodes.hasOwnProperty(key)){
-                    var node = nodes[key];
-                    dashboard.info.nodes[key] = {
-                        name: node.name,
-                        type: node.type,
-                        config: node.config,
-                        preview: node.preview
-                    };
-                }
-            };
+            var dashboard = getDashboard(name);
 
 
             post("dashboard", JSON.stringify(dashboard),{
@@ -564,7 +603,6 @@ bluewave.Explorer = function(parent, config) {
   //** saveThumbnail
   //**************************************************************************
     var saveThumbnail = function(id, callback){
-
       //Convert base64 encoded string into a binary object
         var data = thumbnail;
         var type = data.substring(data.indexOf(":")+1, data.indexOf(";"));
@@ -953,7 +991,6 @@ bluewave.Explorer = function(parent, config) {
   //** addNodeToDrawFlow
   //**************************************************************************
     var addNodeToDrawFlow = function (nodeType, pos_x, pos_y) {
-
       //Don't add node if the view is "fixed"
         if (drawflow.editor_mode === "fixed")  return false;
 
@@ -975,13 +1012,13 @@ bluewave.Explorer = function(parent, config) {
                     (drawflow.precanvas.clientHeight * drawflow.zoom));
 
 
-
      //Get toolbar button associated with the nodeType
         var btn = button[nodeType];
         if (!btn){
             console.log("Unsupported Node Type: " + nodeType);
             return;
         }
+        
 
       //Get button icon and title to decorate the node
         var icon = btn.el.dataset["icon"];
@@ -1044,22 +1081,6 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
             case "layout":
-
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 0
-                });
-
-                addEventListeners(node);
-
-                break;
-
-            case "map":
 
                 var node = createNode({
                     name: title,
@@ -1436,7 +1457,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** editMap
   //**************************************************************************
-    var editMap = function(node){
+    var editMap = function(node,hide){
         if(!mapEditor){
             var win = createNodeEditor({
                 title: "Edit Map",
@@ -1467,10 +1488,11 @@ bluewave.Explorer = function(parent, config) {
                     }
                     button.layout.enable();
                 }
+                
             });
 
             mapEditor = new bluewave.charts.MapEditor(win.getBody(), config);
-
+            
             mapEditor.show = function(){
                 win.show();
             };
@@ -1478,36 +1500,30 @@ bluewave.Explorer = function(parent, config) {
             mapEditor.hide = function(){
                 win.hide();
             };
-        }
 
+        };
 
       //Add custom getNode() method to the mapEditor to return current node
         mapEditor.getNode = function(){
-            return node;
-        };
+        return node;
+          };
 
 
-        var data = [];
-        for (var key in node.inputs) {
-            if (node.inputs.hasOwnProperty(key)){
-                var csv = node.inputs[key].csv;
-                if(csv === undefined){
-                    var inputConfig = node.inputs[key].config;
-                    data.push(inputConfig);
-                }else {
-                    data.push(csv);
-                }
-            }
-        }
-        mapEditor.update(node.config, data);
+
+      //Update and render mapEditor
+        mapEditor.update(node.config,mapEditor.getMapData(node));
+        mapConfig = mapEditor.getConfig();
+        if (hide===true) return;
+      // show mapEditor when we are in editor view
         mapEditor.show();
+
     };
 
 
   //**************************************************************************
   //** editSankey
   //**************************************************************************
-    var editSankey = function(node){
+    var editSankey = function(node, hide){
         if (!sankeyEditor){
             var win = createNodeEditor({
                 title: "Edit Sankey",
@@ -1552,29 +1568,16 @@ bluewave.Explorer = function(parent, config) {
             };
         }
 
-      //Add custom getNode() method to the layoutEditor to return current node
+      //Add custom getNode() method to the sankeyEditor to return current node
         sankeyEditor.getNode = function(){
             return node;
         };
 
 
-        
-      //Special for supply chain inputs
-        var inputs = [];
-        for (var key in node.inputs) {
-            if (node.inputs.hasOwnProperty(key)){
-                var inputNode = node.inputs[key];
-                if (inputNode.type==="supplyChain"){
-                    var inputConfig = inputNode.config;
-                    if (inputConfig) inputs.push(inputConfig);
-                }
-
-            }
-        }
-        
-
-
-        sankeyEditor.update(node.config, inputs);
+      //Update and render sankeyEditor
+        sankeyEditor.update(node.config, getSupplyChainInputs(node));
+        if (hide===true) return;
+      // show sankeyEditor when we are in the editor view
         sankeyEditor.show();
     };
 
@@ -2017,13 +2020,12 @@ bluewave.Explorer = function(parent, config) {
                 if (height>maxHeight) setHeight();
             }
 
-
+            if (width===0 || height===0) return;
             resizeCanvas(canvas, width, height, true);
             var base64image = canvas.toDataURL("image/png");
 
             var img = document.createElement('img');
             img.className = "noselect";
-            img.style.width = "100%";
             img.onload = function() {
                 el.appendChild(this);
             };
@@ -2407,47 +2409,29 @@ bluewave.Explorer = function(parent, config) {
                         grid.load(rows, 1);
                     }
                 }
-                else if (node.type==="sankeyChart" || node.type==="supplyChain"){
-                    var data = {
-                        nodes: [],
-                        links: []
-                    };
+                else if (node.type==="sankeyChart" || node.type==="supplyChain"){  
 
-                    var sankeyConfig = chartConfig;
-                    for (var nodeID in sankeyConfig.nodes) {
-                        if (sankeyConfig.nodes.hasOwnProperty(nodeID)){
-                            var node = sankeyConfig.nodes[nodeID];
-                            data.nodes.push({
-                                name: node.name,
-                                group: node.type
-                            });
-                        }
-                    }
+                  //Instantiate sankeyEditor as needed
+                    if (!sankeyEditor) editSankey(node, true);
+                    
+                  //Get sankey config and data
+                    sankeyEditor.update(node.config, getSupplyChainInputs(node));
+                    var sankeyConfig = sankeyEditor.getConfig();
+                    var data = sankeyEditor.getSankeyData();
+                    
+                  //Render sankeyChart
+                    var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
+                    sankeyChart.update(sankeyConfig.style,data);
 
-                    for (var key in sankeyConfig.links) {
-                        if (sankeyConfig.links.hasOwnProperty(key)){
-                            var link = sankeyConfig.links[key];
-                            var idx = key.indexOf("->");
-                            var source = key.substring(0,idx);
-                            var target = key.substring(idx+2);
-                            data.links.push({
-                                source: sankeyConfig.nodes[source].name,
-                                target: sankeyConfig.nodes[target].name,
-                                value: link.quantity
-                            });
-                        }
-                    }
-
-                    var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,{});
-                    sankeyChart.update(data);
                 }
                 else{
-
                     var data = [];
                     for (var key in node.inputs) {
                         if (node.inputs.hasOwnProperty(key)){
                             var csv = node.inputs[key].csv;
-                            data.push(d3.csvParse(csv));
+                            if (csv){
+                                data.push(d3.csvParse(csv));
+                            }
                         }
                     }
 
@@ -2467,6 +2451,17 @@ bluewave.Explorer = function(parent, config) {
                         var scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{});
                         scatterChart.update(chartConfig, data);
                     }
+                    else if (node.type==="map"){
+                    //Instantiate mapEditor as needed
+                      if (!mapEditor) editMap(node, true);
+                    
+                    //Get map config and data
+                      mapEditor.update(node.config, mapEditor.getMapData(node));
+
+                    //Render mapChart
+                      var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
+                      mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
+                    }
                     else{
                         console.log(node.type + " preview not implemented!");
                     }
@@ -2477,6 +2472,29 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** getSupplyChainInputs
+  //**************************************************************************
+  /** Used to convert supplyChain data into inputs for MapChart & Sankey
+   */
+   var getSupplyChainInputs = function(node){
+        var inputs = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var inputNode = node.inputs[key];
+                if (inputNode.type==="supplyChain"){
+                    var inputConfig = inputNode.config;
+                    if (inputConfig) inputs.push(inputConfig);
+                }  
+            }
+        }
+    return inputs;
+    };
+
+
+
+
+    
   //**************************************************************************
   //** createToggleButton
   //**************************************************************************
@@ -2546,6 +2564,7 @@ bluewave.Explorer = function(parent, config) {
     var post = javaxt.dhtml.utils.post;
     var del = javaxt.dhtml.utils.delete;
     var get = bluewave.utils.get;
+    var destroy = javaxt.dhtml.utils.destroy;
 
 
     init();

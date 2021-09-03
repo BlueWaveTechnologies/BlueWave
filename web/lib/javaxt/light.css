@@ -274,6 +274,40 @@ input, select, textarea { /* Allows overriding native style of form elements on 
 
 
 /**************************************************************************/
+/** Form Checkbox
+/**************************************************************************/
+/** The following classes are used to define the style for checkbox inputs
+ */
+.form-checkbox {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    padding: 0px;
+    margin: 4px 5px 4px 1px;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #b9b9b9;
+    background: #fff;
+}
+
+.form-checkbox:checked:before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 9px;
+    border: solid #2a79bf;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin: 2px 0px 0px 6px;
+}
+
+.form-checkbox:focus {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+
+/**************************************************************************/
 /** Form Buttons
 /**************************************************************************/
 /** The following classes are used to define the style for buttons in a

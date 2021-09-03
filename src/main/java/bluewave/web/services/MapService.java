@@ -34,7 +34,7 @@ public class MapService extends WebService {
       //Create spatial index of hospital points
         try{
             String sql = bluewave.queries.Index.getQuery("Hospital_Points", "cypher");
-            String csv = DataService.getCSV(sql, Config.getGraph());
+            String csv = DataService.getCSV(sql, Config.getGraph(null));
             String[] rows = csv.split("\n");
             long hospitalID = 0;
             for (int i=1; i<rows.length; i++){

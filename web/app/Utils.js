@@ -97,7 +97,6 @@ bluewave.utils = {
   //** addOverflow
   //**************************************************************************
     addOverflow: function(parent, config){
-
       //Set default config options
         var defaultConfig = {
             style: {
@@ -303,13 +302,16 @@ bluewave.utils = {
             btn.className = "toggle-button";
             if (config.options[i]==config.defaultValue) btn.className+="-active";
             btn.innerHTML = config.options[i];
-            btn.onclick = function(){
-                if (this.className==="toggle-button-active") return;
+            var onClick = function(btn){
+                if (btn.className==="toggle-button-active") return;
                 for (var i=0; i<div.childNodes.length; i++){
                     div.childNodes[i].className = "toggle-button";
                 }
-                this.className="toggle-button-active";
-                if (config.onChange) config.onChange.apply(this, [this.innerHTML]);
+                btn.className="toggle-button-active";
+                if (config.onChange) config.onChange.apply(btn, [btn.innerHTML]);
+            };
+            btn.onclick = function(){
+                onClick(this);
             };
             div.appendChild(btn);
         }
@@ -318,7 +320,7 @@ bluewave.utils = {
             for (var i=0; i<div.childNodes.length; i++){
                 var btn = div.childNodes[i];
                 if (btn.innerText===val){
-                    btn.click();
+                    onClick(btn);
                     break;
                 }
             }
@@ -515,7 +517,7 @@ bluewave.utils = {
   //**************************************************************************
   /** Creates a custom form input using a text field
    */
-    createSlider: function(inputName, form){
+    createSlider: function(inputName, form, endCharacter = ""){
 
       //Add row under the given input
         var input = form.findField(inputName);
@@ -546,7 +548,7 @@ bluewave.utils = {
         var setValue = input.setValue;
         input.setValue = function(val){
             val = parseFloat(val);
-            setValue(val + "%");
+            setValue(val + `${endCharacter}`);
             slider.value = round(val/5)+1;
         };
 
@@ -669,19 +671,22 @@ bluewave.utils = {
     getColorPalette: function(fixedColors){
         if (fixedColors===true)
         return [
-            ...[
-                //darker
-                "#6699CC", //blue
-                "#FF8C42", //orange
-                "#933ed5", //purple
-                "#bebcc1", //gray
-                //lighter
-                "#9DBEDE",
-                "#C6EDD3",
-                "#FF8280",
-                "#FFB586",
-            ],
-            ...d3.schemeCategory10,
+
+          //darker
+            "#6699CC", //blue
+            "#98DFAF", //green
+            "#FF3C38", //red
+            "#FF8C42", //orange
+            "#933ed5", //purple
+            "#bebcc1", //gray
+
+          //lighter
+            "#9DBEDE",
+            "#C6EDD3",
+            "#FF8280",
+            "#FFB586",
+            "#cda5eb",
+            "#dedde0"
         ];
 
 
@@ -700,6 +705,146 @@ bluewave.utils = {
             ...d3.schemeCategory10
         ];
 
+    },
+
+
+  //**************************************************************************
+  //** createColorPicker
+  //**************************************************************************
+  /** Returns a panel used to select a color from the list of standard colors
+   *  or to define a new color using a color wheel
+   */
+    createColorPicker: function(parent, config){
+        if (!config) config = {};
+        if (!config.style) config.style = javaxt.dhtml.style.default;
+
+        var colorPicker = {
+            onChange: function(c){},
+            setColor: function(c){},
+            colorWheel: null
+        };
+
+
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+
+        var checkbox = document.createElement("div");
+        checkbox.innerHTML = '<i class="fas fa-check"></i>';
+
+
+        var div = document.createElement("div");
+        div.className = "color-picker-header";
+        div.innerHTML = "Theme Colors";
+        td.appendChild(div);
+        bluewave.utils.getColorPalette(true).forEach((c)=>{
+            div = document.createElement("div");
+            div.className = "color-picker-option";
+            div.style.backgroundColor = c;
+            div.onclick = function(){
+                if (checkbox.parentNode === this) return;
+                if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                this.appendChild(checkbox);
+                colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+            };
+            td.appendChild(div);
+        });
+
+
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+        var div = document.createElement("div");
+        div.className = "color-picker-header noselect";
+        div.innerHTML = "Custom Colors";
+        td.appendChild(div);
+
+        var createNewColor = function(){
+
+            div = document.createElement("div");
+            div.className = "color-picker-option";
+            div.onclick = function(){
+                if (checkbox.parentNode === this) return;
+                if (this.innerHTML === ""){
+                    if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                    this.appendChild(checkbox);
+                    colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+                    return;
+                }
+
+                if (!colorPicker.colorWheel){
+
+                    var callout = new javaxt.dhtml.Callout(document.body,{
+                        style: {
+                            panel: "color-picker-callout-panel",
+                            arrow: "color-picker-callout-arrow"
+                        }
+                    });
+
+                    var innerDiv = callout.getInnerDiv();
+                    innerDiv.style.padding = "5px";
+                    innerDiv.style.backgroundColor = "#fff";
+                    var cp = new iro.ColorPicker(innerDiv, {
+                      width: 280,
+                      height: 280,
+                      anticlockwise: true,
+                      borderWidth: 1,
+                      borderColor: "#fff",
+                      css: {
+                        "#output": {
+                          "background-color": "$color"
+                        }
+                      }
+                    });
+
+                    colorPicker.colorWheel = callout;
+                    colorPicker.colorWheel.getColor = function(){
+                        return cp.color.hexString;
+                    };
+
+                    cp.on("color:change", function(c){
+                        var div = colorPicker.colorWheel.target;
+                        div.innerHTML = "";
+                        div.style.backgroundColor = colorPicker.colorWheel.getColor();
+                    });
+
+                }
+
+
+                var div = this;
+                var rect = javaxt.dhtml.utils.getRect(div);
+                var x = rect.x + rect.width + 5;
+                var y = rect.y + (rect.height/2);
+                colorPicker.colorWheel.target = div;
+                colorPicker.colorWheel.showAt(x, y, "right", "middle");
+                colorPicker.colorWheel.onHide = function(){
+                    if (table.getElementsByClassName("color-picker-new-option").length>0) return;
+                    createNewColor();
+                };
+
+            };
+            td.appendChild(div);
+            var innerDiv = document.createElement("div");
+            innerDiv.className = "color-picker-new-option";
+            innerDiv.innerHTML = "<i class=\"fas fa-plus\"></i>";
+            div.appendChild(innerDiv);
+
+        };
+
+        createNewColor();
+
+        parent.appendChild(table);
+        return colorPicker;
     },
 
 
@@ -983,6 +1128,31 @@ bluewave.utils = {
         }
 
         return new Blob(byteArrays, {type: mime});
+    },
+
+  //**************************************************************************
+  //** drawGridlines
+  //**************************************************************************
+    drawGridlines: function(svg, xScale, yScale, height, width){
+
+         svg.append("g")
+            .attr("class", "gridLines")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(xScale)
+            .tickSize(-height)
+            .tickFormat("")
+            )
+            .style("stroke-opacity", ".2")
+
+
+         svg.append("g")
+            .attr("class", "gridLines")
+            .call(d3.axisLeft(yScale)
+            .tickSize(-width)
+            .tickFormat("")
+            )
+            .style("stroke-opacity", ".2")
+
     }
 
 };
