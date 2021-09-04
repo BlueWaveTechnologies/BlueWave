@@ -38,7 +38,7 @@ if(!bluewave.charts) bluewave.charts={};
         censusRegion:null,
         colorScale:null
     };
-    var styleEditor;
+    var styleEditor, colorPicker;
 
 
   //**************************************************************************
@@ -175,8 +175,8 @@ if(!bluewave.charts) bluewave.charts={};
                 mapInputs.mapValue.add(val, val);
             });
 
-            mapInputs.mapType.add("Point","Point");
-            mapInputs.mapType.add("Area","Area");
+            mapInputs.mapType.add("Point", "Point");
+            mapInputs.mapType.add("Area", "Area");
 
 
             mapInputs.mapLevel.add("US Counties", "counties");
@@ -202,6 +202,12 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.mapType.show();
         mapInputs.mapLevel.show();
         mapInputs.mapValue.show();
+        if (chartConfig.mapType==="Point"){
+            if (chartConfig.latitude && chartConfig.longitude){
+                mapInputs.lat.show();
+                mapInputs.long.show();
+            }
+        }
 
 
       //Set default values
@@ -307,8 +313,10 @@ if(!bluewave.charts) bluewave.charts={};
             if (chartConfig.mapType==="Area"){
                 if(chartConfig.mapLevel === "states" && inputData[0].state == null){
                     warn("No State Data detected", mapInputs.mapLevel);
+                    return;
                 }
             }
+            createMapPreview();
         }
     };
 
@@ -317,9 +325,8 @@ if(!bluewave.charts) bluewave.charts={};
   //** createMapPreview
   //**************************************************************************
     var createMapPreview = function(){
-        if(chartConfig.mapType===null){
-            return;
-        }
+        if (!chartConfig.mapType) return;
+
         if(chartConfig.mapType==="Point" && chartConfig.mapLevel===null){
             return;
         }
@@ -379,6 +386,7 @@ if(!bluewave.charts) bluewave.charts={};
   //** editStyle
   //**************************************************************************
     var editStyle = function(mapType, mapLevel){
+
       //Create styleEditor as needed
         if (!styleEditor){
             styleEditor = new javaxt.dhtml.Window(document.body, {
@@ -391,81 +399,103 @@ if(!bluewave.charts) bluewave.charts={};
             });
         }
 
+
       //Create form
         var form;
         var body = styleEditor.getBody();
         body.innerHTML = "";
         if (mapType==="Point"){
-            if (mapLevel==="states"){
-                form = new javaxt.dhtml.Form(body, {
-                    style: config.style.form,
+
+            var formItems = [
+                {
+                    group: "Point Style",
                     items: [
                         {
-                            group: "Style",
-                            items: [
+                            name: "color",
+                            label: "Color",
+                            type: new javaxt.dhtml.ComboBox(
+                                document.createElement("div"),
                                 {
-                                    name: "color",
-                                    label: "Color",
-                                    type: new javaxt.dhtml.ComboBox(
-                                        document.createElement("div"),
-                                        {
-                                            style: config.style.combobox
-                                        }
-                                    )
+                                    style: config.style.combobox
+                                }
+                            )
+                        },
+                        {
+                            name: "radius",
+                            label: "Radius",
+                            type: "text"
+                        },
+                        {
+                            name: "labels",
+                            label: "Labels",
+                            type: "radio",
+                            alignment: "vertical",
+                            options: [
+                                {
+                                    label: "True",
+                                    value: true
                                 },
                                 {
-                                    name: "radius",
-                                    label: "Radius",
-                                    type: "text"
-                                },
-                                {
-                                    name: "labels",
-                                    label: "Labels",
-                                    type: "radio",
-                                    alignment: "vertical",
-                                    options: [
-                                        {
-                                            label: "True",
-                                            value: true
-                                        },
-                                        {
-                                            label: "False",
-                                            value: false
-                                        }
-                                    ]
-                                },
-                                {
-                                     name: "zoom",
-                                     label: "Zoom",
-                                     type: "text"
-                                },
-                                {
-                                     name: "centerHorizontal",
-                                     label: "Horizontal Center",
-                                     type: "text"
-                                },
-                                {
-                                     name: "centerVertical",
-                                     label: "Vertical Center",
-                                     type: "text"
+                                    label: "False",
+                                    value: false
                                 }
                             ]
                         }
                     ]
+                }
+            ];
+
+            if (mapLevel==="states" || mapLevel==="world"){
+                formItems.push({
+                    group: "Map Center",
+                    items: [
+                        {
+                             name: "zoom",
+                             label: "Zoom",
+                             type: "text"
+                        },
+                        {
+                             name: "centerHorizontal",
+                             label: "Horizontal Center",
+                             type: "text"
+                        },
+                        {
+                             name: "centerVertical",
+                             label: "Vertical Center",
+                             type: "text"
+                        }
+                    ]
                 });
+            }
 
-              //Update cutout field (add slider) and set initial value
-                createSlider("radius", form, "%");
-                var radius = chartConfig.pointRadius;
-                if (radius==null) radius = 0.65;
-                chartConfig.pointRadius = radius;
-                form.findField("radius").setValue(radius*100);
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: formItems
+            });
 
-              //Tweak height of the label field and set initial value
-                var labelField = form.findField("labels");
-                labelField.row.style.height = "68px";
-                var labels = chartConfig.pieLabels;
-                labelField.setValue(labels===true ? true : false);
+
+          //Update color field (add colorPicker) and set initial value
+            createColorOptions("color", form);
+            form.findField("color").setValue(chartConfig.lineColor || "#ff3c38"); //red default
+
+
+          //Update cutout field (add slider) and set initial value
+            createSlider("radius", form, "px", 1, 20, 1);
+            var radius = chartConfig.pointRadius;
+            if (radius==null) radius = 3;
+            chartConfig.pointRadius = radius;
+            form.findField("radius").setValue(radius);
+
+          //Tweak height of the label field and set initial value
+            var labelField = form.findField("labels");
+            labelField.row.style.height = "68px";
+            var labels = chartConfig.pieLabels;
+            labelField.setValue(labels===true ? true : false);
+
+
+
+          //Process onChange events
+            if (mapLevel==="states" || mapLevel==="world"){
 
                 var zoomField = form.findField("zoom");
                 var zoom = chartConfig.linkZoom;
@@ -485,10 +515,10 @@ if(!bluewave.charts) bluewave.charts={};
                 chartConfig.centerVertical = vertical;
                 verticalField.setValue(vertical);
 
-              //Process onChange events
                 form.onChange = function(){
                     var settings = form.getData();
-                    chartConfig.pointRadius = settings.radius/100;
+                    chartConfig.pointColor = settings.color;
+                    chartConfig.pointRadius = settings.radius;
                     if (settings.labels==="true") settings.labels = true;
                     else if (settings.labels==="false") settings.labels = false;
                     chartConfig.pointLabels = settings.labels;
@@ -498,168 +528,12 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if (mapLevel==="world"){
-                form = new javaxt.dhtml.Form(body, {
-                    style: config.style.form,
-                    items: [
-                        {
-                            group: "Style",
-                            items: [
-                                {
-                                    name: "color",
-                                    label: "Color",
-                                    type: new javaxt.dhtml.ComboBox(
-                                        document.createElement("div"),
-                                        {
-                                            style: config.style.combobox
-                                        }
-                                    )
-                                },
-                                {
-                                    name: "radius",
-                                    label: "Radius",
-                                    type: "text"
-                                },
-                                {
-                                    name: "labels",
-                                    label: "Labels",
-                                    type: "radio",
-                                    alignment: "vertical",
-                                    options: [
-                                        {
-                                            label: "True",
-                                            value: true
-                                        },
-                                        {
-                                            label: "False",
-                                            value: false
-                                        }
-                                    ]
-                                },
-                                {
-                                     name: "zoom",
-                                     label: "Zoom",
-                                     type: "text"
-                                },
-                                {
-                                     name: "centerLongitude",
-                                     label: "Longitudinal Center",
-                                     type: "text"
-                                },
-                                {
-                                     name: "centerLatitude",
-                                     label: "Latitudinal Center",
-                                     type: "text"
-                                }
-                            ]
-                        }
-                    ]
-                });
+            else {
 
-              //Update cutout field (add slider) and set initial value
-                createSlider("radius", form, "%");
-                var radius = chartConfig.pointRadius;
-                if (radius==null) radius = 0.65;
-                chartConfig.pointRadius = radius;
-                form.findField("radius").setValue(radius*100);
-
-              //Tweak height of the label field and set initial value
-                var labelField = form.findField("labels");
-                labelField.row.style.height = "68px";
-                var labels = chartConfig.pieLabels;
-                labelField.setValue(labels===true ? true : false);
-
-                var zoomField = form.findField("zoom");
-                var zoom = chartConfig.linkZoom;
-                if (zoom==null) zoom = 800;
-                chartConfig.linkZoom = zoom;
-                zoomField.setValue(zoom);
-
-                var horizontalField = form.findField("centerLongitude");
-                var horizontal = chartConfig.centerLongitude;
-                if(horizontal==null) horizontal = 500;
-                chartConfig.centerLongitude = horizontal;
-                horizontalField.setValue(horizontal);
-
-                var verticalField = form.findField("centerLatitude");
-                var vertical = chartConfig.centerLatitude;
-                if(vertical==null) vertical = 500;
-                chartConfig.centerLatitude = vertical;
-                verticalField.setValue(vertical);
-
-              //Process onChange events
                 form.onChange = function(){
                     var settings = form.getData();
-                    chartConfig.pointRadius = settings.radius/100;
-                    if (settings.labels==="true") settings.labels = true;
-                    else if (settings.labels==="false") settings.labels = false;
-                    chartConfig.pointLabels = settings.labels;
-                    chartConfig.linkZoom = settings.zoom;
-                    chartConfig.centerLongitude =  settings.centerLongitude;
-                    chartConfig.centerLatitude = settings.centerLatitude;
-                    createMapPreview();
-                };
-            }
-            else if (mapLevel==="counties"){
-                form = new javaxt.dhtml.Form(body, {
-                    style: config.style.form,
-                    items: [
-                        {
-                            group: "Style",
-                            items: [
-                                {
-                                    name: "color",
-                                    label: "Color",
-                                    type: new javaxt.dhtml.ComboBox(
-                                        document.createElement("div"),
-                                        {
-                                            style: config.style.combobox
-                                        }
-                                    )
-                                },
-                                {
-                                    name: "radius",
-                                    label: "Radius",
-                                    type: "text"
-                                },
-                                {
-                                    name: "labels",
-                                    label: "Labels",
-                                    type: "radio",
-                                    alignment: "vertical",
-                                    options: [
-                                        {
-                                            label: "True",
-                                            value: true
-                                        },
-                                        {
-                                            label: "False",
-                                            value: false
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                });
-
-                //Update cutout field (add slider) and set initial value
-                createSlider("radius", form, "%");
-                var radius = chartConfig.pointRadius;
-                if (radius==null) radius = 0.65;
-                chartConfig.pointRadius = radius;
-                form.findField("radius").setValue(radius*100);
-
-                //Tweak height of the label field and set initial value
-                var labelField = form.findField("labels");
-                labelField.row.style.height = "68px";
-                var labels = chartConfig.pieLabels;
-                labelField.setValue(labels===true ? true : false);
-
-                //Process onChange events
-                form.onChange = function(){
-                    var settings = form.getData();
-                    chartConfig.pointRadius = settings.radius/100;
+                    chartConfig.pointColor = settings.color;
+                    chartConfig.pointRadius = settings.radius;
                     if (settings.labels==="true") settings.labels = true;
                     else if (settings.labels==="false") settings.labels = false;
                     chartConfig.pointLabels = settings.labels;
@@ -975,6 +849,107 @@ if(!bluewave.charts) bluewave.charts={};
         if (mapLevel.indexOf("countries")>-1 || mapLevel.indexOf("world")>-1) return "world";
         return mapLevel;
     };
+
+
+
+  //**************************************************************************
+  //** createColorOptions
+  //**************************************************************************
+  /** Creates a custom form input using a combobox
+   */
+    var createColorOptions = function(inputName, form){
+
+        var colorField = form.findField(inputName);
+        var colorPreview = colorField.getButton();
+        colorPreview.className = colorPreview.className.replace("pulldown-button-icon", "");
+        colorPreview.style.boxShadow = "none";
+        colorPreview.setColor = function(color){
+            colorPreview.style.backgroundColor =
+            colorPreview.style.borderColor = color;
+        };
+        colorField.setValue = function(color){
+            //color = getHexColor(getColor(color));
+            colorPreview.setColor(color);
+            colorField.getInput().value = color;
+            form.onChange(colorField, color);
+        };
+        colorField.getValue = function(){
+            return colorField.getInput().value;
+        };
+        colorPreview.onclick = function(){
+            if (!colorPicker) colorPicker = createColorPicker();
+            var rect = javaxt.dhtml.utils.getRect(colorField.row);
+            var x = rect.x + rect.width + 15;
+            var y = rect.y + (rect.height/2);
+            colorPicker.showAt(x, y, "right", "middle");
+
+            colorPicker.setColor(colorField.getValue());
+
+            colorPicker.onChange = function(color){
+                colorField.setValue(color);
+            };
+        };
+    };
+
+
+  //**************************************************************************
+  //** createColorPicker
+  //**************************************************************************
+  /** Returns a callout with a color picker
+   */
+    var createColorPicker = function(){
+
+      //Create popup
+        var popup = new javaxt.dhtml.Callout(document.body,{
+            style: {
+                panel: "color-picker-callout-panel",
+                arrow: "color-picker-callout-arrow"
+            }
+        });
+        var innerDiv = popup.getInnerDiv();
+
+
+      //Create title div
+        var title = "Select Color";
+        var titleDiv = document.createElement("div");
+        titleDiv.className = "window-header";
+        titleDiv.innerHTML = "<div class=\"window-title\">" + title + "</div>";
+        innerDiv.appendChild(titleDiv);
+
+
+      //Create content div
+        var contentDiv = document.createElement("div");
+        contentDiv.style.padding = "0 15px 15px";
+        contentDiv.style.width = "325px";
+        contentDiv.style.backgroundColor = "#fff";
+        innerDiv.appendChild(contentDiv);
+
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr = document.createElement('tr');
+        tbody.appendChild(tr);
+
+
+
+        var td = document.createElement('td');
+        tr.appendChild(td);
+        var cp = bluewave.utils.createColorPicker(td, config);
+
+
+        popup.onChange = function(color){};
+        popup.setColor = function(color){
+            cp.setColor(color);
+        };
+
+        cp.onChange = function(color){
+            popup.onChange(color);
+        };
+
+        contentDiv.appendChild(table);
+        return popup;
+    };
+
 
 
   //**************************************************************************
