@@ -63,7 +63,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
-        this.clear();
+        me.clear();
         var parent = svg.node().parentNode;
         onRender(parent, function(){
             var width = parent.offsetWidth;
@@ -72,8 +72,6 @@ bluewave.charts.MapChart = function(parent, config) {
           //Get min/max values
             var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
-          //Get isObject boolean.
-            var isObject = chartConfig.isObject;
 
           //Set color scale
             var colorScale = {
@@ -84,8 +82,11 @@ bluewave.charts.MapChart = function(parent, config) {
             if(chartConfig.linkZoom === (width / .8) || chartConfig.linkZoom === width / 2 / Math.PI){
                 delete chartConfig.linkZoom;
             }
-            var getColor =  d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-            if(chartConfig.mapLevel === "States" || chartConfig.mapLevel === "Census Regions"){
+
+            var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
+
+            var mapLevel = chartConfig.mapLevel;
+            if(mapLevel === "states" || mapLevel === "census"){
                 getData("states", function(mapData) {
                     getData("countries", function(countryData){
                         if(!chartConfig.linkZoom) chartConfig.linkZoom = (width / .8);
@@ -94,12 +95,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         var zoom = chartConfig.linkZoom;
                         var horizontal = chartConfig.centerHorizontal;
                         var vertical = chartConfig.centerVertical;
-                        var useCensusData;
-                        if(chartConfig.mapLevel === "Census Regions"){
-                            useCensusData = true;
-                        } else {
-                            useCensusData = false;
-                        }
+                        var useCensusData = mapLevel === "census";
                         var countries = topojson.feature(countryData, countryData.objects.countries);
                         var states = topojson.feature(mapData, mapData.objects.states);
                         var projection = d3.geoAlbers()
@@ -126,7 +122,7 @@ bluewave.charts.MapChart = function(parent, config) {
                             .append("path")
                             .attr('d', path)
                             .attr('fill', 'lightgray')
-                            .attr('stroke', 'white')
+                            .attr('stroke', 'white');
 
                         var coords = [];
                         data.forEach(function(d){
@@ -385,7 +381,8 @@ bluewave.charts.MapChart = function(parent, config) {
                         }
                     });
                 });
-            }else if(chartConfig.mapLevel === "Counties"){
+            }
+            else if(mapLevel === "counties"){
                 getData("states", function(mapData) {
                     getData("counties", function(mapData){
                         var counties = topojson.feature(mapData, mapData.objects.counties);
@@ -519,7 +516,8 @@ bluewave.charts.MapChart = function(parent, config) {
                         }
                     });
                 });
-            }else if(chartConfig.mapLevel === "World"){
+            }
+            else if(mapLevel === "world"){
                 getData("countries", function(mapData){
                     if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
                     if(!chartConfig.centerLongitude) chartConfig.centerLongitude = 110;
