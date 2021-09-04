@@ -26,7 +26,7 @@ if(!bluewave.charts) bluewave.charts={};
     var svg;
     var panel;
     var previewArea;
-    var mapArea;
+    var mapChart;
     var inputData = [];
     var mapInputs = {
         projection:null,
@@ -38,8 +38,8 @@ if(!bluewave.charts) bluewave.charts={};
         censusRegion:null,
         colorScale:null
     };
-    var mapProjection;
     var styleEditor;
+
 
   //**************************************************************************
   //** Constructor
@@ -54,13 +54,23 @@ if(!bluewave.charts) bluewave.charts={};
         me.el = table;
         var td;
 
+
+      //Create left panel with map options
         td = document.createElement("td");
         tr.appendChild(td);
         let div = document.createElement("div");
         div.className = "chart-editor-options";
         td.appendChild(div);
-        createDropDown(div);
+        createInput(div,"mapType","Map Type",showHideDropDowns);
+        createInput(div,"mapLevel","Map Level",showHideDropDowns);
+        createInput(div,"latitude","Latitude",createMapPreview,"lat");
+        createInput(div,"longitude","Longitude",createMapPreview,"long");
+        createInput(div,"censusRegion","Census Location Field",createMapPreview);
+        createInput(div,"mapValue","Value",createMapPreview);
+        createInput(div,"mapProjectionName","Projection",createMapPreview);
 
+
+      //Create main panel with map
         td = document.createElement("td");
         td.className = "chart-editor-preview";
         td.style.width = "100%";
@@ -72,8 +82,20 @@ if(!bluewave.charts) bluewave.charts={};
             title: "Untitled",
             settings: true
         });
-        previewArea = panel.innerDiv;
         panel.el.className = "";
+        previewArea = panel.innerDiv;
+        onRender(previewArea, function(){
+            var width = previewArea.offsetWidth;
+            var height = previewArea.offsetHeight;
+
+            svg = d3.select(previewArea).append("svg");
+            svg.attr("width", width);
+            svg.attr("height", height);
+
+            mapChart = new bluewave.charts.MapChart(svg, {
+                margin: margin
+            });
+        });
 
 
       //Allow users to change the title associated with the chart
@@ -87,272 +109,8 @@ if(!bluewave.charts) bluewave.charts={};
         panel.settings.onclick = function(){
             if (chartConfig) editStyle(chartConfig.mapType, chartConfig.mapLevel);
         };
-
-
-        onRender(previewArea, function(){
-            initializeChartSpace();
-        });
     };
 
-  //**************************************************************************
-  //** update
-  //**************************************************************************
-    this.update = function(mapConfig, inputs){
-        me.clear();
-        for (var i=0; i<inputs.length; i++){
-            var input = inputs[i];
-            if(typeof input !== 'object' && input !== null){
-                if (input!=null) inputs[i] = d3.csvParse(input);
-            }
-        }
-        if(mapConfig !== null && mapConfig !== undefined){
-            Object.keys(mapConfig).forEach(val=>{
-                chartConfig[val] = mapConfig[val]? mapConfig[val]:null;
-            });
-            panel.title.innerHTML = mapConfig.chartTitle;
-        }
-        inputData = inputs;
-        createOptions();
-    };
-
-  //**************************************************************************
-  //** createDropDown
-  //**************************************************************************
-    var createDropDown = function(parent){
-
-        var table = createTable();
-        var tbody = table.firstChild;
-        table.style.height = "";
-        parent.appendChild(table);
-        createMapDropDown(tbody);
-    };
-
-  //**************************************************************************
-  //** createMapDropDown
-  //**************************************************************************
-    var createMapDropDown = function(tbody){
-        dropdownItem(tbody,"mapType","Map Type",showHideDropDowns,mapInputs,"mapType");
-        dropdownItem(tbody,"mapLevel","Map Level",showHideDropDowns,mapInputs,"mapLevel");
-        dropdownItem(tbody,"latitude","Latitude",createMapPreview,mapInputs,"lat");
-        dropdownItem(tbody,"longitude","Longitude",createMapPreview,mapInputs,"long");
-        dropdownItem(tbody,"censusRegion","Census Location Field",createMapPreview,mapInputs,"censusRegion");
-        dropdownItem(tbody,"mapValue","Value",createMapPreview,mapInputs,"mapValue");
-
-        var tr, tr2, td;
-
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        td.innerHTML= "Projection:";
-
-        addShowHide(tr);
-
-        tr2 = document.createElement("tr");
-        tbody.appendChild(tr2);
-        td = document.createElement("td");
-        tr2.appendChild(td);
-
-        mapProjection = new javaxt.dhtml.ComboBox(td, {
-            style: config.style.combobox,
-            readOnly: true
-        });
-        mapProjection.clear();
-        mapProjection.row = tr;
-        mapProjection.onChange = function(name,value){
-            chartConfig.mapProjectionName = name;
-            createMapPreview();
-        };
-
-        mapProjection.hide();
-        mapProjection.row.hide();
-        mapInputs.lat.hide();
-        mapInputs.lat.row.hide();
-        mapInputs.long.hide();
-        mapInputs.long.row.hide();
-        mapInputs.mapValue.hide();
-        mapInputs.mapValue.row.hide();
-        mapInputs.censusRegion.hide();
-        mapInputs.censusRegion.row.hide();
-
-    };
-
-  //**************************************************************************
-  //** dropdownItem
-  //**************************************************************************
-    var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
-        var tr, tr2, td;
-
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        td.innerHTML= displayName+":";
-
-        addShowHide(tr);
-
-        tr2 = document.createElement("tr");
-        tbody.appendChild(tr2);
-        td = document.createElement("td");
-        tr2.appendChild(td);
-
-        input[inputType] = new javaxt.dhtml.ComboBox(td, {
-            style: config.style.combobox,
-            readOnly: true
-        });
-        input[inputType].row = tr;
-        input[inputType].clear();
-        input[inputType].onChange = function(name,value){
-            chartConfig[chartConfigRef] = value;
-            callBack();
-        };
-    };
-
-  //**************************************************************************
-  //** showHideDropDowns
-  //**************************************************************************
-    var showHideDropDowns = function(){
-        if(chartConfig.mapType==="Point"){
-
-            //We clear out the values from the chartConfig
-            if(chartConfig.latitude !== null) chartConfig.latitude = null;
-            if(chartConfig.longitude !== null) chartConfig.longitude = null;
-            if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
-            if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
-
-            //Show the combox box inputs
-            mapInputs.lat.show();
-            mapInputs.long.show();
-            mapInputs.mapValue.show();
-            mapInputs.censusRegion.hide();
-
-            //Show the table row objects
-            mapInputs.lat.row.show();
-            mapInputs.long.row.show();
-            mapInputs.mapValue.row.show();
-            mapInputs.censusRegion.row.hide();
-        };
-        if(chartConfig.mapType==="Area"){
-
-            if(chartConfig.latitude !== null) chartConfig.latitude = null;
-            if(chartConfig.longitude !== null) chartConfig.longitude = null;
-            if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
-
-            if(chartConfig.mapLevel === "Census Regions") {
-                mapInputs.censusRegion.show();
-                mapInputs.censusRegion.row.show();
-            } else {
-                mapInputs.censusRegion.hide();
-                mapInputs.censusRegion.row.hide();
-            }
-
-            mapInputs.lat.hide();
-            mapInputs.long.hide();
-            mapInputs.mapValue.show();
-
-            mapInputs.lat.row.hide();
-            mapInputs.long.row.hide();
-            mapInputs.mapValue.row.show();
-        };
-        if(chartConfig.mapType==="Links"){
-            if(chartConfig.latitude !== null) chartConfig.latitude = null;
-            if(chartConfig.longitude !== null) chartConfig.longitude = null;
-            if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-            if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
-            if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
-
-            mapInputs.lat.hide();
-            mapInputs.long.hide();
-            mapInputs.mapValue.show();
-            mapInputs.censusRegion.hide();
-
-            mapInputs.lat.row.hide();
-            mapInputs.long.row.hide();
-            mapInputs.censusRegion.row.hide();
-            mapInputs.mapValue.row.show();
-        };
-        if(chartConfig.mapLevel === "States" && inputData[0].state == null){
-            warn("No State Data detected", mapInputs.mapLevel);
-        }else{
-            createMapPreview();
-        };
-    };
-
-  //**************************************************************************
-  //** createMapPreview
-  //**************************************************************************
-    var createMapPreview = function(){
-        if(chartConfig.mapType===null){
-            return;
-        }
-        if(chartConfig.mapType=="Point" && chartConfig.mapLevel===null){
-            return;
-        }
-        if(chartConfig.mapType=="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapLevel===null)){
-            return;
-        }
-        if(chartConfig.mapType=="Links" && (chartConfig.mapValue==null ||
-            chartConfig.mapLevel===null)){
-            return;
-        }
-        onRender(previewArea, function() {
-            var data = inputData[0];
-            mapArea.update(chartConfig, data);
-        });
-    };
-
-  //**************************************************************************
-  //** createOptions
-  //**************************************************************************
-  /** Initializes Options for Dropdowns.
-   */
-    var createOptions = function() {
-        var data = inputData[0];
-        if(Array.isArray(data)){
-            let dataOptions = Object.keys(data[0]);
-            chartConfig.isObject = false;
-            dataOptions.forEach((val)=>{
-                mapInputs.lat.add(val, val);
-                mapInputs.long.add(val, val);
-                mapInputs.censusRegion.add(val, val);
-                mapInputs.mapValue.add(val, val);
-            });
-        }else{
-            mapInputs.mapValue.add("quantity", "quantity");
-            chartConfig.isObject = true;
-        }
-        const mapOptions = [
-            "Point",
-            "Area",
-            "Links"
-            ];
-        mapOptions.forEach((val)=>{
-            mapInputs.mapType.add(val,val);
-        });
-        if(!Array.isArray(inputData[0])){
-            mapInputs.mapType.setValue("Links");
-        }
-        const mapLevel = [
-            "Counties",
-            "States",
-            "Census Regions",
-            "World"
-        ];
-        mapLevel.forEach((val)=>{
-            mapInputs.mapLevel.add(val, val);
-        });
-
-        mapInputs.mapType.setValue(chartConfig.mapType, true);
-        mapInputs.mapValue.setValue(chartConfig.mapValue, true);
-        mapInputs.lat.setValue(chartConfig.latitude, true);
-        mapInputs.long.setValue(chartConfig.longitude, true);
-        mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
-        mapInputs.censusRegion.setValue(chartConfig.censusRegion, true);
-        createMapPreview();
-    };
 
   //**************************************************************************
   //** clear
@@ -367,30 +125,218 @@ if(!bluewave.charts) bluewave.charts={};
             for (var key in mapInputs) {
                 if (mapInputs.hasOwnProperty(key)){
                     var mapInput = mapInputs[key];
-                    if (mapInput && mapInput.clear) mapInput.clear();
+                    if (mapInput){
+                        if (mapInput.clear) mapInput.clear();
+                        if (mapInput.hide) mapInput.hide();
+                    }
                 }
             }
         }
 
-       //if (mapArea) mapArea.selectAll("*").remove();
-       //if (mapLayer) mapLayer.selectAll("circle").remove();
+      //Clear map preview
+        if (mapChart) mapChart.clear();
     };
 
-  //**************************************************************************
-  //** initializeChartSpace
-  //**************************************************************************
-    var initializeChartSpace = function(){
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
 
-        svg = d3.select(previewArea).append("svg");
-        svg.attr("width", width);
-        svg.attr("height", height);
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(mapConfig, inputs){
+        me.clear();
 
-        mapArea = new bluewave.charts.MapChart(svg, {
-            margin: margin
+      //Parse inputs
+        for (var i=0; i<inputs.length; i++){
+            var input = inputs[i];
+            if(typeof input !== 'object' && input !== null){
+                if (input!=null) inputs[i] = d3.csvParse(input);
+            }
+        }
+        inputData = inputs;
+
+
+      //Update config
+        if(mapConfig !== null && mapConfig !== undefined){
+            Object.keys(mapConfig).forEach(val=>{
+                chartConfig[val] = mapConfig[val]? mapConfig[val]:null;
+            });
+            panel.title.innerHTML = mapConfig.chartTitle;
+            chartConfig.mapLevel = getMapLevel(chartConfig);
+        }
+
+
+      //Populate pulldowns
+        var data = inputData[0];
+        if(Array.isArray(data)){
+            let dataOptions = Object.keys(data[0]);
+            dataOptions.forEach((val)=>{
+                mapInputs.lat.add(val, val);
+                mapInputs.long.add(val, val);
+                mapInputs.censusRegion.add(val, val);
+                mapInputs.mapValue.add(val, val);
+            });
+
+            mapInputs.mapType.add("Point","Point");
+            mapInputs.mapType.add("Area","Area");
+
+
+            mapInputs.mapLevel.add("US Counties", "counties");
+            mapInputs.mapLevel.add("US States", "states");
+            mapInputs.mapLevel.add("US Census Regions", "census");
+            mapInputs.mapLevel.add("World", "world");
+
+        }
+        else{ //input from supply chain editor
+
+            chartConfig.mapType = "Links";
+            chartConfig.mapValue = "quantity";
+            chartConfig.mapLevel = "world";
+
+            mapInputs.mapType.add("Links","Links");
+            mapInputs.mapValue.add("quantity", "quantity");
+
+            mapInputs.mapLevel.add("World", "world");
+        }
+
+
+      //Show default pulldowns
+        mapInputs.mapType.show();
+        mapInputs.mapLevel.show();
+        mapInputs.mapValue.show();
+
+
+      //Set default values
+        mapInputs.mapType.setValue(chartConfig.mapType, true);
+        mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
+        mapInputs.mapValue.setValue(chartConfig.mapValue, true);
+        mapInputs.lat.setValue(chartConfig.latitude, true);
+        mapInputs.long.setValue(chartConfig.longitude, true);
+        mapInputs.censusRegion.setValue(chartConfig.censusRegion, true);
+
+
+      //Render map
+        createMapPreview();
+    };
+
+
+  //**************************************************************************
+  //** createInput
+  //**************************************************************************
+    var createInput = function(parent,chartConfigRef,displayName,onChange,inputType){
+        if (!inputType) inputType = chartConfigRef;
+
+        var row = document.createElement("div");
+        parent.appendChild(row);
+        addShowHide(row);
+
+        var label = document.createElement("label");
+        label.innerText = displayName + ":";
+        row.appendChild(label);
+
+        var input = new javaxt.dhtml.ComboBox(row, {
+            style: config.style.combobox,
+            readOnly: true
+        });
+        input.onChange = function(name,value){
+            chartConfig[chartConfigRef] = value;
+            onChange.apply(input,[inputType, name, value]);
+        };
+
+        var show = input.show;
+        input.show = function(){
+            show();
+            row.show();
+        };
+
+        var hide = input.hide;
+        input.hide = function(){
+            hide();
+            row.hide();
+        };
+
+        input.hide();
+
+
+        mapInputs[inputType] = input;
+    };
+
+
+  //**************************************************************************
+  //** showHideDropDowns
+  //**************************************************************************
+    var showHideDropDowns = function(inputType, name, value){
+        var input = this;
+        if (inputType==="mapType"){
+
+            if(value==="Point"){
+
+                //We clear out the values from the chartConfig
+                if(chartConfig.latitude !== null) chartConfig.latitude = null;
+                if(chartConfig.longitude !== null) chartConfig.longitude = null;
+                if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
+                if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
+                if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
+
+                //Show the combox box inputs
+                mapInputs.lat.show();
+                mapInputs.long.show();
+                mapInputs.mapValue.show();
+                mapInputs.censusRegion.hide();
+
+            }
+            else if(value==="Area"){
+
+                if(chartConfig.latitude !== null) chartConfig.latitude = null;
+                if(chartConfig.longitude !== null) chartConfig.longitude = null;
+                if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
+                if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
+
+                if(chartConfig.mapLevel === "census") {
+                    mapInputs.censusRegion.show();
+                } else {
+                    mapInputs.censusRegion.hide();
+                }
+
+                mapInputs.lat.hide();
+                mapInputs.long.hide();
+                mapInputs.mapValue.show();
+            }
+
+        }
+        else if (inputType==="mapLevel"){
+
+            if (chartConfig.mapType==="Area"){
+                if(chartConfig.mapLevel === "states" && inputData[0].state == null){
+                    warn("No State Data detected", mapInputs.mapLevel);
+                }
+            }
+        }
+    };
+
+
+  //**************************************************************************
+  //** createMapPreview
+  //**************************************************************************
+    var createMapPreview = function(){
+        if(chartConfig.mapType===null){
+            return;
+        }
+        if(chartConfig.mapType==="Point" && chartConfig.mapLevel===null){
+            return;
+        }
+        if(chartConfig.mapType==="Area" && (chartConfig.mapValue===null ||
+            chartConfig.mapLevel===null)){
+            return;
+        }
+        if(chartConfig.mapType==="Links" && (chartConfig.mapValue==null ||
+            chartConfig.mapLevel===null)){
+            return;
+        }
+        onRender(previewArea, function() {
+            var data = inputData[0];
+            mapChart.update(chartConfig, data);
         });
     };
+
 
   //**************************************************************************
   //** getConfig
@@ -450,7 +396,7 @@ if(!bluewave.charts) bluewave.charts={};
         var body = styleEditor.getBody();
         body.innerHTML = "";
         if (mapType==="Point"){
-            if(mapLevel==="States"){
+            if (mapLevel==="states"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -552,7 +498,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="World"){
+            else if (mapLevel==="world"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -654,7 +600,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="Counties"){
+            else if (mapLevel==="counties"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -722,7 +668,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (mapType==="Area"){
-            if(mapLevel==="States"){
+            if (mapLevel==="states"){
                 var colorField = new javaxt.dhtml.ComboBox(
                     document.createElement("div"),
                     {
@@ -791,7 +737,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="World"){
+            else if(mapLevel==="world"){
 
                 var colorField = new javaxt.dhtml.ComboBox(
                     document.createElement("div"),
@@ -863,7 +809,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="Counties"){
+            else if (mapLevel==="counties"){
                 var colorField = new javaxt.dhtml.ComboBox(
                     document.createElement("div"),
                     {
@@ -898,7 +844,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (mapType==="Links"){
-            if(mapLevel==="States"){
+            if (mapLevel==="states"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -951,7 +897,7 @@ if(!bluewave.charts) bluewave.charts={};
                     createMapPreview();
                 };
             }
-            else if(mapLevel==="World"){
+            else if (mapLevel==="world"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -1012,6 +958,22 @@ if(!bluewave.charts) bluewave.charts={};
             styleEditor.showAt(108,57);
             form.resize();
         }
+    };
+
+
+  //**************************************************************************
+  //** getMapLevel
+  //**************************************************************************
+  /** Used to normalize/standardize values for mapLevel
+   */
+    var getMapLevel = function(chartConfig){
+        if (!chartConfig.mapLevel) return null;
+        var mapLevel = chartConfig.mapLevel.toLowerCase();
+        if (mapLevel.indexOf("census")>-1) return "census";
+        if (mapLevel.indexOf("states")>-1) return "states";
+        if (mapLevel.indexOf("counties")>-1) return "counties";
+        if (mapLevel.indexOf("countries")>-1 || mapLevel.indexOf("world")>-1) return "world";
+        return mapLevel;
     };
 
 
