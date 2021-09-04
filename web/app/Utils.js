@@ -518,7 +518,7 @@ bluewave.utils = {
   //**************************************************************************
   /** Creates a custom form input using a text field
    */
-    createSlider: function(inputName, form, endCharacter = ""){
+    createSlider: function(inputName, form, endCharacter = "", min=0, max=100, interval=5){
 
       //Add row under the given input
         var input = form.findField(inputName);
@@ -535,10 +535,19 @@ bluewave.utils = {
         cols[2].appendChild(slider);
         slider.type = "range";
         slider.className = "dashboard-slider";
-        slider.setAttribute("min", 1);
-        slider.setAttribute("max", 20);
+        min = parseInt(min);
+        if (min<0) min = 0;
+        max = parseInt(max);
+        if (max<min) max = 100;
+
+        interval = parseInt(interval);
+        if (interval<1) interval = 1;
+        max = Math.ceil(max/interval);
+
+        slider.setAttribute("min", min+1);
+        slider.setAttribute("max", max+1);
         slider.onchange = function(){
-            var val = (this.value-1)*5;
+            var val = (this.value-1)*interval;
             input.setValue(val);
         };
 
@@ -550,7 +559,7 @@ bluewave.utils = {
         input.setValue = function(val){
             val = parseFloat(val);
             setValue(val + `${endCharacter}`);
-            slider.value = round(val/5)+1;
+            slider.value = round(val/interval)+1;
         };
 
         var getValue = input.getValue;
@@ -563,10 +572,9 @@ bluewave.utils = {
         input.row.getElementsByTagName("input")[0].addEventListener('input', function(e) {
             var val = parseFloat(this.value);
             if (isNumber(val)){
-                if (val<0 || val>95){
-                    if (val<0) val = 0;
-                    else val = 95;
-                }
+                if (val<0) val = 0;
+                //if (val>=94) val = 100;
+
                 input.setValue(val);
             }
         });
