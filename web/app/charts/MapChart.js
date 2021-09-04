@@ -124,18 +124,11 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr('fill', 'lightgray')
                             .attr('stroke', 'white');
 
-                        var coords = [];
-                        data.forEach(function(d){
-                            var lat = parseFloat(d.lat);
-                            var lon = parseFloat(d.lon);
-                            if (isNaN(lat) || isNaN(lon))return;
-                            var coord = projection([lon, lat]);
-                            if (!coord) return;
-                            coord.push(parseFloat(d[chartConfig.mapValue]));
-                            coords.push(coord);
-                        });
 
+                        var points = getPoints(data, chartConfig, projection);
+                        var coords = points.coords;
                         if (coords.length===0){ //use state centroids
+                            points.hasValue = false;
                             data.forEach(function(d){
                                 var state = d.state;
                                 for (var i = 0; i < states.features.length; i++){
@@ -147,31 +140,16 @@ bluewave.charts.MapChart = function(parent, config) {
                                                 var coord = path.centroid(feature);
                                                 coord.push(d[chartConfig.mapValue]);
                                                 coords.push(coord);
+                                                points.hasValue = true;
                                             }
                                         }
                                     }
                                 }
                             });
+                            points.coords = coords;
                         }
+                        renderPoints(points, chartConfig, extent);
 
-                        for (var i=0; i<coords.length; i++){
-                            var coord = coords[i];
-                            var val = coord[2];
-                            if (isNaN(val) || val<=0) continue;
-                            var p = val/extent[1];
-                            var maxSize = 20;
-                            if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
-                            if(p > 0){
-                                var r = maxSize*p;
-                            }else{
-                                var r = maxSize*.25;
-                            }
-                            mapArea.append("circle")
-                                .attr("cx", coord[0])
-                                .attr("cy", coord[1])
-                                .attr("r", r + "px")
-                                .style("fill", "rgb(217,91,67)");
-                        }
 
                     }else if(chartConfig.mapType === "Area"){
                         data.forEach(function(d){
@@ -418,17 +396,8 @@ bluewave.charts.MapChart = function(parent, config) {
                                 )
                               );
 
-                            var coords = [];
-                            data.forEach(function(d){
-                                var lat = parseFloat(d.lat);
-                                var lon = parseFloat(d.lon);
-                                if (isNaN(lat) || isNaN(lon))return;
-                                var coord = projection([lon, lat]);
-                                if (!coord) return;
-                                coord.push(parseFloat(d[chartConfig.mapValue]));
-                                coords.push(coord);
-                            });
-
+                            var points = getPoints(data, chartConfig, projection);
+                            var coords = points.coords;
                             if (coords.length===0){ //use county centroids
                                 data.forEach(function(d){
                                     var county = d.county;
@@ -446,27 +415,9 @@ bluewave.charts.MapChart = function(parent, config) {
                                         }
                                     }
                                 });
+                                points.coords = coords;
                             }
-
-
-                            for (var i=0; i<coords.length; i++){
-                                var coord = coords[i];
-                                var val = coord[2];
-                                if (isNaN(val) || val<=0) continue;
-                                var p = val/extent[1];
-                                var maxSize = 20;
-                                if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
-                                if(p > 0){
-                                    var r = maxSize*p;
-                                }else{
-                                    var r = maxSize*.25;
-                                }
-                                mapArea.append("circle")
-                                    .attr("cx", coord[0])
-                                    .attr("cy", coord[1])
-                                    .attr("r", r + "px")
-                                    .style("fill", "rgb(217,91,67)");
-                            }
+                            renderPoints(points, chartConfig, extent);
 
                         }
                         else if(chartConfig.mapType === "Area"){
@@ -543,53 +494,8 @@ bluewave.charts.MapChart = function(parent, config) {
                             .attr('fill', 'lightgray')
                             .attr('stroke', 'white');
 
-                        var coords = [];
-                        data.forEach(function(d){
-                            var lat = parseFloat(d.lat);
-                            var lon = parseFloat(d.lon);
-                            if (isNaN(lat) || isNaN(lon))return;
-                            var coord = projection([lon, lat]);
-                            if (!coord) return;
-                            coord.push(parseFloat(d[chartConfig.mapValue]));
-                            coords.push(coord);
-                        });
-                        if (coords.length===0){ //use state centroids
-                            data.forEach(function(d){
-                                var country = d.country;
-                                for (var i = 0; i < countries.features.length; i++){
-                                    var feature = countries.features[i];
-                                    if (country === feature.properties.code){
-                                        if (chartConfig.mapValue){
-                                            var val = parseFloat(d[chartConfig.mapValue]);
-                                            if (!isNaN(val) && val>0){
-                                                var coord = path.centroid(feature);
-                                                coord.push(d[chartConfig.mapValue]);
-                                                coords.push(coord);
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        }
-
-                        for (var i=0; i<coords.length; i++){
-                            var coord = coords[i];
-                            var val = coord[2];
-                            if (isNaN(val) || val<=0) continue;
-                            var p = val/extent[1];
-                            var maxSize = 20;
-                            if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
-                            if(p > 0){
-                                var r = maxSize*p;
-                            }else{
-                                var r = maxSize*.25;
-                            }
-                            mapArea.append("circle")
-                                .attr("cx", coord[0])
-                                .attr("cy", coord[1])
-                                .attr("r", r + "px")
-                                .style("fill", "rgb(217,91,67)");
-                        }
+                        var points = getPoints(data, chartConfig, projection);
+                        renderPoints(points, chartConfig, extent);
 
                     }else if(chartConfig.mapType === "Area"){
                         var aggregateState = 0;
@@ -787,6 +693,61 @@ bluewave.charts.MapChart = function(parent, config) {
         });
     };
 
+
+  //**************************************************************************
+  //** getPoints
+  //**************************************************************************
+    var getPoints = function(data, chartConfig, projection){
+        var coords = [];
+        var hasValue = false;
+        data.forEach(function(d){
+            var lat = parseFloat(d[chartConfig.latitude]);
+            var lon = parseFloat(d[chartConfig.longitude]);
+            if (isNaN(lat) || isNaN(lon))return;
+            var coord = projection([lon, lat]);
+            if (!coord) return;
+            var val = parseFloat(d[chartConfig.mapValue]);
+            if (!isNaN(val)){
+                coord.push(coord);
+                hasValue = true;
+            }
+            coords.push(coord);
+        });
+        return {
+            coords: coords,
+            hasValue: hasValue
+        };
+    };
+
+
+  //**************************************************************************
+  //** renderPoints
+  //**************************************************************************
+    var renderPoints = function(points, chartConfig, extent){
+
+        var coords = points.coords;
+        for (var i=0; i<coords.length; i++){
+            var coord = coords[i];
+            var r = 10;
+            if (points.hasValue){
+                var val = coord[2];
+                if (isNaN(val) || val<=0) continue;
+                var p = val/extent[1];
+                var maxSize = 20;
+                if (!isNaN(chartConfig.pointRadius)) maxSize = maxSize*chartConfig.pointRadius;
+                if (p > 0){
+                    r = maxSize*p;
+                }else{
+                    r = maxSize*.25;
+                }
+            }
+            mapArea.append("circle")
+                .attr("cx", coord[0])
+                .attr("cy", coord[1])
+                .attr("r", r + "px")
+                .style("fill", "rgb(217,91,67)");
+        }
+    };
 
   //**************************************************************************
   //** Utils
