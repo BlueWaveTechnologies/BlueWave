@@ -725,10 +725,17 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     var renderPoints = function(points, chartConfig, extent){
 
+        var r = parseInt(chartConfig.pointRadius);
+        if (isNaN(r)) r = 3;
+        if (r<0) r = 1;
+
+        var c = chartConfig.pointColor;
+        if (!c) c = "#ff3c38";
+
         var coords = points.coords;
         for (var i=0; i<coords.length; i++){
             var coord = coords[i];
-            var r = 10;
+
             if (points.hasValue){
                 var val = coord[2];
                 if (isNaN(val) || val<=0) continue;
@@ -741,13 +748,15 @@ bluewave.charts.MapChart = function(parent, config) {
                     r = maxSize*.25;
                 }
             }
+
             mapArea.append("circle")
                 .attr("cx", coord[0])
                 .attr("cy", coord[1])
                 .attr("r", r + "px")
-                .style("fill", "rgb(217,91,67)");
+                .style("fill", c);
         }
     };
+    
 
   //**************************************************************************
   //** Utils
