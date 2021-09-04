@@ -694,96 +694,17 @@ bluewave.ChartEditor = function(parent, config) {
   /** Creates a custom form input using a combobox
    */
     var createColorOptions = function(inputName, form){
-
-        var colorField = form.findField(inputName);
-        var colorPreview = colorField.getButton();
-        colorPreview.className = colorPreview.className.replace("pulldown-button-icon", "");
-        colorPreview.style.boxShadow = "none";
-        colorPreview.setColor = function(color){
-            colorPreview.style.backgroundColor =
-            colorPreview.style.borderColor = color;
-        };
-        colorField.setValue = function(color){
-            //color = getHexColor(getColor(color));
-            colorPreview.setColor(color);
-            colorField.getInput().value = color;
-            form.onChange(colorField, color);
-        };
-        colorField.getValue = function(){
-            return colorField.getInput().value;
-        };
-        colorPreview.onclick = function(){
-            if (!colorPicker) colorPicker = createColorPicker();
+        bluewave.utils.createColorOptions(inputName, form, function(colorField){
+            if (!colorPicker) colorPicker = bluewave.utils.createColorPickerCallout(config);
             var rect = javaxt.dhtml.utils.getRect(colorField.row);
             var x = rect.x + rect.width + 15;
             var y = rect.y + (rect.height/2);
             colorPicker.showAt(x, y, "right", "middle");
-
             colorPicker.setColor(colorField.getValue());
-
             colorPicker.onChange = function(color){
                 colorField.setValue(color);
             };
-        };
-    };
-
-
-  //**************************************************************************
-  //** createColorPicker
-  //**************************************************************************
-  /** Returns a callout with a color picker
-   */
-    var createColorPicker = function(){
-
-      //Create popup
-        var popup = new javaxt.dhtml.Callout(document.body,{
-            style: {
-                panel: "color-picker-callout-panel",
-                arrow: "color-picker-callout-arrow"
-            }
         });
-        var innerDiv = popup.getInnerDiv();
-
-
-      //Create title div
-        var title = "Select Color";
-        var titleDiv = document.createElement("div");
-        titleDiv.className = "window-header";
-        titleDiv.innerHTML = "<div class=\"window-title\">" + title + "</div>";
-        innerDiv.appendChild(titleDiv);
-
-
-      //Create content div
-        var contentDiv = document.createElement("div");
-        contentDiv.style.padding = "0 15px 15px";
-        contentDiv.style.width = "325px";
-        contentDiv.style.backgroundColor = "#fff";
-        innerDiv.appendChild(contentDiv);
-
-
-        var table = javaxt.dhtml.utils.createTable();
-        var tbody = table.firstChild;
-        var tr = document.createElement('tr');
-        tbody.appendChild(tr);
-
-
-
-        var td = document.createElement('td');
-        tr.appendChild(td);
-        var cp = bluewave.utils.createColorPicker(td, config);
-
-
-        popup.onChange = function(color){};
-        popup.setColor = function(color){
-            cp.setColor(color);
-        };
-
-        cp.onChange = function(color){
-            popup.onChange(color);
-        };
-
-        contentDiv.appendChild(table);
-        return popup;
     };
 
 
@@ -795,7 +716,6 @@ bluewave.ChartEditor = function(parent, config) {
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
-    var getColorPalette = bluewave.utils.getColorPalette;
 
     init();
 };
