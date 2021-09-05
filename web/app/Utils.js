@@ -932,7 +932,7 @@ bluewave.utils = {
         var cp = bluewave.utils.createColorPicker(td, config);
 
         popup.onHide = function(){
-            if (cp.colorWheel.isVisible()){
+            if (cp.colorWheel && cp.colorWheel.isVisible()){
                 cp.colorWheel.hide();
                 popup.show();
             }
