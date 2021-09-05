@@ -52,6 +52,14 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** onRender
+  //**************************************************************************
+  /** Called after the map has been updated
+   */
+    this.onUpdate = function(){};
+
+
+  //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
@@ -92,12 +100,12 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
         var mapLevel = chartConfig.mapLevel;
-        if (mapLevel === "states" || mapLevel === "census"){
-            getData("states", function(mapData) {
+        if (mapLevel === "states"){
+            getData("counties", function(mapData){
+                var counties = topojson.feature(mapData, mapData.objects.counties);
+                var states = topojson.feature(mapData, mapData.objects.states);
                 getData("countries", function(countryData){
-                    var useCensusData = mapLevel === "census";
                     var countries = topojson.feature(countryData, countryData.objects.countries);
-                    var states = topojson.feature(mapData, mapData.objects.states);
                     var projection = d3.geoAlbers().center([-8, 43]);
                     var path = d3.geoPath(projection);
 
@@ -106,11 +114,9 @@ bluewave.charts.MapChart = function(parent, config) {
                     var worldMap = mapArea.append("g");
 
 
-
                   //Render countries
-                    worldMap.append("g")
-                        .attr("class", "boundary")
-                        .selectAll("boundary")
+                    worldMap
+                        .selectAll("whatever")
                         .data(countries.features)
                         .enter().append("path")
                         .attr('d', path)
@@ -119,26 +125,28 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
                   //Render states
-                    var statePolygons = worldMap.append("g")
-                        .attr("class", "boundary")
-                        .selectAll("boundary")
+                    var renderStates = function(){
+                        return worldMap.selectAll("whatever")
                         .data(states.features)
                         .enter()
                         .append("path")
                         .attr('d', path)
                         .attr('fill', 'none')
                         .attr('stroke', 'white');
+                    };
 
 
                   //Render data
                     if (chartConfig.mapType === "Point"){
+
+                        renderStates();
 
                         var points = getPoints(data, chartConfig, projection);
                         var coords = points.coords;
                         if (coords.length===0){ //use state centroids
                             points.hasValue = false;
                             data.forEach(function(d){
-                                var state = d.state;
+                                var state = d[chartConfig.mapLocation];
                                 for (var i = 0; i < states.features.length; i++){
                                     var feature = states.features[i];
                                     if (state === feature.properties.code){
@@ -160,50 +168,116 @@ bluewave.charts.MapChart = function(parent, config) {
 
                     }
                     else if(chartConfig.mapType === "Area"){
+
+
+                      //Analyze data
+                        var numStates = 0;
+                        var numCounties = 0;
+                        var numCensusRegions = 0;
                         data.forEach(function(d){
-                            if(useCensusData){
-                                var location = d[chartConfig.censusRegion];
-                                var locations = location.split(",");
-                                var censusDivision = locations[1];
-                                censusDivision = censusDivision.replace(/\D/g, "");
-                                censusDivision = parseInt(censusDivision);
-                                for(var i = 0; i < states.features.length; i++){
-                                    if(censusDivision == states.features[i].properties.censusDivision){
-                                        states.features[i].properties.censusData = true;
-                                        states.features[i].properties.mapValue = d[chartConfig.mapValue];
-                                    }else if(states.features[i].properties.inData){
-                                        states.features[i].properties.inData = false;
-                                    }
+                            var location = d[chartConfig.mapLocation];
+                            if (typeof location === 'undefined') return;
+
+                            var censusDivision = null;
+                            if (location.indexOf(",")>-1){
+                                try{
+                                    var locations = location.split(",");
+                                    var censusDivision = locations[1];
+                                    censusDivision = censusDivision.replace(/\D/g, "");
+                                    censusDivision = parseInt(censusDivision);
                                 }
-                            } else {
-                                var state = d.state;
-                                for(var i = 0; i < states.features.length; i++){
-                                    if(state == states.features[i].properties.code){
-                                        states.features[i].properties.inData = true;
-                                        states.features[i].properties.mapValue = d[chartConfig.mapValue];
-                                    }else if(states.features[i].properties.censusData){
-                                        states.features[i].properties.censusData = false;
-                                    }
-                                }
+                                catch(e){}
                             }
-                        });
 
 
-                      //Update fill color of states as needed
-                        statePolygons.each(function() {
-                            var path = d3.select(this);
-                            var fillColor = path.attr('fill');
-                            path.attr('fill', function(d){
-                                var inData = d.properties.inData;
-                                var inCensus = d.properties.censusData;
-                                if (inData || inCensus){
-                                    return colorScale[chartConfig.colorScale](d.properties.mapValue);
+                            counties.features.every(function(county){
+                                if (county.id===location){
+                                    numCounties++;
+                                    return false;
                                 }
-                                else{
-                                    return fillColor;
-                                }
+                                return true;
                             });
+
+                            states.features.every(function(state){
+                                var foundMatch = false;
+
+                                if (state.properties.name===location || state.properties.code===location){
+                                    numStates++;
+                                    foundMatch = true;
+                                }
+
+                                if (!isNaN(censusDivision)){
+                                    if (state.properties.censusDivision===censusDivision){
+                                        numCensusRegions++;
+                                        foundMatch = true;
+                                    }
+                                }
+
+                                return !foundMatch;
+                            });
+
                         });
+                        console.log(numStates, numCounties, numCensusRegions, data.length);
+
+
+                      //Render data using the most suitable geometry type
+                        var maxMatches = Math.max(numStates, numCounties, numCensusRegions);
+                        if (maxMatches===numCounties){ //render counties
+
+                            var values = {};
+                            data.forEach(function(d){
+                                var countyID = d[chartConfig.mapLocation];
+                                values[countyID] = d[chartConfig.mapValue];
+                            });
+
+                            worldMap.selectAll("whatever")
+                            .data(counties.features)
+                            .enter()
+                            .append("path")
+                            .attr('d', path)
+                            .attr('fill', function(county){
+                                var v = parseFloat(values[county.id]);
+                                if (isNaN(v) || v<0) v = 0;
+                                var fill = colorScale[chartConfig.colorScale](v);
+                                if (!fill) return 'none';
+                                return fill;
+                            });
+                            renderStates();
+                        }
+                        else if (maxMatches===numStates){ //render states
+                            var statePolygons = renderStates();
+
+                            var values = {};
+                            data.forEach(function(d){
+                                var location = d[chartConfig.mapLocation];
+                                if (typeof location === 'undefined') return;
+                                values[location] = d[chartConfig.mapValue];
+                            });
+
+                            statePolygons.each(function() {
+                                var path = d3.select(this);
+                                path.attr('fill', function(state){
+                                    var v = parseFloat(values[state.properties.name]);
+                                    if (isNaN(v)) v = parseFloat(values[state.properties.code]);
+                                    if (isNaN(v) || v<0) v = 0;
+                                    var fill = colorScale[chartConfig.colorScale](v);
+                                    if (!fill) return 'none';
+                                    return fill;
+                                });
+                            });
+
+                        }
+                        else if (maxMatches===numCensusRegions){ //render census regions
+                            var statePolygons = renderStates();
+
+                            statePolygons.each(function() {
+                                var path = d3.select(this);
+                                var fillColor = path.attr('fill');
+                                path.attr('fill', function(d){
+                                    return fillColor;
+                                });
+                            });
+                        }
                     }
                     else if(chartConfig.mapType === "Links"){
 
@@ -283,14 +357,14 @@ bluewave.charts.MapChart = function(parent, config) {
                                     type: "LineString",
                                     coordinates: [
                                         [d[0][1], d[0][0]],
-                                        [d[1][1], d[1][0]],
+                                        [d[1][1], d[1][0]]
                                     ]
                                 });
                             })
                             .style("fill", "none")
                             .style("stroke-opacity", 0.5)
                             .style('stroke-width', (d) =>{
-                                return thicknessScale(d[2])
+                                return thicknessScale(d[2]);
                             })
                             .style('stroke', (d) =>{
                                 return getColor(d);
@@ -337,6 +411,8 @@ bluewave.charts.MapChart = function(parent, config) {
                             });
 
                     }
+
+                    me.onUpdate();
                 });
             });
         }
@@ -410,7 +486,7 @@ bluewave.charts.MapChart = function(parent, config) {
                   //Map countyIDs to data values
                     var values = {};
                     data.forEach(function(d){
-                        var countyID = d.county+"";
+                        var countyID = d[chartConfig.mapLocation];
                         values[countyID] = d[chartConfig.mapValue];
                     });
 
@@ -428,6 +504,8 @@ bluewave.charts.MapChart = function(parent, config) {
                         });
                     });
                 }
+
+                me.onUpdate();
             });
         }
         else if(mapLevel === "world"){
@@ -504,6 +582,8 @@ bluewave.charts.MapChart = function(parent, config) {
                         renderLinks(data, countries, ports);
                     });
                 }
+
+                me.onUpdate();
             });
         }
     };
