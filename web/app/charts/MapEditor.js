@@ -66,6 +66,7 @@ if(!bluewave.charts) bluewave.charts={};
         createInput(div,"latitude","Latitude",createMapPreview,"lat");
         createInput(div,"longitude","Longitude",createMapPreview,"long");
         createInput(div,"censusRegion","Census Location Field",createMapPreview);
+        createInput(div,"mapLocation","Location Data",createMapPreview);
         createInput(div,"mapValue","Value",createMapPreview);
         createInput(div,"mapProjectionName","Projection",createMapPreview);
 
@@ -172,6 +173,7 @@ if(!bluewave.charts) bluewave.charts={};
                 mapInputs.lat.add(val, val);
                 mapInputs.long.add(val, val);
                 mapInputs.censusRegion.add(val, val);
+                mapInputs.mapLocation.add(val, val);
                 mapInputs.mapValue.add(val, val);
             });
 
@@ -179,9 +181,9 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapType.add("Area", "Area");
 
 
-            mapInputs.mapLevel.add("US Counties", "counties");
-            mapInputs.mapLevel.add("US States", "states");
-            mapInputs.mapLevel.add("US Census Regions", "census");
+            mapInputs.mapLevel.add("States", "counties");
+            mapInputs.mapLevel.add("Country", "states");
+            //mapInputs.mapLevel.add("US Census Regions", "census");
             mapInputs.mapLevel.add("World", "world");
 
         }
@@ -275,18 +277,18 @@ if(!bluewave.charts) bluewave.charts={};
 
             if(value==="Point"){
 
-                //We clear out the values from the chartConfig
+              //We clear out the values from the chartConfig
                 if(chartConfig.latitude !== null) chartConfig.latitude = null;
                 if(chartConfig.longitude !== null) chartConfig.longitude = null;
                 if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
                 if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
-                if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
 
-                //Show the combox box inputs
+
+              //Show the combox box inputs
                 mapInputs.lat.show();
                 mapInputs.long.show();
+                mapInputs.mapLocation.hide();
                 mapInputs.mapValue.show();
-                mapInputs.censusRegion.hide();
 
             }
             else if(value==="Area"){
@@ -294,28 +296,22 @@ if(!bluewave.charts) bluewave.charts={};
                 if(chartConfig.latitude !== null) chartConfig.latitude = null;
                 if(chartConfig.longitude !== null) chartConfig.longitude = null;
                 if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-                if(chartConfig.censusRegion !== null) chartConfig.censusRegion = null;
-
-                if(chartConfig.mapLevel === "census") {
-                    mapInputs.censusRegion.show();
-                } else {
-                    mapInputs.censusRegion.hide();
-                }
 
                 mapInputs.lat.hide();
                 mapInputs.long.hide();
+                mapInputs.mapLocation.show();
                 mapInputs.mapValue.show();
             }
 
         }
         else if (inputType==="mapLevel"){
 
-            if (chartConfig.mapType==="Area"){
-                if(chartConfig.mapLevel === "states" && inputData[0].state == null){
-                    warn("No State Data detected", mapInputs.mapLevel);
-                    return;
-                }
-            }
+//            if (chartConfig.mapType==="Area"){
+//                if(chartConfig.mapLevel === "states" && inputData[0].state == null){
+//                    warn("No State Data detected", mapInputs.mapLevel);
+//                    return;
+//                }
+//            }
             createMapPreview();
         }
     };
@@ -326,16 +322,18 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var createMapPreview = function(){
         if (!chartConfig.mapType) return;
+        if (!chartConfig.mapLevel) return;
 
-        if(chartConfig.mapType==="Point" && chartConfig.mapLevel===null){
+        if (chartConfig.mapType==="Point" &&
+            (chartConfig.latitude===null || chartConfig.longitude===null)){
             return;
         }
         if(chartConfig.mapType==="Area" && (chartConfig.mapValue===null ||
-            chartConfig.mapLevel===null)){
+            chartConfig.mapLocation===null)){
             return;
         }
         if(chartConfig.mapType==="Links" && (chartConfig.mapValue==null ||
-            chartConfig.mapLevel===null)){
+            chartConfig.mapLocation===null)){
             return;
         }
         onRender(previewArea, function() {
