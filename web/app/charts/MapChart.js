@@ -22,8 +22,11 @@ bluewave.charts.MapChart = function(parent, config) {
             left: 82
         }
     };
-    var mapArea;
-    var svg;
+    var svg, mapArea; //d3 elements
+    var countyData, countryData; //raw json
+    var counties, states, countries; //topojson
+    var options = []; //aggregation options
+
 
   //**************************************************************************
   //** Constructor
@@ -64,6 +67,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         if (mapArea) mapArea.node().innerHTML = "";
+        options = [];
     };
 
 
@@ -72,13 +76,19 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
-        var parent = svg.node().parentNode;
-        onRender(parent, function(){
-            update(chartConfig, data);
+        getMapData(function(){
+            var parent = svg.node().parentNode;
+            onRender(parent, function(){
+                update(parent, chartConfig, data);
+            });
         });
     };
 
-    var update = function(chartConfig, data){
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    var update = function(parent, chartConfig, data){
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
@@ -101,490 +111,481 @@ bluewave.charts.MapChart = function(parent, config) {
 
         var mapLevel = chartConfig.mapLevel;
         if (mapLevel === "states"){
-            getData("counties", function(mapData){
-                var counties = topojson.feature(mapData, mapData.objects.counties);
-                var states = topojson.feature(mapData, mapData.objects.states);
-                getData("countries", function(countryData){
-                    var countries = topojson.feature(countryData, countryData.objects.countries);
-                    var projection = d3.geoAlbers().center([-8, 43]);
-                    var path = d3.geoPath(projection);
+
+            var projection = d3.geoAlbers().center([-8, 43]);
+            var path = d3.geoPath(projection);
 
 
-                  //Create map layer
-                    var worldMap = mapArea.append("g");
+          //Create map layer
+            var worldMap = mapArea.append("g");
 
 
-                  //Render countries
-                    worldMap
-                        .selectAll("whatever")
-                        .data(countries.features)
-                        .enter().append("path")
-                        .attr('d', path)
-                        .attr('fill', 'lightgray')
-                        .attr('stroke', 'white');
+          //Render countries
+            worldMap
+                .selectAll("whatever")
+                .data(countries.features)
+                .enter().append("path")
+                .attr('d', path)
+                .attr('fill', 'lightgray')
+                .attr('stroke', 'white');
 
 
-                  //Render states
-                    var renderStates = function(){
-                        return worldMap.selectAll("whatever")
-                        .data(states.features)
-                        .enter()
-                        .append("path")
-                        .attr('d', path)
-                        .attr('fill', 'none')
-                        .attr('stroke', 'white');
-                    };
+          //Render states
+            var renderStates = function(){
+                return worldMap.selectAll("whatever")
+                .data(states.features)
+                .enter()
+                .append("path")
+                .attr('d', path)
+                .attr('fill', 'none')
+                .attr('stroke', 'white');
+            };
 
 
-                  //Render data
-                    if (chartConfig.mapType === "Point"){
+          //Render data
+            if (chartConfig.mapType === "Point"){
 
-                        renderStates();
+                renderStates();
 
-                        var points = getPoints(data, chartConfig, projection);
-                        var coords = points.coords;
-                        if (coords.length===0){ //use state centroids
-                            points.hasValue = false;
-                            data.forEach(function(d){
-                                var state = d[chartConfig.mapLocation];
-                                for (var i = 0; i < states.features.length; i++){
-                                    var feature = states.features[i];
-                                    if (state === feature.properties.code){
-                                        if (chartConfig.mapValue){
-                                            var val = parseFloat(d[chartConfig.mapValue]);
-                                            if (!isNaN(val) && val>0){
-                                                var coord = path.centroid(feature);
-                                                coord.push(d[chartConfig.mapValue]);
-                                                coords.push(coord);
-                                                points.hasValue = true;
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                            points.coords = coords;
-                        }
-                        renderPoints(points, chartConfig, extent);
-
-                    }
-                    else if(chartConfig.mapType === "Area"){
-
-
-                      //Analyze data
-                        var numStates = 0;
-                        var numCounties = 0;
-                        var numCensusRegions = 0;
-                        data.forEach(function(d){
-                            var location = d[chartConfig.mapLocation];
-                            if (typeof location === 'undefined') return;
-
-                            var censusDivision = null;
-                            if (location.indexOf(",")>-1){
-                                try{
-                                    var locations = location.split(",");
-                                    var censusDivision = locations[1];
-                                    censusDivision = censusDivision.replace(/\D/g, "");
-                                    censusDivision = parseInt(censusDivision);
-                                }
-                                catch(e){}
-                            }
-
-
-                            counties.features.every(function(county){
-                                if (county.id===location){
-                                    numCounties++;
-                                    return false;
-                                }
-                                return true;
-                            });
-
-                            states.features.every(function(state){
-                                var foundMatch = false;
-
-                                if (state.properties.name===location || state.properties.code===location){
-                                    numStates++;
-                                    foundMatch = true;
-                                }
-
-                                if (!isNaN(censusDivision)){
-                                    if (state.properties.censusDivision===censusDivision){
-                                        numCensusRegions++;
-                                        foundMatch = true;
-                                    }
-                                }
-
-                                return !foundMatch;
-                            });
-
-                        });
-                        console.log(numStates, numCounties, numCensusRegions, data.length);
-
-
-                      //Render data using the most suitable geometry type
-                        var maxMatches = Math.max(numStates, numCounties, numCensusRegions);
-                        if (maxMatches===numCounties){ //render counties
-
-                            var values = {};
-                            data.forEach(function(d){
-                                var countyID = d[chartConfig.mapLocation];
-                                values[countyID] = d[chartConfig.mapValue];
-                            });
-
-                            worldMap.selectAll("whatever")
-                            .data(counties.features)
-                            .enter()
-                            .append("path")
-                            .attr('d', path)
-                            .attr('fill', function(county){
-                                var v = parseFloat(values[county.id]);
-                                if (isNaN(v) || v<0) v = 0;
-                                var fill = colorScale[chartConfig.colorScale](v);
-                                if (!fill) return 'none';
-                                return fill;
-                            });
-                            renderStates();
-                        }
-                        else if (maxMatches===numStates){ //render states
-                            var statePolygons = renderStates();
-
-                            var values = {};
-                            data.forEach(function(d){
-                                var location = d[chartConfig.mapLocation];
-                                if (typeof location === 'undefined') return;
-                                values[location] = d[chartConfig.mapValue];
-                            });
-
-                            statePolygons.each(function() {
-                                var path = d3.select(this);
-                                path.attr('fill', function(state){
-                                    var v = parseFloat(values[state.properties.name]);
-                                    if (isNaN(v)) v = parseFloat(values[state.properties.code]);
-                                    if (isNaN(v) || v<0) v = 0;
-                                    var fill = colorScale[chartConfig.colorScale](v);
-                                    if (!fill) return 'none';
-                                    return fill;
-                                });
-                            });
-
-                        }
-                        else if (maxMatches===numCensusRegions){ //render census regions
-                            var statePolygons = renderStates();
-
-                            statePolygons.each(function() {
-                                var path = d3.select(this);
-                                var fillColor = path.attr('fill');
-                                path.attr('fill', function(d){
-                                    return fillColor;
-                                });
-                            });
-                        }
-                    }
-                    else if(chartConfig.mapType === "Links"){
-
-                        var nodes = data.nodes;
-                        var links = data.links;
-                        var linkArray = [];
-                        var connections = [];
-                        var coords = [];
-                        //Split Links up into the component parts.
-                        for(var link in links){
-                            if(links.hasOwnProperty(link)){
-                                var linkage = link.split('->');
-                                linkage.push(links[link].quantity);
-                                linkArray.push(linkage);
-                            }
-                        };
-                        linkArray.forEach(function(d){
-                            var connection = {};
-                            var stateCodeOne = nodes[d[0]].state;
-                            var stateCodeTwo = nodes[d[1]].state;
-                            var stateValue = d[2];
-                            connection.stateCodeOne = stateCodeOne;
-                            connection.stateCodeTwo = stateCodeTwo;
-                            connection.quantity = stateValue;
-                            connections.push(connection);
-                        });
-                        connections.forEach(function(d){
-                            var stateOne = d.stateCodeOne;
-                            var stateTwo = d.stateCodeTwo;
-                            var quantity = d.quantity;
-                            var coordOne = [];
-                            var coordTwo = [];
-                            var connectionPath = [];
-                            for (var i = 0; i < states.features.length; i++){
-                                var stateCenter = states.features[i];
-                                if (stateOne === stateCenter.properties.code){
-                                    var lat = stateCenter.properties.latitude;
-                                    var lon = stateCenter.properties.longitude;
-                                    coordOne.push(lat);
-                                    coordOne.push(lon);
-                                    connectionPath.push(coordOne);
-                                    break;
-                                }
-                            }
-                            for(var i = 0; i < states.features.length; i++){
-                                var stateCenter = states.features[i];
-                                if(stateTwo === stateCenter.properties.code){
-                                    var lat = stateCenter.properties.latitude;
-                                    var lon = stateCenter.properties.longitude;
-                                    coordTwo.push(lat);
-                                    coordTwo.push(lon);
-                                    connectionPath.push(coordTwo);
-                                    connectionPath.push(quantity);
-                                    break;
-                                }
-                            }
-                            coords.push(connectionPath);
-                        });
-
-                        var quantities = [];
-                        coords.forEach(function(d){
-                            quantities.push(d[2]);
-                        });
-                        var thicknessExtent = d3.extent(quantities);
-                        var thicknessScale = d3.scaleQuantile()
-                            .domain(thicknessExtent)
-                            .range([6 ,8, 10, 12, 14]);
-
-                        mapArea.selectAll("#connection-path").remove();
-                        mapArea.selectAll("#connection-path")
-                            .data(coords)
-                            .enter()
-                            .append("path")
-                            .attr("id", "#connection-path")
-                            .attr("d", function (d) {
-                                return path({
-                                    type: "LineString",
-                                    coordinates: [
-                                        [d[0][1], d[0][0]],
-                                        [d[1][1], d[1][0]]
-                                    ]
-                                });
-                            })
-                            .style("fill", "none")
-                            .style("stroke-opacity", 0.5)
-                            .style('stroke-width', (d) =>{
-                                return thicknessScale(d[2]);
-                            })
-                            .style('stroke', (d) =>{
-                                return getColor(d);
-                            })
-
-                        mapArea.selectAll("#connection-dot").remove();
-                        let dots = mapArea
-                            .append("g")
-                            .attr("id", "connection-dot")
-                            .selectAll("#connection-dot")
-                            .data(coords)
-                            .enter();
-
-                        dots.append("circle")
-                            .attr("cx", function(d){
-                                let lat = d[0][0];
-                                let lon = d[0][1];
-                                return projection([lon, lat])[0];
-                            })
-                            .attr("cy", function(d){
-                                let lat = d[0][0];
-                                let lon = d[0][1];
-                                return projection([lon, lat])[1];
-                            })
-                            .attr("r", 6)
-                            .attr("fill", (d) =>{
-                                return getColor(d);
-                            });
-
-                        dots.append("circle")
-                            .attr("cx", function(d){
-                                let lat = d[1][0];
-                                let lon = d[1][1];
-                                return projection([lon, lat])[0];
-                            })
-                            .attr("cy", function(d){
-                                let lat = d[1][0];
-                                let lon = d[1][1];
-                                return projection([lon, lat])[1];
-                            })
-                            .attr("r", 6)
-                            .attr("fill", (d) =>{
-                                return getColor(d[0]);
-                            });
-
-                    }
-
-                    me.onUpdate();
-                });
-            });
-        }
-        else if(mapLevel === "counties"){
-            getData("counties", function(mapData){
-                var counties = topojson.feature(mapData, mapData.objects.counties);
-                var projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
-                var path = d3.geoPath(projection);
-
-              //Create map layer
-                var countyMap = mapArea.append("g");
-
-
-              //Render county polygons
-                var countyPolygons = countyMap.selectAll("path")
-                  .data(counties.features)
-                  .join("path")
-                  .attr("fill", 'lightgray')
-                  .attr("d", path);
-
-
-              //Render state boundaries
-                countyMap
-                  .append("path")
-                  .attr("fill", "none")
-                  .attr("stroke", "white")
-                  .attr("d", path(
-                      topojson.mesh(
-                        mapData,
-                        mapData.objects.states,
-                        function(a, b) {
-                          return a !== b;
-                        }
-                      )
-                    )
-                  );
-
-
-              //Render data
-                if (chartConfig.mapType === "Point"){
-
-                  //Get points
-                    var points = getPoints(data, chartConfig, projection);
-
-
-                  //If points are empty but a mapValue is defined, use county centroids
-                    if (points.coords.length===0 && chartConfig.mapValue){
-                        data.forEach(function(d){
-                            var county = d.county;
-                            for (var i = 0; i < counties.features.length; i++){
-                                var feature = counties.features[i];
-                                if (county === feature.id){
+                var points = getPoints(data, chartConfig, projection);
+                var coords = points.coords;
+                if (coords.length===0){ //use state centroids
+                    points.hasValue = false;
+                    data.forEach(function(d){
+                        var state = d[chartConfig.mapLocation];
+                        for (var i = 0; i < states.features.length; i++){
+                            var feature = states.features[i];
+                            if (state === feature.properties.code){
+                                if (chartConfig.mapValue){
                                     var val = parseFloat(d[chartConfig.mapValue]);
                                     if (!isNaN(val) && val>0){
                                         var coord = path.centroid(feature);
                                         coord.push(d[chartConfig.mapValue]);
-                                        points.coords.push(coord);
+                                        coords.push(coord);
+                                        points.hasValue = true;
                                     }
                                 }
                             }
-                        });
+                        }
+                    });
+                    points.coords = coords;
+                }
+                renderPoints(points, chartConfig, extent);
+
+            }
+            else if(chartConfig.mapType === "Area"){
+
+
+              //Analyze data
+                var numStates = 0;
+                var numCounties = 0;
+                var numCensusRegions = 0;
+                data.forEach(function(d){
+                    var location = d[chartConfig.mapLocation];
+                    if (typeof location === 'undefined') return;
+
+                    var censusDivision = null;
+                    if (location.indexOf(",")>-1){
+                        try{
+                            var locations = location.split(",");
+                            var censusDivision = locations[1];
+                            censusDivision = censusDivision.replace(/\D/g, "");
+                            censusDivision = parseInt(censusDivision);
+                        }
+                        catch(e){}
                     }
 
 
-                  //Render points
-                    renderPoints(points, chartConfig, extent);
+                    counties.features.every(function(county){
+                        if (county.id===location){
+                            numCounties++;
+                            return false;
+                        }
+                        return true;
+                    });
 
-                }
-                else if(chartConfig.mapType === "Area"){
+                    states.features.every(function(state){
+                        var foundMatch = false;
 
-                  //Map countyIDs to data values
+                        if (state.properties.name===location || state.properties.code===location){
+                            numStates++;
+                            foundMatch = true;
+                        }
+
+                        if (!isNaN(censusDivision)){
+                            if (state.properties.censusDivision===censusDivision){
+                                numCensusRegions++;
+                                foundMatch = true;
+                            }
+                        }
+
+                        return !foundMatch;
+                    });
+
+                });
+                console.log(numStates, numCounties, numCensusRegions, data.length);
+
+
+              //Render data using the most suitable geometry type
+                var maxMatches = Math.max(numStates, numCounties, numCensusRegions);
+                if (maxMatches===numCounties){ //render counties
+
                     var values = {};
                     data.forEach(function(d){
                         var countyID = d[chartConfig.mapLocation];
                         values[countyID] = d[chartConfig.mapValue];
                     });
 
+                    worldMap.selectAll("whatever")
+                    .data(counties.features)
+                    .enter()
+                    .append("path")
+                    .attr('d', path)
+                    .attr('fill', function(county){
+                        var v = parseFloat(values[county.id]);
+                        if (isNaN(v) || v<0) v = 0;
+                        var fill = colorScale[chartConfig.colorScale](v);
+                        if (!fill) return 'none';
+                        return fill;
+                    });
+                    renderStates();
+                }
+                else if (maxMatches===numStates){ //render states
+                    var statePolygons = renderStates();
 
-                  //Update fill color of county polygons
-                    countyPolygons.each(function() {
+                    var values = {};
+                    data.forEach(function(d){
+                        var location = d[chartConfig.mapLocation];
+                        if (typeof location === 'undefined') return;
+                        values[location] = d[chartConfig.mapValue];
+                    });
+
+                    statePolygons.each(function() {
                         var path = d3.select(this);
-                        var fillColor = path.attr('fill');
-                        path.attr('fill', function(d){
-                            var v = parseFloat(values[d.id]);
+                        path.attr('fill', function(state){
+                            var v = parseFloat(values[state.properties.name]);
+                            if (isNaN(v)) v = parseFloat(values[state.properties.code]);
                             if (isNaN(v) || v<0) v = 0;
                             var fill = colorScale[chartConfig.colorScale](v);
-                            if (!fill) return fillColor;
+                            if (!fill) return 'none';
                             return fill;
                         });
                     });
+
+                }
+                else if (maxMatches===numCensusRegions){ //render census regions
+                    var statePolygons = renderStates();
+
+                    statePolygons.each(function() {
+                        var path = d3.select(this);
+                        var fillColor = path.attr('fill');
+                        path.attr('fill', function(d){
+                            return fillColor;
+                        });
+                    });
+                }
+            }
+            else if(chartConfig.mapType === "Links"){
+
+                var nodes = data.nodes;
+                var links = data.links;
+                var linkArray = [];
+                var connections = [];
+                var coords = [];
+                //Split Links up into the component parts.
+                for(var link in links){
+                    if(links.hasOwnProperty(link)){
+                        var linkage = link.split('->');
+                        linkage.push(links[link].quantity);
+                        linkArray.push(linkage);
+                    }
+                };
+                linkArray.forEach(function(d){
+                    var connection = {};
+                    var stateCodeOne = nodes[d[0]].state;
+                    var stateCodeTwo = nodes[d[1]].state;
+                    var stateValue = d[2];
+                    connection.stateCodeOne = stateCodeOne;
+                    connection.stateCodeTwo = stateCodeTwo;
+                    connection.quantity = stateValue;
+                    connections.push(connection);
+                });
+                connections.forEach(function(d){
+                    var stateOne = d.stateCodeOne;
+                    var stateTwo = d.stateCodeTwo;
+                    var quantity = d.quantity;
+                    var coordOne = [];
+                    var coordTwo = [];
+                    var connectionPath = [];
+                    for (var i = 0; i < states.features.length; i++){
+                        var stateCenter = states.features[i];
+                        if (stateOne === stateCenter.properties.code){
+                            var lat = stateCenter.properties.latitude;
+                            var lon = stateCenter.properties.longitude;
+                            coordOne.push(lat);
+                            coordOne.push(lon);
+                            connectionPath.push(coordOne);
+                            break;
+                        }
+                    }
+                    for(var i = 0; i < states.features.length; i++){
+                        var stateCenter = states.features[i];
+                        if(stateTwo === stateCenter.properties.code){
+                            var lat = stateCenter.properties.latitude;
+                            var lon = stateCenter.properties.longitude;
+                            coordTwo.push(lat);
+                            coordTwo.push(lon);
+                            connectionPath.push(coordTwo);
+                            connectionPath.push(quantity);
+                            break;
+                        }
+                    }
+                    coords.push(connectionPath);
+                });
+
+                var quantities = [];
+                coords.forEach(function(d){
+                    quantities.push(d[2]);
+                });
+                var thicknessExtent = d3.extent(quantities);
+                var thicknessScale = d3.scaleQuantile()
+                    .domain(thicknessExtent)
+                    .range([6 ,8, 10, 12, 14]);
+
+                mapArea.selectAll("#connection-path").remove();
+                mapArea.selectAll("#connection-path")
+                    .data(coords)
+                    .enter()
+                    .append("path")
+                    .attr("id", "#connection-path")
+                    .attr("d", function (d) {
+                        return path({
+                            type: "LineString",
+                            coordinates: [
+                                [d[0][1], d[0][0]],
+                                [d[1][1], d[1][0]]
+                            ]
+                        });
+                    })
+                    .style("fill", "none")
+                    .style("stroke-opacity", 0.5)
+                    .style('stroke-width', (d) =>{
+                        return thicknessScale(d[2]);
+                    })
+                    .style('stroke', (d) =>{
+                        return getColor(d);
+                    });
+
+                mapArea.selectAll("#connection-dot").remove();
+                let dots = mapArea
+                    .append("g")
+                    .attr("id", "connection-dot")
+                    .selectAll("#connection-dot")
+                    .data(coords)
+                    .enter();
+
+                dots.append("circle")
+                    .attr("cx", function(d){
+                        let lat = d[0][0];
+                        let lon = d[0][1];
+                        return projection([lon, lat])[0];
+                    })
+                    .attr("cy", function(d){
+                        let lat = d[0][0];
+                        let lon = d[0][1];
+                        return projection([lon, lat])[1];
+                    })
+                    .attr("r", 6)
+                    .attr("fill", (d) =>{
+                        return getColor(d);
+                    });
+
+                dots.append("circle")
+                    .attr("cx", function(d){
+                        let lat = d[1][0];
+                        let lon = d[1][1];
+                        return projection([lon, lat])[0];
+                    })
+                    .attr("cy", function(d){
+                        let lat = d[1][0];
+                        let lon = d[1][1];
+                        return projection([lon, lat])[1];
+                    })
+                    .attr("r", 6)
+                    .attr("fill", (d) =>{
+                        return getColor(d[0]);
+                    });
+
+            }
+
+            me.onUpdate();
+        }
+        else if(mapLevel === "counties"){
+
+            var projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
+            var path = d3.geoPath(projection);
+
+          //Create map layer
+            var countyMap = mapArea.append("g");
+
+
+          //Render county polygons
+            var countyPolygons = countyMap.selectAll("path")
+              .data(counties.features)
+              .join("path")
+              .attr("fill", 'lightgray')
+              .attr("d", path);
+
+
+          //Render state boundaries
+            countyMap
+              .append("path")
+              .attr("fill", "none")
+              .attr("stroke", "white")
+              .attr("d", path(
+                  topojson.mesh(
+                    countyData,
+                    countyData.objects.states,
+                    function(a, b) {
+                      return a !== b;
+                    }
+                  )
+                )
+              );
+
+
+          //Render data
+            if (chartConfig.mapType === "Point"){
+
+              //Get points
+                var points = getPoints(data, chartConfig, projection);
+
+
+              //If points are empty but a mapValue is defined, use county centroids
+                if (points.coords.length===0 && chartConfig.mapValue){
+                    data.forEach(function(d){
+                        var county = d.county;
+                        for (var i = 0; i < counties.features.length; i++){
+                            var feature = counties.features[i];
+                            if (county === feature.id){
+                                var val = parseFloat(d[chartConfig.mapValue]);
+                                if (!isNaN(val) && val>0){
+                                    var coord = path.centroid(feature);
+                                    coord.push(d[chartConfig.mapValue]);
+                                    points.coords.push(coord);
+                                }
+                            }
+                        }
+                    });
                 }
 
-                me.onUpdate();
-            });
+
+              //Render points
+                renderPoints(points, chartConfig, extent);
+
+            }
+            else if(chartConfig.mapType === "Area"){
+
+              //Map countyIDs to data values
+                var values = {};
+                data.forEach(function(d){
+                    var countyID = d[chartConfig.mapLocation];
+                    values[countyID] = d[chartConfig.mapValue];
+                });
+
+
+              //Update fill color of county polygons
+                countyPolygons.each(function() {
+                    var path = d3.select(this);
+                    var fillColor = path.attr('fill');
+                    path.attr('fill', function(d){
+                        var v = parseFloat(values[d.id]);
+                        if (isNaN(v) || v<0) v = 0;
+                        var fill = colorScale[chartConfig.colorScale](v);
+                        if (!fill) return fillColor;
+                        return fill;
+                    });
+                });
+            }
+
+            me.onUpdate();
         }
         else if(mapLevel === "world"){
-            getData("countries", function(mapData){
-                if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
-                if(isNaN(chartConfig.centerLongitude)) chartConfig.centerLongitude = 0;
-                if(isNaN(chartConfig.centerLatitude)) chartConfig.centerLatitude = 0;
-                var zoom = chartConfig.linkZoom;
-                var centerLon = 0;
-                var centerLat = 20;
-                var countries = topojson.feature(mapData, mapData.objects.countries);
+
+            if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
+            if(isNaN(chartConfig.centerLongitude)) chartConfig.centerLongitude = 0;
+            if(isNaN(chartConfig.centerLatitude)) chartConfig.centerLatitude = 0;
+            var zoom = chartConfig.linkZoom;
+            var centerLon = 0;
+            var centerLat = 20;
+
 //                var projection = d3.geoMercator()
 //                                .scale(zoom)
 //                                .rotate([centerLon, 0])
 //                                .center([0, centerLat])
 //                                .translate([width / 2, height / 2]);
 
-                var projection = d3.geoMercator().center([centerLon, centerLat]).scale(180);
-                var path = d3.geoPath(projection);
+            var projection = d3.geoMercator().center([centerLon, centerLat]).scale(180);
+            var path = d3.geoPath(projection);
 
 
-              //Render countries
+          //Render countries
+            mapArea.selectAll("path")
+                .data(countries.features)
+                .enter()
+                .append("path")
+                .attr('d', path)
+                .attr('fill', 'lightgray')
+                .attr('stroke', 'white');
+
+
+            if (chartConfig.mapType === "Point"){
+                var points = getPoints(data, chartConfig, projection);
+                renderPoints(points, chartConfig, extent);
+            }
+            else if(chartConfig.mapType === "Area"){
+                var aggregateState = 0;
+                data.forEach(function(d){
+                    var state;
+                    var country;
+                    if(d.state) {
+                        state = d.state;
+                        aggregateState = aggregateState + parseFloat(d[chartConfig.mapValue]);
+                    }
+                   if(d.country) country = d.country;
+                    for(var i = 0; i < countries.features.length; i++){
+                        if(country == countries.features[i].properties.code){
+                            countries.features[i].properties.inData = true;
+                            countries.features[i].properties.mapValue = d[chartConfig.mapValue];
+                        }else if(countries.features[i].properties.code == "US" &&
+                                aggregateState > 0){
+                            countries.features[i].properties.inData = true;
+                            countries.features[i].properties.mapValue = aggregateState;
+                        }
+                    }
+                });
                 mapArea.selectAll("path")
                     .data(countries.features)
                     .enter()
                     .append("path")
                     .attr('d', path)
-                    .attr('fill', 'lightgray')
-                    .attr('stroke', 'white');
-
-
-                if (chartConfig.mapType === "Point"){
-                    var points = getPoints(data, chartConfig, projection);
-                    renderPoints(points, chartConfig, extent);
-                }
-                else if(chartConfig.mapType === "Area"){
-                    var aggregateState = 0;
-                    data.forEach(function(d){
-                        var state;
-                        var country;
-                        if(d.state) {
-                            state = d.state;
-                            aggregateState = aggregateState + parseFloat(d[chartConfig.mapValue]);
-                        }
-                       if(d.country) country = d.country;
-                        for(var i = 0; i < countries.features.length; i++){
-                            if(country == countries.features[i].properties.code){
-                                countries.features[i].properties.inData = true;
-                                countries.features[i].properties.mapValue = d[chartConfig.mapValue];
-                            }else if(countries.features[i].properties.code == "US" &&
-                                    aggregateState > 0){
-                                countries.features[i].properties.inData = true;
-                                countries.features[i].properties.mapValue = aggregateState;
-                            }
+                    .attr('stroke', 'white')
+                    .attr('fill', function(d){
+                        var inData = d.properties.inData;
+                        if(inData){
+                            return colorScale[chartConfig.colorScale](d.properties.mapValue);
+                        }else{
+                            return "lightgrey";
                         }
                     });
-                    mapArea.selectAll("path")
-                        .data(countries.features)
-                        .enter()
-                        .append("path")
-                        .attr('d', path)
-                        .attr('stroke', 'white')
-                        .attr('fill', function(d){
-                            var inData = d.properties.inData;
-                            if(inData){
-                                return colorScale[chartConfig.colorScale](d.properties.mapValue);
-                            }else{
-                                return "lightgrey";
-                            }
-                        });
-                }
-                else if(chartConfig.mapType === "Links"){
-                    getData("PortsOfEntry", function(ports){
-                        renderLinks(data, countries, ports);
-                    });
-                }
+            }
+            else if(chartConfig.mapType === "Links"){
+                getData("PortsOfEntry", function(ports){
+                    renderLinks(data, countries, ports);
+                });
+            }
 
-                me.onUpdate();
-            });
+            me.onUpdate();
         }
     };
 
@@ -803,6 +804,37 @@ bluewave.charts.MapChart = function(parent, config) {
             return "translate(" + [d[0],d[1]] + ")";
         })
         .style("fill", c);
+    };
+
+
+  //**************************************************************************
+  //** getMapData
+  //**************************************************************************
+    var getMapData = function(callback){
+        if (counties){
+            if (countries) callback();
+            else{
+                getData("countries", function(countryData){
+                    countries = topojson.feature(countryData, countryData.objects.countries);
+                    callback();
+                });
+            }
+        }
+        else{
+            getData("counties", function(json){
+                countyData = json;
+                counties = topojson.feature(countyData, countyData.objects.counties);
+                states = topojson.feature(countyData, countyData.objects.states);
+                if (countries) callback();
+                else{
+                    getData("countries", function(json){
+                        countryData = json;
+                        countries = topojson.feature(countryData, countryData.objects.countries);
+                        callback();
+                    });
+                }
+            });
+        }
     };
 
 
