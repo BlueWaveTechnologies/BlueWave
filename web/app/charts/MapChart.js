@@ -110,7 +110,135 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
         var mapLevel = chartConfig.mapLevel;
-        if (mapLevel === "states"){
+        if (mapLevel === "counties"){
+
+            var projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
+            var path = d3.geoPath(projection);
+
+          //Create map layer
+            var countyMap = mapArea.append("g");
+
+
+          //Render county polygons
+            var renderCounties = function(){
+                return countyMap.selectAll("path")
+                  .data(counties.features)
+                  .join("path")
+                  .attr("fill", 'none')
+                  .attr("d", path);
+            };
+
+
+          //Render state boundaries
+            var renderStates = function(renderPolygons){
+                if (renderPolygons===true){
+                    return countyMap.selectAll("whatever")
+                    .data(states.features)
+                    .enter()
+                    .append("path")
+                    .attr('d', path)
+                    .attr('fill', 'none')
+                    .attr('stroke', 'white');
+                }
+                else{
+                    countyMap
+                      .append("path")
+                      .attr("fill", "none")
+                      .attr("stroke", "white")
+                      .attr("d", path(
+                          topojson.mesh(
+                            countyData,
+                            countyData.objects.states,
+                            function(a, b) {
+                              return a !== b;
+                            }
+                          )
+                        )
+                      );
+                }
+            };
+
+
+          //Render data
+            if (chartConfig.mapType === "Point"){
+
+              //Render counties and states
+                renderCounties();
+                renderStates();
+
+
+              //Get points
+                var points = getPoints(data, chartConfig, projection);
+
+
+              //If points are empty but a mapValue is defined, use county centroids
+                if (points.coords.length===0 && chartConfig.mapValue){
+                    data.forEach(function(d){
+                        var county = d.county;
+                        for (var i = 0; i < counties.features.length; i++){
+                            var feature = counties.features[i];
+                            if (county === feature.id){
+                                var val = parseFloat(d[chartConfig.mapValue]);
+                                if (!isNaN(val) && val>0){
+                                    var coord = path.centroid(feature);
+                                    coord.push(d[chartConfig.mapValue]);
+                                    points.coords.push(coord);
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+              //Render points
+                renderPoints(points, chartConfig, extent);
+
+            }
+            else if(chartConfig.mapType === "Area"){
+
+                var area = selectArea(data, chartConfig);
+                if (area==="counties"){
+
+                  //Render Counties
+                    var countyPolygons = renderCounties();
+
+
+
+                  //Map countyIDs to data values
+                    var values = {};
+                    data.forEach(function(d){
+                        var countyID = d[chartConfig.mapLocation];
+                        values[countyID] = d[chartConfig.mapValue];
+                    });
+
+
+                  //Update fill color of county polygons
+                    countyPolygons.each(function() {
+                        var path = d3.select(this);
+                        var fillColor = path.attr('fill');
+                        path.attr('fill', function(d){
+                            var v = parseFloat(values[d.id]);
+                            if (isNaN(v) || v<0) v = 0;
+                            var fill = colorScale[chartConfig.colorScale](v);
+                            if (!fill) return fillColor;
+                            return fill;
+                        });
+                    });
+
+
+                  //Render state boundaries
+                    renderStates();
+                }
+                else if (area==="states"){ //render states
+                    var statePolygons = renderStates(true);
+                    updateStatePolygons(data, statePolygons, chartConfig, colorScale);
+                }
+
+            }
+
+            me.onUpdate();
+        }
+        else if (mapLevel === "states"){
 
             var projection = d3.geoAlbers().center([-8, 43]);
             var path = d3.geoPath(projection);
@@ -176,59 +304,9 @@ bluewave.charts.MapChart = function(parent, config) {
             else if(chartConfig.mapType === "Area"){
 
 
-              //Analyze data
-                var numStates = 0;
-                var numCounties = 0;
-                var numCensusRegions = 0;
-                data.forEach(function(d){
-                    var location = d[chartConfig.mapLocation];
-                    if (typeof location === 'undefined') return;
-
-                    var censusDivision = null;
-                    if (location.indexOf(",")>-1){
-                        try{
-                            var locations = location.split(",");
-                            var censusDivision = locations[1];
-                            censusDivision = censusDivision.replace(/\D/g, "");
-                            censusDivision = parseInt(censusDivision);
-                        }
-                        catch(e){}
-                    }
-
-
-                    counties.features.every(function(county){
-                        if (county.id===location){
-                            numCounties++;
-                            return false;
-                        }
-                        return true;
-                    });
-
-                    states.features.every(function(state){
-                        var foundMatch = false;
-
-                        if (state.properties.name===location || state.properties.code===location){
-                            numStates++;
-                            foundMatch = true;
-                        }
-
-                        if (!isNaN(censusDivision)){
-                            if (state.properties.censusDivision===censusDivision){
-                                numCensusRegions++;
-                                foundMatch = true;
-                            }
-                        }
-
-                        return !foundMatch;
-                    });
-
-                });
-                console.log(numStates, numCounties, numCensusRegions, data.length);
-
-
               //Render data using the most suitable geometry type
-                var maxMatches = Math.max(numStates, numCounties, numCensusRegions);
-                if (maxMatches===numCounties){ //render counties
+                var area = selectArea(data, chartConfig);
+                if (area==="counties"){ //render counties
 
                     var values = {};
                     data.forEach(function(d){
@@ -250,30 +328,11 @@ bluewave.charts.MapChart = function(parent, config) {
                     });
                     renderStates();
                 }
-                else if (maxMatches===numStates){ //render states
+                else if (area==="states"){ //render states
                     var statePolygons = renderStates();
-
-                    var values = {};
-                    data.forEach(function(d){
-                        var location = d[chartConfig.mapLocation];
-                        if (typeof location === 'undefined') return;
-                        values[location] = d[chartConfig.mapValue];
-                    });
-
-                    statePolygons.each(function() {
-                        var path = d3.select(this);
-                        path.attr('fill', function(state){
-                            var v = parseFloat(values[state.properties.name]);
-                            if (isNaN(v)) v = parseFloat(values[state.properties.code]);
-                            if (isNaN(v) || v<0) v = 0;
-                            var fill = colorScale[chartConfig.colorScale](v);
-                            if (!fill) return 'none';
-                            return fill;
-                        });
-                    });
-
+                    updateStatePolygons(data, statePolygons, chartConfig, colorScale);
                 }
-                else if (maxMatches===numCensusRegions){ //render census regions
+                else if (area==="censusRegions"){ //render census regions
                     var statePolygons = renderStates();
 
                     statePolygons.each(function() {
@@ -285,7 +344,7 @@ bluewave.charts.MapChart = function(parent, config) {
                     });
                 }
             }
-            else if(chartConfig.mapType === "Links"){
+            else if(chartConfig.mapType === "Links"){ //untested...
 
                 var nodes = data.nodes;
                 var links = data.links;
@@ -416,96 +475,6 @@ bluewave.charts.MapChart = function(parent, config) {
                         return getColor(d[0]);
                     });
 
-            }
-
-            me.onUpdate();
-        }
-        else if(mapLevel === "counties"){
-
-            var projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
-            var path = d3.geoPath(projection);
-
-          //Create map layer
-            var countyMap = mapArea.append("g");
-
-
-          //Render county polygons
-            var countyPolygons = countyMap.selectAll("path")
-              .data(counties.features)
-              .join("path")
-              .attr("fill", 'lightgray')
-              .attr("d", path);
-
-
-          //Render state boundaries
-            countyMap
-              .append("path")
-              .attr("fill", "none")
-              .attr("stroke", "white")
-              .attr("d", path(
-                  topojson.mesh(
-                    countyData,
-                    countyData.objects.states,
-                    function(a, b) {
-                      return a !== b;
-                    }
-                  )
-                )
-              );
-
-
-          //Render data
-            if (chartConfig.mapType === "Point"){
-
-              //Get points
-                var points = getPoints(data, chartConfig, projection);
-
-
-              //If points are empty but a mapValue is defined, use county centroids
-                if (points.coords.length===0 && chartConfig.mapValue){
-                    data.forEach(function(d){
-                        var county = d.county;
-                        for (var i = 0; i < counties.features.length; i++){
-                            var feature = counties.features[i];
-                            if (county === feature.id){
-                                var val = parseFloat(d[chartConfig.mapValue]);
-                                if (!isNaN(val) && val>0){
-                                    var coord = path.centroid(feature);
-                                    coord.push(d[chartConfig.mapValue]);
-                                    points.coords.push(coord);
-                                }
-                            }
-                        }
-                    });
-                }
-
-
-              //Render points
-                renderPoints(points, chartConfig, extent);
-
-            }
-            else if(chartConfig.mapType === "Area"){
-
-              //Map countyIDs to data values
-                var values = {};
-                data.forEach(function(d){
-                    var countyID = d[chartConfig.mapLocation];
-                    values[countyID] = d[chartConfig.mapValue];
-                });
-
-
-              //Update fill color of county polygons
-                countyPolygons.each(function() {
-                    var path = d3.select(this);
-                    var fillColor = path.attr('fill');
-                    path.attr('fill', function(d){
-                        var v = parseFloat(values[d.id]);
-                        if (isNaN(v) || v<0) v = 0;
-                        var fill = colorScale[chartConfig.colorScale](v);
-                        if (!fill) return fillColor;
-                        return fill;
-                    });
-                });
             }
 
             me.onUpdate();
@@ -804,6 +773,104 @@ bluewave.charts.MapChart = function(parent, config) {
             return "translate(" + [d[0],d[1]] + ")";
         })
         .style("fill", c);
+    };
+
+
+  //**************************************************************************
+  //** selectArea
+  //**************************************************************************
+  /** Returns most suitable map type based on the "mapLocation" config
+   */
+    var selectArea = function(data, chartConfig){
+
+      //Analyze data
+        var numStates = 0;
+        var numCounties = 0;
+        var numCensusRegions = 0;
+        data.forEach(function(d){
+            var location = d[chartConfig.mapLocation];
+            if (typeof location === 'undefined') return;
+
+            var censusDivision = null;
+            if (location.indexOf(",")>-1){
+                try{
+                    var locations = location.split(",");
+                    var censusDivision = locations[1];
+                    censusDivision = censusDivision.replace(/\D/g, "");
+                    censusDivision = parseInt(censusDivision);
+                }
+                catch(e){}
+            }
+
+
+            counties.features.every(function(county){
+                if (county.id===location){
+                    numCounties++;
+                    return false;
+                }
+                return true;
+            });
+
+            states.features.every(function(state){
+                var foundMatch = false;
+
+                if (state.properties.name===location || state.properties.code===location){
+                    numStates++;
+                    foundMatch = true;
+                }
+
+                if (!isNaN(censusDivision)){
+                    if (state.properties.censusDivision===censusDivision){
+                        numCensusRegions++;
+                        foundMatch = true;
+                    }
+                }
+
+                return !foundMatch;
+            });
+
+        });
+        //console.log(numStates, numCounties, numCensusRegions, data.length);
+
+
+      //Render data using the most suitable geometry type
+        var maxMatches = Math.max(numStates, numCounties, numCensusRegions);
+        if (maxMatches===numCounties){ //render counties
+            return "counties";
+        }
+        else if (maxMatches===numStates){ //render states
+            return "states";
+        }
+        else if (maxMatches===numCensusRegions){ //render census regions
+            return "censusRegion";
+        }
+    };
+
+
+  //**************************************************************************
+  //** updateStatePolygons
+  //**************************************************************************
+  /** Used to update the fill color for states using the "mapValue"
+   */
+    var updateStatePolygons = function(data, statePolygons, chartConfig, colorScale){
+        var values = {};
+        data.forEach(function(d){
+            var location = d[chartConfig.mapLocation];
+            if (typeof location === 'undefined') return;
+            values[location] = d[chartConfig.mapValue];
+        });
+
+        statePolygons.each(function() {
+            var path = d3.select(this);
+            path.attr('fill', function(state){
+                var v = parseFloat(values[state.properties.name]);
+                if (isNaN(v)) v = parseFloat(values[state.properties.code]);
+                if (isNaN(v) || v<0) v = 0;
+                var fill = colorScale[chartConfig.colorScale](v);
+                if (!fill) return 'none';
+                return fill;
+            });
+        });
     };
 
 
