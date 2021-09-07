@@ -35,7 +35,6 @@ if(!bluewave.charts) bluewave.charts={};
         long:null,
         mapValue:null,
         mapLevel:null,
-        censusRegion:null,
         colorScale:null
     };
     var styleEditor, colorPicker;
@@ -65,7 +64,6 @@ if(!bluewave.charts) bluewave.charts={};
         createInput(div,"mapLevel","Map Level",showHideDropDowns);
         createInput(div,"latitude","Latitude",createMapPreview,"lat");
         createInput(div,"longitude","Longitude",createMapPreview,"long");
-        createInput(div,"censusRegion","Census Location Field",createMapPreview);
         createInput(div,"mapLocation","Location Data",createMapPreview);
         createInput(div,"mapValue","Value",createMapPreview);
         createInput(div,"mapProjectionName","Projection",createMapPreview);
@@ -172,7 +170,6 @@ if(!bluewave.charts) bluewave.charts={};
             dataOptions.forEach((val)=>{
                 mapInputs.lat.add(val, val);
                 mapInputs.long.add(val, val);
-                mapInputs.censusRegion.add(val, val);
                 mapInputs.mapLocation.add(val, val);
                 mapInputs.mapValue.add(val, val);
             });
@@ -183,7 +180,6 @@ if(!bluewave.charts) bluewave.charts={};
 
             mapInputs.mapLevel.add("States", "counties");
             mapInputs.mapLevel.add("Country", "states");
-            //mapInputs.mapLevel.add("US Census Regions", "census");
             mapInputs.mapLevel.add("World", "world");
 
         }
@@ -218,7 +214,6 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.mapValue.setValue(chartConfig.mapValue, true);
         mapInputs.lat.setValue(chartConfig.latitude, true);
         mapInputs.long.setValue(chartConfig.longitude, true);
-        mapInputs.censusRegion.setValue(chartConfig.censusRegion, true);
 
 
       //Render map
@@ -812,7 +807,7 @@ if(!bluewave.charts) bluewave.charts={};
     var getMapLevel = function(chartConfig){
         if (!chartConfig.mapLevel) return null;
         var mapLevel = chartConfig.mapLevel.toLowerCase();
-        if (mapLevel.indexOf("census")>-1) return "census";
+        if (mapLevel.indexOf("census")>-1) return "states";
         if (mapLevel.indexOf("states")>-1) return "states";
         if (mapLevel.indexOf("counties")>-1) return "counties";
         if (mapLevel.indexOf("countries")>-1 || mapLevel.indexOf("world")>-1) return "world";
