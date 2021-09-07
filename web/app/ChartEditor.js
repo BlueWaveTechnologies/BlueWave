@@ -72,6 +72,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+
         let table = createTable();
         let tbody = table.firstChild;
         var tr = document.createElement("tr");
@@ -167,7 +168,7 @@ bluewave.ChartEditor = function(parent, config) {
         if (pieChart) pieChart.clear();
         if (lineChart) lineChart.clear();
         if (barChart) barChart.clear();
-        
+
         if (colorPicker) colorPicker.hide();
         if (styleEditor) styleEditor.hide();
     };
@@ -385,7 +386,6 @@ bluewave.ChartEditor = function(parent, config) {
                 }
             };
         };
-
     };
 
 
@@ -680,11 +680,9 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.opacity = settings.lineOpacity/100;
                 createLinePreview();
             };
-
-
         }
         else if(chartType==="barChart"){
-                
+
           //Create color dropdown
             var chartLayout = new javaxt.dhtml.ComboBox(
                 document.createElement("div"),
@@ -696,14 +694,170 @@ bluewave.ChartEditor = function(parent, config) {
             chartLayout.add("Horizontal", "horizontal");
             chartLayout.setValue("vertical");
 
-            
-            
-            form = new javaxt.dhtml.Form(body, { 
-                style: config.style.form, 
-                items: [ 
-                    { 
-                        group: "General", 
-                        items: [ 
+
+
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "General",
+                        items: [
+
+                            {
+                                name: "layout",
+                                label: "Chart Layout",
+                                type: chartLayout
+                            },
+                            {
+                                name: "legend",
+                                label: "Display Legend",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            }
+                        ]
+                    },
+
+                    {
+                        group: "X-Axis",
+                        items: [
+                            {
+                                name: "xLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "xGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            }
+                        ]
+                    },
+
+                    {
+                        group: "Y-Axis",
+                        items: [
+                            {
+                                name: "yLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "yGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            }
+                        ]
+                    }
+
+                ]
+            });
+
+
+            //Set form value for bar layout
+            // form.findField("layout").setValue(chartConfig.layout);
+            // console.log(chartConfig.barLayout)
+            var layoutField = form.findField("layout");
+            var layout = chartConfig.barLayout;
+            layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
+
+           //Set initial value for X-gridline
+            var xGridField = form.findField("xGrid");
+            var xGrid = chartConfig.xGrid;
+            xGridField.setValue(xGrid===true ? true : false);
+
+           //Set initial value for Y-gridline
+            var yGridField = form.findField("yGrid");
+            var yGrid = chartConfig.yGrid;
+            yGridField.setValue(yGrid===true ? true : false);
+
+            //Set intial value for legend display
+            var legendField = form.findField("legend");
+            var legend = chartConfig.barLegend;
+            legendField.setValue(legend===true ? true : false);
+
+            //Set intial value for xLabel
+            var xLabelField = form.findField("xLabel");
+            var xLabel = chartConfig.xLabel;
+            xLabelField.setValue(xLabel===true ? true : false);
+
+            //Set intial value for yLabel
+            var yLabelField = form.findField("yLabel");
+            var yLabel = chartConfig.yLabel;
+            yLabelField.setValue(yLabel===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+
+
+                // if (settings.layout==="vertical") settings.layout = false;
+                // else if (settings.layout==="horizontal") {settings.xGrid = false}
+
+                if (settings.xGrid==="true") settings.xGrid = true;
+                else if (settings.xGrid==="false") settings.xGrid = false;
+
+                if (settings.yGrid==="true") settings.yGrid = true;
+                else if (settings.yGrid==="false") settings.yGrid = false;
+
+                if (settings.legend==="true") settings.legend = true;
+                else if (settings.legend==="false") settings.legend = false;
+
+                if (settings.xLabel==="true") settings.xLabel = true;
+                else if (settings.xLabel==="false") settings.xLabel = false;
+
+                if (settings.yLabel==="true") settings.yLabel = true;
+                else if (settings.yLabel==="false") settings.yLabel = false;
+
+                //Disable gridlines parallel to bars
+                if (settings.layout==="vertical") {settings.yGrid = false}
+                else if (settings.layout==="horizontal") {settings.xGrid = false}
+
+
+                chartConfig.barLayout = settings.layout;
+                chartConfig.barLegend = settings.legend;
+                chartConfig.xGrid = settings.xGrid;
+                chartConfig.yGrid = settings.yGrid;
+                chartConfig.xLabel = settings.xLabel;
+                chartConfig.yLabel = settings.yLabel;
+                createBarPreview();
+            };
+        }
+
 
       //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);
@@ -725,59 +879,13 @@ bluewave.ChartEditor = function(parent, config) {
                 }
             }, 100);
         }
-
-        // Workaround for bar chart legend until editor is split up
+        
+      //Workaround for bar chart legend until editor is split up
         if(chartType !== "barChart"){
             let legendContainer = document.querySelector(".bar-legend");
             if(legendContainer) legendContainer.remove();
         }
-        
-
     };
-    
-
-  //**************************************************************************
-  //** getColorPicker
-  //**************************************************************************
-    var getColorPicker = function(initialColor){
-      if (!colorPicker){
-          colorPicker = new javaxt.dhtml.Window(document.body, {
-              title: "Edit Color",
-              width: 340,
-              modal: false,
-              style: config.style.window
-          });
-
-          var cp = new iro.ColorPicker(colorPicker.getBody(), {
-            width: 320,
-            height: 320,
-            anticlockwise: true,
-            borderWidth: 1,
-            borderColor: "#fff",
-            css: {
-              "#output": {
-                "background-color": "$color"
-              }
-            }
-          });
-
-          cp.on("color:change", function(c){
-              colorPicker.onChange(c);
-          });
-
-          colorPicker.onChange = function(c){};
-          
-          colorPicker.setColor = function(c){
-              cp.color.set(c);
-          };
-      }
-      
-      if (initialColor) colorPicker.setColor(initialColor);
-      
-      
-      colorPicker.showAt(108+20,57+20);
-      return colorPicker;
-  };
 
 
   //**************************************************************************
