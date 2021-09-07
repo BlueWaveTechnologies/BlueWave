@@ -233,7 +233,14 @@ bluewave.charts.MapChart = function(parent, config) {
                     var statePolygons = renderStates(true);
                     updateStatePolygons(data, statePolygons, chartConfig, colorScale);
                 }
-
+                else if (area==="censusDivisions"){ //render census divisions
+                    var statePolygons = renderStates(true);
+                    updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
+                }
+                else{
+                    renderCounties();
+                    renderStates();
+                }
             }
 
             me.onUpdate();
@@ -332,16 +339,12 @@ bluewave.charts.MapChart = function(parent, config) {
                     var statePolygons = renderStates();
                     updateStatePolygons(data, statePolygons, chartConfig, colorScale);
                 }
-                else if (area==="censusRegions"){ //render census regions
+                else if (area==="censusDivisions"){ //render census divisions
                     var statePolygons = renderStates();
-
-                    statePolygons.each(function() {
-                        var path = d3.select(this);
-                        var fillColor = path.attr('fill');
-                        path.attr('fill', function(d){
-                            return fillColor;
-                        });
-                    });
+                    updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
+                }
+                else{
+                    renderStates();
                 }
             }
             else if(chartConfig.mapType === "Links"){ //untested...
@@ -786,21 +789,11 @@ bluewave.charts.MapChart = function(parent, config) {
       //Analyze data
         var numStates = 0;
         var numCounties = 0;
-        var numCensusRegions = 0;
+        var numCensusDivisions = 0;
         data.forEach(function(d){
             var location = d[chartConfig.mapLocation];
             if (typeof location === 'undefined') return;
-
-            var censusDivision = null;
-            if (location.indexOf(",")>-1){
-                try{
-                    var locations = location.split(",");
-                    var censusDivision = locations[1];
-                    censusDivision = censusDivision.replace(/\D/g, "");
-                    censusDivision = parseInt(censusDivision);
-                }
-                catch(e){}
-            }
+            var censusDivision = getCensusDivision(d[chartConfig.mapLocation]);
 
 
             counties.features.every(function(county){
@@ -821,7 +814,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
                 if (!isNaN(censusDivision)){
                     if (state.properties.censusDivision===censusDivision){
-                        numCensusRegions++;
+                        numCensusDivisions++;
                         foundMatch = true;
                     }
                 }
@@ -830,20 +823,23 @@ bluewave.charts.MapChart = function(parent, config) {
             });
 
         });
-        //console.log(numStates, numCounties, numCensusRegions, data.length);
+        //console.log(numStates, numCounties, numCensusDivisions, data.length);
 
 
       //Render data using the most suitable geometry type
-        var maxMatches = Math.max(numStates, numCounties, numCensusRegions);
-        if (maxMatches===numCounties){ //render counties
-            return "counties";
+        var maxMatches = Math.max(numStates, numCounties, numCensusDivisions);
+        if (maxMatches>0){
+            if (maxMatches===numCounties){
+                return "counties";
+            }
+            else if (maxMatches===numStates){
+                return "states";
+            }
+            else if (maxMatches===numCensusDivisions){
+                return "censusDivisions";
+            }
         }
-        else if (maxMatches===numStates){ //render states
-            return "states";
-        }
-        else if (maxMatches===numCensusRegions){ //render census regions
-            return "censusRegion";
-        }
+        return null;
     };
 
 
@@ -875,8 +871,64 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** updateCensusPolygons
+  //**************************************************************************
+  /** Used to update the fill color for states by census division using "mapValue"
+   */
+    var updateCensusPolygons = function(data, statePolygons, chartConfig, colorScale){
+        var values = {};
+        data.forEach(function(d){
+            var censusDivision = getCensusDivision(d[chartConfig.mapLocation]);
+            if (!isNaN(censusDivision)){
+                values[censusDivision+""] = d[chartConfig.mapValue];
+            }
+        });
+
+        statePolygons.each(function() {
+            var path = d3.select(this);
+            path.attr('fill', function(state){
+                var v = parseFloat(values[state.properties.censusDivision+""]);
+                if (isNaN(v) || v<0) v = 0;
+                var fill = colorScale[chartConfig.colorScale](v);
+                if (!fill) return 'none';
+                return fill;
+            });
+        });
+    };
+
+
+  //**************************************************************************
+  //** getCensusDivision
+  //**************************************************************************
+  /** Used to parse a given string and returns an integer value (1-9)
+   */
+    var getCensusDivision = function(str){
+
+        if (typeof str === 'undefined') return null;
+        var censusDivision = parseInt(censusDivision);
+        if (!isNaN(censusDivision)) return censusDivision;
+
+        str = str.toLowerCase();
+        if (str.indexOf("new england")>-1) return 1;
+        if (str.indexOf("middle atlantic")>-1 || str.indexOf("mid atlantic")>-1) return 2;
+        if (str.indexOf("east north central")>-1) return 3;
+        if (str.indexOf("west north central")>-1) return 4;
+        if (str.indexOf("south atlantic")>-1) return 5;
+        if (str.indexOf("east south central")>-1) return 6;
+        if (str.indexOf("west south central")>-1) return 7;
+        if (str.indexOf("mountain")>-1) return 8;
+        if (str.indexOf("pacific")>-1) return 9;
+
+        return null;
+    };
+
+
+  //**************************************************************************
   //** getMapData
   //**************************************************************************
+  /** Used to download and parse counties and countries and calls the callback
+   *  when ready
+   */
     var getMapData = function(callback){
         if (counties){
             if (countries) callback();
