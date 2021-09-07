@@ -1303,6 +1303,7 @@ bluewave.Explorer = function(parent, config) {
                 title: "Query",
                 width: 1020,
                 height: 600,
+                resizable: true,
                 beforeClose: function(){
                     dbView.onClose();
                 }
@@ -1324,7 +1325,7 @@ bluewave.Explorer = function(parent, config) {
                 queryService: "query/job/",
                 getTables: function(tree){
                     waitmask.show();
-                    get("graph/nodes", {
+                    get("graph/properties", {
                         success: function(nodes){
                             waitmask.hide();
 
@@ -1333,7 +1334,10 @@ bluewave.Explorer = function(parent, config) {
                             for (var i=0; i<nodes.length; i++){
                                 var nodeName = nodes[i].node;
                                 if (nodeName){
-                                    arr.push({name: nodes[i].node});
+                                    arr.push({
+                                        name: nodes[i].node,
+                                        properties: nodes[i].properties
+                                    });
                                 }
                             }
                             arr.sort(function(a, b){
@@ -1348,6 +1352,22 @@ bluewave.Explorer = function(parent, config) {
                             alert(request);
                         }
                     });
+                },
+                onTreeClick: function(item){
+                    var cql = "MATCH (n:" + item.name + ")\n";
+                    var properties = item.node.properties;
+                    if (properties && properties.length>0){
+                        cql += "RETURN\n";
+                        //cql += "   ID(n) as node_id,\n";
+                        for (var i=0; i<properties.length; i++){
+                            if (i>0) cql +=",\n";
+                            cql += "   n." + properties[i] + " as " + properties[i];
+                        }
+                    }
+                    else{
+                        cql += "RETURN ID(n) as id, properties(n) as " + item.name + " limit 10"
+                    }
+                    this.getComponents().editor.setValue(cql);
                 },
                 style:{
                     table: javaxt.dhtml.style.default.table,

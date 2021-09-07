@@ -75,7 +75,13 @@ bluewave.AdminPanel = function(parent, config) {
             waitmask: waitmask,
             queryService: "admin/job/",
             getTables: "admin/tables/",
-            appendSchemaNameToTables: true,
+            onTreeClick: function(item){
+                var sql = "select * from ";
+                var schemaName = item.node.schema;
+                if (schemaName) sql += schemaName + ".";
+                sql += item.name;
+                this.getComponents().editor.setValue(sql);
+            },
             style:{
                 table: javaxt.dhtml.style.default.table,
                 toolbar: javaxt.dhtml.style.default.toolbar,
