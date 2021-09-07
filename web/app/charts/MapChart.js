@@ -72,6 +72,16 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+        if (mapArea){
+
+        }
+    };
+
+
+  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
@@ -162,8 +172,17 @@ bluewave.charts.MapChart = function(parent, config) {
           //Render data
             if (chartConfig.mapType === "Point"){
 
-              //Render counties and states
-                renderCounties();
+              //Render counties
+                var countyPolygons = renderCounties();
+                countyPolygons.each(function() {
+                    var path = d3.select(this);
+                    path.attr('fill', function(d){
+                        return 'lightgray';
+                    });
+                });
+
+
+              //Render states
                 renderStates();
 
 
