@@ -26,7 +26,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
-
+    //let zoom = d3.zoom().on('zoom', handleZoom); //allow zoom/pan
 
   //**************************************************************************
   //** Constructor
@@ -51,7 +51,24 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
+        svg.call(d3.zoom().on("zoom", function () {
+            mapArea.attr("transform", d3.event.transform)
+        }));
     };
+
+  //**************************************************************************
+  //** handleZoom
+  //**************************************************************************
+    function handleZoom(e){
+        //mapArea.attr('transform', e.transform);
+    }
+
+  //**************************************************************************
+  //** initZoom
+  //**************************************************************************
+    function initZoom(){
+        //mapArea.call(zoom);
+    }
 
 
   //**************************************************************************
@@ -978,4 +995,5 @@ bluewave.charts.MapChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
 
     init();
+    initZoom();
 };
