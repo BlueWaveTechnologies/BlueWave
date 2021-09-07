@@ -222,6 +222,14 @@ if(!bluewave.charts) bluewave.charts={};
 
 
   //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+        if (mapChart) mapChart.resize();
+    };
+
+
+  //**************************************************************************
   //** createInput
   //**************************************************************************
     var createInput = function(parent,chartConfigRef,displayName,onChange,inputType){
