@@ -211,13 +211,14 @@ bluewave.utils = {
         var td;
         if (tr){
             td = tr.childNodes[2];
+        }else{
+            td = field.el.parentNode;
         }
-        else{
+        if(td == null){
             td = field.el.parentNode;
         }
         var getRect = javaxt.dhtml.utils.getRect;
         var rect = getRect(td);
-
 
         var inputs = td.getElementsByTagName("input");
         if (inputs.length==0) inputs = td.getElementsByTagName("textarea");
@@ -517,7 +518,7 @@ bluewave.utils = {
   //**************************************************************************
   /** Creates a custom form input using a text field
    */
-    createSlider: function(inputName, form, endCharacter = ""){
+    createSlider: function(inputName, form, endCharacter = "", min=0, max=100, interval=5){
 
       //Add row under the given input
         var input = form.findField(inputName);
@@ -534,10 +535,19 @@ bluewave.utils = {
         cols[2].appendChild(slider);
         slider.type = "range";
         slider.className = "dashboard-slider";
-        slider.setAttribute("min", 1);
-        slider.setAttribute("max", 20);
+        min = parseInt(min);
+        if (min<0) min = 0;
+        max = parseInt(max);
+        if (max<min) max = 100;
+
+        interval = parseInt(interval);
+        if (interval<1) interval = 1;
+        max = Math.ceil(max/interval);
+
+        slider.setAttribute("min", min+1);
+        slider.setAttribute("max", max+1);
         slider.onchange = function(){
-            var val = (this.value-1)*5;
+            var val = (this.value-1)*interval;
             input.setValue(val);
         };
 
@@ -549,7 +559,7 @@ bluewave.utils = {
         input.setValue = function(val){
             val = parseFloat(val);
             setValue(val + `${endCharacter}`);
-            slider.value = round(val/5)+1;
+            slider.value = round(val/interval)+1;
         };
 
         var getValue = input.getValue;
@@ -562,13 +572,42 @@ bluewave.utils = {
         input.row.getElementsByTagName("input")[0].addEventListener('input', function(e) {
             var val = parseFloat(this.value);
             if (isNumber(val)){
-                if (val<0 || val>95){
-                    if (val<0) val = 0;
-                    else val = 95;
-                }
+                if (val<0) val = 0;
+                //if (val>=94) val = 100;
+
                 input.setValue(val);
             }
         });
+    },
+
+
+  //**************************************************************************
+  //** createColorOptions
+  //**************************************************************************
+  /** Creates a custom form input using a combobox
+   */
+    createColorOptions: function(inputName, form, onClick){
+
+        var colorField = form.findField(inputName);
+        var colorPreview = colorField.getButton();
+        colorPreview.className = colorPreview.className.replace("pulldown-button-icon", "");
+        colorPreview.style.boxShadow = "none";
+        colorPreview.setColor = function(color){
+            colorPreview.style.backgroundColor =
+            colorPreview.style.borderColor = color;
+        };
+        colorField.setValue = function(color){
+            //color = getHexColor(getColor(color));
+            colorPreview.setColor(color);
+            colorField.getInput().value = color;
+            form.onChange(colorField, color);
+        };
+        colorField.getValue = function(){
+            return colorField.getInput().value;
+        };
+        colorPreview.onclick = function(){
+            if (onClick) onClick.apply(this,[colorField]);
+        };
     },
 
 
@@ -845,6 +884,72 @@ bluewave.utils = {
 
         parent.appendChild(table);
         return colorPicker;
+    },
+
+
+  //**************************************************************************
+  //** createColorPickerCallout
+  //**************************************************************************
+  /** Returns a callout with a color picker
+   */
+    createColorPickerCallout: function(config){
+
+      //Create popup
+        var popup = new javaxt.dhtml.Callout(document.body,{
+            style: {
+                panel: "color-picker-callout-panel",
+                arrow: "color-picker-callout-arrow"
+            }
+        });
+        var innerDiv = popup.getInnerDiv();
+
+
+      //Create title div
+        var title = "Select Color";
+        var titleDiv = document.createElement("div");
+        titleDiv.className = "window-header";
+        titleDiv.innerHTML = "<div class=\"window-title\">" + title + "</div>";
+        innerDiv.appendChild(titleDiv);
+
+
+      //Create content div
+        var contentDiv = document.createElement("div");
+        contentDiv.style.padding = "0 15px 15px";
+        contentDiv.style.width = "325px";
+        contentDiv.style.backgroundColor = "#fff";
+        innerDiv.appendChild(contentDiv);
+
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr = document.createElement('tr');
+        tbody.appendChild(tr);
+
+
+
+        var td = document.createElement('td');
+        tr.appendChild(td);
+        var cp = bluewave.utils.createColorPicker(td, config);
+
+        popup.onHide = function(){
+            if (cp.colorWheel && cp.colorWheel.isVisible()){
+                cp.colorWheel.hide();
+                popup.show();
+            }
+        };
+
+
+        popup.onChange = function(color){};
+        popup.setColor = function(color){
+            cp.setColor(color);
+        };
+
+        cp.onChange = function(color){
+            popup.onChange(color);
+        };
+
+        contentDiv.appendChild(table);
+        return popup;
     },
 
 
