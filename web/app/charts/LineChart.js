@@ -196,28 +196,33 @@ bluewave.charts.LineChart = function(parent, config) {
                             return y(d["value"]);
                         })
                     );
-            //define and fill area under line
-            if(chartConfig.fillArea === true){
-                plotArea
-                    .append("path")
-                    .datum(sumData)
-                    .attr("fill", chartConfig.lineColor)
-                    .attr("opacity", chartConfig.opacity)
-                    .attr(
-                        "d", d3.area()
-                        .x(function(d){
-                            if(keyType==="date"){
-                                return x(new Date(d.key));
-                            }else{
-                                return x(d.key);
-                            }
-                        })
-                        .y0(plotHeight)
-                        .y1(function(d){
-                            return y(d["value"])
-                        })
-                    
-                    );
+
+
+
+
+
+              //define and fill area under line
+                if(chartConfig.fillArea === true){
+                    plotArea
+                        .append("path")
+                        .datum(sumData)
+                        .attr("fill", chartConfig.lineColor)
+                        .attr("opacity", chartConfig.opacity)
+                        .attr(
+                            "d", d3.area()
+                            .x(function(d){
+                                if(keyType==="date"){
+                                    return x(new Date(d.key));
+                                }else{
+                                    return x(d.key);
+                                }
+                            })
+                            .y0(plotHeight)
+                            .y1(function(d){
+                                return y(d["value"])
+                            })
+
+                        );
                 }
 
 
@@ -226,9 +231,26 @@ bluewave.charts.LineChart = function(parent, config) {
             if(chartConfig.gridLines === true){
                drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.gridLines, chartConfig.gridLines);
             }
-            
+
+
+            var lines = plotArea.selectAll("path").data(data);
+            lines.on("click", function(){
+                me.onClick(this);
+            });
+
+            lines.on("dblclick", function(){
+                me.onDblClick(this);
+            });
+
         });
     };
+
+
+  //**************************************************************************
+  //** onClick
+  //**************************************************************************
+    this.onClick = function(line){};
+    this.onDblClick = function(line){};
 
 
   //**************************************************************************
