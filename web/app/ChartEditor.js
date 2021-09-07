@@ -48,8 +48,9 @@ bluewave.ChartEditor = function(parent, config) {
         lineColor:null,
         lineWidth:null,
         opacity:null,
-        fillArea:null,
-        gridLines:null
+        gridLines:null,
+        startOpacity:null,
+        endOpacity:null
     };
     var margin = {
         top: 15,
@@ -500,24 +501,7 @@ bluewave.ChartEditor = function(parent, config) {
                     {
                         group: "Style",
                         items: [
-                            {
-                                name: "area",
-                                label: "Area Chart",
-                                type: "radio",
-                                alignment: "horizontal",
-                                options: [
-                                    {
-                                        label: "true",
-                                        value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
-                                    },
-
-
-                                ]
-                            },
+                            
                             {
                                 name: "gridLines",
                                 label: "Grid Lines",
@@ -542,11 +526,7 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
 
-          //Set initial value of the area field
-            var areaField = form.findField("area");
-            var fillArea = chartConfig.fillArea;
-            areaField.setValue(fillArea===true ? true : false);
-
+ 
           //Set initial value of the gridline field
             var gridLineField = form.findField("gridLines");
             var gridlines = chartConfig.gridLines;
@@ -557,14 +537,10 @@ bluewave.ChartEditor = function(parent, config) {
             form.onChange = function(){
                 var settings = form.getData();
 
-                if (settings.area==="true") settings.area = true;
-                else if (settings.area==="false") settings.area = false;
-
                 if (settings.gridLines==="true") settings.gridLines = true;
                 else if (settings.gridLines==="false") settings.gridLines = false;
 
                 //update config values
-                chartConfig.fillArea = settings.area;
                 chartConfig.gridLines = settings.gridLines;
                 createLinePreview();
             };
@@ -603,19 +579,15 @@ bluewave.ChartEditor = function(parent, config) {
                     {
                         group: "Fill Style",
                         items: [
+
                             {
-                                name: "fillColor",
-                                label: "Color",
-                                type: new javaxt.dhtml.ComboBox(
-                                    document.createElement("div"),
-                                    {
-                                        style: config.style.combobox
-                                    }
-                                )
+                                name: "startOpacity",
+                                label: "Start Opacity",
+                                type: "text"
                             },
                             {
-                                name: "fillOpacity",
-                                label: "Opacity",
+                                name: "endOpacity",
+                                label: "End Opacity",
                                 type: "text"
                             }
                         ]
@@ -638,17 +610,26 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.lineWidth = thickness;
             form.findField("lineThickness").setValue(thickness*10);
 
-          //Add opacity slider
+          //Add opacity sliders
             createSlider("lineOpacity", form, "%");
             var opacity = chartConfig.opacity;
-            if (opacity==null) opacity = .95;
+            if (opacity==null) opacity = 1;
             chartConfig.opacity = opacity;
             form.findField("lineOpacity").setValue(opacity*100);
 
 
-            createColorOptions("fillColor", form);
-            createSlider("fillOpacity", form, "%");
+            createSlider("startOpacity", form, "%");
+            var startOpacity = chartConfig.startOpacity;
+            if (isNaN(startOpacity)) startOpacity = 0;
+            chartConfig.startOpacity = startOpacity;
+            form.findField("startOpacity").setValue(startOpacity*100);
 
+
+            createSlider("endOpacity", form, "%");
+            var endOpacity = chartConfig.endOpacity;
+            if (isNaN(endOpacity)) endOpacity = 0;
+            chartConfig.endOpacity = endOpacity;
+            form.findField("endOpacity").setValue(endOpacity*100);
 
           //Process onChange events
             form.onChange = function(){
@@ -659,6 +640,8 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.lineColor = settings.lineColor;
                 chartConfig.lineWidth = settings.lineThickness/10;
                 chartConfig.opacity = settings.lineOpacity/100;
+                chartConfig.startOpacity = settings.startOpacity/100;
+                chartConfig.endOpacity = settings.endOpacity/100;
                 createLinePreview();
             };
         }
