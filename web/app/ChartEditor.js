@@ -377,7 +377,10 @@ bluewave.ChartEditor = function(parent, config) {
             margin: margin
         });
         barChart.onDblClick = function(bar, bars){
-            var currColor = d3.select(bar).attr("fill");
+            chartConfig.barColor = d3.select(bar).attr("fill");
+            editStyle("bar");
+
+            /*
             getColorPicker(currColor).onChange = function(c){
                 for (var i=0; i<bars.length; i++){
                     var bar = d3.select(bars[i]);
@@ -385,6 +388,7 @@ bluewave.ChartEditor = function(parent, config) {
                     chartConfig.barColor = c.hexString;
                 }
             };
+            */
         };
     };
 
@@ -649,15 +653,16 @@ bluewave.ChartEditor = function(parent, config) {
             createColorOptions("lineColor", form);
             form.findField("lineColor").setValue(chartConfig.lineColor || "#6699CC");
 
-
+            
           //Update lineWidth field (add slider) and set initial value
-            createSlider("lineThickness", form);
+            createSlider("lineThickness", form, "px", 1, 10, 1);
             var thickness = chartConfig.lineWidth;
-            if (thickness==null) thickness = 1.5;
+            if (isNaN(thickness)) thickness = 1;
             chartConfig.lineWidth = thickness;
-            form.findField("lineThickness").setValue(thickness*10);
+            form.findField("lineThickness").setValue(thickness);
 
-          //Add opacity slider
+
+          //Add opacity sliders
             createSlider("lineOpacity", form, "%");
             var opacity = chartConfig.opacity;
             if (opacity==null) opacity = .95;
@@ -672,11 +677,8 @@ bluewave.ChartEditor = function(parent, config) {
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
-
-
-                //update config values
                 chartConfig.lineColor = settings.lineColor;
-                chartConfig.lineWidth = settings.lineThickness/10;
+                chartConfig.lineWidth = settings.lineThickness;
                 chartConfig.opacity = settings.lineOpacity/100;
                 createLinePreview();
             };
@@ -844,8 +846,8 @@ bluewave.ChartEditor = function(parent, config) {
                 else if (settings.yLabel==="false") settings.yLabel = false;
 
                 //Disable gridlines parallel to bars
-                if (settings.layout==="vertical") {settings.yGrid = false}
-                else if (settings.layout==="horizontal") {settings.xGrid = false}
+                if (settings.layout==="vertical") settings.yGrid = false;
+                else if (settings.layout==="horizontal") settings.xGrid = false;
 
 
                 chartConfig.barLayout = settings.layout;
@@ -854,6 +856,52 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.yGrid = settings.yGrid;
                 chartConfig.xLabel = settings.xLabel;
                 chartConfig.yLabel = settings.yLabel;
+                createBarPreview();
+            };
+        }
+        else if (chartType==="bar"){
+
+          //Add style options
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Fill Style",
+                        items: [
+                            {
+                                name: "fillColor",
+                                label: "Color",
+                                type: new javaxt.dhtml.ComboBox(
+                                    document.createElement("div"),
+                                    {
+                                        style: config.style.combobox
+                                    }
+                                )
+                            },
+                            {
+                                name: "fillOpacity",
+                                label: "Opacity",
+                                type: "text"
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+            createColorOptions("fillColor", form);
+            createSlider("fillOpacity", form, "%");
+
+
+            form.findField("fillColor").setValue(chartConfig.barColor);
+            form.findField("fillOpacity").setValue(0);
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+
+                chartConfig.barColor = settings.fillColor;
+
                 createBarPreview();
             };
         }
@@ -879,7 +927,7 @@ bluewave.ChartEditor = function(parent, config) {
                 }
             }, 100);
         }
-        
+
       //Workaround for bar chart legend until editor is split up
         if(chartType !== "barChart"){
             let legendContainer = document.querySelector(".bar-legend");
