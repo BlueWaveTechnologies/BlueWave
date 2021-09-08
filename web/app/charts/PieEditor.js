@@ -22,6 +22,7 @@ bluewave.charts.PieEditor = function(parent, config) {
     var currentNode;
     var panel;
     var inputData = [];
+    var isCsv = false;
     var svg;
     var previewArea;
     var pieChart;
@@ -122,9 +123,13 @@ bluewave.charts.PieEditor = function(parent, config) {
 
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
-            if (input!=null) inputs[i] = d3.csvParse(input);
+            if (typeof input !== 'object' && input!=null) {
+                inputs[i] = d3.csvParse(input);
+                isCsv = true;
+            }
         }
         inputData = inputs;
+
         if(config !== null && config !== undefined){
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
@@ -133,7 +138,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         }
         chartConfig.chartType = nodeType;
         createDropDown(optionsDiv);
-        createOptions();
+        createOptions(isCsv);
     };
 
 
@@ -174,22 +179,43 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   /** Initializes Options for Dropdowns.
    */
-    var createOptions = function() {
+    var createOptions = function(isCsv) {
         var data = inputData[0];
         var data2 = inputData[1];
+
+        if (!isCsv) {
+            data = Object.values(inputData[0].links);
+        }
 
         let dataOptions = Object.keys(data[0]);
         let dataOptions2 = data2?Object.keys(data2[0]):null;
 
+        if(!isCsv) {
+            dataOptions = Object.keys(inputData[0].links);
+        }
+
         pieInputs.value.clear();
         pieInputs.key.clear();
+        if (isCsv) {
         dataOptions.forEach((val)=>{
-            if(!isNaN(data[0][val])){
-                pieInputs.value.add(val,val);
-            }else{
-                pieInputs.key.add(val,val);
+                if(!isNaN(data[0][val])){
+                    pieInputs.value.add(val,val);
+                } else{
+                   pieInputs.key.add(val,val);
+                }
+            });
+        } else {
+        dataOptions.forEach((val)=>{
+            if (inputData[0].links[val] !== null) {
+                pieInputs.key.add(val);
+                pieInputs.value.add(inputData[0].links[val].quantity);
             }
+
         });
+
+
+        }
+
         pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
         pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
 

@@ -1700,6 +1700,7 @@ bluewave.Explorer = function(parent, config) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
                 if(csv === undefined){
+                    console.log(node.inputs[key].config);
                     var inputConfig = node.inputs[key].config;
                     data.push(inputConfig);
                 }else {
