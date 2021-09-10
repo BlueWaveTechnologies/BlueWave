@@ -48,8 +48,6 @@ bluewave.ChartEditor = function(parent, config) {
         lineColor:null,
         lineWidth:null,
         opacity:null,
-        fillArea:null,
-        gridLines:null,
         startOpacity:null,
         endOpacity:null,
         xGrid:null,

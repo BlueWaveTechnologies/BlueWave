@@ -1240,7 +1240,7 @@ bluewave.utils = {
   //**************************************************************************
     drawGridlines: function(svg, xScale, yScale, height, width, xGrid, yGrid){
 
-        if(yGrid){
+        if(xGrid){
          svg.append("g")
             .attr("class", "grid")
             .attr("transform", "translate(0," + height + ")")
@@ -1251,7 +1251,7 @@ bluewave.utils = {
             
         }
 
-        if(xGrid){
+        if(yGrid){
          svg.append("g")
             .attr("class", "grid")
             .call(d3.axisLeft(yScale)

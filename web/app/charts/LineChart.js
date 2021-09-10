@@ -112,8 +112,7 @@ bluewave.charts.LineChart = function(parent, config) {
             //set default values if not instantiated
             if (chartConfig.lineColor==null) chartConfig.lineColor = "#6699CC";
             if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1.5;
-            if (chartConfig.opacity==null) chartConfig.opacity = .95;
-            if (chartConfig.gridLines==null) chartConfig.gridLines = false;
+            if (chartConfig.opacity==null) chartConfig.opacity = 1;
             if (chartConfig.startOpacity==null) chartConfig.startOpacity = 0;
             if (chartConfig.endOpacity==null) chartConfig.endOpacity = 0;
 
@@ -200,25 +199,24 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
               //Define and fill area under line
-                if(chartConfig.fillArea === true){
-                    plotArea
-                        .append("path")
-                        .datum(sumData)
-                        .attr("class", "line-area")
-                        .attr(
-                            "d", d3.area()
-                            .x(function(d){
-                                if(keyType==="date"){
-                                    return x(new Date(d.key));
-                                }else{
-                                    return x(d.key);
-                                }
-                            })
-                            .y0(plotHeight)
-                            .y1(function(d){
-                                return y(d["value"])
-                            })
-                        );
+                plotArea
+                    .append("path")
+                    .datum(sumData)
+                    .attr("class", "line-area")
+                    .attr(
+                        "d", d3.area()
+                        .x(function(d){
+                             if(keyType==="date"){
+                                return x(new Date(d.key));
+                            }else{
+                                return x(d.key);
+                            }
+                        })
+                        .y0(plotHeight)
+                        .y1(function(d){
+                            return y(d["value"])
+                        })
+                     );
 
                 //Add linear gradient
                     plotArea
@@ -239,7 +237,7 @@ bluewave.charts.LineChart = function(parent, config) {
                         .attr("stop-color", (d) => d.color )
                         .attr("stop-opacity", (d) => d.opacity );
 
-                }
+                
 
             }
 

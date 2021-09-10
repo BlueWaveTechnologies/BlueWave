@@ -258,6 +258,13 @@ bluewave.charts.BarChart = function(parent, config) {
             if(chartConfig.xGrid || chartConfig.yGrid){
                 drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
             }
+
+            //Draw labels if checked
+            if(chartConfig.xLabel || chartConfig.yLabel){
+                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                    axisHeight, axisWidth, margin, bottomLabel, leftLabel);
+            }
+
             
             //Display legend
             // var legendContainer = document.querySelector(".bar-legend");
@@ -306,25 +313,6 @@ bluewave.charts.BarChart = function(parent, config) {
             //     if(legendContainer) legendContainer.remove();
             // }
 
-            //Add X-axis label
-            if(chartConfig.xLabel){
-                plotArea.append("text")             
-                .attr("x", width/2)
-                .attr("y", height+margin.bottom - 2)
-                .style("text-anchor", "middle")
-                .text(bottomLabel);
-            }
-
-            //Add Y-axis label
-            if(chartConfig.yLabel){
-                plotArea.append("text")
-                .attr("transform", "rotate(-90)")
-                .attr("x", 0 - (height/2))
-                .attr("y", 0 - margin.left)    
-                .attr("dy", "1em")
-                .style("text-anchor", "middle")
-                .text(leftLabel);
-            }
 
             
         });
@@ -499,6 +487,7 @@ bluewave.charts.BarChart = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
     var drawGridlines = bluewave.utils.drawGridlines;
+    var drawLabels = bluewave.utils.drawLabels;
 
     init();
 };
