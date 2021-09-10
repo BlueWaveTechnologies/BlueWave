@@ -1696,6 +1696,7 @@ bluewave.Explorer = function(parent, config) {
 
 
         var data = [];
+        var isSupplyChain = false;
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
@@ -1703,13 +1704,14 @@ bluewave.Explorer = function(parent, config) {
                     console.log(node.inputs[key].config);
                     var inputConfig = node.inputs[key].config;
                     data.push(inputConfig);
+                    isSupplyChain = true;
                 }else {
                     data.push(csv);
                 }
             }
         }
 
-        pieEditor.update(node.config, data);
+        pieEditor.update(node.config, data, isSupplyChain);
         pieEditor.show();
     };
 

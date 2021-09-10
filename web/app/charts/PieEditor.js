@@ -21,8 +21,9 @@ bluewave.charts.PieEditor = function(parent, config) {
     var me = this;
     var currentNode;
     var panel;
+    var isSupChain;
     var inputData = [];
-    var isCsv = false;
+    var linksAndQuantity = [];
     var svg;
     var previewArea;
     var pieChart;
@@ -118,18 +119,17 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(nodeType, inputs){
+    this.update = function(nodeType, inputs, isSupplyChain){
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
             if (typeof input !== 'object' && input!=null) {
                 inputs[i] = d3.csvParse(input);
-                isCsv = true;
             }
         }
         inputData = inputs;
-
+        isSupChain = isSupplyChain;
         if(config !== null && config !== undefined){
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
@@ -138,7 +138,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         }
         chartConfig.chartType = nodeType;
         createDropDown(optionsDiv);
-        createOptions(isCsv);
+        createOptions(isSupplyChain);
     };
 
 
@@ -179,24 +179,62 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   /** Initializes Options for Dropdowns.
    */
-    var createOptions = function(isCsv) {
+    var createOptions = function(isSupplyChain) {
         var data = inputData[0];
         var data2 = inputData[1];
 
-        if (!isCsv) {
+
+        var nodeAndType = [];
+        var nodeTypeList = [];
+
+        if (isSupplyChain) {
             data = Object.values(inputData[0].links);
+
+            for (var node in inputData[0].nodes) {
+                var nodeType =inputData[0].nodes[node].type;
+                if (nodeTypeList.indexOf(nodeType) === -1) {
+                nodeTypeList.push(nodeType);
+                }
+                var nodeAndTypeEntry = {};
+                nodeAndTypeEntry.id = node;
+                nodeAndTypeEntry.type = nodeType;
+                nodeAndType.push(nodeAndTypeEntry);
+            }
+
+            for (var link in inputData[0].links) {
+                var hi = link;
+                var linkStartType = "";
+                var linkEndType = "";
+                var linkQuantity = inputData[0].links[link].quantity;
+
+                for (var entry of nodeAndType) {
+                    if (link.startsWith(entry.id)) {
+                        linkStartType = entry.type;
+                    }
+                    if (link.endsWith(entry.id)) {
+                        linkEndType = entry.type;
+                    }
+
+                }
+                var linkFullType = linkStartType + " to " + linkEndType;
+                var linksAndQuantityEntry = {};
+                linksAndQuantityEntry.type = linkFullType;
+                linksAndQuantityEntry.quantity = linkQuantity;
+                linksAndQuantity.push(linksAndQuantityEntry);
+            }
         }
 
         let dataOptions = Object.keys(data[0]);
+
         let dataOptions2 = data2?Object.keys(data2[0]):null;
 
-        if(!isCsv) {
-            dataOptions = Object.keys(inputData[0].links);
+        if(isSupplyChain) {
+            dataOptions = nodeTypeList;
         }
 
         pieInputs.value.clear();
         pieInputs.key.clear();
-        if (isCsv) {
+        if (!isSupplyChain) {
         dataOptions.forEach((val)=>{
                 if(!isNaN(data[0][val])){
                     pieInputs.value.add(val,val);
@@ -206,14 +244,9 @@ bluewave.charts.PieEditor = function(parent, config) {
             });
         } else {
         dataOptions.forEach((val)=>{
-            if (inputData[0].links[val] !== null) {
-                pieInputs.key.add(val);
-                pieInputs.value.add(inputData[0].links[val].quantity);
-            }
-
+            pieInputs.key.add(val, val);
         });
-
-
+            pieInputs.value.add("quantity");
         }
 
         pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
@@ -303,6 +336,9 @@ bluewave.charts.PieEditor = function(parent, config) {
         if (chartConfig.pieKey===null || chartConfig.pieValue===null) return;
         onRender(previewArea, function(){
             var data = inputData[0];
+            if (isSupChain) {
+            data = linksAndQuantity;
+            }
             pieChart.update(chartConfig, data);
         });
     };
