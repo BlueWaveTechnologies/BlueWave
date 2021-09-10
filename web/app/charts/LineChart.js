@@ -199,9 +199,6 @@ bluewave.charts.LineChart = function(parent, config) {
                     );
 
 
-
-
-
               //Define and fill area under line
                 if(chartConfig.fillArea === true){
                     plotArea
@@ -241,19 +238,21 @@ bluewave.charts.LineChart = function(parent, config) {
                         .attr("offset", (d) => d.offset )
                         .attr("stop-color", (d) => d.color )
                         .attr("stop-opacity", (d) => d.opacity );
-                        
-                
 
-            };
-            //Draw grid lines if option is checked
+                }
+
+            }
+
+
+          //Draw grid lines if option is checked
             if(chartConfig.xGrid || chartConfig.yGrid){
                drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
             }
 
-            //Draw labels if checked
+          //Draw labels if checked
             if(chartConfig.xLabel || chartConfig.yLabel){
-                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel, 
-                    axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis)
+                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                    axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
             }
 
 

@@ -50,6 +50,8 @@ bluewave.ChartEditor = function(parent, config) {
         opacity:null,
         fillArea:null,
         gridLines:null,
+        startOpacity:null,
+        endOpacity:null,
         xGrid:null,
         yGrid:null,
         barLayout: null,
@@ -523,7 +525,7 @@ bluewave.ChartEditor = function(parent, config) {
                     {
                         group: "X-Axis",
                         items: [
-                            
+
                             {
                                 name: "xLabel",
                                 label: "Show Labels",
@@ -690,7 +692,7 @@ bluewave.ChartEditor = function(parent, config) {
             createColorOptions("lineColor", form);
             form.findField("lineColor").setValue(chartConfig.lineColor || "#6699CC");
 
-            
+
           //Update lineWidth field (add slider) and set initial value
             createSlider("lineThickness", form, "px", 1, 10, 1);
             var thickness = chartConfig.lineWidth;
