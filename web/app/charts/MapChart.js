@@ -22,11 +22,15 @@ bluewave.charts.MapChart = function(parent, config) {
             left: 82
         }
     };
+    var centeringConfig = {
+        centering: null,
+        zoomScale: null
+    };
     var svg, mapArea; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
-    //let zoom = d3.zoom().on('zoom', handleZoom); //allow zoom/pan
+    var projection;
 
   //**************************************************************************
   //** Constructor
@@ -51,24 +55,35 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
-        svg.call(d3.zoom().on("zoom", function () {
-            mapArea.attr("transform", d3.event.transform)
+        svg.call(d3.zoom().on("zoom", function() {
+
+            mapArea.attr("transform", d3.event.transform);
+            var projection = me.getProjection();
+            if (projection){
+                var rect = javaxt.dhtml.utils.getRect(svg.node());
+                var w = rect.width;
+                var h = rect.height;
+                var t = d3.event.transform;
+                var x = (w/2)-t.x;
+                var y = (h/2)-t.y;
+                var p = projection.invert([x,y]);
+                centeringConfig.centering = p;
+                console.log(p);
+                var coordinateFormat = d3.format(".2f");
+                var text = "(" + coordinateFormat(p[1]) + "°, " +
+                    coordinateFormat(p[0]) + "°)";
+                    console.log(text);
+            }
+
+
         }));
     };
-
   //**************************************************************************
-  //** handleZoom
+  //** getProjection
   //**************************************************************************
-    function handleZoom(e){
-        //mapArea.attr('transform', e.transform);
-    }
-
-  //**************************************************************************
-  //** initZoom
-  //**************************************************************************
-    function initZoom(){
-        //mapArea.call(zoom);
-    }
+    this.getProjection = function(){
+        return projection;
+    };
 
 
   //**************************************************************************
@@ -85,6 +100,16 @@ bluewave.charts.MapChart = function(parent, config) {
     this.clear = function(){
         if (mapArea) mapArea.node().innerHTML = "";
         options = [];
+    };
+
+
+  //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+        if (mapArea){
+
+        }
     };
 
 
@@ -108,7 +133,6 @@ bluewave.charts.MapChart = function(parent, config) {
     var update = function(parent, chartConfig, data){
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
-
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
@@ -129,7 +153,7 @@ bluewave.charts.MapChart = function(parent, config) {
         var mapLevel = chartConfig.mapLevel;
         if (mapLevel === "counties"){
 
-            var projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
+            projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
             var path = d3.geoPath(projection);
 
           //Create map layer
@@ -179,8 +203,17 @@ bluewave.charts.MapChart = function(parent, config) {
           //Render data
             if (chartConfig.mapType === "Point"){
 
-              //Render counties and states
-                renderCounties();
+              //Render counties
+                var countyPolygons = renderCounties();
+                countyPolygons.each(function() {
+                    var path = d3.select(this);
+                    path.attr('fill', function(d){
+                        return 'lightgray';
+                    });
+                });
+
+
+              //Render states
                 renderStates();
 
 
@@ -264,7 +297,7 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if (mapLevel === "states"){
 
-            var projection = d3.geoAlbers().center([-8, 43]);
+            projection = d3.geoAlbers().center([-8, 43]);
             var path = d3.geoPath(projection);
 
 
@@ -505,18 +538,23 @@ bluewave.charts.MapChart = function(parent, config) {
             if(isNaN(chartConfig.centerLongitude)) chartConfig.centerLongitude = 0;
             if(isNaN(chartConfig.centerLatitude)) chartConfig.centerLatitude = 0;
             var zoom = chartConfig.linkZoom;
-            var centerLon = 0;
-            var centerLat = 20;
+            var centerLon;
+            var centerLat;
+            if(chartConfig.centerVals == null){
+                console.log("Test");
+                centerLon = 0;
+                centerLat = 0;
+            }else{
+                centerLon = chartConfig.centerVals[0];
+                centerLat = chartConfig.centerVals[1];
+            }
 
-//                var projection = d3.geoMercator()
-//                                .scale(zoom)
-//                                .rotate([centerLon, 0])
-//                                .center([0, centerLat])
-//                                .translate([width / 2, height / 2]);
-
-            var projection = d3.geoMercator().center([centerLon, centerLat]).scale(180);
+            projection = d3.geoMercator().center([centerLon, centerLat]).scale(180).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
 
+            svg.on("mousemove", function(){
+                chartConfig.centerVals = centeringConfig.centering;
+            });
 
           //Render countries
             mapArea.selectAll("path")
@@ -526,7 +564,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 .attr('d', path)
                 .attr('fill', 'lightgray')
                 .attr('stroke', 'white');
-
 
             if (chartConfig.mapType === "Point"){
                 var points = getPoints(data, chartConfig, projection);
@@ -995,5 +1032,4 @@ bluewave.charts.MapChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
 
     init();
-    initZoom();
 };

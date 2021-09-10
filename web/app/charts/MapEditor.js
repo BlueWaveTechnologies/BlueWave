@@ -94,6 +94,27 @@ if(!bluewave.charts) bluewave.charts={};
             mapChart = new bluewave.charts.MapChart(svg, {
                 margin: margin
             });
+
+
+            var verticalLine = document.createElement("div");
+            verticalLine.style.position = "absolute";
+            verticalLine.style.top = 0+"px";
+            verticalLine.style.left = width/2+"px";
+            verticalLine.style.height = "100%";
+            verticalLine.style.width = "1px";
+            verticalLine.style.backgroundColor = "#000000";
+            previewArea.appendChild(verticalLine);
+
+
+            var horizontalLine = document.createElement("div");
+            horizontalLine.style.position = "absolute";
+            horizontalLine.style.top = height/2+"px";
+            horizontalLine.style.left = 0+"px";
+            horizontalLine.style.height = "1px";
+            horizontalLine.style.width = "100%";
+            horizontalLine.style.backgroundColor = "#000000";
+            previewArea.appendChild(horizontalLine);
+
         });
 
 
@@ -218,6 +239,14 @@ if(!bluewave.charts) bluewave.charts={};
 
       //Render map
         createMapPreview();
+    };
+
+
+  //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+        if (mapChart) mapChart.resize();
     };
 
 
