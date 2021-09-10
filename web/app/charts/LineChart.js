@@ -113,8 +113,9 @@ bluewave.charts.LineChart = function(parent, config) {
             if (chartConfig.lineColor==null) chartConfig.lineColor = "#6699CC";
             if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1.5;
             if (chartConfig.opacity==null) chartConfig.opacity = .95;
-            if (chartConfig.fillArea==null) chartConfig.fillArea = false;
             if (chartConfig.gridLines==null) chartConfig.gridLines = false;
+            if (chartConfig.startOpacity==null) chartConfig.startOpacity = 0;
+            if (chartConfig.endOpacity==null) chartConfig.endOpacity = 0;
 
 
             var data1 = data[0];
@@ -206,8 +207,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     plotArea
                         .append("path")
                         .datum(sumData)
-                        .attr("fill", chartConfig.lineColor)
-                        .attr("opacity", chartConfig.opacity)
+                        .attr("class", "line-area")
                         .attr(
                             "d", d3.area()
                             .x(function(d){
@@ -221,10 +221,28 @@ bluewave.charts.LineChart = function(parent, config) {
                             .y1(function(d){
                                 return y(d["value"])
                             })
-
                         );
-                }
 
+                //Add linear gradient
+                    plotArea
+                        .append("defs")
+                        .append("linearGradient")
+                        .attr("id", "fill-gradient")
+                        .attr("x1", "0%").attr("y1", "0%")
+                        .attr("x2", "0%").attr("y2", "100%")
+                        .selectAll("stop")
+                        .data([
+                            {offset: "0%", color: chartConfig.lineColor, opacity: chartConfig.startOpacity},
+                            // {offset: "20%", color: chartConfig.lineColor,
+                                //  opacity: Math.max(chartConfig.startOpacity/2, chartConfig.endOpacity)},
+                            {offset: "100%", color: chartConfig.lineColor, opacity: chartConfig.endOpacity}
+                            ])
+                        .enter().append("stop")
+                        .attr("offset", (d) => d.offset )
+                        .attr("stop-color", (d) => d.color )
+                        .attr("stop-opacity", (d) => d.opacity );
+                        
+                
 
             };
             //Draw grid lines if option is checked

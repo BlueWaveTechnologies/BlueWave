@@ -523,6 +523,7 @@ bluewave.ChartEditor = function(parent, config) {
                     {
                         group: "X-Axis",
                         items: [
+                            
                             {
                                 name: "xLabel",
                                 label: "Show Labels",
@@ -666,19 +667,15 @@ bluewave.ChartEditor = function(parent, config) {
                     {
                         group: "Fill Style",
                         items: [
+
                             {
-                                name: "fillColor",
-                                label: "Color",
-                                type: new javaxt.dhtml.ComboBox(
-                                    document.createElement("div"),
-                                    {
-                                        style: config.style.combobox
-                                    }
-                                )
+                                name: "startOpacity",
+                                label: "Start Opacity",
+                                type: "text"
                             },
                             {
-                                name: "fillOpacity",
-                                label: "Opacity",
+                                name: "endOpacity",
+                                label: "End Opacity",
                                 type: "text"
                             }
                         ]
@@ -710,9 +707,18 @@ bluewave.ChartEditor = function(parent, config) {
             form.findField("lineOpacity").setValue(opacity*100);
 
 
-            createColorOptions("fillColor", form);
-            createSlider("fillOpacity", form, "%");
+            createSlider("startOpacity", form, "%");
+            var startOpacity = chartConfig.startOpacity;
+            if (isNaN(startOpacity)) startOpacity = 0;
+            chartConfig.startOpacity = startOpacity;
+            form.findField("startOpacity").setValue(startOpacity*100);
 
+
+            createSlider("endOpacity", form, "%");
+            var endOpacity = chartConfig.endOpacity;
+            if (isNaN(endOpacity)) endOpacity = 0;
+            chartConfig.endOpacity = endOpacity;
+            form.findField("endOpacity").setValue(endOpacity*100);
 
           //Process onChange events
             form.onChange = function(){
@@ -720,6 +726,8 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.lineColor = settings.lineColor;
                 chartConfig.lineWidth = settings.lineThickness;
                 chartConfig.opacity = settings.lineOpacity/100;
+                chartConfig.startOpacity = settings.startOpacity/100;
+                chartConfig.endOpacity = settings.endOpacity/100;
                 createLinePreview();
             };
         }
