@@ -201,7 +201,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-              //define and fill area under line
+              //Define and fill area under line
                 if(chartConfig.fillArea === true){
                     plotArea
                         .append("path")
@@ -228,8 +228,14 @@ bluewave.charts.LineChart = function(parent, config) {
 
             };
             //Draw grid lines if option is checked
-            if(chartConfig.gridLines === true){
-               drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.gridLines, chartConfig.gridLines);
+            if(chartConfig.xGrid || chartConfig.yGrid){
+               drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+            }
+
+            //Draw labels if checked
+            if(chartConfig.xLabel || chartConfig.yLabel){
+                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel, 
+                    axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis)
             }
 
 
@@ -416,6 +422,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
     var drawGridlines = bluewave.utils.drawGridlines;
+    var drawLabels = bluewave.utils.drawLabels;
 
     init();
 };

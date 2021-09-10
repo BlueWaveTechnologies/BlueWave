@@ -516,81 +516,121 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="lineChart"){
 
-          //Add style options
+
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
                     {
-                        group: "Style",
+                        group: "X-Axis",
                         items: [
                             {
-                                name: "area",
-                                label: "Area Chart",
-                                type: "radio",
-                                alignment: "horizontal",
+                                name: "xLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
                                 options: [
                                     {
-                                        label: "true",
+                                        label: "",
                                         value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
-                                    },
-
+                                    }
 
                                 ]
                             },
                             {
-                                name: "gridLines",
-                                label: "Grid Lines",
-                                type: "radio",
-                                alignment: "horizontal",
+                                name: "xGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
                                 options: [
                                     {
-                                        label: "true",
+                                        label: "",
                                         value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
-                                    },
+                                    }
 
+                                ]
+                            }
+                        ]
+                    },
+
+                    {
+                        group: "Y-Axis",
+                        items: [
+                            {
+                                name: "yLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "yGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
 
                                 ]
                             }
                         ]
                     }
+
                 ]
             });
 
 
-          //Set initial value of the area field
-            var areaField = form.findField("area");
-            var fillArea = chartConfig.fillArea;
-            areaField.setValue(fillArea===true ? true : false);
+           //Set initial value for X-gridline
+            var xGridField = form.findField("xGrid");
+            var xGrid = chartConfig.xGrid;
+            xGridField.setValue(xGrid===true ? true : false);
 
-          //Set initial value of the gridline field
-            var gridLineField = form.findField("gridLines");
-            var gridlines = chartConfig.gridLines;
-            gridLineField.setValue(gridlines===true ? true : false);
+           //Set initial value for Y-gridline
+            var yGridField = form.findField("yGrid");
+            var yGrid = chartConfig.yGrid;
+            yGridField.setValue(yGrid===true ? true : false);
+
+            //Set intial value for xLabel
+            var xLabelField = form.findField("xLabel");
+            var xLabel = chartConfig.xLabel;
+            xLabelField.setValue(xLabel===true ? true : false);
+
+            //Set intial value for yLabel
+            var yLabelField = form.findField("yLabel");
+            var yLabel = chartConfig.yLabel;
+            yLabelField.setValue(yLabel===true ? true : false);
 
 
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
 
-                if (settings.area==="true") settings.area = true;
-                else if (settings.area==="false") settings.area = false;
 
-                if (settings.gridLines==="true") settings.gridLines = true;
-                else if (settings.gridLines==="false") settings.gridLines = false;
+                if (settings.xGrid==="true") settings.xGrid = true;
+                else if (settings.xGrid==="false") settings.xGrid = false;
 
-                //update config values
-                chartConfig.fillArea = settings.area;
-                chartConfig.gridLines = settings.gridLines;
+                if (settings.yGrid==="true") settings.yGrid = true;
+                else if (settings.yGrid==="false") settings.yGrid = false;
+
+                if (settings.xLabel==="true") settings.xLabel = true;
+                else if (settings.xLabel==="false") settings.xLabel = false;
+
+                if (settings.yLabel==="true") settings.yLabel = true;
+                else if (settings.yLabel==="false") settings.yLabel = false;
+
+
+                chartConfig.xGrid = settings.xGrid;
+                chartConfig.yGrid = settings.yGrid;
+                chartConfig.xLabel = settings.xLabel;
+                chartConfig.yLabel = settings.yLabel;
                 createLinePreview();
             };
+
+
         }
         else if (chartType==="line"){
 
@@ -665,7 +705,7 @@ bluewave.ChartEditor = function(parent, config) {
           //Add opacity sliders
             createSlider("lineOpacity", form, "%");
             var opacity = chartConfig.opacity;
-            if (opacity==null) opacity = .95;
+            if (opacity==null) opacity = 1;
             chartConfig.opacity = opacity;
             form.findField("lineOpacity").setValue(opacity*100);
 
@@ -791,7 +831,6 @@ bluewave.ChartEditor = function(parent, config) {
 
             //Set form value for bar layout
             // form.findField("layout").setValue(chartConfig.layout);
-            // console.log(chartConfig.barLayout)
             var layoutField = form.findField("layout");
             var layout = chartConfig.barLayout;
             layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
@@ -827,9 +866,6 @@ bluewave.ChartEditor = function(parent, config) {
                 var settings = form.getData();
 
 
-                // if (settings.layout==="vertical") settings.layout = false;
-                // else if (settings.layout==="horizontal") {settings.xGrid = false}
-
                 if (settings.xGrid==="true") settings.xGrid = true;
                 else if (settings.xGrid==="false") settings.xGrid = false;
 
@@ -844,10 +880,6 @@ bluewave.ChartEditor = function(parent, config) {
 
                 if (settings.yLabel==="true") settings.yLabel = true;
                 else if (settings.yLabel==="false") settings.yLabel = false;
-
-                //Disable gridlines parallel to bars
-                if (settings.layout==="vertical") settings.yGrid = false;
-                else if (settings.layout==="horizontal") settings.xGrid = false;
 
 
                 chartConfig.barLayout = settings.layout;
@@ -929,10 +961,10 @@ bluewave.ChartEditor = function(parent, config) {
         }
 
       //Workaround for bar chart legend until editor is split up
-        if(chartType !== "barChart"){
-            let legendContainer = document.querySelector(".bar-legend");
-            if(legendContainer) legendContainer.remove();
-        }
+        // if(chartType !== "barChart"){
+        //     let legendContainer = document.querySelector(".bar-legend");
+        //     if(legendContainer) legendContainer.remove();
+        // }
     };
 
 

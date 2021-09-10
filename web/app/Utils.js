@@ -1248,7 +1248,7 @@ bluewave.utils = {
             .tickSize(-height)
             .tickFormat("")
             )
-            // .style("stroke-opacity", ".2")
+            
         }
 
         if(xGrid){
@@ -1258,8 +1258,34 @@ bluewave.utils = {
             .tickSize(-width)
             .tickFormat("")
             )
-            // .style("stroke-opacity", ".2")       
+                  
         }
+    },
+
+  //**************************************************************************
+  //** drawLabels
+  //**************************************************************************
+    drawLabels: function(svg, xLabel, yLabel, height, width, margin, xLabelName, yLabelName){
+            //Add X-axis label
+            if(xLabel){
+                svg.append("text")
+                .attr("x", width/2)
+                .attr("y", height+margin.bottom - 2)
+                .style("text-anchor", "middle")
+                .text(xLabelName);
+            }
+
+            //Add Y-axis label
+            if(yLabel){
+                svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", 0 - (height/2))
+                .attr("y", 0 - margin.left)    
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text(yLabelName);
+            }
+
     }
 
 };
