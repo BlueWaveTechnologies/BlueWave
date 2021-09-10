@@ -68,7 +68,9 @@ bluewave.charts.MapChart = function(parent, config) {
                 var y = (h/2)-t.y;
                 var p = projection.invert([x,y]);
                 centeringConfig.centering = p;
+                centeringConfig.scalingValue = t.k;
                 console.log(p);
+                console.log(t.k);
                 var coordinateFormat = d3.format(".2f");
                 var text = "(" + coordinateFormat(p[1]) + "°, " +
                     coordinateFormat(p[0]) + "°)";
@@ -534,14 +536,10 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if(mapLevel === "world"){
 
-            if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
-            if(isNaN(chartConfig.centerLongitude)) chartConfig.centerLongitude = 0;
-            if(isNaN(chartConfig.centerLatitude)) chartConfig.centerLatitude = 0;
             var zoom = chartConfig.linkZoom;
             var centerLon;
             var centerLat;
             if(chartConfig.centerVals == null){
-                console.log("Test");
                 centerLon = 0;
                 centerLat = 0;
             }else{
@@ -553,7 +551,9 @@ bluewave.charts.MapChart = function(parent, config) {
             var path = d3.geoPath(projection);
 
             svg.on("mousemove", function(){
-                chartConfig.centerVals = centeringConfig.centering;
+                if(centeringConfig){
+                    chartConfig.centerVals = centeringConfig.centering;
+                }
             });
 
           //Render countries
