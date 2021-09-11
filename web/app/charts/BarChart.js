@@ -151,6 +151,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
             if (y.bandwidth || x.bandwidth) {
 
+                if(chartConfig.barLayout === "vertical"){
                 plotArea
                     .selectAll("mybar")
                     .data(sumData)
@@ -174,7 +175,34 @@ bluewave.charts.BarChart = function(parent, config) {
                         return x.bandwidth ? x.bandwidth() : x(d["key"]);
                     })
                     .attr("fill", getBarColor);
+                }
+                //Horizontal layout
+               else if(chartConfig.barLayout === "horizontal"){
+                plotArea
+                    .selectAll("mybar")
+                    .data(sumData)
+                    .enter()
+                    .append("rect")
+                    .attr("x", function (d) {
+                        return 0;
+                    })
+                    .attr("y", function (d) {
+                        return y(d["key"]);
+                    })
+                    .attr("height", function (d) {
+
+                        return y.bandwidth
+                            ? y.bandwidth()
+                            : height - y(d["value"]);
+                    })
+                    .attr("width", function (d) {
+                        return x.bandwidth ? x.bandwidth() : x(d["value"]);
+                    })
+                    .attr("fill", getBarColor);
+                }
             }
+
+            //No bandwith
             else {
                 // if(timeAxis === "x")
                 if (chartConfig.barLayout === "vertical") {
