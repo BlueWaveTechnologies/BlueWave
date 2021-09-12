@@ -300,7 +300,7 @@ public class GraphService extends WebService {
                             String label = r.get(0).asString();
                             List props = r.get(1).asList();
                             JSONObject json = new JSONObject();
-                            json.set("node", label);
+                            json.set("name", label);
                             JSONArray properties = new JSONArray();
                             json.set("properties", properties);
                             for (Object p : props){
