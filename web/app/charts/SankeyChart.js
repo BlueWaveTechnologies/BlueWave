@@ -45,7 +45,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
             svg = d3.select(parent).append("svg");
         }
 
-        sankeyArea = svg.append("g");
+       sankeyArea = svg.append("g").append("g");
     };
 
 
