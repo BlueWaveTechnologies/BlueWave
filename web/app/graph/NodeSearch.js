@@ -11,8 +11,9 @@ if(!bluewave) var bluewave={};
 bluewave.NodeSearch = function(parent, config) {
 
     var me = this;
-    var grid, gridContainer, waitmask;
-    var searchBar, nodeList, nodeView; //panels
+    var waitmask;
+    var searchBar, nodeList, nodeView, gridPanel; //panels
+    var queryService = "query";
     var jobID;
 
 
@@ -58,7 +59,7 @@ bluewave.NodeSearch = function(parent, config) {
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
-        createGrid(td);
+        createGridPanel(td);
 
 
       //Add vertical resizer between row 2 and 3
@@ -78,6 +79,7 @@ bluewave.NodeSearch = function(parent, config) {
         searchBar.clear();
         nodeList.clear();
         nodeView.clear();
+        gridPanel.clear();
     };
 
 
@@ -157,7 +159,7 @@ bluewave.NodeSearch = function(parent, config) {
                 input.oninput();
                 input.blur();
                 var q = searchBar.getValue();
-                executeQuery(q);
+                updateNodes(q);
             }
         };
 
@@ -260,18 +262,19 @@ bluewave.NodeSearch = function(parent, config) {
                 div.onclick = function(){
                     var opacity = parseFloat(this.style.opacity);
                     if (isNaN(opacity)){
-                        //this.node;
-                        gridContainer.show();
+                        gridPanel.show(this.node);
                     }
                     else{
-                        gridContainer.hide();
+                        gridPanel.hide();
                     }
                 };
                 div.disable = function(){
                     this.style.opacity = 0.45;
+                    this.node.ids = [];
                 };
-                div.enable = function(){
+                div.enable = function(nodeIDs){
                     this.style.opacity = "";
+                    this.node.ids = nodeIDs;
                 };
                 div.disable();
                 innerDiv.appendChild(div);
@@ -439,34 +442,93 @@ bluewave.NodeSearch = function(parent, config) {
 
 
   //**************************************************************************
-  //** createGrid
+  //** createGridPanel
   //**************************************************************************
-    var createGrid = function(parent){
+    var createGridPanel = function(parent){
         var height = 250;
+        var currNode = null;
+        var currIDs = [];
 
-      //Create outer div
-        gridContainer = document.createElement("div");
-        gridContainer.className = "node-search-grid";
-        gridContainer.style.position = "relative";
-        gridContainer.show = function(){
+
+        gridPanel = document.createElement("div");
+        gridPanel.className = "node-search-grid";
+        gridPanel.style.position = "relative";
+
+
+
+        var outerDiv = document.createElement("div");
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        gridPanel.appendChild(outerDiv);
+
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        innerDiv.style.position = "absolute";
+        innerDiv.style.overflow = "hidden";
+        innerDiv.style.overflowX = "auto";
+        outerDiv.appendChild(innerDiv);
+
+
+        var overflowDiv = document.createElement("div");
+        overflowDiv.style.width = "100%";
+        overflowDiv.style.height = "100%";
+        overflowDiv.style.position = "absolute";
+        innerDiv.appendChild(overflowDiv);
+
+
+        gridPanel.innerDiv = innerDiv;
+        gridPanel.overflowDiv = overflowDiv;
+        parent.appendChild(gridPanel);
+
+
+
+        gridPanel.show = function(node){
             this.style.height = height + "px";
+
+            if (node.name === currNode && node.ids.length === currIDs.length){
+
+                var numMatches = 0;
+                node.ids.forEach(function(id){
+                    currIDs.every(function(i){
+                        if (i===id){
+                            numMatches++;
+                            return false;
+                        }
+                        return true;
+                    });
+                });
+
+                if (numMatches===currIDs.length) return;
+            }
+
+            this.clear();
+            updateGrid(node);
         };
-        gridContainer.hide = function(){
+
+
+        gridPanel.hide = function(){
             var h = this.offsetHeight;
             if (h>50) height = h;
             this.style.height = "0px";
         };
-        parent.appendChild(gridContainer);
 
 
-        return gridContainer;
+        gridPanel.clear = function(){
+            currNode = null;
+            currIDs = [];
+            overflowDiv.innerHTML = "";
+        };
+
     };
 
 
   //**************************************************************************
-  //** executeQuery
+  //** updateNodes
   //**************************************************************************
-    var executeQuery = function(q){
+  /** Used to find nodes that contain a given keyword and update the view
+   */
+    var updateNodes = function(q){
 
       //Cancel current query (if running)
         cancel();
@@ -474,7 +536,7 @@ bluewave.NodeSearch = function(parent, config) {
 
 
       //Clear last query
-        gridContainer.hide();
+        gridPanel.hide();
         nodeView.clear();
         nodeList.nodes.forEach(function(node){
            node.div.disable();
@@ -496,7 +558,7 @@ bluewave.NodeSearch = function(parent, config) {
         nodeList.nodes.forEach(function(n){
             var query = "MATCH (p:" + n.name + ")\n" +
             "WHERE any(key in keys(p) WHERE toLower(p[key]) CONTAINS toLower('" + q +"') )\n" +
-            "RETURN count(ID(p)) as count";
+            "RETURN ID(p) as id";
             arr.push({
                 node: n.name,
                 query: query,
@@ -514,14 +576,22 @@ bluewave.NodeSearch = function(parent, config) {
             var updateNodes = function(){
                 var item = arr.pop();
                 getCSV(item.query, function(csv){
-                    csv = d3.csvParse(csv)[0];
-                    if (parseInt(csv.count)>0){
+
+                    var rows = d3.csvParse(csv);
+                    if (rows.length>0){
+
+                        var nodeIDs = [];
+                        rows.forEach(function(row){
+                            nodeIDs.push(parseInt(row.id));
+                        });
+
                         var item = this;
                         var nodeName = item.node;
-                        item.div.enable();
+                        item.div.enable(nodeIDs);
                         nodes.push({
                             name: nodeName,
-                            type: "match"
+                            type: "match",
+                            nodes: nodeIDs
                         });
                         links.push({
                             source: q,
@@ -543,6 +613,332 @@ bluewave.NodeSearch = function(parent, config) {
 
     };
 
+
+  //**************************************************************************
+  //** updateGrid
+  //**************************************************************************
+    var updateGrid = function(node){
+
+        var limit = 50;
+        var offset = 0;
+        var page = 1;
+
+
+
+        var getQuery = function(){
+
+            var query = "MATCH (n:" + node.name + ")\n";
+            query += "WHERE ID(n) in [" + node.ids.slice(offset, offset+limit).join() + "]\n";
+            var properties = node.properties;
+            if (properties && properties.length>0){
+                query += "RETURN\n";
+                for (var i=0; i<properties.length; i++){
+                    if (i>0) query +=",\n";
+                    query += "   n." + properties[i] + " as " + properties[i];
+                }
+            }
+
+            return query;
+        };
+
+
+        var executeQuery = function(callback){
+            waitmask.show(500);
+            getResponse(
+                queryService,
+                JSON.stringify({
+                    query: getQuery(),
+                    limit: limit
+                }),
+                function(request){
+                    var json = JSON.parse(request.responseText);
+                    var data = parseResponse(json);
+
+                    if (data.records.length<limit){
+                        offset = null;
+                    }
+                    else{
+                        offset += data.records.length;
+                    }
+
+                    waitmask.hide();
+
+                    callback.apply(me, [data, request]);
+
+                }
+            );
+        };
+
+
+
+        var widths = [];
+        var totalWidth = 0;
+        var headerWidth = 0;
+        var pixelsPerChar = 10;
+
+        var getColumns = function(columns, records){
+            if (columns.length>1){
+
+                for (var i=0; i<columns.length; i++){
+                    var len = 0;
+                    var column = columns[i];
+                    if (column!=null) len = (rec+"").length*pixelsPerChar;
+                    widths.push(len);
+                    headerWidth+=len;
+                }
+                for (var i=0; i<records.length; i++){
+                    var record = records[i];
+                    for (var j=0; j<record.length; j++){
+                        var rec = record[j];
+                        var len = 0;
+                        if (rec!=null){
+                            var str = rec+"";
+                            var r = str.indexOf("\r");
+                            var n = str.indexOf("\n");
+                            if (r==-1){
+                                if (n>-1) str = str.substring(n);
+                            }
+                            else{
+                                if (n>-1){
+                                    str = str.substring(Math.min(r,n));
+                                }
+                                else str = str.substring(r);
+                            }
+
+                            len = Math.min(str.length*pixelsPerChar, 150);
+                        }
+                        widths[j] = Math.max(widths[j], len);
+                    }
+                }
+                for (var i=0; i<widths.length; i++){
+                    totalWidth += widths[i];
+                }
+            }
+            else{
+                widths.push(1);
+                totalWidth = 1;
+            }
+
+
+
+          //Convert list of column names into column definitions
+            var arr = [];
+            for (var i=0; i<columns.length; i++){
+                var colWidth = ((widths[i]/totalWidth)*100)+"%";
+                arr.push({
+                   header: columns[i],
+                   width: colWidth,
+                   sortable: false
+                });
+            }
+
+            return arr;
+        };
+
+
+        var createGrid = function(columns){
+            gridPanel.overflowDiv.style.width = "100%";
+            var rect = javaxt.dhtml.utils.getRect(gridPanel.innerDiv);
+            if (rect.width<headerWidth){
+                gridPanel.overflowDiv.style.width = headerWidth + "px";
+            }
+
+            var grid = new javaxt.dhtml.DataGrid(gridPanel.overflowDiv, {
+                style: config.style.table,
+                columns: columns,
+                limit: limit,
+                getResponse: function(url, payload, callback){
+                    if (isNaN(offset)){
+
+                    }
+                    else{
+                        executeQuery(function(data, request){
+                            page++;
+                            grid.load(data.records, page);
+                        });
+                    }
+                }
+            });
+
+            return grid;
+        };
+
+
+
+      //Execute query and render results
+        executeQuery(function(data, request){
+            var columns = getColumns(data.columns, data.records);
+            var grid = createGrid(columns);
+            grid.load(data.records, page);
+        });
+
+    };
+
+
+  //**************************************************************************
+  //** cancel
+  //**************************************************************************
+  /** Used to cancel the current query
+   */
+    var cancel = function(callback){
+        if (jobID){
+            javaxt.dhtml.utils.delete(config.queryService + jobID,{
+                success : function(){
+                    //cancelButton.disable();
+                    if (callback) callback.apply(null,[]);
+                },
+                failure: function(request){
+                    //cancelButton.disable();
+                    if (callback) callback.apply(null,[]);
+
+                    if (request.status!==404){
+                        showError(request);
+                    }
+                }
+            });
+        }
+        else{
+            if (callback) callback.apply(null,[]);
+        }
+        jobID = null;
+    };
+
+
+  //**************************************************************************
+  //** showError
+  //**************************************************************************
+  /** Used to render error messages returned from the server
+   */
+    var showError = function(msg){
+        //cancelButton.disable();
+
+        if (msg.responseText){
+            msg = (msg.responseText.length>0 ? msg.responseText : msg.statusText);
+        }
+        //gridPanel.innerHTML = msg;
+        waitmask.hide();
+    };
+
+
+  //**************************************************************************
+  //** getResponse
+  //**************************************************************************
+  /** Used to execute a query request and get a response. Note that queries
+   *  are executed asynchronously. This method will poll the sql api until
+   *  the query is complete.
+   */
+    var getResponse = function(url, payload, callback){
+        var request = post(url, payload, {
+            success : function(text){
+
+                jobID = JSON.parse(text).job_id;
+                //cancelButton.enable();
+
+
+              //Periodically check job status
+                var timer;
+                var checkStatus = function(){
+                    if (jobID){
+                        var request = get(config.queryService + jobID, {
+                            success : function(text){
+                                if (text==="pending" || text==="running"){
+                                    timer = setTimeout(checkStatus, 250);
+                                }
+                                else{
+                                    clearTimeout(timer);
+                                    callback.apply(me, [request]);
+                                }
+                            },
+                            failure: function(response){
+                                clearTimeout(timer);
+                                showError(response);
+                            }
+                        });
+                    }
+                    else{
+                        clearTimeout(timer);
+                    }
+                };
+
+                if (jobID){
+                    timer = setTimeout(checkStatus, 250);
+                }
+                else{
+                    callback.apply(me, [request]);
+                }
+
+            },
+            failure: function(response){
+                //mainMask.hide();
+                showError(response);
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** parseResponse
+  //**************************************************************************
+  /** Used to parse the query response from the sql api
+   */
+    var parseResponse = function(json){
+
+      //Get rows
+        var rows = json.rows;
+
+
+      //Generate list of columns
+        var record = rows[0];
+        var columns = [];
+        for (var key in record) {
+            if (record.hasOwnProperty(key)) {
+                columns.push(key);
+            }
+        }
+
+
+      //Generate records
+        var records = [];
+        for (var i=0; i<rows.length; i++){
+            var record = [];
+            var row = rows[i];
+            for (var j=0; j<columns.length; j++){
+                var key = columns[j];
+                var val = row[key];
+                record.push(val);
+            }
+            records.push(record);
+        }
+
+
+        return {
+            columns: columns,
+            records: records
+        };
+    };
+
+
+
+  //**************************************************************************
+  //** getCSV
+  //**************************************************************************
+    var getCSV = function(query, callback, scope){
+
+        var payload = {
+            query: query,
+            format: "csv",
+            limit: -1
+        };
+
+        post(queryService, JSON.stringify(payload), {
+            success : function(text){
+                callback.apply(scope, [text]);
+            },
+            failure: function(response){
+                alert(response);
+            }
+        });
+    };
 
 
   //**************************************************************************
@@ -625,313 +1021,6 @@ bluewave.NodeSearch = function(parent, config) {
         return div;
     };
 
-
-  //**************************************************************************
-  //** cancel
-  //**************************************************************************
-  /** Used to cancel the current query
-   */
-    var cancel = function(callback){
-        if (jobID){
-            javaxt.dhtml.utils.delete(config.queryService + jobID,{
-                success : function(){
-                    //cancelButton.disable();
-                    if (callback) callback.apply(null,[]);
-                },
-                failure: function(request){
-                    //cancelButton.disable();
-                    if (callback) callback.apply(null,[]);
-
-                    if (request.status!==404){
-                        showError(request);
-                    }
-                }
-            });
-        }
-        else{
-            if (callback) callback.apply(null,[]);
-        }
-        jobID = null;
-    };
-
-
-  //**************************************************************************
-  //** showError
-  //**************************************************************************
-  /** Used to render error messages returned from the server
-   */
-    var showError = function(msg){
-        //cancelButton.disable();
-
-        if (msg.responseText){
-            msg = (msg.responseText.length>0 ? msg.responseText : msg.statusText);
-        }
-        gridContainer.innerHTML = msg;
-        waitmask.hide();
-    };
-
-
-  //**************************************************************************
-  //** getResponse
-  //**************************************************************************
-  /** Used to execute a sql api request and get a response. Note that queries
-   *  are executed asynchronously. This method will pull the sql api until
-   *  the query is complete.
-   */
-    var getResponse = function(url, payload, callback){
-        post(url, payload, {
-            success : function(text){
-
-                jobID = JSON.parse(text).job_id;
-                //cancelButton.enable();
-
-
-              //Periodically check job status
-                var timer;
-                var checkStatus = function(){
-                    if (jobID){
-                        var request = get(config.queryService + jobID, {
-                            success : function(text){
-                                if (text==="pending" || text==="running"){
-                                    timer = setTimeout(checkStatus, 250);
-                                }
-                                else{
-                                    clearTimeout(timer);
-                                    callback.apply(me, [request]);
-                                }
-                            },
-                            failure: function(response){
-                                clearTimeout(timer);
-                                showError(response);
-                            }
-                        });
-                    }
-                    else{
-                        clearTimeout(timer);
-                    }
-                };
-                timer = setTimeout(checkStatus, 250);
-
-            },
-            failure: function(response){
-                //mainMask.hide();
-                showError(response);
-            }
-        });
-    };
-
-
-  //**************************************************************************
-  //** parseResponse
-  //**************************************************************************
-  /** Used to parse the query response from the sql api
-   */
-    var parseResponse = function(json){
-
-      //Get rows
-        var rows = json.rows;
-
-
-      //Generate list of columns
-        var record = rows[0];
-        var columns = [];
-        for (var key in record) {
-            if (record.hasOwnProperty(key)) {
-                columns.push(key);
-            }
-        }
-
-
-      //Generate records
-        var records = [];
-        for (var i=0; i<rows.length; i++){
-            var record = [];
-            var row = rows[i];
-            for (var j=0; j<columns.length; j++){
-                var key = columns[j];
-                var val = row[key];
-                record.push(val);
-            }
-            records.push(record);
-        }
-
-
-        return {
-            columns: columns,
-            records: records
-        };
-    };
-
-
-  //**************************************************************************
-  //** render
-  //**************************************************************************
-  /** Used to render query results in a grid
-   */
-    var render = function(records, columns){
-
-        //mainMask.hide();
-
-
-      //Compute default column widths
-        var widths = [];
-        var totalWidth = 0;
-        var headerWidth = 0;
-        var pixelsPerChar = 10;
-        if (columns.length>1){
-
-            for (var i=0; i<columns.length; i++){
-                var len = 0;
-                var column = columns[i];
-                if (column!=null) len = (rec+"").length*pixelsPerChar;
-                widths.push(len);
-                headerWidth+=len;
-            }
-            for (var i=0; i<records.length; i++){
-                var record = records[i];
-                for (var j=0; j<record.length; j++){
-                    var rec = record[j];
-                    var len = 0;
-                    if (rec!=null){
-                        var str = rec+"";
-                        var r = str.indexOf("\r");
-                        var n = str.indexOf("\n");
-                        if (r==-1){
-                            if (n>-1) str = str.substring(n);
-                        }
-                        else{
-                            if (n>-1){
-                                str = str.substring(Math.min(r,n));
-                            }
-                            else str = str.substring(r);
-                        }
-
-                        len = Math.min(str.length*pixelsPerChar, 150);
-                    }
-                    widths[j] = Math.max(widths[j], len);
-                }
-            }
-            for (var i=0; i<widths.length; i++){
-                totalWidth += widths[i];
-            }
-        }
-        else{
-            widths.push(1);
-            totalWidth = 1;
-        }
-
-
-
-      //Convert list of column names into column definitions
-        var arr = [];
-        for (var i=0; i<columns.length; i++){
-            var colWidth = ((widths[i]/totalWidth)*100)+"%";
-            arr.push({
-               header: columns[i],
-               width: colWidth,
-               sortable: false
-            });
-        }
-
-
-
-
-        var outerDiv = document.createElement("div");
-        outerDiv.style.height = "100%";
-        outerDiv.style.position = "relative";
-        gridContainer.appendChild(outerDiv);
-
-        var innerDiv = document.createElement("div");
-        innerDiv.style.width = "100%";
-        innerDiv.style.height = "100%";
-        innerDiv.style.position = "absolute";
-        innerDiv.style.overflow = "hidden";
-        innerDiv.style.overflowX = "auto";
-        outerDiv.appendChild(innerDiv);
-
-
-        var overflowDiv = document.createElement("div");
-        overflowDiv.style.width = "100%";
-        overflowDiv.style.height = "100%";
-        overflowDiv.style.position = "absolute";
-        innerDiv.appendChild(overflowDiv);
-
-
-
-        onRender(innerDiv, function(){
-            var rect = javaxt.dhtml.utils.getRect(innerDiv);
-            //console.log(totalWidth, headerWidth, rect.width);
-            if (rect.width<headerWidth){
-                overflowDiv.style.width = headerWidth + "px";
-            }
-        });
-
-
-      //Create grid
-        grid = new javaxt.dhtml.DataGrid(overflowDiv, {
-            columns: arr,
-            style: config.style.table,
-            url: config.queryService,
-            payload: JSON.stringify({
-
-            }),
-            limit: config.pageSize,
-            getResponse: getResponse,
-            parseResponse: function(request){
-                return parseResponse(JSON.parse(request.responseText)).records;
-            }
-        });
-
-
-        grid.beforeLoad = function(page){
-            //mainMask.show();
-            //cancelButton.disable();
-        };
-
-        grid.afterLoad = function(){
-            //mainMask.hide();
-            cancelButton.disable();
-        };
-
-        grid.onSelectionChange = function(){
-
-        };
-
-        grid.getColumns = function(){
-            return columns;
-        };
-
-        grid.getConfig = function(){
-            return {
-                columns: arr
-            };
-        };
-
-
-        grid.load(records, 1);
-    };
-
-
-  //**************************************************************************
-  //** getCSV
-  //**************************************************************************
-    var getCSV = function(query, callback, scope){
-
-        var payload = {
-            query: query,
-            format: "csv",
-            limit: -1
-        };
-
-        post("query", JSON.stringify(payload), {
-            success : function(text){
-                callback.apply(scope, [text]);
-            },
-            failure: function(response){
-                alert(response);
-            }
-        });
-    };
 
   //**************************************************************************
   //** Utilites
