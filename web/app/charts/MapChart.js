@@ -31,6 +31,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var counties, states, countries; //topojson
     var options = []; //aggregation options
     var projection;
+    var zoomed = false;
 
   //**************************************************************************
   //** Constructor
@@ -56,7 +57,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
         mapArea = svg.append("g");
         svg.call(d3.zoom().on("zoom", function() {
-
             mapArea.attr("transform", d3.event.transform);
             var projection = me.getProjection();
             if (projection){
@@ -67,16 +67,9 @@ bluewave.charts.MapChart = function(parent, config) {
                 var x = (w/2)-t.x;
                 var y = (h/2)-t.y;
                 var p = projection.invert([x,y]);
-                centeringConfig.centering = p;
-                centeringConfig.scalingValue = t.k;
-                console.log(p);
-                console.log(t.k);
-                var coordinateFormat = d3.format(".2f");
-                var text = "(" + coordinateFormat(p[1]) + "°, " +
-                    coordinateFormat(p[0]) + "°)";
-                    console.log(text);
+                centeringConfig.transformVal = t;
+                zoomed = true;
             }
-
 
         }));
     };
@@ -150,7 +143,6 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-
 
         var mapLevel = chartConfig.mapLevel;
         if (mapLevel === "counties"){
@@ -535,24 +527,17 @@ bluewave.charts.MapChart = function(parent, config) {
             me.onUpdate();
         }
         else if(mapLevel === "world"){
-
-            var zoom = chartConfig.linkZoom;
-            var centerLon;
-            var centerLat;
-            if(chartConfig.centerVals == null){
-                centerLon = 0;
-                centerLat = 0;
-            }else{
-                centerLon = chartConfig.centerVals[0];
-                centerLat = chartConfig.centerVals[1];
-            }
-
-            projection = d3.geoMercator().center([centerLon, centerLat]).scale(180).translate([width / 2, height / 2]);
+            projection = d3.geoMercator().center([0, 0]).scale(180).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
-
+            if(chartConfig.transformVal !== null) {
+                console.log("Test");
+                console.log(chartConfig.transformVal);
+                var t = d3.zoomIdentity.translate(chartConfig.transformVal.x, chartConfig.transformVal.y).scale(chartConfig.transformVal.k);
+                mapArea.attr("transform", t);
+            }
             svg.on("mousemove", function(){
-                if(centeringConfig){
-                    chartConfig.centerVals = centeringConfig.centering;
+                if(zoomed){
+                    chartConfig.transformVal = centeringConfig.transformVal;
                 }
             });
 
