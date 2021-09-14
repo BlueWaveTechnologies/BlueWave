@@ -343,14 +343,11 @@ bluewave.charts.PieEditor = function(parent, config) {
         onRender(previewArea, function(){
             var data = inputData[0];
             if (isSupChain) {
-            data = linksAndQuantity;
+            data = linksAndQuantity.slice();
             }
-            for (var i=0; i < data.length; i++) {
-                if (!(data[i].key.includes(chartConfig.pieKey))) {
-                    data.splice(i, 1);
-                }
-            }
-            pieChart.update(chartConfig, data, isSupChain);
+
+            let filteredData = data.filter(entry => entry.key.includes(chartConfig.pieKey));
+            pieChart.update(chartConfig, filteredData, isSupChain);
         });
     };
 
