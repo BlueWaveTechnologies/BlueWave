@@ -989,6 +989,15 @@ li.tree-node:hover {
     border-radius: 3px;
 }
 
+.node-search-list-item-count {
+    position:absolute;
+    font-size:9px;
+    top: -3px;
+    right: 0px;
+    background-color: #df4444;
+    border-radius: 6px;
+    padding: 0px 4px;
+}
 
 .node-search-graph {
     border: 1px solid #fefefe;
