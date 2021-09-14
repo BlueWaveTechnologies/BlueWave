@@ -269,10 +269,29 @@ bluewave.NodeSearch = function(parent, config) {
                     }
                 };
                 div.disable = function(){
+                    this.innerHTML = "";
+                    this.innerText = this.node.name;
                     this.style.opacity = 0.45;
                     this.node.ids = [];
                 };
                 div.enable = function(nodeIDs){
+                    this.innerHTML = "";
+
+                    var wrapper = document.createElement("div");
+                    wrapper.style.position = "relative";
+                    wrapper.style.display = "inline-block";
+                    this.appendChild(wrapper);
+
+                    var nodeLabel = document.createElement("span");
+                    nodeLabel.innerText = this.node.name;
+                    wrapper.appendChild(nodeLabel);
+
+                    var nodeCount = document.createElement("div");
+                    nodeCount.className = "node-search-list-item-count";
+                    nodeCount.innerText = nodeIDs.length;
+                    wrapper.appendChild(nodeCount);
+                    nodeCount.style.right = -(nodeCount.offsetWidth+2);
+
                     this.style.opacity = "";
                     this.node.ids = nodeIDs;
                 };
