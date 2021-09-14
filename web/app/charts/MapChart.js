@@ -23,8 +23,11 @@ bluewave.charts.MapChart = function(parent, config) {
         }
     };
     var centeringConfig = {
-        centering: null,
-        zoomScale: null
+        newCenter: null,
+        scaleFactor: null,
+        zoomScale: null,
+        width: null,
+        height: null
     };
     var svg, mapArea; //d3 elements
     var countyData, countryData; //raw json
@@ -32,6 +35,8 @@ bluewave.charts.MapChart = function(parent, config) {
     var options = []; //aggregation options
     var projection;
     var zoomed = false;
+
+     var zoom = d3.zoom().on('zoom', handleZoom)
 
   //**************************************************************************
   //** Constructor
@@ -56,23 +61,32 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
-        svg.call(d3.zoom().on("zoom", function() {
-            mapArea.attr("transform", d3.event.transform);
-            var projection = me.getProjection();
-            if (projection){
-                var rect = javaxt.dhtml.utils.getRect(svg.node());
-                var w = rect.width;
-                var h = rect.height;
-                var t = d3.event.transform;
-                var x = (w/2)-t.x;
-                var y = (h/2)-t.y;
-                var p = projection.invert([x,y]);
-                centeringConfig.transformVal = t;
-                zoomed = true;
-            }
-
-        }));
+        svg.call(zoom);
     };
+
+  //**************************************************************************
+  //** handleZoom
+  //**************************************************************************
+    function handleZoom(){
+        mapArea.attr('transform', d3.event.transform);
+        var projection = me.getProjection();
+        console.log(projection);
+        if (projection){
+            projection.scale(centeringConfig.scaleFactor * d3.event.transform.k);
+            console.log(projection);
+            var rect = javaxt.dhtml.utils.getRect(svg.node());
+            var w = rect.width;
+            var h = rect.height;
+            var t = d3.event.transform;
+            var x = (w/2)-t.x;
+            var y = (h/2)-t.y;
+            var p = projection.invert([x,y]);
+            console.log(p);
+            centeringConfig.newCenter = p;
+            zoomed = true;
+        }
+    }
+
   //**************************************************************************
   //** getProjection
   //**************************************************************************
@@ -128,6 +142,8 @@ bluewave.charts.MapChart = function(parent, config) {
     var update = function(parent, chartConfig, data){
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
+        centeringConfig.width = width;
+        centeringConfig.height = height;
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
@@ -527,17 +543,24 @@ bluewave.charts.MapChart = function(parent, config) {
             me.onUpdate();
         }
         else if(mapLevel === "world"){
-            projection = d3.geoMercator().center([0, 0]).scale(180).translate([width / 2, height / 2]);
-            var path = d3.geoPath(projection);
-            if(chartConfig.transformVal !== null) {
-                console.log("Test");
-                console.log(chartConfig.transformVal);
-                var t = d3.zoomIdentity.translate(chartConfig.transformVal.x, chartConfig.transformVal.y).scale(chartConfig.transformVal.k);
-                mapArea.attr("transform", t);
+            centeringConfig.scaleFactor = 180;
+            var centerLon, centerLat;
+            if(chartConfig.newCenter){
+                console.log(chartConfig.newCenter);
+                centerLon = chartConfig.newCenter[0];
+                centerLat = chartConfig.newCenter[1];
+
+            }else{
+                centerLon = 0;
+                centerLat = 0;
             }
+            console.log(centerLon);
+            console.log(centerLat);
+            projection = d3.geoMercator().center([centerLon, centerLat]).scale(180).translate([width / 2, height / 2]);
+            var path = d3.geoPath(projection);
             svg.on("mousemove", function(){
                 if(zoomed){
-                    chartConfig.transformVal = centeringConfig.transformVal;
+                    chartConfig.newCenter = centeringConfig.newCenter;
                 }
             });
 
