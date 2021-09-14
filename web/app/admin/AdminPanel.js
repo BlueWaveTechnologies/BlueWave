@@ -33,16 +33,10 @@ bluewave.AdminPanel = function(parent, config) {
         waitmask = config.waitmask;
 
 
-        var div = document.createElement("div");
-        div.className = "admin-panel";
-        parent.appendChild(div);
-        me.el = div;
-        addShowHide(me);
-
-
       //Create table
         var table = createTable();
-        div.appendChild(table);
+        table.className = "admin-panel";
+        parent.appendChild(table);
         var tbody = table.firstChild;
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
@@ -81,6 +75,13 @@ bluewave.AdminPanel = function(parent, config) {
             waitmask: waitmask,
             queryService: "admin/job/",
             getTables: "admin/tables/",
+            onTreeClick: function(item){
+                var sql = "select * from ";
+                var schemaName = item.node.schema;
+                if (schemaName) sql += schemaName + ".";
+                sql += item.name;
+                this.getComponents().editor.setValue(sql);
+            },
             style:{
                 table: javaxt.dhtml.style.default.table,
                 toolbar: javaxt.dhtml.style.default.toolbar,
@@ -92,6 +93,10 @@ bluewave.AdminPanel = function(parent, config) {
             }
         });
         createPanel("Graph", "fas fa-share-alt", bluewave.GraphAdmin, config);
+        createPanel("Config", "fas fa-sliders-h", bluewave.ConfigAdmin, config);
+
+        me.el = table;
+        addShowHide(me);
     };
 
 
