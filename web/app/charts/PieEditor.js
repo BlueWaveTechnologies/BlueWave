@@ -202,7 +202,6 @@ bluewave.charts.PieEditor = function(parent, config) {
             }
 
             for (var link in inputData[0].links) {
-                var hi = link;
                 var linkStartType = "";
                 var linkEndType = "";
                 var linkQuantity = inputData[0].links[link].quantity;
@@ -218,9 +217,16 @@ bluewave.charts.PieEditor = function(parent, config) {
                 }
                 var linkFullType = linkStartType + " to " + linkEndType;
                 var linksAndQuantityEntry = {};
-                linksAndQuantityEntry.type = linkFullType;
-                linksAndQuantityEntry.quantity = linkQuantity;
-                linksAndQuantity.push(linksAndQuantityEntry);
+                linksAndQuantityEntry.key = linkFullType;
+                linksAndQuantityEntry.value = linkQuantity;
+
+
+                if (!(linksAndQuantity.indexOf(linkFullType) === -1)) {
+                    var objIndex = linksAndQuantity.findIndex((obj => obj.key == linkFullType));
+                    linksAndQuantity[objIndex].value = linksAndQuantity[objIndex].value + linkQuantity;
+                } else {
+                    linksAndQuantity.push(linksAndQuantityEntry);
+                }
             }
         }
 
@@ -339,7 +345,12 @@ bluewave.charts.PieEditor = function(parent, config) {
             if (isSupChain) {
             data = linksAndQuantity;
             }
-            pieChart.update(chartConfig, data);
+            for (var i=0; i < data.length; i++) {
+                if (!(data[i].key.includes(chartConfig.pieKey))) {
+                    data.splice(i, 1);
+                }
+            }
+            pieChart.update(chartConfig, data, isSupChain);
         });
     };
 
