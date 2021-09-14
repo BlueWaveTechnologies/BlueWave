@@ -1143,3 +1143,7 @@ svg text {
     color: #636363;
     box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
 }
+
+.line-area {
+    fill: url(#fill-gradient)
+}
