@@ -80,6 +80,7 @@ bluewave.NodeSearch = function(parent, config) {
         nodeList.clear();
         nodeView.clear();
         gridPanel.clear();
+        gridPanel.hide();
     };
 
 
@@ -172,7 +173,7 @@ bluewave.NodeSearch = function(parent, config) {
         cancelButton.hide();
         div.appendChild(cancelButton);
         cancelButton.onclick = function(){
-            searchBar.clear();
+            me.clear();
         };
 
         searchBar.clear = function(){
@@ -251,8 +252,11 @@ bluewave.NodeSearch = function(parent, config) {
             el: outerDiv,
             nodes: [],
             clear: function(){
-                innerDiv.innerHTML = "";
-                this.nodes = [];
+                //innerDiv.innerHTML = "";
+                //this.nodes = [];
+                innerDiv.childNodes.forEach(function(div){
+                    div.disable();
+                });
             },
             addNode: function(n){
                 var div = document.createElement("div");
