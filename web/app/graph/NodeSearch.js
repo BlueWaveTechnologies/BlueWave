@@ -210,7 +210,6 @@ bluewave.NodeSearch = function(parent, config) {
 
       //Left column
         td = document.createElement("td");
-        setStyle(td, config.style.leftPanel);
         td.style.height = "100%";
         tr.appendChild(td);
         createNodeList(td);
@@ -239,7 +238,7 @@ bluewave.NodeSearch = function(parent, config) {
         outerDiv.className = "node-search-list";
         outerDiv.style.height = "100%";
         outerDiv.style.width = "210px";
-        outerDiv.style.overflow = "auto";
+        outerDiv.style.overflow = "hidden auto";
         parent.appendChild(outerDiv);
 
         var innerDiv = document.createElement('div');
@@ -247,6 +246,7 @@ bluewave.NodeSearch = function(parent, config) {
         innerDiv.style.width = "100%";
         outerDiv.appendChild(innerDiv);
 
+        var className = "node-search-list-item noselect";
 
         nodeList = {
             el: outerDiv,
@@ -255,18 +255,34 @@ bluewave.NodeSearch = function(parent, config) {
                 //innerDiv.innerHTML = "";
                 //this.nodes = [];
                 innerDiv.childNodes.forEach(function(div){
+                    div.className = className;
                     div.disable();
                 });
             },
             addNode: function(n){
                 var div = document.createElement("div");
-                div.className = "node-search-list-item noselect";
+                div.className = className;
                 div.innerText = n.name;
+                div.tabIndex = -1;
                 div.node = n;
                 div.onclick = function(){
                     var opacity = parseFloat(this.style.opacity);
                     if (isNaN(opacity)){
-                        gridPanel.show(this.node);
+                        var div = this;
+                        innerDiv.childNodes.forEach(function(d){
+                            d.className = className;
+                            if (d===div){
+                                d.className += " highlight";
+                            }
+                        });
+
+
+                        div.focus();
+                        gridPanel.show(div.node);
+                        setTimeout(function(){ //focus again after the gridPanel animation
+                            div.blur();
+                            div.focus();
+                        },800);
                     }
                     else{
                         gridPanel.hide();
@@ -304,6 +320,11 @@ bluewave.NodeSearch = function(parent, config) {
 
                 n.div = div;
                 this.nodes.push(n);
+            },
+            selectNode: function(node){
+                innerDiv.childNodes.forEach(function(div){
+                    if (div.node.name===node.name) div.onclick();
+                });
             }
         };
     };
@@ -323,13 +344,20 @@ bluewave.NodeSearch = function(parent, config) {
           .attr("width", "100%")
           .attr("height", "100%");
 
+        var container = svg.append("g");
+
+        svg.call(d3.zoom().on("zoom", function() {
+            container.attr("transform", d3.event.transform);
+        }));
+
+
         var clear = function(){
-            svg.node().innerHTML = "";
+            container.node().innerHTML = "";
         };
 
         var update = function(q, nodes, links){
             clear();
-            var g = svg.append("g");
+            var g = container.append("g");
 
 
             var cx = div.offsetWidth/2;
@@ -387,6 +415,14 @@ bluewave.NodeSearch = function(parent, config) {
                   else{
                       return "#b987d4";
                   }
+              })
+              .on("click", function(node){
+                if (node.type==="search"){
+                    gridPanel.hide();
+                }
+                else{
+                    nodeList.selectNode(node);
+                }
               });
 
 
@@ -406,8 +442,15 @@ bluewave.NodeSearch = function(parent, config) {
                   else{
                     return "#000";
                   }
+              })
+              .on("click", function(node){
+                if (node.type==="search"){
+                    gridPanel.hide();
+                }
+                else{
+                    nodeList.selectNode(node);
+                }
               });
-
 
 
             var labelHeight = 12;
@@ -508,6 +551,7 @@ bluewave.NodeSearch = function(parent, config) {
 
         gridPanel.show = function(node){
             this.style.height = height + "px";
+            this.style.opacity = 1;
 
             if (node.name === currNode && node.ids.length === currIDs.length){
 
@@ -534,6 +578,7 @@ bluewave.NodeSearch = function(parent, config) {
             var h = this.offsetHeight;
             if (h>50) height = h;
             this.style.height = "0px";
+            this.style.opacity = 0;
         };
 
 
