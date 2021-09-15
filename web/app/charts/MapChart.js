@@ -29,7 +29,7 @@ bluewave.charts.MapChart = function(parent, config) {
         width: null,
         height: null
     };
-    var svg, mapArea; //d3 elements
+    var svg, mapArea, mapCenter; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
@@ -80,35 +80,31 @@ bluewave.charts.MapChart = function(parent, config) {
             var x = (w/2)-t.x;
             var y = (h/2)-t.y;
             var p = projection.invert([x,y]);
-            console.log(p);
+            //console.log(p);
             centeringConfig.newCenter = p;
             zoomed = true;
-            renderCenter(p, projection);
+
+            if (!mapCenter){
+                mapCenter = mapArea.append("g")
+                .selectAll("whatever")
+                .data([0]) //fake data
+                .enter()
+                .append("circle")
+                .attr("r", 10)
+                .style("fill", "#ff3c38");
+            }
+
+
+
+            mapCenter
+            .attr("cx", function(){
+                return projection([p[0],p[1]])[0];
+            })
+            .attr("cy", function(){
+                return projection([p[0],p[1]])[1];
+            });
         }
     }
-
-
-  //**************************************************************************
-  //** renderCenter
-  //**************************************************************************
-    var renderCenter = function(center, projection){
-
-        var r = 10
-        var coords = [];
-        coords.push(center);
-        var c = "#ff3c38";
-
-        mapArea.append("g")
-        .selectAll("circle")
-        .remove()
-        .data(coords)
-        .enter()
-        .append("circle")
-        .attr("r", r)
-        .attr("cx", d=>projection([center[0],center[1]])[0])
-        .attr("cy", d=>projection([center[0],center[1]])[1])
-        .style("fill", c);
-    };
 
 
   //**************************************************************************
