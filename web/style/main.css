@@ -967,7 +967,6 @@ li.tree-node:hover {
 .node-search-list {
     background-color: #0b3c56;
     border-radius: 5px 0 0 5px;
-    padding: 5px;
 }
 
 .node-search-list-item {
@@ -979,12 +978,9 @@ li.tree-node:hover {
     cursor: pointer;
 }
 
-.node-search-list-item:hover {
-    /*
-    background-color:#115980;
-    border-radius: 3px;
-    color: #9db6c3;
-    */
+.node-search-list-item:hover,
+.node-search-list-item:focus,
+.node-search-list-item.highlight {
     background-color: #1a75a7;
     border-radius: 3px;
 }
@@ -1008,6 +1004,22 @@ li.tree-node:hover {
 
 .node-search-graph text {
     font-size: 12px;
+    cursor: pointer;
+}
+
+.node-search-grid {
+    border: 1px solid #dcdcdc;
+    transition: all 0.8s cubic-bezier(0.39, 0.575, 0.565, 1);
+}
+
+.node-search-grid .table-col,
+.node-search-grid .table-header-col {
+    font-size: 12px;
+    height: 28px;
+    line-height: 28px;
+}
+.node-search-grid .table-header {
+    height: 28px;
 }
 
 
