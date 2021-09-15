@@ -83,8 +83,33 @@ bluewave.charts.MapChart = function(parent, config) {
             console.log(p);
             centeringConfig.newCenter = p;
             zoomed = true;
+            renderCenter(p, projection);
         }
     }
+
+
+  //**************************************************************************
+  //** renderCenter
+  //**************************************************************************
+    var renderCenter = function(center, projection){
+
+        var r = 10
+        var coords = [];
+        coords.push(center);
+        var c = "#ff3c38";
+
+        mapArea.append("g")
+        .selectAll("circle")
+        .remove()
+        .data(coords)
+        .enter()
+        .append("circle")
+        .attr("r", r)
+        .attr("cx", d=>projection([center[0],center[1]])[0])
+        .attr("cy", d=>projection([center[0],center[1]])[1])
+        .style("fill", c);
+    };
+
 
   //**************************************************************************
   //** getProjection

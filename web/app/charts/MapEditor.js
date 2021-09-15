@@ -119,20 +119,6 @@ if(!bluewave.charts) bluewave.charts={};
             horizontalLine.style.zIndex = "1";
             previewArea.appendChild(horizontalLine);
 
-            var centerDot = document.createElement("div");
-            centerDot.style.position = "absolute";
-            centerDot.style.top = height/2+"px";
-            centerDot.style.bottom = height/2+"px";
-            centerDot.style.left = width/2+"px";
-            centerDot.style.right = width/2+"px";
-            centerDot.style.height = "14px";
-            centerDot.style.width = "14px";
-            centerDot.style.borderRadius = "50%";
-            centerDot.style.backgroundColor = "#FF0000";
-            centerDot.style.transform = "translate(-50%, -50%)";
-            centerDot.style.zIndex = "0";
-            previewArea.appendChild(centerDot);
-
         });
 
 
