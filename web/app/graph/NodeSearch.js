@@ -400,8 +400,11 @@ bluewave.NodeSearch = function(parent, config) {
                   else if (node.type==="match"){
                       return "#d07393";
                   }
-                  else{
+                  else if (node.type==="related"){
                       return "#d89df8";
+                  }
+                  else{
+                      return "#dcdcdc";
                   }
               })
               .attr("stroke-width", 1.5)
@@ -412,8 +415,11 @@ bluewave.NodeSearch = function(parent, config) {
                   else if (node.type==="match"){
                       return "#c0416b";
                   }
+                  else if (node.type==="related"){
+                      return "#b886d3";
+                  }
                   else{
-                      return "#b987d4";
+                      return "#777";
                   }
               })
               .on("click", function(node){
@@ -484,13 +490,25 @@ bluewave.NodeSearch = function(parent, config) {
                     .attr("transform", function(node) {
                         var x = node.x;
                         var y = node.y;
+                        var box = d3.select(this).node().getBBox();
+
                         if (node.type==="search"){ //place text inside node
                             var xOffset = x-(20-2); //radius - width of circle outline
                             var yOffset = y+((labelHeight/2)-2); //- width of circle outline
                             return "translate(" + xOffset + "," + yOffset + ")";
                         }
                         else{
-                            return "translate(" + (x+10) + "," + (y-(labelHeight/2)) + ")";
+
+                            var xOffset;
+                            var nodeRadius = 10;
+                            if (x>cx){
+                                xOffset = x+nodeRadius;
+                            }
+                            else{
+                                xOffset = x-(box.width+nodeRadius);
+                            }
+
+                            return "translate(" + xOffset + "," + (y-(labelHeight/2)) + ")";
                         }
                     });
                 }
@@ -594,7 +612,8 @@ bluewave.NodeSearch = function(parent, config) {
   //**************************************************************************
   //** updateNodes
   //**************************************************************************
-  /** Used to find nodes that contain a given keyword and update the view
+  /** Used to find nodes that contain a given keyword and update the node
+   *  views (e.g. nodeList and nodeView)
    */
     var updateNodes = function(q){
 
@@ -621,12 +640,20 @@ bluewave.NodeSearch = function(parent, config) {
            type: "search"
         });
 
+        var relatedNodes = {};
+
+
 
         var arr = [];
         nodeList.nodes.forEach(function(n){
             var query = "MATCH (p:" + n.name + ")\n" +
             "WHERE any(key in keys(p) WHERE toLower(p[key]) CONTAINS toLower('" + q +"') )\n" +
-            "RETURN ID(p) as id";
+            "OPTIONAL MATCH (p)-[r]-(n) \n"+
+            "RETURN ID(p) as id,\n" +
+            "type(r) as relationship,\n" +
+            "ID(n) as relatedNodeID,\n" +
+            "labels(n) as relatedNodeLabels,\n" +
+            "ID(startNode(r)) as startNode";
             arr.push({
                 node: n.name,
                 query: query,
@@ -636,24 +663,74 @@ bluewave.NodeSearch = function(parent, config) {
 
 
         var onReady = function(){
+            updateRelatedNodes();
             nodeView.update(q, nodes, links);
         };
 
+
+
         if (arr.length>0){
             waitmask.show(500);
-            var updateNodes = function(){
+            var getNodes = function(){
                 var item = arr.pop();
                 getCSV(item.query, function(csv){
+                    var item = this;
 
                     var rows = d3.csvParse(csv);
                     if (rows.length>0){
 
-                        var nodeIDs = [];
+
+                        var matchingNodes = {};
+                        var relationships = {};
                         rows.forEach(function(row){
-                            nodeIDs.push(parseInt(row.id));
+                            var nodeID = row.id;
+
+                            if (!matchingNodes[nodeID]){
+                                matchingNodes[nodeID] = [];
+                            }
+
+
+                            if (row.relationship){
+
+                                var dir;
+                                if (row.startNode===nodeID){
+                                    dir = "->";
+                                }
+                                else{
+                                    dir = "<-";
+                                }
+
+
+                                var relatedNode;
+                                if (!row.relatedNodeLabels){
+                                    relatedNode = "";
+                                }
+                                else{
+                                    relatedNode = row.relatedNodeLabels;
+                                    if (relatedNode.indexOf("[")===0 && relatedNode.lastIndexOf("]")===relatedNode.length-1){
+                                        relatedNode = relatedNode.substring(1, relatedNode.length-1);
+                                    }
+                                    if (relatedNode.indexOf(",")>-1){
+                                        relatedNode = relatedNode.split(",")[0].trim();
+                                    }
+                                }
+
+                                var key = dir+relatedNode;
+                                if (!relationships[key]) relationships[key] = [];
+                                relationships[key].push(row.relatedNodeID);
+                            }
+
                         });
 
-                        var item = this;
+
+
+                        var nodeIDs = [];
+                        for (var key in matchingNodes) {
+                            nodeIDs.push(parseInt(key));
+                        }
+
+
+
                         var nodeName = item.node;
                         item.div.enable(nodeIDs);
                         nodes.push({
@@ -665,6 +742,27 @@ bluewave.NodeSearch = function(parent, config) {
                             source: q,
                             target: nodeName
                         });
+
+
+                        for (var key in relationships) {
+
+                            var relatedNodeIDs = relationships[key];
+                            var dir = key.substring(0,2);
+                            var relatedNode = key.substring(2);
+
+
+
+                            if (!relatedNodes[nodeName]) relatedNodes[nodeName] = [];
+                            relatedNodes[nodeName].push({
+                                name: relatedNode,
+                                type: "related",
+                                nodes: relatedNodeIDs,
+                                dir: dir
+                            });
+
+
+
+                        }
                     }
 
                     if (arr.length===0){
@@ -672,12 +770,59 @@ bluewave.NodeSearch = function(parent, config) {
                         onReady();
                     }
                     else{
-                        updateNodes();
+                        getNodes();
                     }
                 }, item);
             };
-            updateNodes();
+            getNodes();
         }
+
+
+        var updateRelatedNodes = function(){
+            for (var key in relatedNodes) {
+                var nodeName = key;
+                var relationships = relatedNodes[key];
+                relationships.forEach(function(r){
+                    /*
+                        name: relatedNode,
+                        type: "related",
+                        nodes: relatedNodeIDs,
+                        dir: dir
+                    */
+                    var relatedNode = r.name;
+                    var addNode = true;
+                    for (var i=0; i<nodes.length; i++){
+                        if (nodes[i].name===relatedNode){
+                            addNode = false;
+                            break;
+                        }
+                    }
+
+                    if (addNode){
+                        nodes.push({
+                            name: relatedNode,
+                            type: "related",
+                            nodes: r.relatedNodeIDs
+                        });
+                    }
+
+
+                    if (r.dir==="->"){
+                        links.push({
+                            source: nodeName,
+                            target: relatedNode
+                        });
+                    }
+                    else{
+                        links.push({
+                            source: relatedNode,
+                            target: nodeName
+                        });
+                    }
+
+                });
+            }
+        };
 
     };
 
