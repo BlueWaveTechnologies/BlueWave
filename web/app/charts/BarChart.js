@@ -104,7 +104,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 xKey2 = chartConfig.xAxis2;
                 yKey2 = chartConfig.yAxis2;
             }
-
+            
 
             var data1 = data[0];
             var data2 = data[1];
@@ -123,16 +123,35 @@ bluewave.charts.BarChart = function(parent, config) {
             }).entries(data);
 
 
+            var getBarColor = function(d){
+                //TODO: check which dataset this belongs to and call getColor()
+                
+                return (chartConfig.barColor || "#6699CC");
+            };
 
 
+            //Set intitial value for layout to vertical
+            if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
+            var layout = chartConfig.barLayout;
 
-            displayAxis("key","value",sumData);
+            //Flip axis if layout is horizontal
+            let leftLabel, bottomLabel;
+            if(layout === "vertical"){
+                displayAxis("key", "value", sumData);
+                leftLabel = chartConfig.yAxis;
+                bottomLabel = chartConfig.xAxis;
+            }else if(layout === "horizontal"){
+                displayAxis("value", "key", sumData);
+                leftLabel = chartConfig.xAxis;
+                bottomLabel = chartConfig.yAxis;
+            } 
 
             width = plotWidth;
             height = plotHeight;
 
             if (y.bandwidth || x.bandwidth) {
 
+                if(chartConfig.barLayout === "vertical"){
                 plotArea
                     .selectAll("mybar")
                     .data(sumData)
@@ -155,11 +174,39 @@ bluewave.charts.BarChart = function(parent, config) {
                     .attr("width", function (d) {
                         return x.bandwidth ? x.bandwidth() : x(d["key"]);
                     })
-                    .attr("fill", "#69b3a2");
-            }
-            else {
+                    .attr("fill", getBarColor);
+                }
+                //Horizontal layout
+               else if(chartConfig.barLayout === "horizontal"){
+                plotArea
+                    .selectAll("mybar")
+                    .data(sumData)
+                    .enter()
+                    .append("rect")
+                    .attr("x", function (d) {
+                        return 0;
+                    })
+                    .attr("y", function (d) {
+                        return y(d["key"]);
+                    })
+                    .attr("height", function (d) {
 
-                if (timeAxis === "x") {
+                        return y.bandwidth
+                            ? y.bandwidth()
+                            : height - y(d["value"]);
+                    })
+                    .attr("width", function (d) {
+                        return x.bandwidth ? x.bandwidth() : x(d["value"]);
+                    })
+                    .attr("fill", getBarColor);
+                }
+            }
+
+            //No bandwith
+            else {
+                // if(timeAxis === "x")
+                if (chartConfig.barLayout === "vertical") {
+
                     plotArea
                         .selectAll("mybar")
                         .data(sumData)
@@ -180,32 +227,131 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return width/sumData.length-5;
                         })
-                        .attr("fill", "#69b3a2");
-                } else if (timeAxis === "y") {
+                        .attr("fill", getBarColor);
+                } 
+                // else if(timeAxis === "y")
+                else if (chartConfig.barLayout === "horizontal") {
+
                     plotArea
                         .selectAll("mybar")
-                        .data(data)
+                        .data(sumData)
                         .enter()
                         .append("rect")
                         .attr("x", function (d) {
                             return 0;
                         })
                         .attr("y", function (d) {
-                            return y(d[yKey]) - height/data.length / 2;
+                            return y(d["key"]) - height/data.length / 2;
                         })
                         .attr("height", function (d) {
                             return height/data.length-5;
                         })
                         .attr("width", function (d) {
-                            return x(d[xKey]);
+                            return x(d["value"]);
                         })
-                        .attr("fill", "#69b3a2");
+                        .attr("fill", getBarColor);
                 }
             }
+            
+            
+            
+            //Create d3 event listeners for bars
+            var bars = plotArea.selectAll("rect").data(data);
+            bars.on("mouseover", function(){ 
+                d3.select(this).transition().duration(100).attr("opacity", "0.8")
+            });
+
+            bars.on("mouseout", function(){
+                d3.select(this).transition().duration(100).attr("opacity", "1.0")
+            });
+            
+            var getSiblings = function(bar){
+                var arr = [];
+                bars.each(function() { 
+                    arr.push(this);
+                }); 
+                return arr;
+            };
+            
+            bars.on("click", function(){
+                me.onClick(this, getSiblings(this));
+            });
+            
+            bars.on("dblclick", function(){
+                me.onDblClick(this, getSiblings(this));
+            });
+            
+            
+            //Draw grid lines
+            if(chartConfig.xGrid || chartConfig.yGrid){
+                drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+            }
+
+            //Draw labels if checked
+            if(chartConfig.xLabel || chartConfig.yLabel){
+                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                    axisHeight, axisWidth, margin, bottomLabel, leftLabel);
+            }
+
+            
+            //Display legend
+            // var legendContainer = document.querySelector(".bar-legend");
+            // if(chartConfig.barLegend && !document.querySelector(".bar-legend")){
+                 
+            //     var div = d3.select(parent).append("div");
+
+            //     div
+            //      .attr("class", "bar-legend")
+            //      .html("<div>Data Set</div>")
+            //      .style("background-color", "white")
+            //      .style("border-radius", "2px")
+            //      .style("padding", "10px")
+            //      .style("display", "flex")
+            //      .style("justify-content", "center")
+            //      .style("align-items", "center")
+            //      .style("position", "absolute")
+            //      .attr("draggable", "true")
+            //      .style("left", plotWidth/2 + "px")
+            //      .style("top", 0 + "px")
+            //      .style("cursor", "move")
+            //      .style("text-align", "center")
+                
+                
+            //     //Temporary drag function - will make a better one
+            //      .call(d3.drag()
+            //         .on('start.interrupt', function () {
+            //         div.interrupt();
+            //     })
+            //     .on('start drag', function () {             
+            //         div.style('top', d3.event.y  + 'px')
+            //         div.style('left', d3.event.x  + 'px')
+            //     }))
+
+            //     //Add legend color
+            //      div.insert("div", ":first-child")
+            //      .style("background-color", getBarColor)
+            //      .style("height", "1.618em")
+            //      .style("width", "1.618em")
+            //      .style("margin", "auto 10px auto 0px")
+            //      .style("border-radius", "2px")
+                 
+
+            // }else if(!chartConfig.barLegend){
+            //     let legendContainer = document.querySelector(".bar-legend");
+            //     if(legendContainer) legendContainer.remove();
+            // }
+
+
+            
         });
     };
 
 
+  //**************************************************************************
+  //** onClick
+  //**************************************************************************
+    this.onClick = function(bar, bars){};
+    this.onDblClick = function(bar, bars){};
 
   //**************************************************************************
   //** displayAxis
@@ -368,6 +514,8 @@ bluewave.charts.BarChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
+    var drawGridlines = bluewave.utils.drawGridlines;
+    var drawLabels = bluewave.utils.drawLabels;
 
     init();
 };

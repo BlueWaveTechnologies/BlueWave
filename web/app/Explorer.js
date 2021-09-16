@@ -203,7 +203,7 @@ bluewave.Explorer = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-    
+
 
               //Add props to node
                 var props = dashboard.info.nodes[nodeID];
@@ -219,11 +219,11 @@ bluewave.Explorer = function(parent, config) {
                 if (props.config.chartTitle) updateTitle(node, props.config.chartTitle);
 
 
-              //Check if there's a thumbnail/preview. If so, we'll render it later 
+              //Check if there's a thumbnail/preview. If so, we'll render it later
                 if (props.preview) thumbnails.push({
                     node: node,
                     thumbnail: props.preview
-                }); 
+                });
 
 
 
@@ -290,15 +290,15 @@ bluewave.Explorer = function(parent, config) {
             updateButtons();
             setZoom(dashboard.info.zoom);
             me.setView(view);
-            
+
             if (me.getView()!=="Dashboard"){
-                
+
               //Update connections
                 for (var i=0; i<connectionNodes.length; i++){
                     var inputID = connectionNodes[i];
                     drawflow.updateConnectionNodes("node-"+inputID);
                 }
-            
+
               //Update thumbnails
                 for (var i=0; i<thumbnails.length; i++){
                     (function (t) {
@@ -320,10 +320,10 @@ bluewave.Explorer = function(parent, config) {
                 var node = csvRequests.pop();
                 getCSV(node.config.query, function(csv){
                     this.csv = csv;
-                    if (csvRequests.length===0){          
+                    if (csvRequests.length===0){
                         showMask = false;
                         waitmask.hide();
-                        onReady.apply(me, []); 
+                        onReady.apply(me, []);
                     }
                     else{
                         updateNodes();
@@ -389,7 +389,7 @@ bluewave.Explorer = function(parent, config) {
                 button.addData.enable();
                 button.sankeyChart.enable();
                 button.supplyChain.enable();
-                
+
 
               //Special case for SupplyChain nodes
                 for (var key in nodes) {
@@ -448,11 +448,11 @@ bluewave.Explorer = function(parent, config) {
     this.setView = function(name){
         if (!name) name = "Edit";
         if (name==="Edit"){
-            
+
             if (me.getView()==="Dashboard"){
                 var dashboard = getDashboard(name);
                 me.update(dashboard, false, "Edit");
-            } 
+            }
             else{
                 toggleButton.setValue("Edit");
                 toggleButton.show();
@@ -561,7 +561,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     this.save = function(){
         if (me.isReadOnly()) return;
-      
+
 
         waitmask.show(500);
         getName(function(formInputs){
@@ -813,8 +813,8 @@ bluewave.Explorer = function(parent, config) {
                     return;
                 }
             }
-            
-            
+
+
           //Ensure that Map can only be connected by addData or supplyChain nodes
             if (node.type === "map"){
                 if (inputNode.type != "addData" && inputNode.type != "supplyChain"){
@@ -822,8 +822,8 @@ bluewave.Explorer = function(parent, config) {
                    return;
                 }
             }
-            
-            
+
+
           //Ensure that Sankey can only be connected by a supplyChain node
             if (node.type === "sankeyChart"){
                 if (inputNode.type != "supplyChain"){
@@ -831,7 +831,7 @@ bluewave.Explorer = function(parent, config) {
                    return;
                 }
             }
-            
+
 
           //If we're still here, update node and open editor
             node.inputs[outputID] = inputNode;
@@ -1018,7 +1018,7 @@ bluewave.Explorer = function(parent, config) {
             console.log("Unsupported Node Type: " + nodeType);
             return;
         }
-        
+
 
       //Get button icon and title to decorate the node
         var icon = btn.el.dataset["icon"];
@@ -1303,6 +1303,7 @@ bluewave.Explorer = function(parent, config) {
                 title: "Query",
                 width: 1020,
                 height: 600,
+                resizable: true,
                 beforeClose: function(){
                     dbView.onClose();
                 }
@@ -1324,7 +1325,7 @@ bluewave.Explorer = function(parent, config) {
                 queryService: "query/job/",
                 getTables: function(tree){
                     waitmask.show();
-                    get("graph/nodes", {
+                    get("graph/properties", {
                         success: function(nodes){
                             waitmask.hide();
 
@@ -1333,7 +1334,10 @@ bluewave.Explorer = function(parent, config) {
                             for (var i=0; i<nodes.length; i++){
                                 var nodeName = nodes[i].node;
                                 if (nodeName){
-                                    arr.push({name: nodes[i].node});
+                                    arr.push({
+                                        name: nodes[i].node,
+                                        properties: nodes[i].properties
+                                    });
                                 }
                             }
                             arr.sort(function(a, b){
@@ -1348,6 +1352,22 @@ bluewave.Explorer = function(parent, config) {
                             alert(request);
                         }
                     });
+                },
+                onTreeClick: function(item){
+                    var cql = "MATCH (n:" + item.name + ")\n";
+                    var properties = item.node.properties;
+                    if (properties && properties.length>0){
+                        cql += "RETURN\n";
+                        //cql += "   ID(n) as node_id,\n";
+                        for (var i=0; i<properties.length; i++){
+                            if (i>0) cql +=",\n";
+                            cql += "   n." + properties[i] + " as " + properties[i];
+                        }
+                    }
+                    else{
+                        cql += "RETURN ID(n) as id, properties(n) as " + item.name + " limit 10"
+                    }
+                    this.getComponents().editor.setValue(cql);
                 },
                 style:{
                     table: javaxt.dhtml.style.default.table,
@@ -1455,8 +1475,8 @@ bluewave.Explorer = function(parent, config) {
         if(!mapEditor){
             var win = createNodeEditor({
                 title: "Edit Map",
-                width: 1680,
-                height: 920,
+                width: 1180,
+                height: 700,
                 resizable: true,
                 beforeClose: function(){
                     var chartConfig = mapEditor.getConfig();
@@ -1482,11 +1502,11 @@ bluewave.Explorer = function(parent, config) {
                     }
                     button.layout.enable();
                 }
-                
+
             });
 
             mapEditor = new bluewave.charts.MapEditor(win.getBody(), config);
-            
+
             mapEditor.show = function(){
                 win.show();
             };
@@ -1495,6 +1515,9 @@ bluewave.Explorer = function(parent, config) {
                 win.hide();
             };
 
+            win.onResize = function(){
+                mapEditor.resize();
+            };
         };
 
       //Add custom getNode() method to the mapEditor to return current node
@@ -2688,7 +2711,7 @@ bluewave.Explorer = function(parent, config) {
                 if (inputNode.type==="supplyChain"){
                     var inputConfig = inputNode.config;
                     if (inputConfig) inputs.push(inputConfig);
-                }  
+                }
             }
         }
     return inputs;
@@ -2697,7 +2720,7 @@ bluewave.Explorer = function(parent, config) {
 
 
 
-    
+
   //**************************************************************************
   //** createToggleButton
   //**************************************************************************
