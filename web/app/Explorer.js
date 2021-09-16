@@ -2399,10 +2399,13 @@ bluewave.Explorer = function(parent, config) {
                     // chartContainer.style.width = (parseFloat(innerDiv.offsetWidth)+ 100) + "px";
                     chartContainer.style.width = rect.imageWidth;
                     chartContainer.style.height = rect.imageHeight;
+                    // chartContainer.style.width = 2000;
+                    // chartContainer.style.height = 2000;
 
                     // chartContainer.style.height = (parseFloat(innerDiv.offsetHeight)*5) + "px";
                     // chartContainer.style.height = (parseFloat(innerDiv.offsetHeight)+100) + "px";
 
+                    
                     innerDiv.appendChild(chartContainer);
                     
 
@@ -2548,6 +2551,20 @@ bluewave.Explorer = function(parent, config) {
     console.log(JSON.stringify(layoutNodeConfig,null,2));
 
     
+    var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
+    // console.log(svg.Width)
+    // console.log(svg.Height)
+    console.log(svg)
+    console.log(JSON.stringify(svg,null,2))
+
+    // we need to set the svg size to the correct size
+    // after chartContainer has been used to render the graph
+    svgToEdit = d3.select(svg)
+        // .attr("width","1000")
+        // .attr("height","1000")
+        .attr("width",layoutNodeConfig.w)
+        .attr("height",layoutNodeConfig.h);
+
   
     
     
@@ -2598,6 +2615,18 @@ bluewave.Explorer = function(parent, config) {
 
 
     var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
+    // console.log(svg.Width)
+    // console.log(svg.Height)
+    console.log(svg)
+    console.log(JSON.stringify(svg,null,2))
+
+    // we need to set the svg size to the correct size
+    // after chartContainer has been used to render the graph
+    svgToEdit = d3.select(svg)
+        .attr("width","1000")
+        .attr("height","1000")
+        .attr("width","1000")
+        .attr("height","1000")
 
     gToEdit = d3.select(svg.getElementsByTagName("g")[0]);
     
