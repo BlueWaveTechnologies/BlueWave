@@ -237,12 +237,7 @@ bluewave.ChartEditor = function(parent, config) {
                 plotInputs.xAxis.setValue(chartConfig.xAxis,chartConfig.xAxis);
                 plotInputs.yAxis.setValue(chartConfig.yAxis,chartConfig.yAxis);
                 plotInputs.group.setValue(chartConfig.group,chartConfig.group);
-                // if(dataOptions2){
-                //     dataOptions2.forEach(val=>{
-                //         plotInputs.xAxis2.add(val,val);
-                //         plotInputs.yAxis2.add(val,val);
-                //     });
-                // }
+
                 // Add dropdown values for each data set
                 for (let i=1; i<inputData.length; i++){
                     let multiLineDataOptions = Object.keys(inputData[i][0]);

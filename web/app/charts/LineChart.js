@@ -126,24 +126,6 @@ bluewave.charts.LineChart = function(parent, config) {
             // if (data2!==null && data2!==undefined && xKey2 && yKey2){
             //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
             // }
-            // data = d3.merge(dataSets)
-
-            // for (let i=0; i<dataSets.length; i++){
-            //         let xKey = chartConfig[`xAxis${i+1}`];
-            //         let xKey2 = chartConfig[`xAxis${i+2}`];
-            //         let yKey = chartConfig[`yAxis${i+1}`];
-            //         let yKey2 = chartConfig[`yAxis${i+2}`];
-            //         console.log(xKey2, xKey2, yKey2, yKey2)
-
-            //         if (dataSets[i+1]!==null && dataSets[i+1]!==undefined && xKey2 && yKey2){
-            //         data = mergeToAxis(dataSets[0],dataSets[i+1],xKey,xKey2,xKey,yKey,yKey2,yKey);
-            //         dataSets[0] = data;
-            //         console.log("yes")
-            //      }
-
-            // }
-            // console.log(data)
-
 
 
             if (group!==null && group!==undefined){
@@ -180,7 +162,7 @@ bluewave.charts.LineChart = function(parent, config) {
             }
             else{
 
-//TODO merge axis of all data sets
+                //Merge data to one axis for displayAxis
                 var mergedData = d3.merge(dataSets);
 
                 var data1 = d3.nest()
