@@ -237,11 +237,27 @@ bluewave.ChartEditor = function(parent, config) {
                 plotInputs.xAxis.setValue(chartConfig.xAxis,chartConfig.xAxis);
                 plotInputs.yAxis.setValue(chartConfig.yAxis,chartConfig.yAxis);
                 plotInputs.group.setValue(chartConfig.group,chartConfig.group);
-                if(dataOptions2){
-                    dataOptions2.forEach(val=>{
-                        plotInputs.xAxis2.add(val,val);
-                        plotInputs.yAxis2.add(val,val);
+                // if(dataOptions2){
+                //     dataOptions2.forEach(val=>{
+                //         plotInputs.xAxis2.add(val,val);
+                //         plotInputs.yAxis2.add(val,val);
+                //     });
+                // }
+                // Add dropdown values for each data set
+                for (let i=1; i<inputData.length; i++){
+                    let multiLineDataOptions = Object.keys(inputData[i][0]);
+
+                    multiLineDataOptions.forEach((val)=>{
+                        let xAxisN = `xAxis${i+1}`;
+                        let yAxisN = `yAxis${i+1}`;
+
+                        plotInputs[xAxisN].add(val, val);
+                        plotInputs[yAxisN].add(val, val);
+
+                        plotInputs[xAxisN].setValue(chartConfig[xAxisN], chartConfig[xAxisN]);
+                        plotInputs[yAxisN].setValue(chartConfig[yAxisN], chartConfig[yAxisN]);
                     });
+
                 }
                 break;
             default:
@@ -306,8 +322,12 @@ bluewave.ChartEditor = function(parent, config) {
         dropdownItem(tbody,"yAxis","Y-Axis",createLinePreview,plotInputs,"yAxis");
         dropdownItem(tbody,"group","Group By",createLinePreview,plotInputs,"group");
         if (inputData.length>1){
-            dropdownItem(tbody,"xAxis2","X-Axis2",createLinePreview,plotInputs,"xAxis2");
-            dropdownItem(tbody,"yAxis2","Y-Axis2",createLinePreview,plotInputs,"yAxis2");
+
+            for(let i=1; i<inputData.length; i++){
+                dropdownItem(tbody,`xAxis${i+1}`,`X-Axis${i+1}`,createLinePreview,plotInputs,`xAxis${i+1}`);
+                dropdownItem(tbody,`yAxis${i+1}`,`Y-Axis${i+1}`,createLinePreview,plotInputs,`yAxis${i+1}`);
+            }
+            
         }
     };
 

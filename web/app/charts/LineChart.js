@@ -120,13 +120,29 @@ bluewave.charts.LineChart = function(parent, config) {
 
             var data1 = data[0];
             var data2 = data[1];
+            dataSets = data
             data = data1;
 
-            if (data2!==null && data2!==undefined && xKey2 && yKey2){
-                data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-            }
+            // if (data2!==null && data2!==undefined && xKey2 && yKey2){
+            //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
+            // }
+            // data = d3.merge(dataSets)
 
+            // for (let i=0; i<dataSets.length; i++){
+            //         let xKey = chartConfig[`xAxis${i+1}`];
+            //         let xKey2 = chartConfig[`xAxis${i+2}`];
+            //         let yKey = chartConfig[`yAxis${i+1}`];
+            //         let yKey2 = chartConfig[`yAxis${i+2}`];
+            //         console.log(xKey2, xKey2, yKey2, yKey2)
 
+            //         if (dataSets[i+1]!==null && dataSets[i+1]!==undefined && xKey2 && yKey2){
+            //         data = mergeToAxis(dataSets[0],dataSets[i+1],xKey,xKey2,xKey,yKey,yKey2,yKey);
+            //         dataSets[0] = data;
+            //         console.log("yes")
+            //      }
+
+            // }
+            // console.log(data)
 
 
 
@@ -163,40 +179,60 @@ bluewave.charts.LineChart = function(parent, config) {
 
             }
             else{
-                let xType = typeOfAxisValue();
 
+//TODO merge axis of all data sets
+                var mergedData = d3.merge(dataSets);
+
+                var data1 = d3.nest()
+                    .key(function(d){return d[xKey];})
+                    .rollup(function(d){
+                        return d3.max(d,function(g){
+                            return g[yKey];
+                        });
+                }).entries(mergedData);
+
+                displayAxis("key","value", data1);
+
+                // let xType = typeOfAxisValue();
+
+                //Draw line for each data set
+                for (let i=0; i<dataSets.length; i++){
+                    if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
+                        xKey = chartConfig[`xAxis${i+1}`];
+                        yKey = chartConfig[`yAxis${i+1}`];
+                        if(!xKey || !yKey) continue;
+                    }
+                    
                 var sumData = d3.nest()
                     .key(function(d){return d[xKey];})
                     .rollup(function(d){
                         return d3.sum(d,function(g){
                             return g[yKey];
                         });
-                }).entries(data);
-
-                displayAxis("key","value",sumData);
+                }).entries(dataSets[i]);
 
                 let keyType = typeOfAxisValue(sumData[0].key);
 
-                plotArea
-                    .append("path")
-                    .datum(sumData)
-                    .attr("fill", "none")
-                    .attr("stroke", chartConfig.lineColor)
-                    .attr("stroke-width", chartConfig.lineWidth)
-                    .attr("opacity", chartConfig.opacity)
-                    .attr(
-                        "d",d3.line()
-                        .x(function(d){
-                            if(keyType==="date"){
-                                return x(new Date(d.key));
-                            }else{
-                                return x(d.key);
-                            }
-                        })
-                        .y(function(d){
-                            return y(d["value"]);
-                        })
-                    );
+                    plotArea
+                        .append("path")
+                        .datum(sumData)
+                        .attr("fill", "none")
+                        .attr("stroke", chartConfig.lineColor)
+                        .attr("stroke-width", chartConfig.lineWidth)
+                        .attr("opacity", chartConfig.opacity)
+                        .attr(
+                            "d",d3.line()
+                            .x(function(d){
+                                if(keyType==="date"){
+                                    return x(new Date(d.key));
+                                }else{
+                                    return x(d.key);
+                                }
+                            })
+                            .y(function(d){
+                                return y(d["value"]);
+                            })
+                        );
 
 
 
@@ -249,7 +285,8 @@ bluewave.charts.LineChart = function(parent, config) {
                    drawGridlines(plotArea, x, y, axisHeight, axisWidth);
                 }
 
-
+                
+            }
             }
 
 
