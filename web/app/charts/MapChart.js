@@ -36,9 +36,15 @@ bluewave.charts.MapChart = function(parent, config) {
     var projection;
     var zoomed = false;
 
-     var zoom = d3.zoom()
+    //this is trying to pass the current translation and scale to the zooming functions. I read this on the Manning D3.js book, and saw it in a few
+//    var zoom = d3.zoom
+//        .translate(projection.translate)
+//        .scale(projection.scale)
+//        .scaleExtent([1, 10])
+//        .on('zoom', handleZoom);
+    var zoom = d3.zoom()
         .scaleExtent([1, 10])
-        .on('zoom', handleZoom);;
+        .on('zoom', handleZoom);
 
   //**************************************************************************
   //** Constructor
@@ -71,6 +77,10 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     function handleZoom(){
         var projection = me.getProjection();
+    //This seems to repproject the projection, nto sure I haven't been able to get it working with the code above.
+//        projection
+//            .translate(zoom.translate())
+//            .scale(zoom.scale());
         mapArea.attr('transform', d3.event.transform);
         if (projection){
             var rect = javaxt.dhtml.utils.getRect(svg.node());
@@ -80,7 +90,7 @@ bluewave.charts.MapChart = function(parent, config) {
             var x = (w/2)-t.x;
             var y = (h/2)-t.y;
             var p = projection.invert([x,y]);
-            //console.log(p);
+            console.log(p);
             centeringConfig.newCenter = p;
             zoomed = true;
 
@@ -93,8 +103,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 .attr("r", 10)
                 .style("fill", "#ff3c38");
             }
-
-
 
             mapCenter
             .attr("cx", function(){
