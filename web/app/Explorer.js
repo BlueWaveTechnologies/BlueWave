@@ -1763,7 +1763,6 @@ bluewave.Explorer = function(parent, config) {
   //** editLayout
   //**************************************************************************
     var editLayout = function(node){
-        console.log("testing this for decoy");
 
       //Create layoutEditor as needed
         if (!layoutEditor){
@@ -1782,11 +1781,7 @@ bluewave.Explorer = function(parent, config) {
                         waitmask.show();
                         var el = layoutEditor.getChart();
                         if (el.show) el.show();
-                        console.log("is it true that these are the same");
-                        console.log(JSON.stringify(el,null,2));
-                        // console.log("what is canvas at this stage",canvas);
                         createPreview(el, function(canvas){
-                            console.log(JSON.stringify(canvas,null,2));
                             thumbnail = canvas.toDataURL("image/png");
                             node.preview = thumbnail;
                             createThumbnail(node, canvas);
@@ -1932,18 +1927,10 @@ bluewave.Explorer = function(parent, config) {
    */
     
     var createThumbnail = function(node, obj,hide){
-        console.log("thumbnail creation here is for something different.")
-        console.log(`node as it was passed in was`, JSON.stringify(node,null,2));
-        console.log(`canvas as it was passed in was`, JSON.stringify(obj,null,2));
-        console.log("ending object is ", obj);
-        console.log("ending node is ", node);
-        randomVar = "googleplex";
         var el = node.childNodes[1];
-        console.log("end el element ", el)
-        console.log("el element ",JSON.stringify(el,null,2));
+      
         el.innerHTML = "";
         var rect = javaxt.dhtml.utils.getRect(el);
-        console.log("rect returned from utils ",JSON.stringify(rect,null,2));
         var width = rect.width;
         var height = rect.height;
 
@@ -1952,8 +1939,6 @@ bluewave.Explorer = function(parent, config) {
         div.style.height = "100%";
         el.appendChild(div);
         var rect = javaxt.dhtml.utils.getRect(div);
-        console.log(`current size of rect width is ${JSON.stringify(rect.width,null,2)}`);
-        console.log(`current size of rect height is ${JSON.stringify(rect.height,null,2)}`);
         el.innerHTML = "";
         var padding = width-rect.width;
         var maxWidth = width-padding;
@@ -1976,9 +1961,7 @@ bluewave.Explorer = function(parent, config) {
         var resize = function(canvas){
             width = canvas.width;
             height = canvas.height;
-            console.log("original size of this thumbnail is ", width, height);
-            console.log("original size of this thumbnail is ", JSON.stringify(width,null,2),JSON.stringify(height,null,2));
-
+            
             if (maxHeight<maxWidth){
 
                 setHeight();
@@ -1998,15 +1981,11 @@ bluewave.Explorer = function(parent, config) {
             img.onload = function() {
                 el.appendChild(this);
             };
-            console.log(base64image)
-            console.log(base64image.offsetHeight)
-            console.log(base64image.offsetWidth)
             img.src = base64image;
             img.ondragstart = function(e){
                 e.preventDefault();
             };
-            console.log(img)
-            console.log(img.style.Height,img.style.Width)
+            
         };
 
 
@@ -2027,10 +2006,7 @@ bluewave.Explorer = function(parent, config) {
         else{ //HTMLCanvasElement
             if (hide!==true){
             resize(obj);
-            console.log(`current size of rect width is ${JSON.stringify(rect.width,null,2)}`);
-            console.log(`current size of rect height is ${JSON.stringify(rect.height,null,2)}`);
-            console.log("original size of this thumbnail is 2006 ", JSON.stringify(width,null,2),JSON.stringify(height,null,2));
-
+            
             return {
                 initWidth:rect.width,
                 innerHeight:rect.height,
@@ -2038,11 +2014,7 @@ bluewave.Explorer = function(parent, config) {
             }
             }
             else{
-                console.log("not showing or processing this, we are generating a fake thumbnail")
-                console.log(`current size of rect width is ${JSON.stringify(rect.width,null,2)}`);
-                console.log(`current size of rect height is ${JSON.stringify(rect.height,null,2)}`);
-                console.log("original size of this thumbnail is 2018 ", JSON.stringify(width,null,2),JSON.stringify(height,null,2));
-
+               
                 return {
                     initWidth:rect.width,
                     innerHeight:rect.height,
@@ -2343,7 +2315,6 @@ bluewave.Explorer = function(parent, config) {
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
-                console.log(node);
                 if (node.type==="layout"){
                     layoutNode = node;
                     break;
@@ -2364,8 +2335,6 @@ bluewave.Explorer = function(parent, config) {
             if (layoutNode.config.hasOwnProperty(key)){
                 // this is probably the sizing for the node
                 var rect = layoutNode.config[key];
-                console.log("the full layout node config is",layoutNode.config);
-                console.log("the full node returned is ", layoutNode);
                 var node = nodes[key];
                 var connected = checkConnection(layoutNode, node);
                 if (!connected) continue;
@@ -2389,44 +2358,16 @@ bluewave.Explorer = function(parent, config) {
                 
                 var innerDiv = dashboardItem.innerDiv;
                 onRender(innerDiv, function(){
-                    console.log("the inner div is reading as ", innerDiv);
 
                     var chartContainer = document.createElement("div");
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
                     innerDiv.style.overflow="hidden";
-                    // value generated from the scaling of the object
-                    // setting random value for scaling the container object 
-
-                    // set this so that it sizes depending on the thumbnail size
-                    // get the thumbnail size
-
-                    // initialize a thumbnail with a fake div
-                    fakeThumbnail = document.createElement("div");
-                    addShowHide(fakeThumbnail)
-                    fakeThumbnail.hide();
-                    // console.log("possible canvas object to be used is ", canvas)
-                    fakeThumbnail = createThumbnail(node,{},true);
-                    console.log(fakeThumbnail);
-                    // console.log(fakeThumbnail.width)
-                    // console.log(fakeThumbnail.height)
-                    console.log(fakeThumbnail.randomVar);
-                    // delete the fakeThumbnail after we have our parameters
-
-
-                    console.log("the innerDiv width is ", innerDiv.offsetHeight);
-                    console.log("the innerDiv height is ", innerDiv.offsetWidth);
                     
-                    
-                    // chartContainer.style.width = (parseFloat(innerDiv.offsetWidth)*5) + "px";
-                    // chartContainer.style.width = (parseFloat(innerDiv.offsetWidth)+ 100) + "px";
+                    // set chartContainer size (used to render each graph) to the size used
+                    // when rendering a thumbnail (in layout editor)
                     chartContainer.style.width = rect.imageWidth;
                     chartContainer.style.height = rect.imageHeight;
-                    // chartContainer.style.width = 2000;
-                    // chartContainer.style.height = 2000;
-
-                    // chartContainer.style.height = (parseFloat(innerDiv.offsetHeight)*5) + "px";
-                    // chartContainer.style.height = (parseFloat(innerDiv.offsetHeight)+100) + "px";
 
                     
                     innerDiv.appendChild(chartContainer);
@@ -2469,7 +2410,6 @@ bluewave.Explorer = function(parent, config) {
                         var data = sankeyEditor.getSankeyData();
                         
                     //Render sankeyChart
-                        // var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
                         var sankeyChart = new bluewave.charts.SankeyChart(chartContainer,config);
 
                         sankeyChart.update(sankeyConfig.style,data);
@@ -2486,29 +2426,24 @@ bluewave.Explorer = function(parent, config) {
                             }
                         }
                         if (node.type==="pieChart"){
-                            // var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
                             var pieChart = new bluewave.charts.PieChart(chartContainer,{});
 
                             pieChart.update(chartConfig, data);
-                            // console.log("the 3 we are passing are ", dashboardItem, node.type, layoutNode.config)
                             editGElement(dashboardItem,node.type,layoutNode.config);
                         }
                         else if (node.type==="barChart"){
-                            // var barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
                             var barChart = new bluewave.charts.BarChart(chartContainer,{});
 
                             barChart.update(chartConfig, data);
                             editGElement(dashboardItem,node.type,layoutNode.config);
                         }
                         else if (node.type==="lineChart"){
-                            // var lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
                             var lineChart = new bluewave.charts.LineChart(chartContainer,{});
 
                             lineChart.update(chartConfig, data);
                             editGElement(dashboardItem,node.type,layoutNode.config);
                         }
                         else if (node.type==="scatterChart"){
-                            // var scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{});
                             var scatterChart = new bluewave.charts.ScatterChart(chartContainer,{});
                             scatterChart.update(chartConfig, data);
                             editGElement(dashboardItem,node.type,layoutNode.config);
@@ -2537,25 +2472,6 @@ bluewave.Explorer = function(parent, config) {
         }
 
     };
-  //**************************************************************************
-  //** circularObjectDebugger
-  //**************************************************************************
-    const getCircularReplacer = () => {
-        const seen = new WeakSet();
-        return (key, value) => {
-          if (typeof value === "object" && value !== null) {
-            if (seen.has(value)) {
-              return;
-            }
-            seen.add(value);
-          }
-          return value;
-        };
-      };
-      // example 
-       //   JSON.stringify(circularReference, getCircularReplacer());
-      
-
 
   //**************************************************************************
   //** Calculate Scaling
@@ -2564,33 +2480,16 @@ bluewave.Explorer = function(parent, config) {
    */
   var calculateScaling = function(dashboardItem,layoutNodeConfig){
 
-    // determine the variable used for the base of the fraction
-    console.log(dashboardItem.innerDiv.offsetWidth);
-    console.log(dashboardItem.innerDiv.offsetHeight);
-    console.log(dashboardItem.offsetWidth);
-    console.log(dashboardItem.offsetHeight);
-    console.log(dashboardItem);
-    console.log(JSON.stringify(dashboardItem,getCircularReplacer(),2));
-    console.log(JSON.stringify(layoutNodeConfig,null,2));
-
-    
+    // determine the variable used for the base of the fraction    
     var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
-    // console.log(svg.Width)
-    // console.log(svg.Height)
-    console.log(svg)
-    console.log(JSON.stringify(svg,null,2))
+
 
     // we need to set the svg size to the correct size
     // after chartContainer has been used to render the graph
     svgToEdit = d3.select(svg)
-        // .attr("width","1000")
-        // .attr("height","1000")
         .attr("width",layoutNodeConfig.w)
         .attr("height",layoutNodeConfig.h);
 
-  
-    
-    
     // determine the variable used for the divider of the fraction
     // calculate scale height
     // original image height
@@ -2598,7 +2497,7 @@ bluewave.Explorer = function(parent, config) {
 
     // new container height
     newContainerHeight = layoutNodeConfig.h;
-    console.log(typeof(newContainerWidth));
+
     // divide
     firstScale = newContainerHeight/originalHeight;
 
@@ -2606,8 +2505,7 @@ bluewave.Explorer = function(parent, config) {
     // calculate scale width
     // original image width
     originalWidth = layoutNodeConfig.imageWidth;
-    console.log(originalHeight);
-    console.log(originalWidth);
+
     // new container width
     newContainerWidth = layoutNodeConfig.w;
 
@@ -2616,12 +2514,6 @@ bluewave.Explorer = function(parent, config) {
 
     
     // return the 2 scaling parameters
-
-    // temporary set variable
-    // firstScale = .3;
-    // secondScale = .6;
-
-    console.log(firstScale, secondScale);
     return {firstScale, secondScale};
   }
 
@@ -2633,36 +2525,22 @@ bluewave.Explorer = function(parent, config) {
    */
 
   var editGElement = function(dashboardItem,nodeType,layoutNodeConfigArray){
-    console.log(layoutNodeConfigArray)
 
 
 
     var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
-    // console.log(svg.Width)
-    // console.log(svg.Height)
-    console.log(svg)
-    console.log(JSON.stringify(svg,null,2))
 
-    // we need to set the svg size to the correct size
-    // after chartContainer has been used to render the graph
-    svgToEdit = d3.select(svg)
-        .attr("width","1000")
-        .attr("height","1000")
-        .attr("width","1000")
-        .attr("height","1000")
+
+
 
     gToEdit = d3.select(svg.getElementsByTagName("g")[0]);
     
       // get the list and handle for each instance
       for (i in layoutNodeConfigArray) {
-        console.log(layoutNodeConfigArray[i]);
         layoutNode = layoutNodeConfigArray[i];
         scales = calculateScaling(dashboardItem,layoutNode);
-            console.log("scales", scales);
             scaleOne = scales.firstScale;
-            console.log(scaleOne);
             scaleTwo = scales.secondScale;
-            console.log("scaleOne , scaleTwo", scaleOne, scaleTwo);
 
 
 
@@ -2675,19 +2553,12 @@ bluewave.Explorer = function(parent, config) {
 
         }
 
-        // setting pieCharts scaling to .5 normalizes and matches the layout view size
-        // but the scaling of .5 only works in the case of the smallest graph.
-        // so we need to do calculations
         if (nodeType == "pieChart"){
-            // gToEdit.attr("transform",`scale(${scaleOne},${scaleTwo})`);
-            // gToEdit.attr("transform",`scale(${scaleTwo},${scaleOne})`);
             gToEdit.attr("transform",`scale(${scaleTwo})`);
 
         }
         if (nodeType == "mapChart"){
             gToEdit.attr("transform","scale(1.0)");
-            // gToEdit.attr("transform",`scale(${scaleTwo},${scaleOne})`);
-            gToEdit.attr("transform",`scale(${scaleTwo})`);
 
         }
         else{

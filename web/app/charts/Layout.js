@@ -194,58 +194,18 @@ bluewave.charts.Layout = function(parent, config) {
         return mainDiv;
     };
 
-    //**************************************************************************
-    //** circularObjectDebugger
-    //**************************************************************************
-    const getCircularReplacer = () => {
-      const seen = new WeakSet();
-      return (key, value) => {
-        if (typeof value === "object" && value !== null) {
-          if (seen.has(value)) {
-            return;
-          }
-          seen.add(value);
-        }
-        return value;
-      };
-    };
-    // example 
-     //   JSON.stringify(circularReference, getCircularReplacer());
-    
+
 
   //**************************************************************************
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
-      console.log("get config is getting called ");
 
         var layout = {};
         for (var i in mainDiv.childNodes){
             var dashboardItem = mainDiv.childNodes[i];
             if (dashboardItem.nodeType===1){
                 var rect = javaxt.dhtml.utils.getRect(dashboardItem);
-                console.log("image size here 209 :", rect.width, rect.height);
-                // print out the img tag..
-                console.log("the image tag is ", dashboardItem.getElementsByTagName("img"))
-                console.log("the iamge natural height is ", dashboardItem.getElementsByTagName("img")[0].naturalHeight);
-                console.log("the iamge height is ", dashboardItem.getElementsByTagName("img")[0].offsetHeight);
-
-                console.log("the rect structure is ", rect);
-                // console.log("the dash item structure is ", JSON.stringify(dashboardItem,null,2));
-                console.log("the dash item structure is ",JSON.stringify(dashboardItem, getCircularReplacer(),2));
-
-
-
-                // we don't need to do this (the following below have been ignored.. the information is available in naturalHeight)
-
-                  // set the style width of the img tag to nothing
-
-
-                  // then get the current width info
-
-                  // set the style width back to width:100% 
-
-                  // then later update the layout config with the new info
 
                 var w = parseInt(dashboardItem.style.width);
                 if (isNaN(w)) w = rect.width;
@@ -259,6 +219,7 @@ bluewave.charts.Layout = function(parent, config) {
                 var y = parseInt(dashboardItem.style.top);
                 if (isNaN(y)) y = rect.y;
 
+               // add rendered image dimensions, position, and dashboardItem dimensions to node config  
                 layout[dashboardItem.inputID] = {
                     x: x,
                     y: y,
@@ -269,7 +230,6 @@ bluewave.charts.Layout = function(parent, config) {
                 };
             }
         }
-        console.log("the resulting layout is",layout)
         return layout;
     };
 
@@ -308,47 +268,6 @@ bluewave.charts.Layout = function(parent, config) {
         };
         img.src = base64image;
     };
-//   //**************************************************************************
-//   //** addImage
-//   //**************************************************************************
-//   var addImage = function(base64image, dashboardItem){
-//     console.log("add image is called here.. ")
-//     dashboardItem.innerDiv.style.verticalAlign = "top";
-
-//     var outerDiv = document.createElement("div");
-//     outerDiv.style.height = "100%";
-//     outerDiv.style.position = "relative";
-//     outerDiv.style.overflow = "hidden";
-//     dashboardItem.innerDiv.appendChild(outerDiv);
-
-//     var innerDiv = document.createElement("div");
-//     innerDiv.style.position = "absolute";
-//     outerDiv.appendChild(innerDiv);
-
-//     var img = document.createElement('img');
-//     img.className = "noselect";
-//     //img.style.width = "100%";
-//     img.onload = function() {
-//         innerDiv.appendChild(this);
-//         var rect = javaxt.dhtml.utils.getRect(this);
-//         console.log("image size:", rect.width, rect.height);
-//         //DO somthing with the w/h
-//         // save w/h to the config
-//         this.style.width = "100%";
-
-//         //if (dashboardItem.el.style.position==="absolute") return;
-
-//         //dashboardItem.el.childNodes[0].style.height = "";
-//         //dashboardItem.innerDiv.style.height = this.height;
-//         //dashboardItem.el.style.height = "";
-
-
-//         var rect = javaxt.dhtml.utils.getRect(dashboardItem.el);
-//         var div = dashboardItem.el.parentNode;
-//         div.style.height = rect.h+"px";
-//     };
-//     img.src = base64image;
-// };
 
   //**************************************************************************
   //** addResizeHandle
