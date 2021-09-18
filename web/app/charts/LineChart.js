@@ -112,15 +112,14 @@ bluewave.charts.LineChart = function(parent, config) {
             //set default values if not instantiated
             if (chartConfig.lineColor==null) chartConfig.lineColor = "#6699CC";
             if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1.5;
-            if (chartConfig.opacity==null) chartConfig.opacity = .95;
-            if (chartConfig.gridLines==null) chartConfig.gridLines = false;
+            if (chartConfig.opacity==null) chartConfig.opacity = 1;
             if (chartConfig.startOpacity==null) chartConfig.startOpacity = 0;
             if (chartConfig.endOpacity==null) chartConfig.endOpacity = 0;
 
 
             var data1 = data[0];
             var data2 = data[1];
-            dataSets = data
+            var dataSets = data;
             data = data1;
 
             // if (data2!==null && data2!==undefined && xKey2 && yKey2){
@@ -184,16 +183,16 @@ bluewave.charts.LineChart = function(parent, config) {
                         yKey = chartConfig[`yAxis${i+1}`];
                         if(!xKey || !yKey) continue;
                     }
-                    
-                var sumData = d3.nest()
-                    .key(function(d){return d[xKey];})
-                    .rollup(function(d){
-                        return d3.sum(d,function(g){
-                            return g[yKey];
-                        });
-                }).entries(dataSets[i]);
 
-                let keyType = typeOfAxisValue(sumData[0].key);
+                    var sumData = d3.nest()
+                        .key(function(d){return d[xKey];})
+                        .rollup(function(d){
+                            return d3.sum(d,function(g){
+                                return g[yKey];
+                            });
+                    }).entries(dataSets[i]);
+
+                    let keyType = typeOfAxisValue(sumData[0].key);
 
                     plotArea
                         .append("path")
@@ -217,10 +216,7 @@ bluewave.charts.LineChart = function(parent, config) {
                         );
 
 
-
-
-
-              //define and fill area under line      
+                  //Define and fill area under line
                     plotArea
                         .append("path")
                         .datum(sumData)
@@ -228,7 +224,7 @@ bluewave.charts.LineChart = function(parent, config) {
                         .attr(
                             "d", d3.area()
                             .x(function(d){
-                                if(keyType==="date"){
+                                 if(keyType==="date"){
                                     return x(new Date(d.key));
                                 }else{
                                     return x(d.key);
@@ -240,7 +236,8 @@ bluewave.charts.LineChart = function(parent, config) {
                             })
                         );
 
-                //Add linear gradient
+
+                  //Add linear gradient
                     plotArea
                         .append("defs")
                         .append("linearGradient")
@@ -258,17 +255,15 @@ bluewave.charts.LineChart = function(parent, config) {
                         .attr("offset", (d) => d.offset )
                         .attr("stop-color", (d) => d.color )
                         .attr("stop-opacity", (d) => d.opacity );
-                        
-                
 
 
-                //Draw grid lines if option is checked
-                if(chartConfig.gridLines === true){
-                   drawGridlines(plotArea, x, y, axisHeight, axisWidth);
+
+                  //Draw grid lines if option is checked
+                    if(chartConfig.gridLines === true){
+                       drawGridlines(plotArea, x, y, axisHeight, axisWidth);
+                    }
+
                 }
-
-                
-            }
             }
 
 
@@ -455,6 +450,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
     var drawGridlines = bluewave.utils.drawGridlines;
+    var drawLabels = bluewave.utils.drawLabels;
 
     init();
 };
