@@ -277,13 +277,13 @@ bluewave.ChartEditor = function(parent, config) {
 
         switch(chartConfig.chartType){
             case "pieChart":
-                createPieDropdown(parent);
+                createPieChartOptions(parent);
                 break;
             case "barChart":
-                createBarDropDown(parent);
+                createBarChartOptions(parent);
                 break;
             case "lineChart":
-                createLineDropDown(parent);
+                createLineChartOptions(parent);
                 break;
             default:
                 break;
@@ -292,31 +292,18 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** createPieDropdown
+  //** createPieChartOptions
   //**************************************************************************
-    var createPieDropdown = function(parent){
+    var createPieChartOptions = function(parent){
         createInput(parent,"pieKey","Key",createPiePreview,pieInputs,"key");
         createInput(parent,"pieValue","Value",createPiePreview,pieInputs,"value");
     };
 
 
   //**************************************************************************
-  //** createBarDropDown
+  //** createBarChartOptions
   //**************************************************************************
-    var createBarDropDown = function(parent){
-        createInput(parent,"xAxis","X-Axis",createBarPreview,plotInputs,"xAxis");
-        createInput(parent,"yAxis","Y-Axis",createBarPreview,plotInputs,"yAxis");
-        if (inputData.length>1){
-            createInput(parent,"xAxis2","X-Axis2",createBarPreview,plotInputs,"xAxis2");
-            createInput(parent,"yAxis2","Y-Axis2",createBarPreview,plotInputs,"yAxis2");
-        }
-    };
-
-
-  //**************************************************************************
-  //** createLineDropDown
-  //**************************************************************************
-    var createLineDropDown = function(parent){
+    var createBarChartOptions = function(parent){
 
         var items = [];
         items.push(
@@ -324,14 +311,10 @@ bluewave.ChartEditor = function(parent, config) {
                 group: "Series 1",
                 items: [
                     createLabel("X-Axis"),
-                    createDropdown("xAxis",plotInputs,"xAxis"),
+                    createDropdown("xAxis", plotInputs),
 
                     createLabel("Y-Axis"),
-                    createDropdown("yAxis",plotInputs,"yAxis"),
-
-                    createLabel("Group By"),
-                    createDropdown("group",plotInputs,"group")
-
+                    createDropdown("yAxis", plotInputs)
                 ]
             }
         );
@@ -342,10 +325,67 @@ bluewave.ChartEditor = function(parent, config) {
                     group: "Series " + (i+1),
                     items: [
                         createLabel("X-Axis"),
-                        createDropdown(`xAxis${i+1}`,plotInputs,`xAxis${i+1}`),
+                        createDropdown(`xAxis${i+1}`, plotInputs),
 
                         createLabel("Y-Axis"),
-                        createDropdown(`yAxis${i+1}`,plotInputs,`yAxis${i+1}`)
+                        createDropdown(`yAxis${i+1}`, plotInputs)
+                    ]
+                }
+            );
+        }
+
+
+        var div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.zIndex = 1;
+        parent.appendChild(div);
+
+
+        var form = new javaxt.dhtml.Form(div, {
+            style: config.style.form,
+            items: items
+        });
+
+        form.onChange = function(input, value){
+            var key = input.name;
+            chartConfig[key] = value;
+            createBarPreview();
+        };
+    };
+
+
+  //**************************************************************************
+  //** createLineChartOptions
+  //**************************************************************************
+    var createLineChartOptions = function(parent){
+
+        var items = [];
+        items.push(
+            {
+                group: "Series 1",
+                items: [
+                    createLabel("X-Axis"),
+                    createDropdown("xAxis", plotInputs),
+
+                    createLabel("Y-Axis"),
+                    createDropdown("yAxis", plotInputs),
+
+                    createLabel("Group By"),
+                    createDropdown("group", plotInputs)
+                ]
+            }
+        );
+
+        for (var i=1; i<inputData.length; i++){
+            items.push(
+                {
+                    group: "Series " + (i+1),
+                    items: [
+                        createLabel("X-Axis"),
+                        createDropdown(`xAxis${i+1}`, plotInputs),
+
+                        createLabel("Y-Axis"),
+                        createDropdown(`yAxis${i+1}`, plotInputs)
                     ]
                 }
             );
@@ -368,7 +408,6 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig[key] = value;
             createLinePreview();
         };
-
     };
 
 
@@ -377,6 +416,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var createLabel = function(label){
         var row = document.createElement("div");
+        row.className = "form-label";
         row.innerText = label + ":";
         return {
             name: "",
@@ -393,7 +433,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createDropdown
   //**************************************************************************
-    var createDropdown = function(chartConfigRef,input,inputType){
+    var createDropdown = function(inputType,input){
         input[inputType] = new javaxt.dhtml.ComboBox(document.createElement("div"), {
             style: config.style.combobox,
             readOnly: true
