@@ -893,19 +893,19 @@ li.tree-node:hover {
 
 .chart-editor-options {
     width: 220px;
-    height:100%;
-    background-color: #f8f8f8;
+    height: 100%;
     padding: 0px 6px;
     border-radius: 0 0 0 5px;
     border-right: 1px solid #dcdcdc;
 }
 
+.chart-editor-options,
 .chart-editor-options .form-grouplabel {
-    background-color:#f8f8f8;
+    background-color: #efefef;
 }
 
 .chart-editor-options .form-label {
-    width: 0px;
+    height: 12px;
     padding: 0;
 }
 
