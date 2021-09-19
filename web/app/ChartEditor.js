@@ -12,7 +12,7 @@ if(!bluewave) var bluewave={};
  *   init - stubs out chart areas
  *   initializeChartSpace - stubs out chart spaces
  *   Update - chart information and config is passed in.
- *   createDropDown - initializes chart Type specific dropdowns
+ *   createForm - initializes chart Type specific dropdowns
  *   createOptions - adds chart input options from updated Data
  *      pie, bar,line, map chart creation.
  ******************************************************************************/
@@ -151,7 +151,7 @@ bluewave.ChartEditor = function(parent, config) {
             panel.title.innerHTML = config.chartTitle;
         }
         chartConfig.chartType = nodeType;
-        createDropDown(optionsDiv);
+        createForm(optionsDiv);
         createOptions();
     };
 
@@ -271,24 +271,19 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** createDropDown
+  //** createForm
   //**************************************************************************
-    var createDropDown = function(parent){
-
-        var table = createTable();
-        var tbody = table.firstChild;
-        table.style.height = "";
-        parent.appendChild(table);
+    var createForm = function(parent){
 
         switch(chartConfig.chartType){
             case "pieChart":
-                createPieDropdown(tbody);
+                createPieDropdown(parent);
                 break;
             case "barChart":
-                createBarDropDown(tbody);
+                createBarDropDown(parent);
                 break;
             case "lineChart":
-                createLineDropDown(tbody);
+                createLineDropDown(parent);
                 break;
             default:
                 break;
@@ -299,21 +294,21 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createPieDropdown
   //**************************************************************************
-    var createPieDropdown = function(tbody){
-        dropdownItem(tbody,"pieKey","Key",createPiePreview,pieInputs,"key");
-        dropdownItem(tbody,"pieValue","Value",createPiePreview,pieInputs,"value");
+    var createPieDropdown = function(parent){
+        createInput(parent,"pieKey","Key",createPiePreview,pieInputs,"key");
+        createInput(parent,"pieValue","Value",createPiePreview,pieInputs,"value");
     };
 
 
   //**************************************************************************
   //** createBarDropDown
   //**************************************************************************
-    var createBarDropDown = function(tbody){
-        dropdownItem(tbody,"xAxis","X-Axis",createBarPreview,plotInputs,"xAxis");
-        dropdownItem(tbody,"yAxis","Y-Axis",createBarPreview,plotInputs,"yAxis");
+    var createBarDropDown = function(parent){
+        createInput(parent,"xAxis","X-Axis",createBarPreview,plotInputs,"xAxis");
+        createInput(parent,"yAxis","Y-Axis",createBarPreview,plotInputs,"yAxis");
         if (inputData.length>1){
-            dropdownItem(tbody,"xAxis2","X-Axis2",createBarPreview,plotInputs,"xAxis2");
-            dropdownItem(tbody,"yAxis2","Y-Axis2",createBarPreview,plotInputs,"yAxis2");
+            createInput(parent,"xAxis2","X-Axis2",createBarPreview,plotInputs,"xAxis2");
+            createInput(parent,"yAxis2","Y-Axis2",createBarPreview,plotInputs,"yAxis2");
         }
     };
 
@@ -321,43 +316,113 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createLineDropDown
   //**************************************************************************
-    var createLineDropDown = function(tbody){
-        dropdownItem(tbody,"xAxis","X-Axis",createLinePreview,plotInputs,"xAxis");
-        dropdownItem(tbody,"yAxis","Y-Axis",createLinePreview,plotInputs,"yAxis");
-        dropdownItem(tbody,"group","Group By",createLinePreview,plotInputs,"group");
-        if (inputData.length>1){
+    var createLineDropDown = function(parent){
 
-            for(let i=1; i<inputData.length; i++){
-                dropdownItem(tbody,`xAxis${i+1}`,`X-Axis${i+1}`,createLinePreview,plotInputs,`xAxis${i+1}`);
-                dropdownItem(tbody,`yAxis${i+1}`,`Y-Axis${i+1}`,createLinePreview,plotInputs,`yAxis${i+1}`);
+        var items = [];
+        items.push(
+            {
+                group: "Series 1",
+                items: [
+                    createLabel("X-Axis"),
+                    createDropdown("xAxis",plotInputs,"xAxis"),
+
+                    createLabel("Y-Axis"),
+                    createDropdown("yAxis",plotInputs,"yAxis"),
+
+                    createLabel("Group By"),
+                    createDropdown("group",plotInputs,"group")
+
+                ]
             }
-            
+        );
+
+        for (var i=1; i<inputData.length; i++){
+            items.push(
+                {
+                    group: "Series " + (i+1),
+                    items: [
+                        createLabel("X-Axis"),
+                        createDropdown(`xAxis${i+1}`,plotInputs,`xAxis${i+1}`),
+
+                        createLabel("Y-Axis"),
+                        createDropdown(`yAxis${i+1}`,plotInputs,`yAxis${i+1}`)
+                    ]
+                }
+            );
         }
+
+
+        var div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.zIndex = 1;
+        parent.appendChild(div);
+
+
+        var form = new javaxt.dhtml.Form(div, {
+            style: config.style.form,
+            items: items
+        });
+
+        form.onChange = function(input, value){
+            var key = input.name;
+            chartConfig[key] = value;
+            createLinePreview();
+        };
+
     };
 
+
   //**************************************************************************
-  //** dropdownItem
+  //** createLabel
   //**************************************************************************
-    var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
-        var tr, td;
+    var createLabel = function(label){
+        var row = document.createElement("div");
+        row.innerText = label + ":";
+        return {
+            name: "",
+            label: "",
+            type: {
+                getValue: function(){},
+                setValue: function(){},
+                el: row
+            }
+        };
+    };
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        td.innerHTML= displayName+":";
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-
-
-        input[inputType] = new javaxt.dhtml.ComboBox(td, {
+  //**************************************************************************
+  //** createDropdown
+  //**************************************************************************
+    var createDropdown = function(chartConfigRef,input,inputType){
+        input[inputType] = new javaxt.dhtml.ComboBox(document.createElement("div"), {
             style: config.style.combobox,
             readOnly: true
         });
-        input[inputType].clear();
+        return {
+            name: inputType,
+            label: "",
+            type: input[inputType]
+        };
+    };
+
+
+  //**************************************************************************
+  //** createInput
+  //**************************************************************************
+    var createInput = function(parent,chartConfigRef,displayName,callBack,input,inputType){
+
+        var row = document.createElement("div");
+        parent.appendChild(row);
+
+
+        var label = document.createElement("label");
+        label.innerText = displayName + ":";
+        row.appendChild(label);
+
+        input[inputType] = new javaxt.dhtml.ComboBox(row, {
+            style: config.style.combobox,
+            readOnly: true
+        });
         input[inputType].onChange = function(name,value){
             chartConfig[chartConfigRef] = value;
             callBack();
