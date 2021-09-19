@@ -220,14 +220,14 @@ bluewave.charts.Layout = function(parent, config) {
                 if (isNaN(y)) y = rect.y;
 
                 var img = dashboardItem.getElementsByTagName("img")[0];
-                var scale = w/img.imageWidth;
 
                 layout[dashboardItem.inputID] = {
                     x: x,
                     y: y,
                     w: w,
                     h: h,
-                    scale: scale
+                    imageWidth: img.naturalWidth,
+                    imageHeight: img.naturalHeight
                 };
             }
         }
