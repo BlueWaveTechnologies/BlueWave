@@ -219,14 +219,15 @@ bluewave.charts.Layout = function(parent, config) {
                 var y = parseInt(dashboardItem.style.top);
                 if (isNaN(y)) y = rect.y;
 
-               // add rendered image dimensions, position, and dashboardItem dimensions to node config  
+                var img = dashboardItem.getElementsByTagName("img")[0];
+                var scale = w/img.imageWidth;
+
                 layout[dashboardItem.inputID] = {
                     x: x,
                     y: y,
                     w: w,
                     h: h,
-                    imageWidth:dashboardItem.getElementsByTagName("img")[0].naturalWidth,
-                    imageHeight:dashboardItem.getElementsByTagName("img")[0].naturalHeight
+                    scale: scale
                 };
             }
         }
@@ -268,6 +269,7 @@ bluewave.charts.Layout = function(parent, config) {
         };
         img.src = base64image;
     };
+
 
   //**************************************************************************
   //** addResizeHandle
