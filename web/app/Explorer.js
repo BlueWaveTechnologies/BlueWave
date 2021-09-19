@@ -1700,7 +1700,7 @@ bluewave.Explorer = function(parent, config) {
                         waitmask.show();
                         var el = supplyChainEditor.getChart();
                         if (el.show) el.show();
-                        
+
                         createPreview(el, function(canvas){
                             node.preview = canvas.toDataURL("image/png");
                             createThumbnail(node, canvas);
@@ -1773,6 +1773,7 @@ bluewave.Explorer = function(parent, config) {
                 resizable: true,
                 beforeClose: function(){
                     var chartConfig = layoutEditor.getConfig();
+                    console.log(chartConfig);
                     var node = layoutEditor.getNode();
                     var orgConfig = node.config;
                     if (!orgConfig) orgConfig = {};
@@ -1925,10 +1926,9 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   /** Inserts a PNG image into a node
    */
-    
-    var createThumbnail = function(node, obj,hide){
+    var createThumbnail = function(node, obj){
         var el = node.childNodes[1];
-      
+
         el.innerHTML = "";
         var rect = javaxt.dhtml.utils.getRect(el);
         var width = rect.width;
@@ -1961,7 +1961,7 @@ bluewave.Explorer = function(parent, config) {
         var resize = function(canvas){
             width = canvas.width;
             height = canvas.height;
-            
+
             if (maxHeight<maxWidth){
 
                 setHeight();
@@ -1985,7 +1985,7 @@ bluewave.Explorer = function(parent, config) {
             img.ondragstart = function(e){
                 e.preventDefault();
             };
-            
+
         };
 
 
@@ -2004,23 +2004,7 @@ bluewave.Explorer = function(parent, config) {
             img.src = obj;
         }
         else{ //HTMLCanvasElement
-            if (hide!==true){
             resize(obj);
-            
-            return {
-                initWidth:rect.width,
-                innerHeight:rect.height,
-                randomVariable:randomVar
-            }
-            }
-            else{
-               
-                return {
-                    initWidth:rect.width,
-                    innerHeight:rect.height,
-                    randomVariable:randomVar
-                }
-            }
         }
     };
 
@@ -2333,7 +2317,6 @@ bluewave.Explorer = function(parent, config) {
       //Render dashboard items
         for (var key in layoutNode.config) {
             if (layoutNode.config.hasOwnProperty(key)){
-                // this is probably the sizing for the node
                 var rect = layoutNode.config[key];
                 var node = nodes[key];
                 var connected = checkConnection(layoutNode, node);
@@ -2354,24 +2337,19 @@ bluewave.Explorer = function(parent, config) {
                 div.style.position = "absolute";
                 div.style.top = rect.y + "px";
                 div.style.left = rect.x + "px";
-                
-                
+
+
                 var innerDiv = dashboardItem.innerDiv;
                 onRender(innerDiv, function(){
 
                     var chartContainer = document.createElement("div");
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
-                    innerDiv.style.overflow="hidden";
-                    
-                    // set chartContainer size (used to render each graph) to the size used
-                    // when rendering a thumbnail (in layout editor)
+                    innerDiv.style.overflow = "hidden";
                     chartContainer.style.width = rect.imageWidth;
                     chartContainer.style.height = rect.imageHeight;
-
-                    
                     innerDiv.appendChild(chartContainer);
-                    
+
 
                     if (node.type==="addData"){
                         div.style.padding = "0px";
@@ -2399,16 +2377,16 @@ bluewave.Explorer = function(parent, config) {
                             grid.load(rows, 1);
                         }
                     }
-                    else if (node.type==="sankeyChart" || node.type==="supplyChain"){  
+                    else if (node.type==="sankeyChart" || node.type==="supplyChain"){
 
                     //Instantiate sankeyEditor as needed
                         if (!sankeyEditor) editSankey(node, true);
-                        
+
                     //Get sankey config and data
                         sankeyEditor.update(node.config, getSupplyChainInputs(node));
                         var sankeyConfig = sankeyEditor.getConfig();
                         var data = sankeyEditor.getSankeyData();
-                        
+
                     //Render sankeyChart
                         var sankeyChart = new bluewave.charts.SankeyChart(chartContainer,config);
 
@@ -2427,45 +2405,42 @@ bluewave.Explorer = function(parent, config) {
                         }
                         if (node.type==="pieChart"){
                             var pieChart = new bluewave.charts.PieChart(chartContainer,{});
-
                             pieChart.update(chartConfig, data);
-                            editGElement(dashboardItem,node.type,layoutNode.config);
+                            resizeSVG(dashboardItem, rect);
                         }
                         else if (node.type==="barChart"){
                             var barChart = new bluewave.charts.BarChart(chartContainer,{});
-
                             barChart.update(chartConfig, data);
-                            editGElement(dashboardItem,node.type,layoutNode.config);
+                            resizeSVG(dashboardItem, rect);
                         }
                         else if (node.type==="lineChart"){
                             var lineChart = new bluewave.charts.LineChart(chartContainer,{});
 
                             lineChart.update(chartConfig, data);
-                            editGElement(dashboardItem,node.type,layoutNode.config);
+                            resizeSVG(dashboardItem, rect);
                         }
                         else if (node.type==="scatterChart"){
                             var scatterChart = new bluewave.charts.ScatterChart(chartContainer,{});
                             scatterChart.update(chartConfig, data);
-                            editGElement(dashboardItem,node.type,layoutNode.config);
+                            resizeSVG(dashboardItem, rect);
                         }
-                        
                         else if (node.type==="map"){
-                        //Instantiate mapEditor as needed
-                        if (!mapEditor) editMap(node, true);
-                        
-                        //Get map config and data
-                        mapEditor.update(node.config, mapEditor.getMapData(node));
+                            //Instantiate mapEditor as needed
+                            if (!mapEditor) editMap(node, true);
 
-                        //Render mapChart
-                        // var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
-                        var mapChart = new bluewave.charts.MapChart(chartContainer,config);
+                            //Get map config and data
+                            mapEditor.update(node.config, mapEditor.getMapData(node));
 
-                        mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
+                            //Render mapChart
+                            // var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
+                            var mapChart = new bluewave.charts.MapChart(chartContainer,config);
+
+                            mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
                         }
                         else{
                             console.log(node.type + " preview not implemented!");
                         }
-                        
+
                     }
                 });
             }
@@ -2473,100 +2448,23 @@ bluewave.Explorer = function(parent, config) {
 
     };
 
-  //**************************************************************************
-  //** Calculate Scaling
-  //**************************************************************************
-  /**  
-   */
-  var calculateScaling = function(dashboardItem,layoutNodeConfig){
-
-    // determine the variable used for the base of the fraction    
-    var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
-
-
-    // we need to set the svg size to the correct size
-    // after chartContainer has been used to render the graph
-    svgToEdit = d3.select(svg)
-        .attr("width",layoutNodeConfig.w)
-        .attr("height",layoutNodeConfig.h);
-
-    // determine the variable used for the divider of the fraction
-    // calculate scale height
-    // original image height
-    originalHeight = layoutNodeConfig.imageHeight;
-
-    // new container height
-    newContainerHeight = layoutNodeConfig.h;
-
-    // divide
-    firstScale = newContainerHeight/originalHeight;
-
-
-    // calculate scale width
-    // original image width
-    originalWidth = layoutNodeConfig.imageWidth;
-
-    // new container width
-    newContainerWidth = layoutNodeConfig.w;
-
-    // divide
-    secondScale = newContainerWidth/originalWidth;
-
-    
-    // return the 2 scaling parameters
-    return {firstScale, secondScale};
-  }
-
 
   //**************************************************************************
-  //** Edit "g" Element
+  //** resizeSVG
   //**************************************************************************
-  /**  
-   */
+    var resizeSVG = function(dashboardItem, rect){
 
-  var editGElement = function(dashboardItem,nodeType,layoutNodeConfigArray){
-
-
-
-    var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
-
+      //Find and update svg
+        var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
+        d3.select(svg)
+        .attr("width",rect.w)
+        .attr("height",rect.h);
 
 
-
-    gToEdit = d3.select(svg.getElementsByTagName("g")[0]);
-    
-      // get the list and handle for each instance
-      for (i in layoutNodeConfigArray) {
-        layoutNode = layoutNodeConfigArray[i];
-        scales = calculateScaling(dashboardItem,layoutNode);
-            scaleOne = scales.firstScale;
-            scaleTwo = scales.secondScale;
-
-
-
-
-        // set parameters for each type of chart individually
-        if (nodeType === "barChart"){
-            gToEdit.attr("transform","scale(1.0)");
-            // gToEdit.attr("transform",`scale(${scaleTwo},${scaleOne})`);
-            gToEdit.attr("transform",`scale(${scaleTwo})`);
-
-        }
-
-        if (nodeType == "pieChart"){
-            gToEdit.attr("transform",`scale(${scaleTwo})`);
-
-        }
-        if (nodeType == "mapChart"){
-            gToEdit.attr("transform","scale(1.0)");
-
-        }
-        else{
-            gToEdit.attr("transform",`scale(${scaleTwo})`);
-
-        }
-    }
-  }
+      //Find and update first "g" element in the svg
+        var g = d3.select(svg.getElementsByTagName("g")[0]);
+        g.attr("transform",`scale(${rect.w/rect.imageWidth})`);
+    };
 
 
   //**************************************************************************
@@ -2585,11 +2483,8 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         }
-    return inputs;
+        return inputs;
     };
-
-
-
 
 
   //**************************************************************************
