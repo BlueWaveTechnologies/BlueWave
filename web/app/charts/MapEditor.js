@@ -95,29 +95,29 @@ if(!bluewave.charts) bluewave.charts={};
                 margin: margin
             });
 
-
-            var verticalLine = document.createElement("div");
-            verticalLine.style.position = "absolute";
-            verticalLine.style.top = 0+"px";
-            verticalLine.style.left = width/2+"px";
-            verticalLine.style.height = "100%";
-            verticalLine.style.width = "1px";
-            verticalLine.style.backgroundColor = "#000000";
-            verticalLine.style.transform = "translateX(-50%)";
-            verticalLine.style.zIndex = "1";
-            previewArea.appendChild(verticalLine);
-
-
-            var horizontalLine = document.createElement("div");
-            horizontalLine.style.position = "absolute";
-            horizontalLine.style.top = height/2+"px";
-            horizontalLine.style.left = 0+"px";
-            horizontalLine.style.height = "1px";
-            horizontalLine.style.width = "100%";
-            horizontalLine.style.backgroundColor = "#000000";
-            horizontalLine.style.transform = "translateY(-50%)";
-            horizontalLine.style.zIndex = "1";
-            previewArea.appendChild(horizontalLine);
+        //This is for the centering/zooming issue on the mapChart.
+//            var verticalLine = document.createElement("div");
+//            verticalLine.style.position = "absolute";
+//            verticalLine.style.top = 0+"px";
+//            verticalLine.style.left = width/2+"px";
+//            verticalLine.style.height = "100%";
+//            verticalLine.style.width = "1px";
+//            verticalLine.style.backgroundColor = "#000000";
+//            verticalLine.style.transform = "translateX(-50%)";
+//            verticalLine.style.zIndex = "1";
+//            previewArea.appendChild(verticalLine);
+//
+//
+//            var horizontalLine = document.createElement("div");
+//            horizontalLine.style.position = "absolute";
+//            horizontalLine.style.top = height/2+"px";
+//            horizontalLine.style.left = 0+"px";
+//            horizontalLine.style.height = "1px";
+//            horizontalLine.style.width = "100%";
+//            horizontalLine.style.backgroundColor = "#000000";
+//            horizontalLine.style.transform = "translateY(-50%)";
+//            horizontalLine.style.zIndex = "1";
+//            previewArea.appendChild(horizontalLine);
 
         });
 

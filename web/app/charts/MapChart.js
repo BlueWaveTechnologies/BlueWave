@@ -23,11 +23,7 @@ bluewave.charts.MapChart = function(parent, config) {
         }
     };
     var centeringConfig = {
-        newCenter: null,
-        scaleFactor: null,
-        zoomScale: null,
-        width: null,
-        height: null
+        newCenter: null
     };
     var svg, mapArea, mapCenter; //d3 elements
     var countyData, countryData; //raw json
@@ -35,15 +31,8 @@ bluewave.charts.MapChart = function(parent, config) {
     var options = []; //aggregation options
     var projection;
     var zoomed = false;
-
-    //this is trying to pass the current translation and scale to the zooming functions. I read this on the Manning D3.js book, and saw it in a few
-//    var zoom = d3.zoom
-//        .translate(projection.translate)
-//        .scale(projection.scale)
-//        .scaleExtent([1, 10])
-//        .on('zoom', handleZoom);
     var zoom = d3.zoom()
-        .scaleExtent([1, 10])
+        .scaleExtent([1, 1])
         .on('zoom', handleZoom);
 
   //**************************************************************************
@@ -77,10 +66,6 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     function handleZoom(){
         var projection = me.getProjection();
-    //This seems to repproject the projection, nto sure I haven't been able to get it working with the code above.
-//        projection
-//            .translate(zoom.translate())
-//            .scale(zoom.scale());
         mapArea.attr('transform', d3.event.transform);
         if (projection){
             var rect = javaxt.dhtml.utils.getRect(svg.node());
@@ -90,28 +75,28 @@ bluewave.charts.MapChart = function(parent, config) {
             var x = (w/2)-t.x;
             var y = (h/2)-t.y;
             var p = projection.invert([x,y]);
-            console.log(p);
             centeringConfig.newCenter = p;
             zoomed = true;
 
-            if (!mapCenter){
-                mapCenter = mapArea.append("g")
-                .selectAll("whatever")
-                .data([0]) //fake data
-                .enter()
-                .append("circle")
-                .attr("r", 10)
-                .style("fill", "#ff3c38");
-            }
-
-            mapCenter
-            .attr("cx", function(){
-                return projection([p[0],p[1]])[0];
-            })
-            .attr("cy", function(){
-                return projection([p[0],p[1]])[1];
-            });
-        }
+    // This is for the zooming, it draws a red circle in point it thinks the center is.
+//            if (!mapCenter){
+//                mapCenter = mapArea.append("g")
+//                .selectAll("whatever")
+//                .data([0]) //fake data
+//                .enter()
+//                .append("circle")
+//                .attr("r", 10)
+//                .style("fill", "#ff3c38");
+//            }
+//
+//            mapCenter
+//            .attr("cx", function(){
+//                return projection([p[0],p[1]])[0];
+//            })
+//            .attr("cy", function(){
+//                return projection([p[0],p[1]])[1];
+//            });
+//        }
     }
 
 
@@ -333,9 +318,28 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if (mapLevel === "states"){
 
-            projection = d3.geoAlbers().center([-8, 43]);
+            var centerLon, centerLat;
+            if(chartConfig.newCenter){
+                centerLon = chartConfig.newCenter[1];
+                centerLat = chartConfig.newCenter[0];
+            }else{
+                centerLon = 38.7;
+                centerLat = -0.6;
+            }
+            centerLat = centerLat + 96;
+            console.log(centerLon);
+            console.log(centerLat);
+            projection = d3.geoAlbers()
+                .scale(1070)
+                .center([centerLat, centerLon])
+                .rotate([96, 0])
             var path = d3.geoPath(projection);
 
+            svg.on("mousemove", function(){
+                if(zoomed){
+                    chartConfig.newCenter = centeringConfig.newCenter;
+                }
+            });
 
           //Create map layer
             var worldMap = mapArea.append("g");
@@ -569,10 +573,8 @@ bluewave.charts.MapChart = function(parent, config) {
             me.onUpdate();
         }
         else if(mapLevel === "world"){
-            centeringConfig.scaleFactor = 360;
             var centerLon, centerLat;
             if(chartConfig.newCenter){
-                console.log(chartConfig.newCenter);
                 centerLon = chartConfig.newCenter[0];
                 centerLat = chartConfig.newCenter[1];
             }else{
@@ -909,7 +911,6 @@ bluewave.charts.MapChart = function(parent, config) {
             });
 
         });
-        //console.log(numStates, numCounties, numCensusDivisions, data.length);
 
 
       //Render data using the most suitable geometry type
