@@ -195,10 +195,12 @@ bluewave.charts.Layout = function(parent, config) {
     };
 
 
+
   //**************************************************************************
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
+
         var layout = {};
         for (var i in mainDiv.childNodes){
             var dashboardItem = mainDiv.childNodes[i];
@@ -217,11 +219,15 @@ bluewave.charts.Layout = function(parent, config) {
                 var y = parseInt(dashboardItem.style.top);
                 if (isNaN(y)) y = rect.y;
 
+                var img = dashboardItem.getElementsByTagName("img")[0];
+
                 layout[dashboardItem.inputID] = {
                     x: x,
                     y: y,
                     w: w,
-                    h: h
+                    h: h,
+                    imageWidth: img.naturalWidth,
+                    imageHeight: img.naturalHeight
                 };
             }
         }

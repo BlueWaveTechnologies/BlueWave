@@ -47,7 +47,7 @@ bluewave.charts.PieChart = function(parent, config) {
             });
         }
 
-        pieArea = svg.append("g");
+        pieArea = svg.append("g").append("g");
     };
 
 

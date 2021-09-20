@@ -1700,6 +1700,7 @@ bluewave.Explorer = function(parent, config) {
                         waitmask.show();
                         var el = supplyChainEditor.getChart();
                         if (el.show) el.show();
+
                         createPreview(el, function(canvas){
                             node.preview = canvas.toDataURL("image/png");
                             createThumbnail(node, canvas);
@@ -1772,6 +1773,7 @@ bluewave.Explorer = function(parent, config) {
                 resizable: true,
                 beforeClose: function(){
                     var chartConfig = layoutEditor.getConfig();
+                    console.log(chartConfig);
                     var node = layoutEditor.getNode();
                     var orgConfig = node.config;
                     if (!orgConfig) orgConfig = {};
@@ -1925,8 +1927,8 @@ bluewave.Explorer = function(parent, config) {
   /** Inserts a PNG image into a node
    */
     var createThumbnail = function(node, obj){
-
         var el = node.childNodes[1];
+
         el.innerHTML = "";
         var rect = javaxt.dhtml.utils.getRect(el);
         var width = rect.width;
@@ -1961,6 +1963,7 @@ bluewave.Explorer = function(parent, config) {
             height = canvas.height;
 
             if (maxHeight<maxWidth){
+
                 setHeight();
                 if (width>maxWidth) setWidth();
             }
@@ -1982,6 +1985,7 @@ bluewave.Explorer = function(parent, config) {
             img.ondragstart = function(e){
                 e.preventDefault();
             };
+
         };
 
 
@@ -2281,6 +2285,9 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+
+
+
   //**************************************************************************
   //** updateDashboard
   //**************************************************************************
@@ -2332,92 +2339,131 @@ bluewave.Explorer = function(parent, config) {
                 div.style.left = rect.x + "px";
 
 
-                if (node.type==="addData"){
-                    div.style.padding = "0px";
+                var innerDiv = dashboardItem.innerDiv;
+                onRender(innerDiv, function(){
 
-                    var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
-                        columns: chartConfig.columns,
-                        style: config.style.table,
-                        url: "query",
-                        payload: JSON.stringify({
-                            query: chartConfig.query,
-                            format: "csv"
-                        }),
-                        limit: 50,
-                        parseResponse: function(request){
-                            var rows = parseCSV(request.responseText);
-                            rows.shift(); //remove first row (csv header)
-                            return rows;
-                        }
-                    });
+                    var chartContainer = document.createElement("div");
+                    chartContainer.style.position = "absolute";
+                    chartContainer.style.top = 0;
+                    innerDiv.style.overflow = "hidden";
+                    chartContainer.style.width = rect.imageWidth;
+                    chartContainer.style.height = rect.imageHeight;
+                    innerDiv.appendChild(chartContainer);
 
 
-                    if (node.csv){
-                        var rows = parseCSV(node.csv);
-                        rows.shift(); //remove first row (csv header)
-                        grid.load(rows, 1);
-                    }
-                }
-                else if (node.type==="sankeyChart" || node.type==="supplyChain"){
+                    if (node.type==="addData"){
+                        div.style.padding = "0px";
 
-                  //Instantiate sankeyEditor as needed
-                    if (!sankeyEditor) editSankey(node, true);
-
-                  //Get sankey config and data
-                    sankeyEditor.update(node.config, getSupplyChainInputs(node));
-                    var sankeyConfig = sankeyEditor.getConfig();
-                    var data = sankeyEditor.getSankeyData();
-
-                  //Render sankeyChart
-                    var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
-                    sankeyChart.update(sankeyConfig.style,data);
-
-                }
-                else{
-                    var data = [];
-                    for (var key in node.inputs) {
-                        if (node.inputs.hasOwnProperty(key)){
-                            var csv = node.inputs[key].csv;
-                            if (csv){
-                                data.push(d3.csvParse(csv));
+                        var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
+                            columns: chartConfig.columns,
+                            style: config.style.table,
+                            url: "query",
+                            payload: JSON.stringify({
+                                query: chartConfig.query,
+                                format: "csv"
+                            }),
+                            limit: 50,
+                            parseResponse: function(request){
+                                var rows = parseCSV(request.responseText);
+                                rows.shift(); //remove first row (csv header)
+                                return rows;
                             }
+                        });
+
+
+                        if (node.csv){
+                            var rows = parseCSV(node.csv);
+                            rows.shift(); //remove first row (csv header)
+                            grid.load(rows, 1);
                         }
                     }
+                    else if (node.type==="sankeyChart" || node.type==="supplyChain"){
 
-                    if (node.type==="pieChart"){
-                        var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,{});
-                        pieChart.update(chartConfig, data);
-                    }
-                    else if (node.type==="barChart"){
-                        var barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
-                        barChart.update(chartConfig, data);
-                    }
-                    else if (node.type==="lineChart"){
-                        var lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
-                        lineChart.update(chartConfig, data);
-                    }
-                    else if (node.type==="scatterChart"){
-                        var scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{});
-                        scatterChart.update(chartConfig, data);
-                    }
-                    else if (node.type==="map"){
-                    //Instantiate mapEditor as needed
-                      if (!mapEditor) editMap(node, true);
+                    //Instantiate sankeyEditor as needed
+                        if (!sankeyEditor) editSankey(node, true);
 
-                    //Get map config and data
-                      mapEditor.update(node.config, mapEditor.getMapData(node));
+                    //Get sankey config and data
+                        sankeyEditor.update(node.config, getSupplyChainInputs(node));
+                        var sankeyConfig = sankeyEditor.getConfig();
+                        var data = sankeyEditor.getSankeyData();
 
-                    //Render mapChart
-                      var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
-                      mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
+                    //Render sankeyChart
+                        var sankeyChart = new bluewave.charts.SankeyChart(chartContainer,config);
+
+                        sankeyChart.update(sankeyConfig.style,data);
+
                     }
                     else{
-                        console.log(node.type + " preview not implemented!");
+                        var data = [];
+                        for (var key in node.inputs) {
+                            if (node.inputs.hasOwnProperty(key)){
+                                var csv = node.inputs[key].csv;
+                                if (csv){
+                                    data.push(d3.csvParse(csv));
+                                }
+                            }
+                        }
+                        if (node.type==="pieChart"){
+                            var pieChart = new bluewave.charts.PieChart(chartContainer,{});
+                            pieChart.update(chartConfig, data);
+                            resizeSVG(dashboardItem, rect);
+                        }
+                        else if (node.type==="barChart"){
+                            var barChart = new bluewave.charts.BarChart(chartContainer,{});
+                            barChart.update(chartConfig, data);
+                            resizeSVG(dashboardItem, rect);
+                        }
+                        else if (node.type==="lineChart"){
+                            var lineChart = new bluewave.charts.LineChart(chartContainer,{});
+
+                            lineChart.update(chartConfig, data);
+                            resizeSVG(dashboardItem, rect);
+                        }
+                        else if (node.type==="scatterChart"){
+                            var scatterChart = new bluewave.charts.ScatterChart(chartContainer,{});
+                            scatterChart.update(chartConfig, data);
+                            resizeSVG(dashboardItem, rect);
+                        }
+                        else if (node.type==="map"){
+                            //Instantiate mapEditor as needed
+                            if (!mapEditor) editMap(node, true);
+
+                            //Get map config and data
+                            mapEditor.update(node.config, mapEditor.getMapData(node));
+
+                            //Render mapChart
+                            // var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
+                            var mapChart = new bluewave.charts.MapChart(chartContainer,config);
+
+                            mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
+                        }
+                        else{
+                            console.log(node.type + " preview not implemented!");
+                        }
+
                     }
-                }
+                });
             }
         }
 
+    };
+
+
+  //**************************************************************************
+  //** resizeSVG
+  //**************************************************************************
+    var resizeSVG = function(dashboardItem, rect){
+
+      //Find and update svg
+        var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
+        d3.select(svg)
+        .attr("width",rect.w)
+        .attr("height",rect.h);
+
+
+      //Find and update first "g" element in the svg
+        var g = d3.select(svg.getElementsByTagName("g")[0]);
+        g.attr("transform",`scale(${rect.w/rect.imageWidth})`);
     };
 
 
@@ -2437,11 +2483,8 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         }
-    return inputs;
+        return inputs;
     };
-
-
-
 
 
   //**************************************************************************
