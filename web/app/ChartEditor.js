@@ -48,8 +48,15 @@ bluewave.ChartEditor = function(parent, config) {
         lineColor:null,
         lineWidth:null,
         opacity:null,
-        fillArea:null,
-        gridLines:null
+        startOpacity:null,
+        endOpacity:null,
+        xGrid:null,
+        yGrid:null,
+        barLayout: null,
+        barLegend:null,
+        barColor:null,
+        xLabel:null,
+        yLabel:null
     };
     var margin = {
         top: 15,
@@ -161,6 +168,9 @@ bluewave.ChartEditor = function(parent, config) {
         if (pieChart) pieChart.clear();
         if (lineChart) lineChart.clear();
         if (barChart) barChart.clear();
+
+        if (colorPicker) colorPicker.hide();
+        if (styleEditor) styleEditor.hide();
     };
 
 
@@ -366,7 +376,20 @@ bluewave.ChartEditor = function(parent, config) {
         barChart = new bluewave.charts.BarChart(svg, {
             margin: margin
         });
+        barChart.onDblClick = function(bar, bars){
+            chartConfig.barColor = d3.select(bar).attr("fill");
+            editStyle("bar");
 
+            /*
+            getColorPicker(currColor).onChange = function(c){
+                for (var i=0; i<bars.length; i++){
+                    var bar = d3.select(bars[i]);
+                    bar.attr("fill", c.hexString);
+                    chartConfig.barColor = c.hexString;
+                }
+            };
+            */
+        };
     };
 
 
@@ -493,81 +516,122 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="lineChart"){
 
-          //Add style options
+
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
                     {
-                        group: "Style",
+                        group: "X-Axis",
                         items: [
+
                             {
-                                name: "area",
-                                label: "Area Chart",
-                                type: "radio",
-                                alignment: "horizontal",
+                                name: "xLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
                                 options: [
                                     {
-                                        label: "true",
+                                        label: "",
                                         value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
-                                    },
-
+                                    }
 
                                 ]
                             },
                             {
-                                name: "gridLines",
-                                label: "Grid Lines",
-                                type: "radio",
-                                alignment: "horizontal",
+                                name: "xGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
                                 options: [
                                     {
-                                        label: "true",
+                                        label: "",
                                         value: true
-                                    },
-                                    {
-                                        label: "false",
-                                        value: false
-                                    },
+                                    }
 
+                                ]
+                            }
+                        ]
+                    },
+
+                    {
+                        group: "Y-Axis",
+                        items: [
+                            {
+                                name: "yLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "yGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
 
                                 ]
                             }
                         ]
                     }
+
                 ]
             });
 
 
-          //Set initial value of the area field
-            var areaField = form.findField("area");
-            var fillArea = chartConfig.fillArea;
-            areaField.setValue(fillArea===true ? true : false);
+           //Set initial value for X-gridline
+            var xGridField = form.findField("xGrid");
+            var xGrid = chartConfig.xGrid;
+            xGridField.setValue(xGrid===true ? true : false);
 
-          //Set initial value of the gridline field
-            var gridLineField = form.findField("gridLines");
-            var gridlines = chartConfig.gridLines;
-            gridLineField.setValue(gridlines===true ? true : false);
+           //Set initial value for Y-gridline
+            var yGridField = form.findField("yGrid");
+            var yGrid = chartConfig.yGrid;
+            yGridField.setValue(yGrid===true ? true : false);
+
+            //Set intial value for xLabel
+            var xLabelField = form.findField("xLabel");
+            var xLabel = chartConfig.xLabel;
+            xLabelField.setValue(xLabel===true ? true : false);
+
+            //Set intial value for yLabel
+            var yLabelField = form.findField("yLabel");
+            var yLabel = chartConfig.yLabel;
+            yLabelField.setValue(yLabel===true ? true : false);
 
 
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
 
-                if (settings.area==="true") settings.area = true;
-                else if (settings.area==="false") settings.area = false;
 
-                if (settings.gridLines==="true") settings.gridLines = true;
-                else if (settings.gridLines==="false") settings.gridLines = false;
+                if (settings.xGrid==="true") settings.xGrid = true;
+                else if (settings.xGrid==="false") settings.xGrid = false;
 
-                //update config values
-                chartConfig.fillArea = settings.area;
-                chartConfig.gridLines = settings.gridLines;
+                if (settings.yGrid==="true") settings.yGrid = true;
+                else if (settings.yGrid==="false") settings.yGrid = false;
+
+                if (settings.xLabel==="true") settings.xLabel = true;
+                else if (settings.xLabel==="false") settings.xLabel = false;
+
+                if (settings.yLabel==="true") settings.yLabel = true;
+                else if (settings.yLabel==="false") settings.yLabel = false;
+
+
+                chartConfig.xGrid = settings.xGrid;
+                chartConfig.yGrid = settings.yGrid;
+                chartConfig.xLabel = settings.xLabel;
+                chartConfig.yLabel = settings.yLabel;
                 createLinePreview();
             };
+
+
         }
         else if (chartType==="line"){
 
@@ -603,6 +667,247 @@ bluewave.ChartEditor = function(parent, config) {
                     {
                         group: "Fill Style",
                         items: [
+
+                            {
+                                name: "startOpacity",
+                                label: "Start Opacity",
+                                type: "text"
+                            },
+                            {
+                                name: "endOpacity",
+                                label: "End Opacity",
+                                type: "text"
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+
+
+          //Update color field (add colorPicker) and set initial value
+            createColorOptions("lineColor", form);
+            form.findField("lineColor").setValue(chartConfig.lineColor || "#6699CC");
+
+
+          //Update lineWidth field (add slider) and set initial value
+            createSlider("lineThickness", form, "px", 1, 10, 1);
+            var thickness = chartConfig.lineWidth;
+            if (isNaN(thickness)) thickness = 1;
+            chartConfig.lineWidth = thickness;
+            form.findField("lineThickness").setValue(thickness);
+
+
+          //Add opacity sliders
+            createSlider("lineOpacity", form, "%");
+            var opacity = chartConfig.opacity;
+            if (opacity==null) opacity = 1;
+            chartConfig.opacity = opacity;
+            form.findField("lineOpacity").setValue(opacity*100);
+
+
+            createSlider("startOpacity", form, "%");
+            var startOpacity = chartConfig.startOpacity;
+            if (isNaN(startOpacity)) startOpacity = 0;
+            chartConfig.startOpacity = startOpacity;
+            form.findField("startOpacity").setValue(startOpacity*100);
+
+
+            createSlider("endOpacity", form, "%");
+            var endOpacity = chartConfig.endOpacity;
+            if (isNaN(endOpacity)) endOpacity = 0;
+            chartConfig.endOpacity = endOpacity;
+            form.findField("endOpacity").setValue(endOpacity*100);
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+                chartConfig.lineColor = settings.lineColor;
+                chartConfig.lineWidth = settings.lineThickness;
+                chartConfig.opacity = settings.lineOpacity/100;
+                chartConfig.startOpacity = settings.startOpacity/100;
+                chartConfig.endOpacity = settings.endOpacity/100;
+                createLinePreview();
+            };
+        }
+        else if(chartType==="barChart"){
+
+          //Create color dropdown
+            var chartLayout = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox
+                }
+            );
+            chartLayout.add("Vertical", "vertical");
+            chartLayout.add("Horizontal", "horizontal");
+            chartLayout.setValue("vertical");
+
+
+
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "General",
+                        items: [
+
+                            {
+                                name: "layout",
+                                label: "Chart Layout",
+                                type: chartLayout
+                            },
+                            {
+                                name: "legend",
+                                label: "Display Legend",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            }
+                        ]
+                    },
+
+                    {
+                        group: "X-Axis",
+                        items: [
+                            {
+                                name: "xLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "xGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            }
+                        ]
+                    },
+
+                    {
+                        group: "Y-Axis",
+                        items: [
+                            {
+                                name: "yLabel",
+                                label: "Show Labels",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "yGrid",
+                                label: "Show Grid Lines",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true
+                                    }
+
+                                ]
+                            }
+                        ]
+                    }
+
+                ]
+            });
+
+
+            //Set form value for bar layout
+            // form.findField("layout").setValue(chartConfig.layout);
+            var layoutField = form.findField("layout");
+            var layout = chartConfig.barLayout;
+            layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
+
+           //Set initial value for X-gridline
+            var xGridField = form.findField("xGrid");
+            var xGrid = chartConfig.xGrid;
+            xGridField.setValue(xGrid===true ? true : false);
+
+           //Set initial value for Y-gridline
+            var yGridField = form.findField("yGrid");
+            var yGrid = chartConfig.yGrid;
+            yGridField.setValue(yGrid===true ? true : false);
+
+            //Set intial value for legend display
+            var legendField = form.findField("legend");
+            var legend = chartConfig.barLegend;
+            legendField.setValue(legend===true ? true : false);
+
+            //Set intial value for xLabel
+            var xLabelField = form.findField("xLabel");
+            var xLabel = chartConfig.xLabel;
+            xLabelField.setValue(xLabel===true ? true : false);
+
+            //Set intial value for yLabel
+            var yLabelField = form.findField("yLabel");
+            var yLabel = chartConfig.yLabel;
+            yLabelField.setValue(yLabel===true ? true : false);
+
+
+          //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+
+
+                if (settings.xGrid==="true") settings.xGrid = true;
+                else if (settings.xGrid==="false") settings.xGrid = false;
+
+                if (settings.yGrid==="true") settings.yGrid = true;
+                else if (settings.yGrid==="false") settings.yGrid = false;
+
+                if (settings.legend==="true") settings.legend = true;
+                else if (settings.legend==="false") settings.legend = false;
+
+                if (settings.xLabel==="true") settings.xLabel = true;
+                else if (settings.xLabel==="false") settings.xLabel = false;
+
+                if (settings.yLabel==="true") settings.yLabel = true;
+                else if (settings.yLabel==="false") settings.yLabel = false;
+
+
+                chartConfig.barLayout = settings.layout;
+                chartConfig.barLegend = settings.legend;
+                chartConfig.xGrid = settings.xGrid;
+                chartConfig.yGrid = settings.yGrid;
+                chartConfig.xLabel = settings.xLabel;
+                chartConfig.yLabel = settings.yLabel;
+                createBarPreview();
+            };
+        }
+        else if (chartType==="bar"){
+
+          //Add style options
+            form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Fill Style",
+                        items: [
                             {
                                 name: "fillColor",
                                 label: "Color",
@@ -624,42 +929,20 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
 
-
-
-          //Update color field (add colorPicker) and set initial value
-            createColorOptions("lineColor", form);
-            form.findField("lineColor").setValue(chartConfig.lineColor || "#6699CC");
-
-
-          //Update lineWidth field (add slider) and set initial value
-            createSlider("lineThickness", form);
-            var thickness = chartConfig.lineWidth;
-            if (thickness==null) thickness = 1.5;
-            chartConfig.lineWidth = thickness;
-            form.findField("lineThickness").setValue(thickness*10);
-
-          //Add opacity slider
-            createSlider("lineOpacity", form, "%");
-            var opacity = chartConfig.opacity;
-            if (opacity==null) opacity = .95;
-            chartConfig.opacity = opacity;
-            form.findField("lineOpacity").setValue(opacity*100);
-
-
             createColorOptions("fillColor", form);
             createSlider("fillOpacity", form, "%");
 
+
+            form.findField("fillColor").setValue(chartConfig.barColor);
+            form.findField("fillOpacity").setValue(0);
 
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
 
+                chartConfig.barColor = settings.fillColor;
 
-                //update config values
-                chartConfig.lineColor = settings.lineColor;
-                chartConfig.lineWidth = settings.lineThickness/10;
-                chartConfig.opacity = settings.lineOpacity/100;
-                createLinePreview();
+                createBarPreview();
             };
         }
 
@@ -685,6 +968,11 @@ bluewave.ChartEditor = function(parent, config) {
             }, 100);
         }
 
+      //Workaround for bar chart legend until editor is split up
+        // if(chartType !== "barChart"){
+        //     let legendContainer = document.querySelector(".bar-legend");
+        //     if(legendContainer) legendContainer.remove();
+        // }
     };
 
 

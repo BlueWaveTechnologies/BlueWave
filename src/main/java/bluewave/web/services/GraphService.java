@@ -100,6 +100,7 @@ public class GraphService extends WebService {
       //Prepopulate cache
         try{
             getNodes();
+            getProperties();
         }
         catch(Exception e){}
 
@@ -182,12 +183,12 @@ public class GraphService extends WebService {
             }
             else{
                 JSONArray arr = new JSONArray();
-                
+
                 javaxt.io.File f = null;
                 if (cacheDir!=null){
                     f = new javaxt.io.File(cacheDir, "nodes.json");
                 }
-                
+
                 if (f!=null && f.exists()){
                     arr = new JSONArray(f.getText());
                     for (int i=0; i<arr.length(); i++){
@@ -241,6 +242,91 @@ public class GraphService extends WebService {
 
               //Update cache
                 cache.put("nodes", arr);
+                cache.notify();
+
+
+                return arr;
+
+            }
+        }
+    }
+
+
+  //**************************************************************************
+  //** getProperties
+  //**************************************************************************
+    public ServiceResponse getProperties(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+        try{
+            return new ServiceResponse(getProperties());
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getProperties
+  //**************************************************************************
+    private JSONArray getProperties() throws Exception {
+        synchronized(cache){
+            Object obj = cache.get("properties");
+            if (obj!=null){
+                return (JSONArray) obj;
+            }
+            else{
+                JSONArray arr = new JSONArray();
+
+                javaxt.io.File f = null;
+                if (cacheDir!=null){
+                    f = new javaxt.io.File(cacheDir, "properties.json");
+                }
+
+                if (f!=null && f.exists()){
+                    arr = new JSONArray(f.getText());
+                }
+                else{
+
+                    Session session = null;
+                    try {
+
+                      //Execute query
+                        String query = bluewave.queries.Index.getQuery("Nodes_And_Properties", "cypher");
+                        session = graph.getSession();
+                        Result rs = session.run(query);
+                        while (rs.hasNext()){
+                            Record r = rs.next();
+                            String label = r.get(0).asString();
+                            List props = r.get(1).asList();
+                            JSONObject json = new JSONObject();
+                            json.set("node", label);
+                            JSONArray properties = new JSONArray();
+                            json.set("properties", properties);
+                            for (Object p : props){
+                                properties.add(p);
+                            }
+                            arr.add(json);
+                        }
+                        session.close();
+
+
+                      //Write file
+                        if (f!=null){
+                            f.create();
+                            f.write(arr.toString());
+                        }
+                    }
+                    catch (Exception e) {
+                        if (session != null) session.close();
+                        throw e;
+                    }
+                }
+
+
+
+              //Update cache
+                cache.put("properties", arr);
                 cache.notify();
 
 
@@ -967,6 +1053,11 @@ public class GraphService extends WebService {
                     javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
                     f.write(nodes.toString());
                 }
+
+
+
+              //TODO: Update properties
+
 
 
               //TODO: Update network
