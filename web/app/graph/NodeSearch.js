@@ -879,7 +879,7 @@ bluewave.NodeSearch = function(parent, config) {
         var page = 1;
 
 
-
+      //Function used to generate query for the grid
         var getQuery = function(){
 
             var query = "MATCH (n:" + node.name + ")\n";
@@ -897,6 +897,7 @@ bluewave.NodeSearch = function(parent, config) {
         };
 
 
+      //Function used to execute a query
         var executeQuery = function(callback){
             waitmask.show(500);
             getResponse(
@@ -931,7 +932,11 @@ bluewave.NodeSearch = function(parent, config) {
         var headerWidth = 0;
         var pixelsPerChar = 10;
 
+
+      //Function used to set up column definitions, specifically widths, for the grid
         var getColumns = function(columns, records){
+
+          //Compute widths
             if (columns.length>1){
 
                 for (var i=0; i<columns.length; i++){
@@ -991,6 +996,7 @@ bluewave.NodeSearch = function(parent, config) {
         };
 
 
+      //Function used to create the grid
         var createGrid = function(columns){
             gridPanel.overflowDiv.style.width = "100%";
             var rect = javaxt.dhtml.utils.getRect(gridPanel.innerDiv);
@@ -1012,6 +1018,29 @@ bluewave.NodeSearch = function(parent, config) {
                             grid.load(data.records, page);
                         });
                     }
+                },
+                update: function(row, record){
+                    var q = searchBar.getValue();
+                    if (q) q = q.toLowerCase();
+                    for (var i=0; i<record.length; i++){
+                        var str = record[i];
+                        if (q && str){
+                            var idx = str.toLowerCase().indexOf(q);
+                            if (idx>-1){
+                                var a = str.substring(0, idx);
+                                var b = str.substring(idx);
+                                var c = "";
+                                idx = b.indexOf(" ");
+                                if (idx>-1){
+                                    c = b.substring(idx);
+                                    b = b.substring(0, idx);
+                                }
+
+                                str = a + "<span class=\"keyword\">" + b + "</span>" + c;
+                            }
+                        }
+                        row.set(i, str);
+                    }
                 }
             });
 
@@ -1020,7 +1049,7 @@ bluewave.NodeSearch = function(parent, config) {
 
 
 
-      //Execute query and render results
+      //Execute query and render results in the grid
         executeQuery(function(data, request){
             var columns = getColumns(data.columns, data.records);
             var grid = createGrid(columns);
