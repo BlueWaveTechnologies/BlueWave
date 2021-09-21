@@ -70,7 +70,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** onRecenter
   //**************************************************************************
-  /** Called whenever a user
+  /** Called whenever the center point of the map is changed
    */
     this.onRecenter = function(lat, lon){};
 
@@ -78,7 +78,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** onUpdate
   //**************************************************************************
-  /** Called after the map has been updated
+  /** Called after the map has been rendered, after an update
    */
     this.onUpdate = function(){};
 
