@@ -43,9 +43,15 @@ bluewave.charts.ScatterChart = function(parent, config) {
         }
         else{
             svg = d3.select(parent).append("svg");
+            onRender(parent, function(){
+                var width = parent.offsetWidth;
+                var height = parent.offsetHeight;
+                svg.attr("width", width);
+                svg.attr("height", height);
+            });
         }
 
-        scatterArea = svg.append("g");
+        scatterArea = svg.append("g").append("g");
     };
 
 

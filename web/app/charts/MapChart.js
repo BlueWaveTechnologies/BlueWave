@@ -51,7 +51,7 @@ bluewave.charts.MapChart = function(parent, config) {
             });
         }
 
-        mapArea = svg.append("g");
+        mapArea = svg.append("g").append("g");
         readOnly = false;
         let zoom = d3.zoom()
             .scaleExtent([1, 1])

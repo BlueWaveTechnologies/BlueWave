@@ -51,7 +51,7 @@ bluewave.charts.BarChart = function(parent, config) {
             });
         }
 
-        plotArea = svg.append("g");
+        plotArea = svg.append("g").append("g");
     };
 
 
