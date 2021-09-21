@@ -53,32 +53,10 @@ bluewave.charts.MapChart = function(parent, config) {
 
         mapArea = svg.append("g").append("g");
         readOnly = false;
-        let zoom = d3.zoom()
+        svg.call(d3.zoom()
             .scaleExtent([1, 1])
-            .on('zoom', handleZoom);
-        svg.call(zoom);
+            .on('zoom', recenter));
     };
-
-  //**************************************************************************
-  //** handleZoom
-  //**************************************************************************
-    function handleZoom(){
-        if(!readOnly){
-            var projection = me.getProjection();
-            mapArea.attr('transform', d3.event.transform);
-            if (projection){
-                var rect = javaxt.dhtml.utils.getRect(svg.node());
-                var w = rect.width;
-                var h = rect.height;
-                var t = d3.event.transform;
-                var x = (w/2)-t.x;
-                var y = (h/2)-t.y;
-                var p = projection.invert([x,y]);
-                console.log(p);
-                me.onRecenter(p[1],p[0]);
-            }
-        }
-    }
 
 
   //**************************************************************************
@@ -92,13 +70,13 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** onRecenter
   //**************************************************************************
-  /** Called after the map has been updated
+  /** Called whenever a user
    */
-    this.onRecenter = function(){};
+    this.onRecenter = function(lat, lon){};
 
 
   //**************************************************************************
-  //** onRender
+  //** onUpdate
   //**************************************************************************
   /** Called after the map has been updated
    */
@@ -108,8 +86,8 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** setReadOnly
   //**************************************************************************
-    this.setReadOnly = function(readOnly){
-        this.readOnly = readOnly;
+    this.setReadOnly = function(readonly){
+        readOnly = (readonly===false) ? false : true;
     };
 
 
@@ -152,6 +130,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var update = function(parent, chartConfig, data){
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
+
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
@@ -630,6 +609,29 @@ bluewave.charts.MapChart = function(parent, config) {
             }
 
             me.onUpdate();
+        }
+    };
+
+
+  //**************************************************************************
+  //** recenter
+  //**************************************************************************
+  /** Used to recenter the map using d3 mouse events
+   */
+    var recenter = function(){
+        if (!readOnly){
+            mapArea.attr('transform', d3.event.transform);
+            var projection = me.getProjection();
+            if (projection){
+                var rect = javaxt.dhtml.utils.getRect(svg.node());
+                var w = rect.width;
+                var h = rect.height;
+                var t = d3.event.transform;
+                var x = (w/2)-t.x;
+                var y = (h/2)-t.y;
+                var p = projection.invert([x,y]);
+                me.onRecenter(p[1],p[0]);
+            }
         }
     };
 
