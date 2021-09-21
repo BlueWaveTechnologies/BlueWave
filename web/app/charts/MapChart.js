@@ -22,12 +22,11 @@ bluewave.charts.MapChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, mapArea, mapCenter; //d3 elements
+    var svg, mapArea; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
     var projection;
-    var zoom;
     var readOnly;
 
   //**************************************************************************
@@ -54,7 +53,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         mapArea = svg.append("g");
         readOnly = false;
-        zoom = d3.zoom()
+        let zoom = d3.zoom()
             .scaleExtent([1, 1])
             .on('zoom', handleZoom);
         svg.call(zoom);
