@@ -1022,6 +1022,13 @@ li.tree-node:hover {
     height: 28px;
 }
 
+.node-search-grid .keyword {
+    background-color: #e66869;
+    color: #fff;
+    border: 1px solid #de3535;
+    border-radius: 4px;
+    padding: 0 2px;
+}
 
 /**************************************************************************/
 /** Admin Panel
