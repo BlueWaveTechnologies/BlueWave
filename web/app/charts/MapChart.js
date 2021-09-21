@@ -22,9 +22,6 @@ bluewave.charts.MapChart = function(parent, config) {
             left: 82
         }
     };
-    var centeringConfig = {
-        newCenter: null
-    };
     var svg, mapArea, mapCenter; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
@@ -32,6 +29,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var projection;
     var zoomed;
     var zoom;
+    var readOnly;
 
   //**************************************************************************
   //** Constructor
@@ -57,6 +55,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         mapArea = svg.append("g");
         zoomed = false;
+        readOnly = false;
         zoom = d3.zoom()
             .scaleExtent([1, 1])
             .on('zoom', handleZoom);
@@ -67,18 +66,21 @@ bluewave.charts.MapChart = function(parent, config) {
   //** handleZoom
   //**************************************************************************
     function handleZoom(){
-        var projection = me.getProjection();
-        mapArea.attr('transform', d3.event.transform);
-        if (projection){
-            var rect = javaxt.dhtml.utils.getRect(svg.node());
-            var w = rect.width;
-            var h = rect.height;
-            var t = d3.event.transform;
-            var x = (w/2)-t.x;
-            var y = (h/2)-t.y;
-            var p = projection.invert([x,y]);
-            centeringConfig.newCenter = p;
-            zoomed = true;
+        if(!readOnly){
+            var projection = me.getProjection();
+            mapArea.attr('transform', d3.event.transform);
+            if (projection){
+                var rect = javaxt.dhtml.utils.getRect(svg.node());
+                var w = rect.width;
+                var h = rect.height;
+                var t = d3.event.transform;
+                var x = (w/2)-t.x;
+                var y = (h/2)-t.y;
+                var p = projection.invert([x,y]);
+                console.log(p);
+                me.onRecenter(p[1],p[0]);
+                zoomed = true;
+            }
         }
     }
 
@@ -92,11 +94,27 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** onRecenter
+  //**************************************************************************
+  /** Called after the map has been updated
+   */
+    this.onRecenter = function(){};
+
+
+  //**************************************************************************
   //** onRender
   //**************************************************************************
   /** Called after the map has been updated
    */
     this.onUpdate = function(){};
+
+
+  //**************************************************************************
+  //** setReadOnly
+  //**************************************************************************
+    this.setReadOnly = function(readOnly){
+        this.readOnly = readOnly;
+    };
 
 
   //**************************************************************************
@@ -302,9 +320,9 @@ bluewave.charts.MapChart = function(parent, config) {
         else if (mapLevel === "states"){
 
             var centerLon, centerLat;
-            if(chartConfig.newCenter){
-                centerLon = chartConfig.newCenter[1];
-                centerLat = chartConfig.newCenter[0];
+            if(chartConfig.lat && chartConfig.lon){
+                centerLon = chartConfig.lon;
+                centerLat = chartConfig.lat;
             }else{
                 centerLon = 38.7;
                 centerLat = -0.6;
@@ -315,12 +333,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 .center([centerLat, centerLon])
                 .rotate([96, 0])
             var path = d3.geoPath(projection);
-
-            svg.on("mousemove", function(){
-                if(zoomed){
-                    chartConfig.newCenter = centeringConfig.newCenter;
-                }
-            });
 
           //Create map layer
             var worldMap = mapArea.append("g");
@@ -555,21 +567,16 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if(mapLevel === "world"){
             var centerLon, centerLat;
-            if(chartConfig.newCenter){
-                centerLon = chartConfig.newCenter[0];
-                centerLat = chartConfig.newCenter[1];
+            console.log(chartConfig);
+            if(chartConfig.lat && chartConfig.lon){
+                centerLon = chartConfig.lon;
+                centerLat = chartConfig.lat;
             }else{
                 centerLon = 0;
                 centerLat = 0;
             }
             projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
-
-            svg.on("mousemove", function(){
-                if(zoomed){
-                    chartConfig.newCenter = centeringConfig.newCenter;
-                }
-            });
 
           //Render countries
             mapArea.selectAll("path")
