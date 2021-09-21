@@ -310,12 +310,6 @@ if(!bluewave.charts) bluewave.charts={};
         }
         else if (inputType==="mapLevel"){
 
-//            if (chartConfig.mapType==="Area"){
-//                if(chartConfig.mapLevel === "states" && inputData[0].state == null){
-//                    warn("No State Data detected", mapInputs.mapLevel);
-//                    return;
-//                }
-//            }
             createMapPreview();
         }
     };
@@ -440,18 +434,13 @@ if(!bluewave.charts) bluewave.charts={};
                     group: "Map Center",
                     items: [
                         {
-                             name: "zoom",
-                             label: "Zoom",
-                             type: "text"
-                        },
-                        {
                              name: "centerHorizontal",
-                             label: "Horizontal Center",
+                             label: "Longitudinal Center",
                              type: "text"
                         },
                         {
                              name: "centerVertical",
-                             label: "Vertical Center",
+                             label: "Latitudinal Center",
                              type: "text"
                         }
                     ]
@@ -480,31 +469,36 @@ if(!bluewave.charts) bluewave.charts={};
           //Process onChange events
             if (mapLevel==="states" || mapLevel==="world"){
 
-                var zoomField = form.findField("zoom");
-                var zoom = chartConfig.linkZoom;
-                if (zoom==null) zoom = 800;
-                chartConfig.linkZoom = zoom;
-                zoomField.setValue(zoom);
-
                 var horizontalField = form.findField("centerHorizontal");
-                var horizontal = chartConfig.centerHorizontal;
-                if(horizontal==null) horizontal = 500;
-                chartConfig.centerHorizontal = horizontal;
+                var horizontal = chartConfig.lon;
+                if(horizontal==null) {
+                    if(mapLevel==="states"){
+                        horizontal = 38.7
+                    }else{
+                        horizontal = 39.5;
+                    }
+                }
+                chartConfig.lon = horizontal;
                 horizontalField.setValue(horizontal);
 
                 var verticalField = form.findField("centerVertical");
-                var vertical = chartConfig.centerVertical;
-                if(vertical==null) vertical = 500;
-                chartConfig.centerVertical = vertical;
+                var vertical = chartConfig.lat;
+                if(vertical==null){
+                    if(mapLevel==="states"){
+                        vertical = -0.6
+                    }else{
+                        vertical = -98.5;
+                    }
+                }
+                chartConfig.lat = vertical;
                 verticalField.setValue(vertical);
 
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.pointColor = settings.color;
                     chartConfig.pointRadius = settings.radius;
-                    chartConfig.linkZoom = settings.zoom;
-                    chartConfig.centerHorizontal =  settings.centerHorizontal;
-                    chartConfig.centerVertical = settings.centerVertical;
+                    chartConfig.lon = settings.centerHorizontal;
+                    chartConfig.lat = settings.centerVertical;
                     createMapPreview();
                 };
             }
@@ -519,7 +513,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (mapType==="Area"){
-            if (mapLevel==="states"){
+            if (mapLevel==="states" || mapLevel==="world"){
                 var colorField = new javaxt.dhtml.ComboBox(
                     document.createElement("div"),
                     {
@@ -547,82 +541,11 @@ if(!bluewave.charts) bluewave.charts={};
                                 },
                                 {
                                     name: "centerHorizontal",
-                                    label: "Horizontal Center",
-                                    type: "text"
-                                },
-                                {
-                                    name: "centerVertical",
-                                    label: "Vertical Center",
-                                    type: "text"
-                                }
-                            ]
-                        }
-                    ]
-                });
-
-                var zoomField = form.findField("zoom");
-                var zoom = chartConfig.linkZoom;
-                if (zoom==null) zoom = 800;
-                chartConfig.linkZoom = zoom;
-                zoomField.setValue(zoom);
-
-                var horizontalField = form.findField("centerHorizontal");
-                var horizontal = chartConfig.centerHorizontal;
-                if(horizontal==null) horizontal = 500;
-                chartConfig.centerHorizontal = horizontal;
-                horizontalField.setValue(horizontal);
-
-                var verticalField = form.findField("centerVertical");
-                var vertical = chartConfig.centerVertical;
-                if(vertical==null) vertical = 500;
-                chartConfig.centerVertical = vertical;
-                verticalField.setValue(vertical);
-
-              //Process onChange events
-                form.onChange = function(){
-                    var settings = form.getData();
-                    chartConfig.colorScale = settings.color;
-                    chartConfig.linkZoom = settings.zoom;
-                    chartConfig.centerHorizontal =  settings.centerHorizontal;
-                    chartConfig.centerVertical = settings.centerVertical;
-                    createMapPreview();
-                };
-            }
-            else if(mapLevel==="world"){
-
-                var colorField = new javaxt.dhtml.ComboBox(
-                    document.createElement("div"),
-                    {
-                        style: config.style.combobox
-                    }
-                );
-                colorField.add("Red", "red");
-                colorField.add("Blue", "blue");
-
-
-                form = new javaxt.dhtml.Form(body, {
-                    style: config.style.form,
-                    items: [
-                        {
-                            group: "Style",
-                            items: [
-                                {
-                                    name: "color",
-                                    label: "Color",
-                                    type: colorField
-                                },
-                                {
-                                    name: "zoom",
-                                    label: "Zoom",
-                                    type: "text"
-                                },
-                                {
-                                    name: "centerLongitude",
                                     label: "Longitudinal Center",
                                     type: "text"
                                 },
                                 {
-                                    name: "centerLatitude",
+                                    name: "centerVertical",
                                     label: "Latitudinal Center",
                                     type: "text"
                                 }
@@ -631,32 +554,36 @@ if(!bluewave.charts) bluewave.charts={};
                     ]
                 });
 
-                var zoomField = form.findField("zoom");
-                var zoom = chartConfig.linkZoom;
-                if (zoom==null) zoom = 800;
-                chartConfig.linkZoom = zoom;
-                zoomField.setValue(zoom);
-
-                var horizontalField = form.findField("centerLongitude");
-                var horizontal = chartConfig.centerLongitude;
-                if(horizontal==null) horizontal = 500;
-                chartConfig.centerLongitude = horizontal;
+                var horizontalField = form.findField("centerHorizontal");
+                var horizontal = chartConfig.lon;
+                if(horizontal==null) {
+                    if(mapLevel==="states"){
+                        horizontal = 38.7
+                    }else{
+                        horizontal = 39.5;
+                    }
+                }
+                chartConfig.lon = horizontal;
                 horizontalField.setValue(horizontal);
 
-                var verticalField = form.findField("centerLatitude");
-                var vertical = chartConfig.centerLatitude;
-                if(vertical==null) vertical = 500;
-                chartConfig.centerLatitude = vertical;
+                var verticalField = form.findField("centerVertical");
+                var vertical = chartConfig.lat;
+                if(vertical==null){
+                    if(mapLevel==="states"){
+                        vertical = -0.6
+                    }else{
+                        vertical = -98.5;
+                    }
+                }
+                chartConfig.lat = vertical;
                 verticalField.setValue(vertical);
-
 
               //Process onChange events
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.colorScale = settings.color;
-                    chartConfig.linkZoom = settings.zoom;
-                    chartConfig.centerLongitude =  settings.centerLongitude;
-                    chartConfig.centerLatitude = settings.centerLatitude;
+                    chartConfig.lon = settings.centerHorizontal;
+                    chartConfig.lat = settings.centerVertical;
                     createMapPreview();
                 };
             }
@@ -695,7 +622,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (mapType==="Links"){
-            if (mapLevel==="states"){
+            if (mapLevel==="states" || mapLevel==="world"){
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
@@ -703,18 +630,13 @@ if(!bluewave.charts) bluewave.charts={};
                             group: "Style",
                             items: [
                                 {
-                                    name: "zoom",
-                                    label: "Zoom",
-                                    type: "text"
-                                },
-                                {
                                     name: "centerHorizontal",
-                                    label: "Horizontal Center",
+                                    label: "Longitudinal Center",
                                     type: "text"
                                 },
                                  {
                                      name: "centerVertical",
-                                     label: "Vertical Center",
+                                     label: "Latitudinal Center",
                                      type: "text"
                                  }
                             ]
@@ -722,83 +644,34 @@ if(!bluewave.charts) bluewave.charts={};
                     ]
                 });
 
-                var zoomField = form.findField("zoom");
-                var zoom = chartConfig.linkZoom;
-                if (zoom==null) zoom = 800;
-                chartConfig.linkZoom = zoom;
-                zoomField.setValue(zoom);
-
                 var horizontalField = form.findField("centerHorizontal");
-                var horizontal = chartConfig.centerHorizontal;
-                if(horizontal==null) horizontal = 500;
-                chartConfig.centerHorizontal = horizontal;
+                var horizontal = chartConfig.lon;
+                if(horizontal==null) {
+                    if(mapLevel==="states"){
+                        horizontal = 38.7
+                    }else{
+                        horizontal = 39.5;
+                    }
+                }
+                chartConfig.lon = horizontal;
                 horizontalField.setValue(horizontal);
 
                 var verticalField = form.findField("centerVertical");
-                var vertical = chartConfig.centerVertical;
-                if(vertical==null) vertical = 500;
-                chartConfig.centerVertical = vertical;
+                var vertical = chartConfig.lat;
+                if(vertical==null){
+                    if(mapLevel==="states"){
+                        vertical = -0.6
+                    }else{
+                        vertical = -98.5;
+                    }
+                }
+                chartConfig.lat = vertical;
                 verticalField.setValue(vertical);
 
                 form.onChange = function(){
                     var settings = form.getData();
-                    chartConfig.linkZoom = settings.zoom;
-                    chartConfig.centerHorizontal =  settings.centerHorizontal;
-                    chartConfig.centerVertical = settings.centerVertical;
-                    createMapPreview();
-                };
-            }
-            else if (mapLevel==="world"){
-                form = new javaxt.dhtml.Form(body, {
-                    style: config.style.form,
-                    items: [
-                        {
-                            group: "Style",
-                            items: [
-                                {
-                                    name: "zoom",
-                                    label: "Zoom",
-                                    type: "text"
-                                },
-                                {
-                                    name: "centerLongitude",
-                                    label: "Longitudinal Center",
-                                    type: "text"
-                                },
-                                {
-                                    name: "centerLatitude",
-                                    label: "Latitudinal Center",
-                                    type: "text"
-                                }
-                            ]
-                        }
-                    ]
-                });
-
-                var zoomField = form.findField("zoom");
-                var zoom = chartConfig.linkZoom;
-                if (zoom==null) zoom = 800;
-                chartConfig.linkZoom = zoom;
-                zoomField.setValue(zoom);
-
-                var longField = form.findField("centerLongitude");
-                var centerLongitude = chartConfig.centerLongitude;
-                if(centerLongitude==null) centerLongitude = 110;
-                chartConfig.centerLongitude = centerLongitude;
-                longField.setValue(centerLongitude);
-
-                var latField = form.findField("centerLatitude");
-                var centerLatitude = chartConfig.centerLatitude;
-                if(centerLatitude==null) centerLatitude = 20;
-                chartConfig.centerLatitude = centerLatitude;
-                latField.setValue(centerLatitude);
-
-
-                form.onChange = function(){
-                    var settings = form.getData();
-                    chartConfig.linkZoom = settings.zoom;
-                    chartConfig.centerLongitude = settings.centerLongitude;
-                    chartConfig.centerLatitude = settings.centerLatitude;
+                    chartConfig.lon =  settings.centerHorizontal;
+                    chartConfig.lat = settings.centerVertical;
                     createMapPreview();
                 };
             }

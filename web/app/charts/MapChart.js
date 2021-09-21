@@ -141,9 +141,6 @@ bluewave.charts.MapChart = function(parent, config) {
             "red": d3.scaleQuantile(extent, d3.schemeReds[7])
         };
         if (!chartConfig.colorScale) chartConfig.colorScale = "red";
-        if (chartConfig.linkZoom === (width / .8) || chartConfig.linkZoom === width / 2 / Math.PI){
-            delete chartConfig.linkZoom;
-        }
 
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
 
@@ -293,7 +290,6 @@ bluewave.charts.MapChart = function(parent, config) {
             me.onUpdate();
         }
         else if (mapLevel === "states"){
-
             var centerLon, centerLat;
             if(chartConfig.lat && chartConfig.lon){
                 centerLon = chartConfig.lon;
@@ -301,6 +297,8 @@ bluewave.charts.MapChart = function(parent, config) {
             }else{
                 centerLon = 38.7;
                 centerLat = -0.6;
+                chartConfig.lon = centerLon;
+                chartConfig.lat = centerLat;
             }
             centerLat = centerLat + 96;
             projection = d3.geoAlbers()
@@ -542,13 +540,14 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if(mapLevel === "world"){
             var centerLon, centerLat;
-            console.log(chartConfig);
             if(chartConfig.lat && chartConfig.lon){
-                centerLon = chartConfig.lon;
-                centerLat = chartConfig.lat;
+                centerLon = parseFloat(chartConfig.lon);
+                centerLat = parseFloat(chartConfig.lat);
             }else{
-                centerLon = 0;
-                centerLat = 0;
+                centerLon = -98.5;
+                centerLat = 39.5;
+                chartConfig.lon = centerLon;
+                chartConfig.lat = centerLat;
             }
             projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
@@ -720,7 +719,6 @@ bluewave.charts.MapChart = function(parent, config) {
         var thicknessScale = d3.scaleQuantile()
             .domain(thicknessExtent)
             .range([6 ,8, 10, 12, 14]);
-
         mapArea.selectAll("#connection-path").remove();
         mapArea.selectAll("#connection-path")
             .data(coords)
