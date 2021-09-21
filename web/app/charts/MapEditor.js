@@ -346,7 +346,7 @@ if(!bluewave.charts) bluewave.charts={};
             mapChart.onRecenter = function(lat, lon){
                 chartConfig.lat = lat;
                 chartConfig.lon = lon;
-            }
+            };
         });
     };
 
