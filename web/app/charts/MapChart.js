@@ -27,7 +27,6 @@ bluewave.charts.MapChart = function(parent, config) {
     var counties, states, countries; //topojson
     var options = []; //aggregation options
     var projection;
-    var zoomed;
     var zoom;
     var readOnly;
 
@@ -54,7 +53,6 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
-        zoomed = false;
         readOnly = false;
         zoom = d3.zoom()
             .scaleExtent([1, 1])
@@ -79,7 +77,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 var p = projection.invert([x,y]);
                 console.log(p);
                 me.onRecenter(p[1],p[0]);
-                zoomed = true;
             }
         }
     }
