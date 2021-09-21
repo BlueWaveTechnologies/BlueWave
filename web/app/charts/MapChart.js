@@ -30,10 +30,8 @@ bluewave.charts.MapChart = function(parent, config) {
     var counties, states, countries; //topojson
     var options = []; //aggregation options
     var projection;
-    var zoomed = false;
-    var zoom = d3.zoom()
-        .scaleExtent([1, 1])
-        .on('zoom', handleZoom);
+    var zoomed;
+    var zoom;
 
   //**************************************************************************
   //** Constructor
@@ -58,6 +56,10 @@ bluewave.charts.MapChart = function(parent, config) {
         }
 
         mapArea = svg.append("g");
+        zoomed = false;
+        zoom = d3.zoom()
+            .scaleExtent([1, 1])
+            .on('zoom', handleZoom);
         svg.call(zoom);
     };
 
@@ -77,26 +79,7 @@ bluewave.charts.MapChart = function(parent, config) {
             var p = projection.invert([x,y]);
             centeringConfig.newCenter = p;
             zoomed = true;
-
-    // This is for the zooming, it draws a red circle in point it thinks the center is.
-//            if (!mapCenter){
-//                mapCenter = mapArea.append("g")
-//                .selectAll("whatever")
-//                .data([0]) //fake data
-//                .enter()
-//                .append("circle")
-//                .attr("r", 10)
-//                .style("fill", "#ff3c38");
-//            }
-//
-//            mapCenter
-//            .attr("cx", function(){
-//                return projection([p[0],p[1]])[0];
-//            })
-//            .attr("cy", function(){
-//                return projection([p[0],p[1]])[1];
-//            });
-//        }
+        }
     }
 
 
@@ -327,8 +310,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 centerLat = -0.6;
             }
             centerLat = centerLat + 96;
-            console.log(centerLon);
-            console.log(centerLat);
             projection = d3.geoAlbers()
                 .scale(1070)
                 .center([centerLat, centerLon])
