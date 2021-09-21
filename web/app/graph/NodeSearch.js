@@ -339,6 +339,8 @@ bluewave.NodeSearch = function(parent, config) {
         div.style.height = "100%";
         parent.appendChild(div);
 
+
+      //Create svg element
         var svg = d3.select(div)
         .append("svg")
           .attr("width", "100%")
@@ -346,9 +348,27 @@ bluewave.NodeSearch = function(parent, config) {
 
         var container = svg.append("g");
 
+
+      //Add panning and zooming to the svg element
         svg.call(d3.zoom().on("zoom", function() {
             container.attr("transform", d3.event.transform);
         }));
+
+
+        // build the arrow.
+        svg.append("svg:defs").selectAll("marker")
+            .data(["end"])
+          .enter().append("svg:marker")
+            .attr("id", String)
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 15)
+            .attr("refY", -1.5)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+          .append("svg:path")
+            .attr("d", "M0,-5L10,0L0,5");
+
 
 
         var clear = function(){
@@ -375,7 +395,8 @@ bluewave.NodeSearch = function(parent, config) {
             .data(links)
             .enter()
             .append("line")
-              .style("stroke", "#aaa");
+              .style("stroke", "#aaa")
+              .attr("marker-end", "url(#end)");
 
 
 
@@ -464,8 +485,9 @@ bluewave.NodeSearch = function(parent, config) {
 
           //Create a lookup table to find nodes by node name
             var nodeMap = {};
-            nodes.forEach(function(node){
-                nodeMap[node.name] = node;
+            node.each(function(n) {
+                n.circle = this;
+                nodeMap[n.name] = n;
             });
 
 
@@ -477,8 +499,28 @@ bluewave.NodeSearch = function(parent, config) {
                   link
                     .attr("x1", function(link) { return nodeMap[link.source].x; })
                     .attr("y1", function(link) { return nodeMap[link.source].y; })
-                    .attr("x2", function(link) { return nodeMap[link.target].x; })
-                    .attr("y2", function(link) { return nodeMap[link.target].y; });
+                    .attr("x2", function(link) {
+                        var node = nodeMap[link.target];
+                        var x0 = node.x;
+                        var y0 = node.y;
+                        var x1 = nodeMap[link.source].x;
+                        var y1 = nodeMap[link.source].y;
+                        var r = d3.select(node.circle).attr("r");
+                        var d = Math.sqrt(Math.pow(x1-x0,2)+Math.pow(y1-y0,2));
+                        var t = r/d;
+                        return (1-t)*x0+t*x1;
+                    })
+                    .attr("y2", function(link) {
+                        var node = nodeMap[link.target];
+                        var x0 = node.x;
+                        var y0 = node.y;
+                        var x1 = nodeMap[link.source].x;
+                        var y1 = nodeMap[link.source].y;
+                        var r = d3.select(node.circle).attr("r");
+                        var d = Math.sqrt(Math.pow(x1-x0,2)+Math.pow(y1-y0,2));
+                        var t = r/d;
+                        return (1-t)*y0+t*y1;
+                    });
 
 
                   node
