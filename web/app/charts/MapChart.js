@@ -572,7 +572,7 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             else if(chartConfig.mapType === "Links"){
                 getData("PortsOfEntry", function(ports){
-                    renderLinks(data, countries, ports);
+                    renderLinks(data, countries, ports, path, projection);
                 });
             }
 
@@ -584,7 +584,8 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** renderLinks
   //**************************************************************************
-    var renderLinks = function(data, countries, ports){
+    var renderLinks = function(data, countries, ports, path, projection){
+        var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
         var nodes = data.nodes;
         var links = data.links;
         var linkArray = []
@@ -665,7 +666,6 @@ bluewave.charts.MapChart = function(parent, config) {
         var thicknessScale = d3.scaleQuantile()
             .domain(thicknessExtent)
             .range([6 ,8, 10, 12, 14]);
-
         mapArea.selectAll("#connection-path").remove();
         mapArea.selectAll("#connection-path")
             .data(coords)
