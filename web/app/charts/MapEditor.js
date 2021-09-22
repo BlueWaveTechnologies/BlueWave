@@ -193,6 +193,7 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapType.add("Links","Links");
             mapInputs.mapValue.add("quantity", "quantity");
 
+            mapInputs.mapLevel.add("Country", "states");
             mapInputs.mapLevel.add("World", "world");
         }
 
@@ -309,7 +310,8 @@ if(!bluewave.charts) bluewave.charts={};
 
         }
         else if (inputType==="mapLevel"){
-
+            chartConfig.lat = null;
+            chartConfig.lon = null;
             createMapPreview();
         }
     };
