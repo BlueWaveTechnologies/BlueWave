@@ -514,20 +514,7 @@ bluewave.ChartEditor = function(parent, config) {
         };
     };
 
-  //**************************************************************************
-  //** addInputstoConfig
-  //**************************************************************************
 
-    var addInputstoConfig = function(){
-        let dataSets = lineChart.getDataSets();
-        if(dataSets){
-        dataSets.forEach((e)=>{
-
-            // chartConfig.inputs.push(e)
-        });
-        // console.log(chartConfig)
-    }
-    }
   //**************************************************************************
   //** createPiePreview
   //**************************************************************************
@@ -539,26 +526,16 @@ bluewave.ChartEditor = function(parent, config) {
         });
     };
 
+
   //**************************************************************************
   //** createLinePreview
   //**************************************************************************
     var createLinePreview = function(){
         onRender(previewArea, function(){
-            addInputstoConfig();
             lineChart.update(chartConfig, inputData);
-            linePaths = lineChart.getLinePaths();
-        
-// console.log(inputData, linePaths)
-
-            // console.log(linePaths, lineChart.getDataSets())
-            linePaths.on("click", function(){
-
-                editStyle("line", this);
-    
-            });
-        
         });
     };
+
 
   //**************************************************************************
   //** createBarPreview
