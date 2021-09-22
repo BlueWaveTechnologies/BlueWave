@@ -26,6 +26,7 @@ bluewave.ChartEditor = function(parent, config) {
     var previewArea;
     var pieChart, lineChart, barChart;
     var optionsDiv;
+    var linePaths;
     var pieInputs={
         key:"",
         value:""
@@ -56,7 +57,8 @@ bluewave.ChartEditor = function(parent, config) {
         barLegend:null,
         barColor:null,
         xLabel:null,
-        yLabel:null
+        yLabel:null,
+        inputs: []
     };
     var margin = {
         top: 15,
@@ -512,7 +514,20 @@ bluewave.ChartEditor = function(parent, config) {
         };
     };
 
+  //**************************************************************************
+  //** addInputstoConfig
+  //**************************************************************************
 
+    var addInputstoConfig = function(){
+        let dataSets = lineChart.getDataSets();
+        if(dataSets){
+        dataSets.forEach((e)=>{
+
+            // chartConfig.inputs.push(e)
+        });
+        // console.log(chartConfig)
+    }
+    }
   //**************************************************************************
   //** createPiePreview
   //**************************************************************************
@@ -529,7 +544,19 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
     var createLinePreview = function(){
         onRender(previewArea, function(){
+            addInputstoConfig();
             lineChart.update(chartConfig, inputData);
+            linePaths = lineChart.getLinePaths();
+        
+// console.log(inputData, linePaths)
+
+            // console.log(linePaths, lineChart.getDataSets())
+            linePaths.on("click", function(){
+
+                editStyle("line", this);
+    
+            });
+        
         });
     };
 
@@ -546,7 +573,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(chartType){
+    var editStyle = function(chartType, target){
 
       //Create styleEditor as needed
         if (!styleEditor){
@@ -843,12 +870,19 @@ bluewave.ChartEditor = function(parent, config) {
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
+                // console.log(target)
+                // target.style.stroke = settings.lineColor;
                 chartConfig.lineColor = settings.lineColor;
                 chartConfig.lineWidth = settings.lineThickness;
                 chartConfig.opacity = settings.lineOpacity/100;
                 chartConfig.startOpacity = settings.startOpacity/100;
                 chartConfig.endOpacity = settings.endOpacity/100;
                 createLinePreview();
+
+                if(target){
+                chartConfig[``] = settings.lineColor;
+                //${indexOf(target) +1 }
+                }
             };
         }
         else if(chartType==="barChart"){

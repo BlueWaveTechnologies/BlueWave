@@ -25,6 +25,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var axisWidth, axisHeight;
     var x, y, xBand, yBand;
     var timeAxis;
+    var dataSets;
 
 
   //**************************************************************************
@@ -119,9 +120,10 @@ bluewave.charts.LineChart = function(parent, config) {
 
             var data1 = data[0];
             var data2 = data[1];
-            var dataSets = data;
+            dataSets = data;
             data = data1;
 
+            var mergedData = d3.merge(dataSets);
             // if (data2!==null && data2!==undefined && xKey2 && yKey2){
             //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
             // }
@@ -142,6 +144,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     .enter()
                     .append("path")
                     .attr("fill", "none")
+                    .attr("class", "line-path")
                     .attr("stroke", chartConfig.lineColor)
                     .attr("stroke-width", chartConfig.lineWidth)
                     .attr("opacity", chartConfig.opacity)
@@ -162,7 +165,7 @@ bluewave.charts.LineChart = function(parent, config) {
             else{
 
                 //Merge data to one axis for displayAxis
-                var mergedData = d3.merge(dataSets);
+                // var mergedData = d3.merge(dataSets);
 
                 var data1 = d3.nest()
                     .key(function(d){return d[xKey];})
@@ -178,9 +181,13 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 //Draw line for each data set
                 for (let i=0; i<dataSets.length; i++){
+                    let lineColor, lineWidth, opacity;
                     if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
                         xKey = chartConfig[`xAxis${i+1}`];
                         yKey = chartConfig[`yAxis${i+1}`];
+                        lineColor = chartConfig[`lineColor${i+1}`]
+                        lineWidth = chartConfig[`lineWidth${i+1}`]
+                        opacity = chartConfig[`opacity${i+1}`]
                         if(!xKey || !yKey) continue;
                     }
 
@@ -197,6 +204,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     plotArea
                         .append("path")
                         .datum(sumData)
+                        .attr("class", "line-path")
                         .attr("fill", "none")
                         .attr("stroke", chartConfig.lineColor)
                         .attr("stroke-width", chartConfig.lineWidth)
@@ -258,18 +266,35 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-                  //Draw grid lines if option is checked
-                    if(chartConfig.gridLines === true){
-                       drawGridlines(plotArea, x, y, axisHeight, axisWidth);
-                    }
+                //Draw grid lines if option is checked
+                if(chartConfig.xGrid || chartConfig.yGrid){
+                    drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+                 }
+     
+               //Draw labels if checked
+                 if(chartConfig.xLabel || chartConfig.yLabel){
+                     drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                         axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
+                 }
 
-                }
-            }
 
+                };
+            };
 
+            //Create event listeners for lines
             var lines = plotArea.selectAll("path").data(data);
+
+            lines.on("mouseover", function(){ 
+                d3.select(this).transition().duration(10).attr("opacity", chartConfig.opacity/2)
+            });
+
+            lines.on("mouseout", function(){
+                d3.select(this).transition().duration(10).attr("opacity", chartConfig.opacity)
+            });
+
             lines.on("click", function(){
                 me.onClick(this);
+ 
             });
 
             lines.on("dblclick", function(){
@@ -286,6 +311,18 @@ bluewave.charts.LineChart = function(parent, config) {
     this.onClick = function(line){};
     this.onDblClick = function(line){};
 
+
+  //**************************************************************************
+  //** getLinePaths
+  //**************************************************************************
+
+    this.getLinePaths = function(){  return plotArea.selectAll(".line-path");  };
+
+  //**************************************************************************
+  //** getDataSets
+  //**************************************************************************
+
+    this.getDataSets = function(){  if(dataSets) return dataSets;  };
 
   //**************************************************************************
   //** displayAxis
