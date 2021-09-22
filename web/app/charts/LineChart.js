@@ -179,15 +179,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 // let xType = typeOfAxisValue();
 
-                //Draw line for each data set
+                var arr = [];
                 for (let i=0; i<dataSets.length; i++){
                     let lineColor, lineWidth, opacity;
                     if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
                         xKey = chartConfig[`xAxis${i+1}`];
                         yKey = chartConfig[`yAxis${i+1}`];
-                        lineColor = chartConfig[`lineColor${i+1}`]
-                        lineWidth = chartConfig[`lineWidth${i+1}`]
-                        opacity = chartConfig[`opacity${i+1}`]
                         if(!xKey || !yKey) continue;
                     }
 
@@ -199,29 +196,25 @@ bluewave.charts.LineChart = function(parent, config) {
                             });
                     }).entries(dataSets[i]);
 
-                    let keyType = typeOfAxisValue(sumData[0].key);
+                    arr.push(sumData);
+                }
 
-                    plotArea
-                        .append("path")
-                        .datum(sumData)
-                        .attr("class", "line-path")
-                        .attr("fill", "none")
-                        .attr("stroke", chartConfig.lineColor)
-                        .attr("stroke-width", chartConfig.lineWidth)
-                        .attr("opacity", chartConfig.opacity)
-                        .attr(
-                            "d",d3.line()
-                            .x(function(d){
-                                if(keyType==="date"){
-                                    return x(new Date(d.key));
-                                }else{
-                                    return x(d.key);
-                                }
-                            })
-                            .y(function(d){
-                                return y(d["value"]);
-                            })
-                        );
+
+
+              //Draw areas under lines first!
+                for (let i=0; i<arr.length; i++){
+                    var sumData = arr[i];
+
+
+                    let lineColor, lineWidth, opacity;
+                    if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
+                        lineColor = chartConfig[`lineColor${i+1}`]
+                        lineWidth = chartConfig[`lineWidth${i+1}`]
+                        opacity = chartConfig[`opacity${i+1}`]
+                    }
+
+
+                    let keyType = typeOfAxisValue(sumData[0].key);
 
 
                   //Define and fill area under line
@@ -264,43 +257,66 @@ bluewave.charts.LineChart = function(parent, config) {
                         .attr("stop-color", (d) => d.color )
                         .attr("stop-opacity", (d) => d.opacity );
 
+                }
 
 
-                //Draw grid lines if option is checked
+
+              //Draw lines
+                for (let i=0; i<arr.length; i++){
+                    var sumData = arr[i];
+
+
+                    let lineColor, lineWidth, opacity;
+                    if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
+                        lineColor = chartConfig[`lineColor${i+1}`]
+                        lineWidth = chartConfig[`lineWidth${i+1}`]
+                        opacity = chartConfig[`opacity${i+1}`]
+                    }
+
+
+                    let keyType = typeOfAxisValue(sumData[0].key);
+
+                    plotArea
+                        .append("path")
+                        .datum(sumData)
+                        .attr("dataset", i)
+                        .attr("fill", "none")
+                        .attr("stroke", chartConfig.lineColor)
+                        .attr("stroke-width", chartConfig.lineWidth)
+                        .attr("opacity", chartConfig.opacity)
+                        .attr(
+                            "d",d3.line()
+                            .x(function(d){
+                                if(keyType==="date"){
+                                    return x(new Date(d.key));
+                                }else{
+                                    return x(d.key);
+                                }
+                            })
+                            .y(function(d){
+                                return y(d["value"]);
+                            })
+                        )
+                        .on("click", function(){
+                            var datasetID = d3.select(this).attr("dataset");
+                            console.log(datasetID);
+                            me.onClick(this);
+                        });
+                }
+
+
+              //Draw grid lines if option is checked
                 if(chartConfig.xGrid || chartConfig.yGrid){
                     drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
-                 }
-     
-               //Draw labels if checked
-                 if(chartConfig.xLabel || chartConfig.yLabel){
-                     drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                         axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
-                 }
+                }
 
+              //Draw labels if checked
+                if(chartConfig.xLabel || chartConfig.yLabel){
+                    drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                        axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
+                }
 
-                };
             };
-
-            //Create event listeners for lines
-            var lines = plotArea.selectAll("path").data(data);
-
-            lines.on("mouseover", function(){ 
-                d3.select(this).transition().duration(10).attr("opacity", chartConfig.opacity/2)
-            });
-
-            lines.on("mouseout", function(){
-                d3.select(this).transition().duration(10).attr("opacity", chartConfig.opacity)
-            });
-
-            lines.on("click", function(){
-                me.onClick(this);
- 
-            });
-
-            lines.on("dblclick", function(){
-                me.onDblClick(this);
-            });
-
         });
     };
 
