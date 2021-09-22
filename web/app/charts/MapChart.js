@@ -290,9 +290,7 @@ bluewave.charts.MapChart = function(parent, config) {
             me.onUpdate();
         }
         else if (mapLevel === "states"){
-            var centerLon, centerLat;
-            console.log("States");
-            console.log(chartConfig);
+            var centerLon, centerLat
             if(chartConfig.lat && chartConfig.lon){
                 centerLon = chartConfig.lon;
                 centerLat = chartConfig.lat;
@@ -416,8 +414,6 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if(mapLevel === "world"){
             var centerLon, centerLat;
-            console.log("World");
-            console.log(chartConfig);
             if(chartConfig.lat && chartConfig.lon){
                 centerLon = parseFloat(chartConfig.lon);
                 centerLat = parseFloat(chartConfig.lat);
