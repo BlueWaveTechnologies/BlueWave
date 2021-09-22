@@ -276,14 +276,38 @@ bluewave.charts.LineChart = function(parent, config) {
 
                     let keyType = typeOfAxisValue(sumData[0].key);
 
+
+                  //Draw line
+                    plotArea
+                        .append("path")
+                        .datum(sumData)
+                        .attr("fill", "none")
+                        .attr("stroke", chartConfig.lineColor)
+                        .attr("stroke-width", chartConfig.lineWidth)
+                        .attr("opacity", chartConfig.opacity)
+                        .attr(
+                            "d",d3.line()
+                            .x(function(d){
+                                if(keyType==="date"){
+                                    return x(new Date(d.key));
+                                }else{
+                                    return x(d.key);
+                                }
+                            })
+                            .y(function(d){
+                                return y(d["value"]);
+                            })
+                        );
+
+                  //Draw think line for selection purposes
                     plotArea
                         .append("path")
                         .datum(sumData)
                         .attr("dataset", i)
                         .attr("fill", "none")
-                        .attr("stroke", chartConfig.lineColor)
-                        .attr("stroke-width", chartConfig.lineWidth)
-                        .attr("opacity", chartConfig.opacity)
+                        .attr("stroke", "#ff0000")
+                        .attr("stroke-width", 10)
+                        .attr("opacity", 0.5)
                         .attr(
                             "d",d3.line()
                             .x(function(d){
