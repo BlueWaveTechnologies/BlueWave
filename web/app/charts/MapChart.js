@@ -291,6 +291,8 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if (mapLevel === "states"){
             var centerLon, centerLat;
+            console.log("States");
+            console.log(chartConfig);
             if(chartConfig.lat && chartConfig.lon){
                 centerLon = chartConfig.lon;
                 centerLat = chartConfig.lat;
@@ -300,7 +302,8 @@ bluewave.charts.MapChart = function(parent, config) {
                 chartConfig.lon = centerLon;
                 chartConfig.lat = centerLat;
             }
-            centerLat = centerLat + 96;
+            //Might no longer be needed, will comment out for now.
+//            centerLat = centerLat + 96;
             projection = d3.geoAlbers()
                 .scale(1070)
                 .center([centerLat, centerLon])
@@ -413,6 +416,8 @@ bluewave.charts.MapChart = function(parent, config) {
         }
         else if(mapLevel === "world"){
             var centerLon, centerLat;
+            console.log("World");
+            console.log(chartConfig);
             if(chartConfig.lat && chartConfig.lon){
                 centerLon = parseFloat(chartConfig.lon);
                 centerLat = parseFloat(chartConfig.lat);
