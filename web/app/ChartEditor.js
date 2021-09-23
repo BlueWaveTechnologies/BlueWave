@@ -491,8 +491,9 @@ bluewave.ChartEditor = function(parent, config) {
         lineChart = new bluewave.charts.LineChart(svg, {
             margin: margin
         });
-        lineChart.onDblClick = function(line){
-            editStyle("line");
+        lineChart.onClick = function(line){
+            var datasetID = d3.select(line).attr("dataset");
+            editStyle("line", datasetID);
         };
 
         barChart = new bluewave.charts.BarChart(svg, {
@@ -533,12 +534,6 @@ bluewave.ChartEditor = function(parent, config) {
     var createLinePreview = function(){
         onRender(previewArea, function(){
             lineChart.update(chartConfig, inputData);
-            
-            linePaths = lineChart.getLinePaths();
-            linePaths.on("click", function(){
-                var datasetID = d3.select(this).attr("dataset");
-                editStyle("line", datasetID);
-            });
         });
     };
 
@@ -854,7 +849,7 @@ bluewave.ChartEditor = function(parent, config) {
 
             //Single line edit case
             if(datasetID){
-                
+
                let n = `${datasetID}`;
 
                if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
@@ -878,7 +873,7 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig["endOpacity" + n] = settings.endOpacity/100;
                 createLinePreview();
                 }
-                
+
             }else{
 
           //Process onChange events
@@ -891,10 +886,10 @@ bluewave.ChartEditor = function(parent, config) {
                 chartConfig.startOpacity = settings.startOpacity/100;
                 chartConfig.endOpacity = settings.endOpacity/100;
                 createLinePreview();
-                
+
                 };
             }
-            
+
 
 
         }

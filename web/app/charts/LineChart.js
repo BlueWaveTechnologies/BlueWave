@@ -183,7 +183,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 var arr = [];
                 for (let i=0; i<dataSets.length; i++){
-                    
+
                     if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
                         xKey = chartConfig[`xAxis${i+1}`];
                         yKey = chartConfig[`yAxis${i+1}`];
@@ -206,7 +206,7 @@ bluewave.charts.LineChart = function(parent, config) {
               //Draw areas under lines first!
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
-                    
+
                     let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
                     let startOpacity = (chartConfig["startOpacity" + i] ?? chartConfig.startOpacity);
                     let endOpacity = (chartConfig["endOpacity" + i] ?? chartConfig.endOpacity);
@@ -245,10 +245,8 @@ bluewave.charts.LineChart = function(parent, config) {
                         .selectAll("stop")
                         .data([
                             {offset: "0%", color: lineColor, opacity: startOpacity},
-                            // {offset: "20%", color: chartConfig.lineColor,
-                                //  opacity: Math.max(chartConfig.startOpacity/2, chartConfig.endOpacity)},
                             {offset: "100%", color: lineColor, opacity: endOpacity}
-                            ])
+                        ])
                         .enter().append("stop")
                         .attr("offset", (d) => d.offset )
                         .attr("stop-color", (d) => d.color )
@@ -296,7 +294,6 @@ bluewave.charts.LineChart = function(parent, config) {
                         .append("path")
                         .datum(sumData)
                         .attr("dataset", i)
-                        .attr("class", "thick-line")
                         .attr("fill", "none")
                         .attr("stroke", "#ff0000")
                         .attr("stroke-width", 10)
@@ -314,11 +311,9 @@ bluewave.charts.LineChart = function(parent, config) {
                                 return y(d["value"]);
                             })
                         )
-                        // .on("click", function(){
-                        //     var datasetID = d3.select(this).attr("dataset");
-                        //     // console.log(datasetID);
-                        //     me.onClick(this);
-                        // });
+                        .on("click", function(){
+                            me.onClick(this);
+                        });
                 }
 
 
@@ -342,7 +337,6 @@ bluewave.charts.LineChart = function(parent, config) {
   //** onClick
   //**************************************************************************
     this.onClick = function(line){};
-    this.onDblClick = function(line){};
 
 
   //**************************************************************************
