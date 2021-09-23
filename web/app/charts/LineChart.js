@@ -131,6 +131,10 @@ bluewave.charts.LineChart = function(parent, config) {
 
             if (group!==null && group!==undefined){
 
+                if (data2!==null && data2!==undefined && xKey2 && yKey2){
+                data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
+                }
+
                 let groupData = d3.nest()
                     .key(function(d){return d[group];})
                     .entries(data);
@@ -164,8 +168,6 @@ bluewave.charts.LineChart = function(parent, config) {
             }
             else{
 
-                //Merge data to one axis for displayAxis
-                // var mergedData = d3.merge(dataSets);
 
                 var data1 = d3.nest()
                     .key(function(d){return d[xKey];})
@@ -181,7 +183,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 var arr = [];
                 for (let i=0; i<dataSets.length; i++){
-                    let lineColor, lineWidth, opacity;
+                    
                     if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
                         xKey = chartConfig[`xAxis${i+1}`];
                         yKey = chartConfig[`yAxis${i+1}`];
@@ -204,15 +206,10 @@ bluewave.charts.LineChart = function(parent, config) {
               //Draw areas under lines first!
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
-
-
-                    let lineColor, lineWidth, opacity;
-                    if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
-                        lineColor = chartConfig[`lineColor${i+1}`]
-                        lineWidth = chartConfig[`lineWidth${i+1}`]
-                        opacity = chartConfig[`opacity${i+1}`]
-                    }
-
+                    
+                    let lineColor = (chartConfig["lineColor" + i] || chartConfig.lineColor);
+                    let startOpacity = (chartConfig["startOpacity" + i] || chartConfig.startOpacity);
+                    let endOpacity = (chartConfig["endOpacity" + i] || chartConfig.endOpacity);
 
                     let keyType = typeOfAxisValue(sumData[0].key);
 
@@ -247,10 +244,10 @@ bluewave.charts.LineChart = function(parent, config) {
                         .attr("x2", "0%").attr("y2", "100%")
                         .selectAll("stop")
                         .data([
-                            {offset: "0%", color: chartConfig.lineColor, opacity: chartConfig.startOpacity},
+                            {offset: "0%", color: lineColor, opacity: startOpacity},
                             // {offset: "20%", color: chartConfig.lineColor,
                                 //  opacity: Math.max(chartConfig.startOpacity/2, chartConfig.endOpacity)},
-                            {offset: "100%", color: chartConfig.lineColor, opacity: chartConfig.endOpacity}
+                            {offset: "100%", color: lineColor, opacity: endOpacity}
                             ])
                         .enter().append("stop")
                         .attr("offset", (d) => d.offset )
@@ -265,14 +262,9 @@ bluewave.charts.LineChart = function(parent, config) {
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
 
-
-                    let lineColor, lineWidth, opacity;
-                    if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
-                        lineColor = chartConfig[`lineColor${i+1}`]
-                        lineWidth = chartConfig[`lineWidth${i+1}`]
-                        opacity = chartConfig[`opacity${i+1}`]
-                    }
-
+                    let lineColor = (chartConfig["lineColor" + i] || chartConfig.lineColor);
+                    let lineWidth = (chartConfig["lineWidth" + i] || chartConfig.lineWidth);
+                    let opacity = (chartConfig["opacity" + i] || chartConfig.opacity);
 
                     let keyType = typeOfAxisValue(sumData[0].key);
 
@@ -282,9 +274,9 @@ bluewave.charts.LineChart = function(parent, config) {
                         .append("path")
                         .datum(sumData)
                         .attr("fill", "none")
-                        .attr("stroke", chartConfig.lineColor)
-                        .attr("stroke-width", chartConfig.lineWidth)
-                        .attr("opacity", chartConfig.opacity)
+                        .attr("stroke", lineColor)
+                        .attr("stroke-width", lineWidth)
+                        .attr("opacity", opacity)
                         .attr(
                             "d",d3.line()
                             .x(function(d){
@@ -299,15 +291,16 @@ bluewave.charts.LineChart = function(parent, config) {
                             })
                         );
 
-                  //Draw think line for selection purposes
+                  //Draw thick line for selection purposes
                     plotArea
                         .append("path")
                         .datum(sumData)
                         .attr("dataset", i)
+                        .attr("class", "thick-line")
                         .attr("fill", "none")
                         .attr("stroke", "#ff0000")
                         .attr("stroke-width", 10)
-                        .attr("opacity", 0.5)
+                        .attr("opacity", 0)
                         .attr(
                             "d",d3.line()
                             .x(function(d){
@@ -321,11 +314,11 @@ bluewave.charts.LineChart = function(parent, config) {
                                 return y(d["value"]);
                             })
                         )
-                        .on("click", function(){
-                            var datasetID = d3.select(this).attr("dataset");
-                            console.log(datasetID);
-                            me.onClick(this);
-                        });
+                        // .on("click", function(){
+                        //     var datasetID = d3.select(this).attr("dataset");
+                        //     // console.log(datasetID);
+                        //     me.onClick(this);
+                        // });
                 }
 
 
@@ -356,13 +349,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //** getLinePaths
   //**************************************************************************
 
-    this.getLinePaths = function(){  return plotArea.selectAll(".line-path");  };
-
-  //**************************************************************************
-  //** getDataSets
-  //**************************************************************************
-
-    this.getDataSets = function(){  if(dataSets) return dataSets;  };
+    this.getLinePaths = function(){  return plotArea.selectAll(".thick-line");  };
 
   //**************************************************************************
   //** displayAxis

@@ -533,6 +533,12 @@ bluewave.ChartEditor = function(parent, config) {
     var createLinePreview = function(){
         onRender(previewArea, function(){
             lineChart.update(chartConfig, inputData);
+            
+            linePaths = lineChart.getLinePaths();
+            linePaths.on("click", function(){
+                var datasetID = d3.select(this).attr("dataset");
+                editStyle("line", datasetID);
+            });
         });
     };
 
@@ -550,7 +556,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(chartType, target){
+    var editStyle = function(chartType, datasetID){
 
       //Create styleEditor as needed
         if (!styleEditor){
@@ -809,6 +815,7 @@ bluewave.ChartEditor = function(parent, config) {
 
 
 
+          //Global update fields for all lines
 
           //Update color field (add colorPicker) and set initial value
             createColorOptions("lineColor", form);
@@ -826,7 +833,7 @@ bluewave.ChartEditor = function(parent, config) {
           //Add opacity sliders
             createSlider("lineOpacity", form, "%");
             var opacity = chartConfig.opacity;
-            if (opacity==null) opacity = 1;
+            if (isNaN(opacity)) opacity = 1;
             chartConfig.opacity = opacity;
             form.findField("lineOpacity").setValue(opacity*100);
 
@@ -844,23 +851,51 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.endOpacity = endOpacity;
             form.findField("endOpacity").setValue(endOpacity*100);
 
+            //Single line edit case
+            if(datasetID){
+                
+               let n = `${datasetID}`;
+
+               if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
+               if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;
+               if( isNaN(chartConfig["opacity" + n]) ) chartConfig["opacity" + n] = 1;
+               if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
+               if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
+
+                form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
+                form.findField("lineThickness").setValue(chartConfig["lineWidth" + n]);
+                form.findField("lineOpacity").setValue(chartConfig["opacity" + n]*100);
+                form.findField("startOpacity").setValue(chartConfig["startOpacity" + n]*100);
+                form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
+
+                form.onChange = function(){
+                let settings = form.getData();
+                chartConfig["lineColor" + n] = settings.lineColor;
+                chartConfig["lineWidth" + n] = settings.lineThickness;
+                chartConfig["opacity" + n] = settings.lineOpacity/100;
+                chartConfig["startOpacity" + n] = settings.startOpacity/100;
+                chartConfig["endOpacity" + n] = settings.endOpacity/100;
+                createLinePreview();
+                }
+                
+            }else{
+
           //Process onChange events
             form.onChange = function(){
-                var settings = form.getData();
-                // console.log(target)
-                // target.style.stroke = settings.lineColor;
+
+                let settings = form.getData();
                 chartConfig.lineColor = settings.lineColor;
                 chartConfig.lineWidth = settings.lineThickness;
                 chartConfig.opacity = settings.lineOpacity/100;
                 chartConfig.startOpacity = settings.startOpacity/100;
                 chartConfig.endOpacity = settings.endOpacity/100;
                 createLinePreview();
+                
+                };
+            }
+            
 
-                if(target){
-                chartConfig[``] = settings.lineColor;
-                //${indexOf(target) +1 }
-                }
-            };
+
         }
         else if(chartType==="barChart"){
 
