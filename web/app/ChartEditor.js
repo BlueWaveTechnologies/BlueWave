@@ -765,6 +765,7 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="line"){
 
+            var dataSetTitle = (datasetID)=>{if(datasetID){return `Data Set ${datasetID + 1}` }};
           //Add style options
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,

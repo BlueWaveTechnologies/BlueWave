@@ -207,9 +207,9 @@ bluewave.charts.LineChart = function(parent, config) {
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
                     
-                    let lineColor = (chartConfig["lineColor" + i] || chartConfig.lineColor);
-                    let startOpacity = (chartConfig["startOpacity" + i] || chartConfig.startOpacity);
-                    let endOpacity = (chartConfig["endOpacity" + i] || chartConfig.endOpacity);
+                    let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
+                    let startOpacity = (chartConfig["startOpacity" + i] ?? chartConfig.startOpacity);
+                    let endOpacity = (chartConfig["endOpacity" + i] ?? chartConfig.endOpacity);
 
                     let keyType = typeOfAxisValue(sumData[0].key);
 
@@ -262,9 +262,9 @@ bluewave.charts.LineChart = function(parent, config) {
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
 
-                    let lineColor = (chartConfig["lineColor" + i] || chartConfig.lineColor);
-                    let lineWidth = (chartConfig["lineWidth" + i] || chartConfig.lineWidth);
-                    let opacity = (chartConfig["opacity" + i] || chartConfig.opacity);
+                    let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
+                    let lineWidth = (chartConfig["lineWidth" + i] ?? chartConfig.lineWidth);
+                    let opacity = (chartConfig["opacity" + i] ?? chartConfig.opacity);
 
                     let keyType = typeOfAxisValue(sumData[0].key);
 
