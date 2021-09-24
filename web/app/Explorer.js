@@ -808,36 +808,55 @@ bluewave.Explorer = function(parent, config) {
             var inputNode = nodes[outputID];
 
 
-          //Ensure that charts can't be connected to other charts
-            if (node.type.indexOf("Chart")>0){
-                if (inputNode.type.indexOf("Chart")>0 && inputNode.type != "sankeyChart"){
-                    drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
-                    return;
-                }
-            }
+
+            var acceptConnection = function(){
+                node.inputs[outputID] = inputNode;
+                node.ondblclick();
+            };
+
+            var removeConnection = function(){
+                drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+            };
 
 
-          //Ensure that Map can only be connected by addData or supplyChain nodes
             if (node.type === "map"){
-                if (inputNode.type != "addData" && inputNode.type != "supplyChain"){
-                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
-                   return;
+                if (inputNode.type == "addData" || inputNode.type == "supplyChain"){
+                    acceptConnection();
+                }
+                else{
+                   removeConnection();
                 }
             }
-
-
-          //Ensure that Sankey can only be connected by a supplyChain node
-            if (node.type === "sankeyChart"){
-                if (inputNode.type != "supplyChain"){
-                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
-                   return;
+            else if (node.type === "pieChart"){
+                if (inputNode.type == "addData" || inputNode.type == "sankeyChart" || inputNode.type == "supplyChain"){
+                    acceptConnection();
+                }
+                else{
+                   removeConnection();
                 }
             }
+            else if (node.type === "sankeyChart"){
+                if (inputNode.type == "supplyChain"){
+                    acceptConnection();
+                }
+                else{
+                   removeConnection();
+                }
+            }
+            else{
 
+              //For all other nodes, ensure that charts can't be connected to other charts
+                if (node.type.indexOf("Chart")>0){
+                    if (inputNode.type.indexOf("Chart")>0){
+                        removeConnection();
+                        return;
+                    }
+                }
 
-          //If we're still here, update node and open editor
-            node.inputs[outputID] = inputNode;
-            node.ondblclick();
+              //If we're still here, accept the connection
+                acceptConnection();
+            }
+
         });
         drawflow.on('nodeRemoved', function(nodeID) {
             removeInputs(nodes, nodeID);
