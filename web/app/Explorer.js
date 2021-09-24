@@ -810,7 +810,7 @@ bluewave.Explorer = function(parent, config) {
 
           //Ensure that charts can't be connected to other charts
             if (node.type.indexOf("Chart")>0){
-                if (inputNode.type.indexOf("Chart")>0){
+                if (inputNode.type.indexOf("Chart")>0 && inputNode.type != "sankeyChart"){
                     drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
                     return;
                 }
