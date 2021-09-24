@@ -21,7 +21,6 @@ bluewave.charts.PieEditor = function(parent, config) {
     var me = this;
     var currentNode;
     var panel;
-    var isSupChain;
     var inputData = [];
     var linksAndQuantity = [];
     var svg;
@@ -129,7 +128,6 @@ bluewave.charts.PieEditor = function(parent, config) {
             }
         }
         inputData = inputs;
-//        isSupChain = isSupplyChain;
         if(config !== null && config !== undefined){
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
