@@ -391,13 +391,15 @@ bluewave.Explorer = function(parent, config) {
                 button.supplyChain.enable();
 
 
-              //Special case for SupplyChain nodes
+              //Enable map and pieChart buttons as needed
                 for (var key in nodes) {
                     if (nodes.hasOwnProperty(key)){
                         var node = nodes[key];
+                        if (node.type==="supplyChain" || node.type==="sankeyChart"){
+                            button.pieChart.enable();
+                        }
                         if (node.type==="supplyChain"){
                             button.map.enable();
-                            break;
                         }
                     }
                 }
