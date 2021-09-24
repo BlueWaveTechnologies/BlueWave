@@ -15,7 +15,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var defaultConfig = {
         margin: {
             top: 15,
-            right: 5,
+            right: 75,
             bottom: 65,
             left: 82
         }
@@ -164,6 +164,22 @@ bluewave.charts.LineChart = function(parent, config) {
                             })(d.values);
                         }
                     );
+
+                    if(chartConfig.endTags){
+                        // groupData.forEach((g)=>{
+                        //    drawLabelTag(g, chartConfig.lineColor, chartConfig.group); 
+                        // })
+//                         let newData = d3.nest()
+//                         .key(function(d){return d[xKey];})
+//                         .rollup(function(d){
+//                             return d3.sum(d,function(g){
+//                                 return g[yKey];
+//                             });
+//                     }).entries(data);
+// console.log(newData)
+//                         drawLabelTag(groupData[0], chartConfig.lineColor, chartConfig.group)
+                        
+                    }
 
             }
             else{
@@ -314,8 +330,13 @@ bluewave.charts.LineChart = function(parent, config) {
                         .on("click", function(){
                             me.onClick(this);
                         });
-                }
 
+                    //Display end tags if checked
+                    if(chartConfig.endTags){
+                        drawLabelTag(sumData, lineColor, chartConfig["label" + i], chartConfig);
+                    }
+
+                };
 
               //Draw grid lines if option is checked
                 if(chartConfig.xGrid || chartConfig.yGrid){
@@ -345,6 +366,64 @@ bluewave.charts.LineChart = function(parent, config) {
 
     this.getLinePaths = function(){  return plotArea.selectAll(".thick-line");  };
 
+  //**************************************************************************
+  //** drawEndLabels
+  //**************************************************************************
+
+    var drawLabelTag = function(dataSet, color, label){
+
+        if(!label){
+            label = "Add Label"
+        }
+
+        var lastItem = dataSet[dataSet.length-1];
+        var lastKey = lastItem.key;
+        var lastVal = lastItem.value; 
+        var keyType = typeOfAxisValue(dataSet[0].key);
+
+        if(keyType==="date"){
+            var tx = x(new Date(lastKey))
+        }else{
+            var tx = x(lastKey)
+        }
+
+        var ty = y(lastVal);
+
+        var temp = plotArea.append("text")
+            .attr("dy", ".35em")
+            .attr("text-anchor", "start")
+            .text(label);
+        var box = temp.node().getBBox();
+        temp.remove();
+
+        var w = Math.max(box.width+8, 60);
+        var h = box.height;
+        var a = h/2;
+        var vertices = [
+          [0, 0], //ul
+          [w, 0], //ur
+          [w, h], //11
+          [0, h], //lr
+          [-a,a] //arrow point
+        ];
+
+
+      //Add tag (rect)
+        var poly = plotArea.append("polygon")
+            .attr("points", vertices.join(" "))
+            .attr("transform", "translate("+ (tx+(a)) +","+ (ty-(a)) +")")
+            .style("fill", color);
+
+      //Add label
+        var text = plotArea.append("text")
+            .attr("transform", "translate("+ (tx+a+4) +","+ty +")")
+            .attr("dy", ".35em")
+            .attr("text-anchor", "start")
+            .style("fill", "#fff")
+            .text(label);
+
+    };
+    
   //**************************************************************************
   //** displayAxis
   //**************************************************************************

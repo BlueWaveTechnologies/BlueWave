@@ -58,11 +58,11 @@ bluewave.ChartEditor = function(parent, config) {
         barColor:null,
         xLabel:null,
         yLabel:null,
-        inputs: []
+        endTags: null
     };
     var margin = {
         top: 15,
-        right: 5,
+        right: 75,
         bottom: 65,
         left: 82
     };
@@ -373,7 +373,11 @@ bluewave.ChartEditor = function(parent, config) {
                     createDropdown("yAxis", plotInputs),
 
                     createLabel("Group By"),
-                    createDropdown("group", plotInputs)
+                    createDropdown("group", plotInputs),
+
+                    createLabel("Label"),
+                    { name: "label0", label: "", type: "text" }
+
                 ]
             }
         );
@@ -387,7 +391,11 @@ bluewave.ChartEditor = function(parent, config) {
                         createDropdown(`xAxis${i+1}`, plotInputs),
 
                         createLabel("Y-Axis"),
-                        createDropdown(`yAxis${i+1}`, plotInputs)
+                        createDropdown(`yAxis${i+1}`, plotInputs),
+
+                        createLabel("Label"),
+                        { name: ("label"+i), label: "", type: "text" }
+
                     ]
                 }
             );
@@ -704,8 +712,28 @@ bluewave.ChartEditor = function(parent, config) {
                                 ]
                             }
                         ]
-                    }
+                    },
+                    
+                    {
+                        group: "General",
+                        items: [
 
+                            {
+                                name: "endTags",
+                                label: "Display End Tags",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                        checked: true
+                                    }
+
+                                ]
+                            },
+
+                        ]
+                    },
                 ]
             });
 
@@ -730,6 +758,10 @@ bluewave.ChartEditor = function(parent, config) {
             var yLabel = chartConfig.yLabel;
             yLabelField.setValue(yLabel===true ? true : false);
 
+            var tagField = form.findField("endTags");
+            var endTags = chartConfig.endTags;
+            tagField.setValue(endTags===true ? true : false);
+
 
           //Process onChange events
             form.onChange = function(){
@@ -748,11 +780,15 @@ bluewave.ChartEditor = function(parent, config) {
                 if (settings.yLabel==="true") settings.yLabel = true;
                 else if (settings.yLabel==="false") settings.yLabel = false;
 
+                if (settings.endTags==="true") settings.endTags = true;
+                else if (settings.endTags==="false") settings.endTags = false;
+
 
                 chartConfig.xGrid = settings.xGrid;
                 chartConfig.yGrid = settings.yGrid;
                 chartConfig.xLabel = settings.xLabel;
                 chartConfig.yLabel = settings.yLabel;
+                chartConfig.endTags = settings.endTags;
                 createLinePreview();
             };
 
