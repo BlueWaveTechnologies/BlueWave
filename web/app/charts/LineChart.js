@@ -333,7 +333,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
                     //Display end tags if checked
                     if(chartConfig.endTags){
-                        drawLabelTag(sumData, lineColor, chartConfig["label" + i], chartConfig);
+                        drawLabelTag(sumData, lineColor, chartConfig["label" + i]);
                     }
 
                 };
