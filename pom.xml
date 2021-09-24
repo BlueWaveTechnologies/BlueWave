@@ -23,13 +23,13 @@
          <id>javaxt.com</id>
          <url>https://www.javaxt.com/maven</url>
        </repository>
-        <repository>
-            <id>jsqlparser-snapshots</id>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-        </repository>
+       <repository>
+         <id>jsqlparser-snapshots</id>
+         <snapshots>
+          <enabled>true</enabled>
+         </snapshots>
+         <url>https://oss.sonatype.org/content/groups/public/</url>
+       </repository>
     </repositories>
     <dependencies>
 
@@ -42,12 +42,12 @@
         <dependency>
           <groupId>javaxt</groupId>
           <artifactId>javaxt-server</artifactId>
-          <version>4.0.1</version>
+          <version>4.1.0</version>
         </dependency>
         <dependency>
           <groupId>javaxt</groupId>
           <artifactId>javaxt-express</artifactId>
-          <version>1.1.1</version>
+          <version>1.1.2</version>
         </dependency>
 
         <!-- H2 (app database) -->

@@ -26,7 +26,8 @@ bluewave.charts.MapChart = function(parent, config) {
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
-
+    var projection;
+    var readOnly;
 
   //**************************************************************************
   //** Constructor
@@ -50,16 +51,44 @@ bluewave.charts.MapChart = function(parent, config) {
             });
         }
 
-        mapArea = svg.append("g");
+        mapArea = svg.append("g").append("g");
+        readOnly = false;
+        svg.call(d3.zoom()
+            .scaleExtent([1, 1])
+            .on('zoom', recenter));
     };
 
 
   //**************************************************************************
-  //** onRender
+  //** getProjection
   //**************************************************************************
-  /** Called after the map has been updated
+    this.getProjection = function(){
+        return projection;
+    };
+
+
+  //**************************************************************************
+  //** onRecenter
+  //**************************************************************************
+  /** Called whenever the center point of the map is changed
+   */
+    this.onRecenter = function(lat, lon){};
+
+
+  //**************************************************************************
+  //** onUpdate
+  //**************************************************************************
+  /** Called after the map has been rendered, after an update
    */
     this.onUpdate = function(){};
+
+
+  //**************************************************************************
+  //** setReadOnly
+  //**************************************************************************
+    this.setReadOnly = function(readonly){
+        readOnly = (readonly===false) ? false : true;
+    };
 
 
   //**************************************************************************
@@ -112,17 +141,13 @@ bluewave.charts.MapChart = function(parent, config) {
             "red": d3.scaleQuantile(extent, d3.schemeReds[7])
         };
         if (!chartConfig.colorScale) chartConfig.colorScale = "red";
-        if (chartConfig.linkZoom === (width / .8) || chartConfig.linkZoom === width / 2 / Math.PI){
-            delete chartConfig.linkZoom;
-        }
 
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-
 
         var mapLevel = chartConfig.mapLevel;
         if (mapLevel === "counties"){
 
-            var projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
+            projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
             var path = d3.geoPath(projection);
 
           //Create map layer
@@ -265,10 +290,23 @@ bluewave.charts.MapChart = function(parent, config) {
             me.onUpdate();
         }
         else if (mapLevel === "states"){
-
-            var projection = d3.geoAlbers().center([-8, 43]);
+            var centerLon, centerLat
+            if(chartConfig.lat && chartConfig.lon){
+                centerLon = chartConfig.lon;
+                centerLat = chartConfig.lat;
+            }else{
+                centerLon = 38.7;
+                centerLat = -0.6;
+                chartConfig.lon = centerLon;
+                chartConfig.lat = centerLat;
+            }
+            //Might no longer be needed, will comment out for now.
+//            centerLat = centerLat + 96;
+            projection = d3.geoAlbers()
+                .scale(1070)
+                .center([centerLat, centerLon])
+                .rotate([96, 0])
             var path = d3.geoPath(projection);
-
 
           //Create map layer
             var worldMap = mapArea.append("g");
@@ -366,159 +404,27 @@ bluewave.charts.MapChart = function(parent, config) {
                     renderStates();
                 }
             }
-            else if(chartConfig.mapType === "Links"){ //untested...
-
-                var nodes = data.nodes;
-                var links = data.links;
-                var linkArray = [];
-                var connections = [];
-                var coords = [];
-                //Split Links up into the component parts.
-                for(var link in links){
-                    if(links.hasOwnProperty(link)){
-                        var linkage = link.split('->');
-                        linkage.push(links[link].quantity);
-                        linkArray.push(linkage);
-                    }
-                };
-                linkArray.forEach(function(d){
-                    var connection = {};
-                    var stateCodeOne = nodes[d[0]].state;
-                    var stateCodeTwo = nodes[d[1]].state;
-                    var stateValue = d[2];
-                    connection.stateCodeOne = stateCodeOne;
-                    connection.stateCodeTwo = stateCodeTwo;
-                    connection.quantity = stateValue;
-                    connections.push(connection);
+            else if(chartConfig.mapType === "Links"){
+                getData("PortsOfEntry", function(ports){
+                    renderLinks(data, countries, ports, path, projection, mapLevel);
                 });
-                connections.forEach(function(d){
-                    var stateOne = d.stateCodeOne;
-                    var stateTwo = d.stateCodeTwo;
-                    var quantity = d.quantity;
-                    var coordOne = [];
-                    var coordTwo = [];
-                    var connectionPath = [];
-                    for (var i = 0; i < states.features.length; i++){
-                        var stateCenter = states.features[i];
-                        if (stateOne === stateCenter.properties.code){
-                            var lat = stateCenter.properties.latitude;
-                            var lon = stateCenter.properties.longitude;
-                            coordOne.push(lat);
-                            coordOne.push(lon);
-                            connectionPath.push(coordOne);
-                            break;
-                        }
-                    }
-                    for(var i = 0; i < states.features.length; i++){
-                        var stateCenter = states.features[i];
-                        if(stateTwo === stateCenter.properties.code){
-                            var lat = stateCenter.properties.latitude;
-                            var lon = stateCenter.properties.longitude;
-                            coordTwo.push(lat);
-                            coordTwo.push(lon);
-                            connectionPath.push(coordTwo);
-                            connectionPath.push(quantity);
-                            break;
-                        }
-                    }
-                    coords.push(connectionPath);
-                });
-
-                var quantities = [];
-                coords.forEach(function(d){
-                    quantities.push(d[2]);
-                });
-                var thicknessExtent = d3.extent(quantities);
-                var thicknessScale = d3.scaleQuantile()
-                    .domain(thicknessExtent)
-                    .range([6 ,8, 10, 12, 14]);
-
-                mapArea.selectAll("#connection-path").remove();
-                mapArea.selectAll("#connection-path")
-                    .data(coords)
-                    .enter()
-                    .append("path")
-                    .attr("id", "#connection-path")
-                    .attr("d", function (d) {
-                        return path({
-                            type: "LineString",
-                            coordinates: [
-                                [d[0][1], d[0][0]],
-                                [d[1][1], d[1][0]]
-                            ]
-                        });
-                    })
-                    .style("fill", "none")
-                    .style("stroke-opacity", 0.5)
-                    .style('stroke-width', (d) =>{
-                        return thicknessScale(d[2]);
-                    })
-                    .style('stroke', (d) =>{
-                        return getColor(d);
-                    });
-
-                mapArea.selectAll("#connection-dot").remove();
-                let dots = mapArea
-                    .append("g")
-                    .attr("id", "connection-dot")
-                    .selectAll("#connection-dot")
-                    .data(coords)
-                    .enter();
-
-                dots.append("circle")
-                    .attr("cx", function(d){
-                        let lat = d[0][0];
-                        let lon = d[0][1];
-                        return projection([lon, lat])[0];
-                    })
-                    .attr("cy", function(d){
-                        let lat = d[0][0];
-                        let lon = d[0][1];
-                        return projection([lon, lat])[1];
-                    })
-                    .attr("r", 6)
-                    .attr("fill", (d) =>{
-                        return getColor(d);
-                    });
-
-                dots.append("circle")
-                    .attr("cx", function(d){
-                        let lat = d[1][0];
-                        let lon = d[1][1];
-                        return projection([lon, lat])[0];
-                    })
-                    .attr("cy", function(d){
-                        let lat = d[1][0];
-                        let lon = d[1][1];
-                        return projection([lon, lat])[1];
-                    })
-                    .attr("r", 6)
-                    .attr("fill", (d) =>{
-                        return getColor(d[0]);
-                    });
-
             }
 
             me.onUpdate();
         }
         else if(mapLevel === "world"){
-
-            if(!chartConfig.linkZoom) chartConfig.linkZoom = (Math.round(width / 2 / Math.PI));
-            if(isNaN(chartConfig.centerLongitude)) chartConfig.centerLongitude = 0;
-            if(isNaN(chartConfig.centerLatitude)) chartConfig.centerLatitude = 0;
-            var zoom = chartConfig.linkZoom;
-            var centerLon = 0;
-            var centerLat = 20;
-
-//                var projection = d3.geoMercator()
-//                                .scale(zoom)
-//                                .rotate([centerLon, 0])
-//                                .center([0, centerLat])
-//                                .translate([width / 2, height / 2]);
-
-            var projection = d3.geoMercator().center([centerLon, centerLat]).scale(180);
+            var centerLon, centerLat;
+            if(chartConfig.lat && chartConfig.lon){
+                centerLon = parseFloat(chartConfig.lon);
+                centerLat = parseFloat(chartConfig.lat);
+            }else{
+                centerLon = -98.5;
+                centerLat = 39.5;
+                chartConfig.lon = centerLon;
+                chartConfig.lat = centerLat;
+            }
+            projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
-
 
           //Render countries
             mapArea.selectAll("path")
@@ -528,7 +434,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 .attr('d', path)
                 .attr('fill', 'lightgray')
                 .attr('stroke', 'white');
-
 
             if (chartConfig.mapType === "Point"){
                 var points = getPoints(data, chartConfig, projection);
@@ -572,7 +477,7 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             else if(chartConfig.mapType === "Links"){
                 getData("PortsOfEntry", function(ports){
-                    renderLinks(data, countries, ports);
+                    renderLinks(data, countries, ports, path, projection, mapLevel);
                 });
             }
 
@@ -582,9 +487,33 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** recenter
+  //**************************************************************************
+  /** Used to recenter the map using d3 mouse events
+   */
+    var recenter = function(){
+        if (!readOnly){
+            mapArea.attr('transform', d3.event.transform);
+            var projection = me.getProjection();
+            if (projection){
+                var rect = javaxt.dhtml.utils.getRect(svg.node());
+                var w = rect.width;
+                var h = rect.height;
+                var t = d3.event.transform;
+                var x = (w/2)-t.x;
+                var y = (h/2)-t.y;
+                var p = projection.invert([x,y]);
+                me.onRecenter(p[1],p[0]);
+            }
+        }
+    };
+
+
+  //**************************************************************************
   //** renderLinks
   //**************************************************************************
-    var renderLinks = function(data, countries, ports){
+    var renderLinks = function(data, countries, ports, path, projection, mapLevel){
+        var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
         var nodes = data.nodes;
         var links = data.links;
         var linkArray = []
@@ -598,55 +527,40 @@ bluewave.charts.MapChart = function(parent, config) {
                 linkArray.push(linkage);
             }
         };
-        linkArray.forEach(function(d){
-            var connection = {};
-            var countryCodeOne = nodes[d[0]].country;
-            var countryCodeTwo = nodes[d[1]].country;
-            var countryValue = d[2];
-            if (countryCodeOne && countryCodeTwo){
-                connection.countryCodeOne = countryCodeOne;
-                connection.countryCodeTwo = countryCodeTwo;
-                connection.quantity = countryValue;
+        if(mapLevel==="states"){
+            linkArray.forEach(function(d){
+                var connection = {};
+                var stateCodeOne = nodes[d[0]].state;
+                var stateCodeTwo = nodes[d[1]].state;
+                var stateValue = d[2];
+                connection.stateCodeOne = stateCodeOne;
+                connection.stateCodeTwo = stateCodeTwo;
+                connection.quantity = stateValue;
                 connections.push(connection);
-            }
-        });
-        connections.forEach(function(d){
-            var countryOne = d.countryCodeOne;
-            var countryTwo = d.countryCodeTwo;
-            var quantity = d.quantity;
-            var coordOne = [];
-            var coordTwo = [];
-            var connectionPath = [];
-            if(countryOne !== 'US' && countryTwo === 'US'){
-                for(var i = 0; i < ports.length; i++){
-                    if(countryOne === ports[i].iso2){
-                        coordOne.push(ports[i].exlatitude);
-                        coordOne.push(ports[i].exlongitude);
-                        coordTwo.push(ports[i].imlatitude);
-                        coordTwo.push(ports[i].imlongitude);
-                        connectionPath.push(coordOne);
-                        connectionPath.push(coordTwo);
-                        connectionPath.push(quantity);
-                        coords.push(connectionPath);
-                    }
-                }
-            }else{
-                for (var i = 0; i < countries.features.length; i++){
-                    var countryCenter = countries.features[i];
-                    if (countryOne === countryCenter.properties.code){
-                        var lat = countryCenter.properties.latitude;
-                        var lon = countryCenter.properties.longitude;
+            });
+            connections.forEach(function(d){
+                var stateOne = d.stateCodeOne;
+                var stateTwo = d.stateCodeTwo;
+                var quantity = d.quantity;
+                var coordOne = [];
+                var coordTwo = [];
+                var connectionPath = [];
+                for (var i = 0; i < states.features.length; i++){
+                    var stateCenter = states.features[i];
+                    if (stateOne === stateCenter.properties.code){
+                        var lat = stateCenter.properties.latitude;
+                        var lon = stateCenter.properties.longitude;
                         coordOne.push(lat);
                         coordOne.push(lon);
                         connectionPath.push(coordOne);
                         break;
                     }
                 }
-                for(var i = 0; i < countries.features.length; i++){
-                    var countryCenter = countries.features[i];
-                    if(countryTwo === countryCenter.properties.code){
-                        var lat = countryCenter.properties.latitude;
-                        var lon = countryCenter.properties.longitude;
+                for(var i = 0; i < states.features.length; i++){
+                    var stateCenter = states.features[i];
+                    if(stateTwo === stateCenter.properties.code){
+                        var lat = stateCenter.properties.latitude;
+                        var lon = stateCenter.properties.longitude;
                         coordTwo.push(lat);
                         coordTwo.push(lon);
                         connectionPath.push(coordTwo);
@@ -655,8 +569,68 @@ bluewave.charts.MapChart = function(parent, config) {
                     }
                 }
                 coords.push(connectionPath);
-            }
-        });
+            });
+        }else if(mapLevel==="world"){
+            linkArray.forEach(function(d){
+                var connection = {};
+                var countryCodeOne = nodes[d[0]].country;
+                var countryCodeTwo = nodes[d[1]].country;
+                var countryValue = d[2];
+                if (countryCodeOne && countryCodeTwo){
+                    connection.countryCodeOne = countryCodeOne;
+                    connection.countryCodeTwo = countryCodeTwo;
+                    connection.quantity = countryValue;
+                    connections.push(connection);
+                }
+            });
+            connections.forEach(function(d){
+                var countryOne = d.countryCodeOne;
+                var countryTwo = d.countryCodeTwo;
+                var quantity = d.quantity;
+                var coordOne = [];
+                var coordTwo = [];
+                var connectionPath = [];
+                if(countryOne !== 'US' && countryTwo === 'US'){
+                    for(var i = 0; i < ports.length; i++){
+                        if(countryOne === ports[i].iso2){
+                            coordOne.push(ports[i].exlatitude);
+                            coordOne.push(ports[i].exlongitude);
+                            coordTwo.push(ports[i].imlatitude);
+                            coordTwo.push(ports[i].imlongitude);
+                            connectionPath.push(coordOne);
+                            connectionPath.push(coordTwo);
+                            connectionPath.push(quantity);
+                            coords.push(connectionPath);
+                        }
+                    }
+                }else{
+                    for (var i = 0; i < countries.features.length; i++){
+                        var countryCenter = countries.features[i];
+                        if (countryOne === countryCenter.properties.code){
+                            var lat = countryCenter.properties.latitude;
+                            var lon = countryCenter.properties.longitude;
+                            coordOne.push(lat);
+                            coordOne.push(lon);
+                            connectionPath.push(coordOne);
+                            break;
+                        }
+                    }
+                    for(var i = 0; i < countries.features.length; i++){
+                        var countryCenter = countries.features[i];
+                        if(countryTwo === countryCenter.properties.code){
+                            var lat = countryCenter.properties.latitude;
+                            var lon = countryCenter.properties.longitude;
+                            coordTwo.push(lat);
+                            coordTwo.push(lon);
+                            connectionPath.push(coordTwo);
+                            connectionPath.push(quantity);
+                            break;
+                        }
+                    }
+                    coords.push(connectionPath);
+                }
+            });
+        }
         var quantities = [];
         coords.forEach(function(d){
             quantities.push(d[2]);
@@ -665,7 +639,6 @@ bluewave.charts.MapChart = function(parent, config) {
         var thicknessScale = d3.scaleQuantile()
             .domain(thicknessExtent)
             .range([6 ,8, 10, 12, 14]);
-
         mapArea.selectAll("#connection-path").remove();
         mapArea.selectAll("#connection-path")
             .data(coords)
@@ -842,7 +815,6 @@ bluewave.charts.MapChart = function(parent, config) {
             });
 
         });
-        //console.log(numStates, numCounties, numCensusDivisions, data.length);
 
 
       //Render data using the most suitable geometry type

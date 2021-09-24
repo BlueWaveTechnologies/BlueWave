@@ -12,7 +12,7 @@ if(!bluewave) var bluewave={};
  *   init - stubs out chart areas
  *   initializeChartSpace - stubs out chart spaces
  *   Update - chart information and config is passed in.
- *   createDropDown - initializes chart Type specific dropdowns
+ *   createForm - initializes chart Type specific dropdowns
  *   createOptions - adds chart input options from updated Data
  *      pie, bar,line, map chart creation.
  ******************************************************************************/
@@ -26,6 +26,7 @@ bluewave.ChartEditor = function(parent, config) {
     var previewArea;
     var pieChart, lineChart, barChart;
     var optionsDiv;
+    var linePaths;
     var pieInputs={
         key:"",
         value:""
@@ -56,7 +57,8 @@ bluewave.ChartEditor = function(parent, config) {
         barLegend:null,
         barColor:null,
         xLabel:null,
-        yLabel:null
+        yLabel:null,
+        inputs: []
     };
     var margin = {
         top: 15,
@@ -151,7 +153,7 @@ bluewave.ChartEditor = function(parent, config) {
             panel.title.innerHTML = config.chartTitle;
         }
         chartConfig.chartType = nodeType;
-        createDropDown(optionsDiv);
+        createForm(optionsDiv);
         createOptions();
     };
 
@@ -246,11 +248,22 @@ bluewave.ChartEditor = function(parent, config) {
                 plotInputs.xAxis.setValue(chartConfig.xAxis,chartConfig.xAxis);
                 plotInputs.yAxis.setValue(chartConfig.yAxis,chartConfig.yAxis);
                 plotInputs.group.setValue(chartConfig.group,chartConfig.group);
-                if(dataOptions2){
-                    dataOptions2.forEach(val=>{
-                        plotInputs.xAxis2.add(val,val);
-                        plotInputs.yAxis2.add(val,val);
+
+                // Add dropdown values for each data set
+                for (let i=1; i<inputData.length; i++){
+                    let multiLineDataOptions = Object.keys(inputData[i][0]);
+
+                    multiLineDataOptions.forEach((val)=>{
+                        let xAxisN = `xAxis${i+1}`;
+                        let yAxisN = `yAxis${i+1}`;
+
+                        plotInputs[xAxisN].add(val, val);
+                        plotInputs[yAxisN].add(val, val);
+
+                        plotInputs[xAxisN].setValue(chartConfig[xAxisN], chartConfig[xAxisN]);
+                        plotInputs[yAxisN].setValue(chartConfig[yAxisN], chartConfig[yAxisN]);
                     });
+
                 }
                 break;
             default:
@@ -260,24 +273,19 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** createDropDown
+  //** createForm
   //**************************************************************************
-    var createDropDown = function(parent){
-
-        var table = createTable();
-        var tbody = table.firstChild;
-        table.style.height = "";
-        parent.appendChild(table);
+    var createForm = function(parent){
 
         switch(chartConfig.chartType){
             case "pieChart":
-                createPieDropdown(tbody);
+                createPieChartOptions(parent);
                 break;
             case "barChart":
-                createBarDropDown(tbody);
+                createBarChartOptions(parent);
                 break;
             case "lineChart":
-                createLineDropDown(tbody);
+                createLineChartOptions(parent);
                 break;
             default:
                 break;
@@ -286,63 +294,177 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** createPieDropdown
+  //** createPieChartOptions
   //**************************************************************************
-    var createPieDropdown = function(tbody){
-        dropdownItem(tbody,"pieKey","Key",createPiePreview,pieInputs,"key");
-        dropdownItem(tbody,"pieValue","Value",createPiePreview,pieInputs,"value");
+    var createPieChartOptions = function(parent){
+        createInput(parent,"pieKey","Key",createPiePreview,pieInputs,"key");
+        createInput(parent,"pieValue","Value",createPiePreview,pieInputs,"value");
     };
 
 
   //**************************************************************************
-  //** createBarDropDown
+  //** createBarChartOptions
   //**************************************************************************
-    var createBarDropDown = function(tbody){
-        dropdownItem(tbody,"xAxis","X-Axis",createBarPreview,plotInputs,"xAxis");
-        dropdownItem(tbody,"yAxis","Y-Axis",createBarPreview,plotInputs,"yAxis");
-        if (inputData.length>1){
-            dropdownItem(tbody,"xAxis2","X-Axis2",createBarPreview,plotInputs,"xAxis2");
-            dropdownItem(tbody,"yAxis2","Y-Axis2",createBarPreview,plotInputs,"yAxis2");
+    var createBarChartOptions = function(parent){
+
+        var items = [];
+        items.push(
+            {
+                group: "Series 1",
+                items: [
+                    createLabel("X-Axis"),
+                    createDropdown("xAxis", plotInputs),
+
+                    createLabel("Y-Axis"),
+                    createDropdown("yAxis", plotInputs)
+                ]
+            }
+        );
+
+        for (var i=1; i<inputData.length; i++){
+            items.push(
+                {
+                    group: "Series " + (i+1),
+                    items: [
+                        createLabel("X-Axis"),
+                        createDropdown(`xAxis${i+1}`, plotInputs),
+
+                        createLabel("Y-Axis"),
+                        createDropdown(`yAxis${i+1}`, plotInputs)
+                    ]
+                }
+            );
         }
+
+
+        var div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.zIndex = 1;
+        parent.appendChild(div);
+
+
+        var form = new javaxt.dhtml.Form(div, {
+            style: config.style.form,
+            items: items
+        });
+
+        form.onChange = function(input, value){
+            var key = input.name;
+            chartConfig[key] = value;
+            createBarPreview();
+        };
     };
 
 
   //**************************************************************************
-  //** createLineDropDown
+  //** createLineChartOptions
   //**************************************************************************
-    var createLineDropDown = function(tbody){
-        dropdownItem(tbody,"xAxis","X-Axis",createLinePreview,plotInputs,"xAxis");
-        dropdownItem(tbody,"yAxis","Y-Axis",createLinePreview,plotInputs,"yAxis");
-        dropdownItem(tbody,"group","Group By",createLinePreview,plotInputs,"group");
-        if (inputData.length>1){
-            dropdownItem(tbody,"xAxis2","X-Axis2",createLinePreview,plotInputs,"xAxis2");
-            dropdownItem(tbody,"yAxis2","Y-Axis2",createLinePreview,plotInputs,"yAxis2");
+    var createLineChartOptions = function(parent){
+
+        var items = [];
+        items.push(
+            {
+                group: "Series 1",
+                items: [
+                    createLabel("X-Axis"),
+                    createDropdown("xAxis", plotInputs),
+
+                    createLabel("Y-Axis"),
+                    createDropdown("yAxis", plotInputs),
+
+                    createLabel("Group By"),
+                    createDropdown("group", plotInputs)
+                ]
+            }
+        );
+
+        for (var i=1; i<inputData.length; i++){
+            items.push(
+                {
+                    group: "Series " + (i+1),
+                    items: [
+                        createLabel("X-Axis"),
+                        createDropdown(`xAxis${i+1}`, plotInputs),
+
+                        createLabel("Y-Axis"),
+                        createDropdown(`yAxis${i+1}`, plotInputs)
+                    ]
+                }
+            );
         }
+
+
+        var div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.zIndex = 1;
+        parent.appendChild(div);
+
+
+        var form = new javaxt.dhtml.Form(div, {
+            style: config.style.form,
+            items: items
+        });
+
+        form.onChange = function(input, value){
+            var key = input.name;
+            chartConfig[key] = value;
+            createLinePreview();
+        };
     };
 
+
   //**************************************************************************
-  //** dropdownItem
+  //** createLabel
   //**************************************************************************
-    var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
-        var tr, td;
+    var createLabel = function(label){
+        var row = document.createElement("div");
+        row.className = "form-label";
+        row.innerText = label + ":";
+        return {
+            name: "",
+            label: "",
+            type: {
+                getValue: function(){},
+                setValue: function(){},
+                el: row
+            }
+        };
+    };
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        td.innerHTML= displayName+":";
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-
-
-        input[inputType] = new javaxt.dhtml.ComboBox(td, {
+  //**************************************************************************
+  //** createDropdown
+  //**************************************************************************
+    var createDropdown = function(inputType,input){
+        input[inputType] = new javaxt.dhtml.ComboBox(document.createElement("div"), {
             style: config.style.combobox,
             readOnly: true
         });
-        input[inputType].clear();
+        return {
+            name: inputType,
+            label: "",
+            type: input[inputType]
+        };
+    };
+
+
+  //**************************************************************************
+  //** createInput
+  //**************************************************************************
+    var createInput = function(parent,chartConfigRef,displayName,callBack,input,inputType){
+
+        var row = document.createElement("div");
+        parent.appendChild(row);
+
+
+        var label = document.createElement("label");
+        label.innerText = displayName + ":";
+        row.appendChild(label);
+
+        input[inputType] = new javaxt.dhtml.ComboBox(row, {
+            style: config.style.combobox,
+            readOnly: true
+        });
         input[inputType].onChange = function(name,value){
             chartConfig[chartConfigRef] = value;
             callBack();
@@ -369,8 +491,9 @@ bluewave.ChartEditor = function(parent, config) {
         lineChart = new bluewave.charts.LineChart(svg, {
             margin: margin
         });
-        lineChart.onDblClick = function(line){
-            editStyle("line");
+        lineChart.onClick = function(line){
+            var datasetID = d3.select(line).attr("dataset");
+            editStyle("line", datasetID);
         };
 
         barChart = new bluewave.charts.BarChart(svg, {
@@ -404,6 +527,7 @@ bluewave.ChartEditor = function(parent, config) {
         });
     };
 
+
   //**************************************************************************
   //** createLinePreview
   //**************************************************************************
@@ -412,6 +536,7 @@ bluewave.ChartEditor = function(parent, config) {
             lineChart.update(chartConfig, inputData);
         });
     };
+
 
   //**************************************************************************
   //** createBarPreview
@@ -426,7 +551,7 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(chartType){
+    var editStyle = function(chartType, datasetID){
 
       //Create styleEditor as needed
         if (!styleEditor){
@@ -635,6 +760,7 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="line"){
 
+            var dataSetTitle = (datasetID)=>{if(datasetID){return `Data Set ${datasetID + 1}` }};
           //Add style options
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
@@ -685,6 +811,7 @@ bluewave.ChartEditor = function(parent, config) {
 
 
 
+          //Global update fields for all lines
 
           //Update color field (add colorPicker) and set initial value
             createColorOptions("lineColor", form);
@@ -702,7 +829,7 @@ bluewave.ChartEditor = function(parent, config) {
           //Add opacity sliders
             createSlider("lineOpacity", form, "%");
             var opacity = chartConfig.opacity;
-            if (opacity==null) opacity = 1;
+            if (isNaN(opacity)) opacity = 1;
             chartConfig.opacity = opacity;
             form.findField("lineOpacity").setValue(opacity*100);
 
@@ -720,16 +847,51 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.endOpacity = endOpacity;
             form.findField("endOpacity").setValue(endOpacity*100);
 
+            //Single line edit case
+            if(datasetID){
+
+               let n = `${datasetID}`;
+
+               if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
+               if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;
+               if( isNaN(chartConfig["opacity" + n]) ) chartConfig["opacity" + n] = 1;
+               if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
+               if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
+
+                form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
+                form.findField("lineThickness").setValue(chartConfig["lineWidth" + n]);
+                form.findField("lineOpacity").setValue(chartConfig["opacity" + n]*100);
+                form.findField("startOpacity").setValue(chartConfig["startOpacity" + n]*100);
+                form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
+
+                form.onChange = function(){
+                let settings = form.getData();
+                chartConfig["lineColor" + n] = settings.lineColor;
+                chartConfig["lineWidth" + n] = settings.lineThickness;
+                chartConfig["opacity" + n] = settings.lineOpacity/100;
+                chartConfig["startOpacity" + n] = settings.startOpacity/100;
+                chartConfig["endOpacity" + n] = settings.endOpacity/100;
+                createLinePreview();
+                }
+
+            }else{
+
           //Process onChange events
             form.onChange = function(){
-                var settings = form.getData();
+
+                let settings = form.getData();
                 chartConfig.lineColor = settings.lineColor;
                 chartConfig.lineWidth = settings.lineThickness;
                 chartConfig.opacity = settings.lineOpacity/100;
                 chartConfig.startOpacity = settings.startOpacity/100;
                 chartConfig.endOpacity = settings.endOpacity/100;
                 createLinePreview();
-            };
+
+                };
+            }
+
+
+
         }
         else if(chartType==="barChart"){
 
