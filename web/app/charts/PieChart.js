@@ -62,7 +62,7 @@ bluewave.charts.PieChart = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(chartConfig, data, isSupplyChain){
+    this.update = function(chartConfig, data){
         me.clear();
 
         var parent = svg.node().parentNode;
@@ -77,18 +77,11 @@ bluewave.charts.PieChart = function(parent, config) {
                 return acc;
             },{});
 
-            if (isSupplyChain) {
-                pieData = data;
-            }
             var pie = d3.pie().value(function (d) {
                 return d.value;
             });
 
-            if (isSupplyChain) {
-                pieData = pie(d3.values(pieData));
-            } else {
-                pieData = pie(d3.entries(pieData));
-            }
+            pieData = pie(d3.entries(pieData));
 
             var margin = config.margin;
             var width = parent.offsetWidth;

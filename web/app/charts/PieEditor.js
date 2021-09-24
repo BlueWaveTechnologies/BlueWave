@@ -119,7 +119,7 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(nodeType, inputs, isSupplyChain){
+    this.update = function(nodeType, inputs){
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
@@ -129,7 +129,7 @@ bluewave.charts.PieEditor = function(parent, config) {
             }
         }
         inputData = inputs;
-        isSupChain = isSupplyChain;
+//        isSupChain = isSupplyChain;
         if(config !== null && config !== undefined){
             Object.keys(config).forEach(val=>{
                 chartConfig[val] = config[val]? config[val]:null;
@@ -138,7 +138,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         }
         chartConfig.chartType = nodeType;
         createDropDown(optionsDiv);
-        createOptions(isSupplyChain);
+        createOptions();
     };
 
 
@@ -179,7 +179,7 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   /** Initializes Options for Dropdowns.
    */
-    var createOptions = function(isSupplyChain) {
+    var createOptions = function() {
         var data = inputData[0];
         var data2 = inputData[1];
 
@@ -187,7 +187,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         var nodeAndType = [];
         var nodeTypeList = [];
 
-        if (isSupplyChain) {
+        if (data.hasOwnProperty("links")) {
             data = Object.values(inputData[0].links);
 
             for (var node in inputData[0].nodes) {
@@ -220,7 +220,6 @@ bluewave.charts.PieEditor = function(parent, config) {
                 linksAndQuantityEntry.key = linkFullType;
                 linksAndQuantityEntry.value = linkQuantity;
 
-
                 if (!(linksAndQuantity.indexOf(linkFullType) === -1)) {
                     var objIndex = linksAndQuantity.findIndex((obj => obj.key == linkFullType));
                     linksAndQuantity[objIndex].value = linksAndQuantity[objIndex].value + linkQuantity;
@@ -234,13 +233,13 @@ bluewave.charts.PieEditor = function(parent, config) {
 
         let dataOptions2 = data2?Object.keys(data2[0]):null;
 
-        if(isSupplyChain) {
+        if(inputData[0].hasOwnProperty("links")) {
             dataOptions = nodeTypeList;
         }
 
         pieInputs.value.clear();
         pieInputs.key.clear();
-        if (!isSupplyChain) {
+        if (!inputData[0].hasOwnProperty("links")) {
         dataOptions.forEach((val)=>{
                 if(!isNaN(data[0][val])){
                     pieInputs.value.add(val,val);
@@ -342,11 +341,21 @@ bluewave.charts.PieEditor = function(parent, config) {
         if (chartConfig.pieKey===null || chartConfig.pieValue===null) return;
         onRender(previewArea, function(){
             var data = inputData[0];
-            if (isSupChain) {
+            if (data.hasOwnProperty("links")) {
             data = linksAndQuantity.slice();
             data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
+            let scData = [];
+            data.forEach(function(entry, index) {
+                let scEntry = {};
+                if (entry.key.includes(chartConfig.pieKey)) {
+                    scEntry[chartConfig.pieKey] = entry.key;
+                    scEntry[chartConfig.pieValue] = entry.value;
+                }
+                scData.push(scEntry);
+            });
+            data = scData;
             }
-            pieChart.update(chartConfig, data, isSupChain);
+            pieChart.update(chartConfig, data);
         });
     };
 

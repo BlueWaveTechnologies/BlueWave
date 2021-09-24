@@ -1734,7 +1734,7 @@ bluewave.Explorer = function(parent, config) {
             }
         }
 
-        pieEditor.update(node.config, data, isSupplyChain);
+        pieEditor.update(node.config, data);
         pieEditor.show();
     };
 
@@ -2448,6 +2448,20 @@ bluewave.Explorer = function(parent, config) {
                   //Render sankeyChart
                     var sankeyChart = new bluewave.charts.SankeyChart(dashboardItem.innerDiv,config);
                     sankeyChart.update(sankeyConfig.style,data);
+
+                    if (node.type === "pieChart") {
+                        if (!pieEditor) editPie(node);
+                        pieEditor.update(node.config, getSupplyChainInputs(node));
+
+                        var pieConfig = pieEditor.getConfig();
+                        var data = pieEditor.getSankeyData();
+
+                        var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv, config);
+                        pieChart.update(pieConfig.style, data);
+
+                    }
+
+
 
                 }
                 else{
