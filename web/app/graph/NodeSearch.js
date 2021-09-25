@@ -330,6 +330,8 @@ bluewave.NodeSearch = function(parent, config) {
     };
 
 
+
+
   //**************************************************************************
   //** createNodeView
   //**************************************************************************
@@ -355,7 +357,7 @@ bluewave.NodeSearch = function(parent, config) {
         }));
 
 
-        // build the arrow.
+      //Define style for arrows
         svg.append("svg:defs").selectAll("marker")
             .data(["end"])
           .enter().append("svg:marker")
@@ -383,10 +385,12 @@ bluewave.NodeSearch = function(parent, config) {
             var cx = div.offsetWidth/2;
             var cy = div.offsetHeight/2;
 
+          //Create graph
             var graph = d3.forceSimulation(nodes)
             .force("link", d3.forceLink().id(function(d) { return d.name; }))
             .force("charge", d3.forceManyBody())
             .force("center", d3.forceCenter(cx, cy));
+
 
 
           //Add links
@@ -406,51 +410,49 @@ bluewave.NodeSearch = function(parent, config) {
             .data(nodes)
             .enter()
             .append("circle")
-              .attr("r", function(node){
-                  if (node.type==="search"){
-                      return 20;
-                  }
-                  else{
-                      return 10;
-                  }
-              })
-              .style("fill", function(node){
-                  if (node.type==="search"){
-                      return "#e66869";
-                  }
-                  else if (node.type==="match"){
-                      return "#d07393";
-                  }
-                  else if (node.type==="related"){
-                      return "#d89df8";
-                  }
-                  else{
-                      return "#dcdcdc";
-                  }
-              })
-              .attr("stroke-width", 1.5)
-              .attr("stroke", function(node){
-                  if (node.type==="search"){
-                      return "#dd3131";
-                  }
-                  else if (node.type==="match"){
-                      return "#c0416b";
-                  }
-                  else if (node.type==="related"){
-                      return "#b886d3";
-                  }
-                  else{
-                      return "#777";
-                  }
-              })
-              .on("click", function(node){
-                if (node.type==="search"){
-                    gridPanel.hide();
-                }
-                else{
-                    nodeList.selectNode(node);
-                }
-              });
+                .attr("transform", function(d) {
+                    return "translate(" + cx + "," + cy + ")";
+                })
+                .attr("r", function(node){
+                    if (node.type==="search"){
+                        return 20;
+                    }
+                    else{
+                        return 10;
+                    }
+                })
+                .style("fill", function(node){
+                    if (node.type==="search"){
+                        return "#e66869";
+                    }
+                    else if (node.type==="match"){
+                        return "#d07393";
+                    }
+                    else if (node.type==="related"){
+                        return "#d89df8";
+                    }
+                    else{
+                        return "#dcdcdc";
+                    }
+                })
+                .attr("stroke-width", 1.5)
+                .attr("stroke", function(node){
+                    if (node.type==="search"){
+                        return "#dd3131";
+                    }
+                    else if (node.type==="match"){
+                        return "#c0416b";
+                    }
+                    else if (node.type==="related"){
+                        return "#b886d3";
+                    }
+                    else{
+                        return "#777";
+                    }
+                })
+                .on("click", function(node){
+                    selectNode(node, this);
+                });
 
 
           //Add labels
@@ -459,53 +461,78 @@ bluewave.NodeSearch = function(parent, config) {
             .data(nodes)
             .enter()
             .append("text")
-              .text(function(node) {
-                return node.name;
-              })
-              .attr("fill", function(node) {
-                  if (node.type==="search"){
-                      return "#fff";
-                  }
-                  else{
-                    return "#000";
-                  }
-              })
-              .on("click", function(node){
-                if (node.type==="search"){
-                    gridPanel.hide();
-                }
-                else{
-                    nodeList.selectNode(node);
-                }
-              });
+                .text(function(node) {
+                    return node.name;
+                })
+                .attr("fill", function(node) {
+                    if (node.type==="search"){
+                        return "#fff";
+                    }
+                    else{
+                        return "#000";
+                    }
+                })
+                .on("click", function(node){
+                    selectNode(node, this);
+                });
 
 
-            var labelHeight = 12;
+          //Calculate label sizes and add custom attributes to the corresponding nodes
+            label.each(function(n) {
+                var box = d3.select(this).node().getBBox();
+                n.labelWidth = box.width;
+                n.labelHeight = box.height;
+            });
 
 
           //Create a lookup table to find nodes by node name
             var nodeMap = {};
             node.each(function(n) {
-                n.circle = this;
+                n.r = parseFloat(d3.select(this).attr("r"));
                 nodeMap[n.name] = n;
             });
 
 
-          //Update elements
+
+          //Update position of elements while the graph is being updated
             graph
               .nodes(nodes)
               .on("tick", function() {
 
+                //Update links. Note that for each of the attr functions we can
+                //simply return the node.x or node.y coordinate but instead we
+                //return a coordinate just outside of the node so we can render
+                //arrows. Reference: https://math.stackexchange.com/a/1630886/
                   link
-                    .attr("x1", function(link) { return nodeMap[link.source].x; })
-                    .attr("y1", function(link) { return nodeMap[link.source].y; })
+                    .attr("x1", function(link) {
+                        var node = nodeMap[link.source];
+                        var x0 = node.x;
+                        var y0 = node.y;
+                        var x1 = nodeMap[link.target].x;
+                        var y1 = nodeMap[link.target].y;
+                        var r = node.r;
+                        var d = Math.sqrt(Math.pow(x1-x0,2)+Math.pow(y1-y0,2));
+                        var t = r/d;
+                        return (1-t)*x0+t*x1;
+                    })
+                    .attr("y1", function(link) {
+                        var node = nodeMap[link.source];
+                        var x0 = node.x;
+                        var y0 = node.y;
+                        var x1 = nodeMap[link.target].x;
+                        var y1 = nodeMap[link.target].y;
+                        var r = node.r;
+                        var d = Math.sqrt(Math.pow(x1-x0,2)+Math.pow(y1-y0,2));
+                        var t = r/d;
+                        return (1-t)*y0+t*y1;
+                    })
                     .attr("x2", function(link) {
                         var node = nodeMap[link.target];
                         var x0 = node.x;
                         var y0 = node.y;
                         var x1 = nodeMap[link.source].x;
                         var y1 = nodeMap[link.source].y;
-                        var r = d3.select(node.circle).attr("r");
+                        var r = node.r;
                         var d = Math.sqrt(Math.pow(x1-x0,2)+Math.pow(y1-y0,2));
                         var t = r/d;
                         return (1-t)*x0+t*x1;
@@ -516,45 +543,103 @@ bluewave.NodeSearch = function(parent, config) {
                         var y0 = node.y;
                         var x1 = nodeMap[link.source].x;
                         var y1 = nodeMap[link.source].y;
-                        var r = d3.select(node.circle).attr("r");
+                        var r = node.r;
                         var d = Math.sqrt(Math.pow(x1-x0,2)+Math.pow(y1-y0,2));
                         var t = r/d;
                         return (1-t)*y0+t*y1;
                     });
 
 
+                //Update nodes
                   node
                     .attr("transform", function(d) {
                         return "translate(" + d.x + "," + d.y + ")";
                     });
 
+
+                //Update labels
                   label
                     .attr("transform", function(node) {
                         var x = node.x;
                         var y = node.y;
-                        var box = d3.select(this).node().getBBox();
+                        var r = node.r;
+                        var w = node.labelWidth;
+                        var h = node.labelHeight;
 
-                        if (node.type==="search"){ //place text inside node
-                            var xOffset = x-(20-2); //radius - width of circle outline
-                            var yOffset = y+((labelHeight/2)-2); //- width of circle outline
+
+                        if (node.type==="search"){
+
+                          //place text inside node
+                            var xOffset = x-(w/2);
+                            var yOffset = y+4;
                             return "translate(" + xOffset + "," + yOffset + ")";
                         }
                         else{
 
+                          //Place text outside of node
                             var xOffset;
-                            var nodeRadius = 10;
                             if (x>cx){
-                                xOffset = x+nodeRadius;
+                                xOffset = x+r;
                             }
                             else{
-                                xOffset = x-(box.width+nodeRadius);
+                                xOffset = x-(w+r);
                             }
 
-                            return "translate(" + xOffset + "," + (y-(labelHeight/2)) + ")";
+                            return "translate(" + xOffset + "," + (y-(h/2)) + ")";
                         }
                     });
                 }
             );
+
+
+            var findRelatedNodes = function(nodeName, relatedNodes){
+                links.forEach(function(l){
+                    if (l.source===nodeName){
+                        relatedNodes[l.target] = {};
+                    }
+                });
+
+                for (var key in relatedNodes) {
+                    if (relatedNodes.hasOwnProperty(key)){
+                        if (!relatedNodes[key]){
+                            findRelatedNodes(key, relatedNodes);
+                        }
+                    }
+                }
+            };
+
+
+            var selectNode = function(n, el){
+
+              //Find related nodes
+                var nodeName = n.name;
+                var relatedNodes = {};
+                findRelatedNodes(nodeName, relatedNodes);
+                relatedNodes[nodeName] = {}; //add selected node
+
+
+              //Update node styles
+                node.each(function() {
+                    d3.select(this).style("opacity", function (n) {
+                        return relatedNodes[n.name] ? 1 : 0.15;
+                    });
+                });
+
+              //Update link styles
+                link.each(function() {
+                    d3.select(this).style("opacity", function (l) {
+                        return relatedNodes[nodeMap[l.source].name] ? 1 : 0.15;
+                    });
+                });
+
+                console.log(relatedNodes);
+//                if (node.type==="search"){
+//                    gridPanel.hide();
+//                }
+//                else{
+//                    nodeList.selectNode(node);
+//                }
+            };
 
         };
 
