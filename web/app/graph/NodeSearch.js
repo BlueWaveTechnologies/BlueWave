@@ -222,7 +222,6 @@ bluewave.NodeSearch = function(parent, config) {
         tr.appendChild(td);
         var hr = addHorizontalResizer(td, nodeList.el);
         createNodeView(hr);
-
     };
 
 
@@ -330,8 +329,6 @@ bluewave.NodeSearch = function(parent, config) {
     };
 
 
-
-
   //**************************************************************************
   //** createNodeView
   //**************************************************************************
@@ -373,10 +370,13 @@ bluewave.NodeSearch = function(parent, config) {
 
 
 
+      //Function used to clear the search results
         var clear = function(){
             container.node().innerHTML = "";
         };
 
+
+      //Function used to render search results
         var update = function(q, nodes, links){
             clear();
             var g = container.append("g");
@@ -592,23 +592,27 @@ bluewave.NodeSearch = function(parent, config) {
             );
 
 
+          //Recursive function used to find all nodes realted to a given nodeName
             var findRelatedNodes = function(nodeName, relatedNodes){
                 links.forEach(function(l){
                     if (l.source===nodeName){
-                        relatedNodes[l.target] = {};
-                    }
-                });
-
-                for (var key in relatedNodes) {
-                    if (relatedNodes.hasOwnProperty(key)){
-                        if (!relatedNodes[key]){
-                            findRelatedNodes(key, relatedNodes);
+                        var targetNode = l.target;
+                        if (!relatedNodes[targetNode]){
+                            findRelatedNodes(targetNode, relatedNodes);
+                            nodeList.nodes.every(function(node){
+                                if (node.name===targetNode){
+                                    relatedNodes[targetNode] = node.properties;
+                                    return false;
+                                }
+                                return true;
+                            });
                         }
                     }
-                }
+                });
             };
 
 
+          //Function used to manage node select events
             var selectNode = function(n, el){
 
               //Find related nodes
@@ -632,7 +636,22 @@ bluewave.NodeSearch = function(parent, config) {
                     });
                 });
 
-                console.log(relatedNodes);
+
+              //Update link styles
+                label.each(function() {
+                    d3.select(this).style("opacity", function (n) {
+                        if (n.type==="search"){
+
+                        }
+                        else{
+                            return relatedNodes[n.name] ? 1 : 0.35;
+                        }
+                    });
+                });
+
+
+
+                selectColumns(relatedNodes);
 //                if (node.type==="search"){
 //                    gridPanel.hide();
 //                }
@@ -644,7 +663,7 @@ bluewave.NodeSearch = function(parent, config) {
         };
 
 
-
+      //Return nodeView object
         nodeView = {
             clear: clear,
             update: update
@@ -732,6 +751,15 @@ bluewave.NodeSearch = function(parent, config) {
             currIDs = [];
             overflowDiv.innerHTML = "";
         };
+
+    };
+
+
+  //**************************************************************************
+  //** selectColumns
+  //**************************************************************************
+    var selectColumns = function(nodes){
+        console.log(nodes);
 
     };
 
