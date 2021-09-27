@@ -60,7 +60,6 @@ bluewave.Explorer = function(parent, config) {
         dashboardPanel.style.height = "100%";
         innerDiv.appendChild(dashboardPanel);
         addShowHide(dashboardPanel);
-        addResizeListener(dashboardPanel, updateLayout);
         dashboardPanel.hide();
 
 
@@ -86,6 +85,7 @@ bluewave.Explorer = function(parent, config) {
         parent.appendChild(div);
         me.el = div;
         addShowHide(me);
+        addResizeListener(div, updateLayout);
     };
 
 
@@ -2320,6 +2320,7 @@ bluewave.Explorer = function(parent, config) {
   //** updateLayout
   //**************************************************************************
     var updateLayout = function(){
+        console.log(javaxt.dhtml.utils.getRect(dashboardPanel));
         if (me.getView()==="Dashboard"){
             var rect = javaxt.dhtml.utils.getRect(dashboardPanel);
             console.log(rect);
