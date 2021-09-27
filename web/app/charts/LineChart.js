@@ -131,10 +131,6 @@ bluewave.charts.LineChart = function(parent, config) {
 
             if (group!==null && group!==undefined){
 
-                if (data2!==null && data2!==undefined && xKey2 && yKey2){
-                data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-                }
-
                 let groupData = d3.nest()
                     .key(function(d){return d[group];})
                     .entries(data);
@@ -165,6 +161,35 @@ bluewave.charts.LineChart = function(parent, config) {
                         }
                     );
 
+                    //Draw thick line for selection purposes
+
+                    let keyType = typeOfAxisValue(groupData[0].key);
+
+                    plotArea
+                        .append("path")
+                        .datum(groupData)
+                        .attr("dataset", 0)
+                        .attr("fill", "none")
+                        .attr("stroke", "#ff0000")
+                        .attr("stroke-width", 10)
+                        .attr("opacity", 1)
+                        .attr(
+                            "d",d3.line()
+                            .x(function(d){
+                                if(keyType==="date"){
+                                    return x(new Date(d.key));
+                                }else{
+                                    return x(d.key);
+                                }
+                            })
+                            .y(function(d){
+                                return y(d["value"]);
+                            })
+                        )
+                        .on("click", function(){
+                            me.onClick(this);
+                        });
+
                     if(chartConfig.endTags){
                         // groupData.forEach((g)=>{
                         //    drawLabelTag(g, chartConfig.lineColor, chartConfig.group); 
@@ -182,10 +207,12 @@ bluewave.charts.LineChart = function(parent, config) {
                     }
 
             }
+
+            
             else{
 
-
-                var data1 = d3.nest()
+                //Set axes with merged data
+                var axisData = d3.nest()
                     .key(function(d){return d[xKey];})
                     .rollup(function(d){
                         return d3.max(d,function(g){
@@ -193,9 +220,19 @@ bluewave.charts.LineChart = function(parent, config) {
                         });
                 }).entries(mergedData);
 
-                displayAxis("key","value", data1);
+                displayAxis("key","value", axisData);
 
-                // let xType = typeOfAxisValue();
+                // Group case
+                // if (group!==null && group!==undefined){
+                        
+                //               dataSets = d3.nest()
+                //                 .key(function(d){return d[group];})
+                //                 .entries(data);
+
+                //                 }
+                                // console.log(data)
+                                // console.log(dataSets)
+                let xType = typeOfAxisValue();
 
                 var arr = [];
                 for (let i=0; i<dataSets.length; i++){
@@ -213,6 +250,12 @@ bluewave.charts.LineChart = function(parent, config) {
                                 return g[yKey];
                             });
                     }).entries(dataSets[i]);
+
+                    // if(group){
+                    //     sumData = d3.nest()
+                    //     .key(function(d){return d[group];})
+                    //     .entries(data);
+                    // }
 
                     arr.push(sumData);
                 }
@@ -338,18 +381,20 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 };
 
-              //Draw grid lines if option is checked
-                if(chartConfig.xGrid || chartConfig.yGrid){
-                    drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
-                }
-
-              //Draw labels if checked
-                if(chartConfig.xLabel || chartConfig.yLabel){
-                    drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                        axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
-                }
-
             };
+
+            //Draw grid lines if option is checked
+            if(chartConfig.xGrid || chartConfig.yGrid){
+                drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+            }
+
+          //Draw labels if checked
+            if(chartConfig.xLabel || chartConfig.yLabel){
+                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                    axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
+            }
+
+
         });
     };
 
