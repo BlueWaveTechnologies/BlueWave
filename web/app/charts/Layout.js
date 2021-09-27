@@ -22,23 +22,6 @@ bluewave.charts.Layout = function(parent, config) {
     console.log("the chart by default creates the dashboard item to the size of 350 x 250 pixels")
     var width = 350; //360
     var height = 250; //260
-    // console.log("INITIAL ------ our parent object is (should have specified width/height that we can use)", parent.offsetHeight,parent.offsetWidth)
-    // console.log(parent.width, parent.height)
-    // console.log(parent)
-// 
-
-    // set a percentage that fits our screen to match the current default width and height
-    console.log("the browser size is ", window.innerWidth, window.innerHeight)
-
-    percentageWidth = width/window.innerWidth;
-    console.log("the decimal width is",percentageWidth)
-    console.log("the percentage width is",(percentageWidth*100),"%")
-    percentageHeight = height/window.innerHeight;
-    percentageMultiplier = null;
-    console.log("the decimal height is",percentageHeight)
-    console.log("the percentage height is",(percentageHeight*100),"%")
-    console.log("the width and height set here is ", width, height)
-    console.log("we want to get it so that it equals the same size for our computer.. it should be 350 x 250 .. but in percentages instead")
 
     var mask;
 
@@ -142,7 +125,7 @@ bluewave.charts.Layout = function(parent, config) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
                     // check the current parent size.. and set a percentage based on that.
-                    console.log(parent)
+                    // console.log(parent)
                     
 
                     // set the width and heights to %
@@ -244,13 +227,40 @@ bluewave.charts.Layout = function(parent, config) {
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
-
+        
         var layout = {};
         for (var i in mainDiv.childNodes){
             var dashboardItem = mainDiv.childNodes[i];
             if (dashboardItem.nodeType===1){
                 var rect = javaxt.dhtml.utils.getRect(dashboardItem);
+        /////////////////////////////////////////////////////////////////////////////////////
 
+                // console.log("INITIAL ------ our parent object is (should have specified width/height that we can use)", parent.offsetHeight,parent.offsetWidth)
+                // console.log(parent.width, parent.height)
+                // console.log(parent)
+                
+
+                // set a percentage that fits our screen to match the current default width and height
+                console.log("the browser size is ", window.innerWidth, window.innerHeight)
+
+
+                // percentageWidth = width/window.innerWidth;
+                percentageWidth = rect.width/window.innerWidth;
+
+                console.log("the decimal width is",percentageWidth)
+
+                console.log("the percentage width is",(percentageWidth*100),"%")
+                // percentageHeight = height/window.innerHeight;
+                percentageHeight = rect.height/window.innerHeight;
+                console.log("outer height of this object is ", window.outerHeight);
+                console.log("the full object printout is", window);
+                percentageMultiplier = null;
+                console.log("the decimal height is",percentageHeight)
+                console.log("the percentage height is",(percentageHeight*100),"%")
+                console.log("the width and height set here is ", rect.width, rect.height)
+                console.log("we want to get it so that it equals the same size for our computer.. it should be 350 x 250 .. but in percentages instead")
+
+        /////////////////////////////////////////////////////////////////////////////////////
                 var w = parseInt(dashboardItem.style.width);
                 if (isNaN(w)) w = rect.width;
 
@@ -266,18 +276,18 @@ bluewave.charts.Layout = function(parent, config) {
                 var img = dashboardItem.getElementsByTagName("img")[0];
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 // here we want to set the widht and heigth to percentages isntead
-                console.log("our width and hegiht taht we want to make into percentages are", w, h)
-                console.log("our parent object is (should have specified width/height that we can use)", parent.offsetHeight,parent.offsetWidth)
+                // console.log("our width and hegiht taht we want to make into percentages are", w, h)
+                // console.log("our parent object is (should have specified width/height that we can use)", parent.offsetHeight,parent.offsetWidth)
                 console.log("rect values ", y , x , h, w)
                 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 ////////////////////////////////////////////////////////////////////////////
                 layout[dashboardItem.inputID] = {
                     x: x,
                     y: y,
-                    // w: "50%",
-                    // h: "50%",
-                    h: h,
-                    w: w,
+                    w:w,
+                    h:h,
+                    widthPercentage:(`${percentageWidth*100}%`), 
+                    heightPercentage:(`${percentageHeight*100}%`), 
                     imageWidth: img.naturalWidth,
                     imageHeight: img.naturalHeight
                 };

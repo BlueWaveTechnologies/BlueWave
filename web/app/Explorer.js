@@ -2365,7 +2365,7 @@ bluewave.Explorer = function(parent, config) {
                 var chartConfig = node.config;
                 if (!chartConfig) chartConfig = {};
                 var title = chartConfig.chartTitle;
-
+                console.log("setting width and height of dashboardItem to ", rect.w, rect.h)
                 var dashboardItem = createDashboardItem(dashboardPanel,{
                     width: rect.w,
                     height: rect.h,
