@@ -60,6 +60,7 @@ bluewave.Explorer = function(parent, config) {
         dashboardPanel.style.height = "100%";
         innerDiv.appendChild(dashboardPanel);
         addShowHide(dashboardPanel);
+        addResizeListener(dashboardPanel, updateLayout);
         dashboardPanel.hide();
 
 
@@ -1123,7 +1124,7 @@ bluewave.Explorer = function(parent, config) {
         console.log(dashboardItem.innerWidth,dashboardItem.innerHeight)
         if (typeof dashboardQueue === "undefined") {
             //Create dashboardQueue if it's not created already
-        
+
             console.log("dashboard queue wasn't initialized, initializing");
             // window.dashboardQueue = {
             dashboardQueue = {
@@ -1132,14 +1133,14 @@ bluewave.Explorer = function(parent, config) {
                 "rectConfig":[]
             };
         }
-        
+
         // dashboardQueue["dashboardItem"].push(dashboardItem)
         // dashboardQueue["rectConfig"].push(rect)
         dashboardQueue["dashboardItem"].push(dashboardItem)
         dashboardQueue["rectConfig"].push(rect)
 
         console.log("new dashboard queue is ", dashboardQueue)
-    
+
     }
   //**************************************************************************
   //** addEventListeners
@@ -2315,8 +2316,16 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
-
-
+  //**************************************************************************
+  //** updateLayout
+  //**************************************************************************
+    var updateLayout = function(){
+        if (me.getView()==="Dashboard"){
+            var rect = javaxt.dhtml.utils.getRect(dashboardPanel);
+            console.log(rect);
+            resizeDashboardItems(rect.width, rect.height);
+        }
+    };
 
 
   //**************************************************************************
@@ -2324,13 +2333,13 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var updateDashboard = function(){
 
-        window.addEventListener('resize', function(event){
-            var newWidth = window.innerWidth;
-            var newHeight = window.innerHeight; 
-            console.log("new window dimensions",newWidth, newHeight);
-            console.log("window Resize function triggered")
-            resizeDashboardItems(newWidth,newHeight);
-        });
+//        window.addEventListener('resize', function(event){
+//            var newWidth = window.innerWidth;
+//            var newHeight = window.innerHeight;
+//            console.log("new window dimensions",newWidth, newHeight);
+//            console.log("window Resize function triggered")
+//            resizeDashboardItems(newWidth,newHeight);
+//        });
 
 
 
@@ -2458,7 +2467,7 @@ bluewave.Explorer = function(parent, config) {
                             // console.log(typeof(dashboardItem))
                             // dashboardItem.addEventListener('resize', function(event){
                             //     var newWidth = window.innerWidth;
-                            //     var newHeight = window.innerHeight; 
+                            //     var newHeight = window.innerHeight;
                             //     var currentDashboardItemWidth = this.innerWidth;
                             //     var currentDashboardItemheight = this.innerHeight;
                             //     console.log(currentDashboardItemWidth,currentDashboardItemheight)
@@ -2539,17 +2548,17 @@ bluewave.Explorer = function(parent, config) {
         var g = d3.select(svg.getElementsByTagName("g")[0]);
         if (isNaN(rect.w)){
         console.log("the rect was not a number")
-        } else {g.attr("transform",`scale(${rect.w/rect.imageWidth})`); console.log("this ran"); 
+        } else {g.attr("transform",`scale(${rect.w/rect.imageWidth})`); console.log("this ran");
     }
-        // if (!isNaN(rect.w))g.attr("transform",`scale(${rect.w/rect.imageWidth})`); console.log("this ran"); 
-        
+        // if (!isNaN(rect.w))g.attr("transform",`scale(${rect.w/rect.imageWidth})`); console.log("this ran");
+
     };
 
 
   //**************************************************************************
   //** addDashboardEventQueue
   //**************************************************************************
-  /** Used to add a node to the resizing queue 
+  /** Used to add a node to the resizing queue
    */
     // var addDashboardEventQueue = function(dashboardItem,rect){
     //     console.log(rect, "added to queue");
@@ -2557,14 +2566,14 @@ bluewave.Explorer = function(parent, config) {
     //     console.log(dashboardItem.innerWidth,dashboardItem.innerHeight)
     //     if (typeof dashboardQueue === "undefined") {
     //         //Create dashboardQueue if it's not created already
-        
+
     //         console.log("dashboard queue wasn't initialized, initializing");
     //         dashboardQueue = {
     //             "dashboardItem":[],
     //             "rectConfig":[]
     //         };
     //     }
-        
+
     //     // dashboardQueue["dashboardItem"].push(dashboardItem)
     //     // dashboardQueue["rectConfig"].push(rect)
     //     dashboardQueue["dashboardItem"].push(dashboardItem)
@@ -2575,11 +2584,11 @@ bluewave.Explorer = function(parent, config) {
  //**************************************************************************
   //** getDashboardQueue
   //**************************************************************************
-  /** Used to get the current dashboard queue for the resizing queue 
+  /** Used to get the current dashboard queue for the resizing queue
    */
     var getDashboardQueue = function(){
         console.log("get dashboard queue called")
-        // if(!(dashboardQueue))console.log("dashboard queue not defined"); else{return dashboardQueue;}   
+        // if(!(dashboardQueue))console.log("dashboard queue not defined"); else{return dashboardQueue;}
         if (typeof dashboardQueue === "undefined") {
             //Undefined
             console.log("does not exist")
@@ -2644,7 +2653,7 @@ bluewave.Explorer = function(parent, config) {
                     dashboardItemList = getDashboardQueue();
                     console.log("dashboard item list", dashboardItemList);
 
-                    for ( var i=0 ; i<dashboardItemList["dashboardItem"].length; i++){     
+                    for ( var i=0 ; i<dashboardItemList["dashboardItem"].length; i++){
                         console.log("i variable is ", i)   ;
                         // console.log(resizeConfig["dashboardItem"]);
                         // console.log(resizeConfig["rectConfig"]);
@@ -2669,10 +2678,10 @@ bluewave.Explorer = function(parent, config) {
                         console.log(
                         {
                         "original image size (w)":rect.imageWidth,
-                        "original image size (h)":rect.imageHeight, 
+                        "original image size (h)":rect.imageHeight,
                         "the current dashboardItem size(w)":rect.newWidth,
                         "the current dashboardItem size(h)":rect.newHeight,
-                        "original dashboardItem size (w)":rect.w, 
+                        "original dashboardItem size (w)":rect.w,
                         "original dahsboardItem size (h)":rect.h,
                         // "current scale should be":newScale
                         "dashboardItem":dashboardItem
@@ -2707,7 +2716,7 @@ bluewave.Explorer = function(parent, config) {
             //     innerDiv.appendChild(chartContainer);
             // }
         }
-        
+
   //**************************************************************************
   //** getSupplyChainInputs
   //**************************************************************************
@@ -2798,6 +2807,7 @@ bluewave.Explorer = function(parent, config) {
     var del = javaxt.dhtml.utils.delete;
     var get = bluewave.utils.get;
     var destroy = javaxt.dhtml.utils.destroy;
+    var addResizeListener = javaxt.dhtml.utils.addResizeListener;
 
 
     init();
