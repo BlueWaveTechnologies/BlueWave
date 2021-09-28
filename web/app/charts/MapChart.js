@@ -210,15 +210,17 @@ bluewave.charts.MapChart = function(parent, config) {
               //Render states
                 renderStates();
 
+                var points;
+              //Get points if we are using Geo Coords
+                if(chartConfig.pointData==="geoCoords") {
+                    points = getPoints(data, chartConfig, projection);
+                }
 
-              //Get points
-                var points = getPoints(data, chartConfig, projection);
 
-
-              //If points are empty but a mapValue is defined, use county centroids
-                if (points.coords.length===0 && chartConfig.mapValue){
+              //If we are using Admin Area instead of Geo Coords
+                if (chartConfig.pointData==="adminArea"){
                     data.forEach(function(d){
-                        var county = d.county;
+                        var county = d[chartConfig.mapLocation];
                         for (var i = 0; i < counties.features.length; i++){
                             var feature = counties.features[i];
                             if (county === feature.id){
@@ -338,11 +340,14 @@ bluewave.charts.MapChart = function(parent, config) {
             if (chartConfig.mapType === "Point"){
 
                 renderStates();
+                var points;
+                //Get points when we are called to get geoCoords
+                if(chartConfig.pointData==="geoCoords"){
+                    points = getPoints(data, chartConfig, projection);
+                }
 
-                var points = getPoints(data, chartConfig, projection);
-                var coords = points.coords;
-                if (coords.length===0){ //use state centroids
-                    points.hasValue = false;
+                //Get Centroids when using Admin Area
+                if (chartConfig.pointData==="adminArea"){
                     data.forEach(function(d){
                         var state = d[chartConfig.mapLocation];
                         for (var i = 0; i < states.features.length; i++){
@@ -354,7 +359,6 @@ bluewave.charts.MapChart = function(parent, config) {
                                         var coord = path.centroid(feature);
                                         coord.push(d[chartConfig.mapValue]);
                                         coords.push(coord);
-                                        points.hasValue = true;
                                     }
                                 }
                             }
@@ -425,7 +429,7 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
-
+            console.log(countries.features);
           //Render countries
             mapArea.selectAll("path")
                 .data(countries.features)
@@ -436,7 +440,30 @@ bluewave.charts.MapChart = function(parent, config) {
                 .attr('stroke', 'white');
 
             if (chartConfig.mapType === "Point"){
-                var points = getPoints(data, chartConfig, projection);
+                var points;
+                //Get Points if we are using GeoCoords
+                if(chartConfig.pointData==="geoCoords"){
+                    points = getPoints(data, chartConfig, projection);
+                }
+
+                //Use Centroids if we are instead using Admin Area
+                if(chartConfig.pointData==="adminArea"){
+                    data.forEach(function(d){
+                        var country = d[chartConfig.mapLocation];
+                        for (var i = 0; i < counties.features.length; i++){
+                            var feature = countries.features[i];
+                            if (country === feature.properties.code){
+                                var val = parseFloat(d[chartConfig.mapValue]);
+                                if (!isNaN(val) && val>0){
+                                    var coord = path.centroid(feature);
+                                    coord.push(d[chartConfig.mapValue]);
+                                    points.coords.push(coord);
+                                }
+                            }
+                        }
+                    });
+
+                }
                 renderPoints(points, chartConfig, extent);
             }
             else if(chartConfig.mapType === "Area"){
