@@ -105,7 +105,7 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(config, inputs){
+    this.update = function(pieConfig, inputs){
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
@@ -116,7 +116,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         }
         inputData = inputs;
 
-        if (config) chartConfig = config;
+        if (pieConfig) chartConfig = pieConfig;
 
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
