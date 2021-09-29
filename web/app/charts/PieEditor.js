@@ -19,7 +19,6 @@ if(!bluewave) var bluewave={};
 
 bluewave.charts.PieEditor = function(parent, config) {
     var me = this;
-    var currentNode;
     var panel;
     var inputData = [];
     var linksAndQuantity = [];
@@ -34,11 +33,7 @@ bluewave.charts.PieEditor = function(parent, config) {
     var chartConfig = {
         pieKey:null,
         pieValue:null,
-        xAxis:null,
-        yAxis:null,
-        chartType:null,
-        chartTitle:null,
-        nodeId:null,
+        chartTitle:null
     };
     var margin = {
         top: 15,
@@ -96,7 +91,7 @@ bluewave.charts.PieEditor = function(parent, config) {
 
       //Watch for settings
         panel.settings.onclick = function(){
-            if (chartConfig) editStyle(chartConfig.chartType);
+            if (chartConfig) editStyle();
         };
 
 
@@ -108,17 +103,9 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** getNode
-  //**************************************************************************
-    this.getNode = function() {
-        return currentNode;
-    };
-
-
-  //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(nodeType, inputs){
+    this.update = function(config, inputs){
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
@@ -128,13 +115,13 @@ bluewave.charts.PieEditor = function(parent, config) {
             }
         }
         inputData = inputs;
-        if(config !== null && config !== undefined){
-            Object.keys(config).forEach(val=>{
-                chartConfig[val] = config[val]? config[val]:null;
-            });
-            panel.title.innerHTML = config.chartTitle;
+
+        if (config) chartConfig = config;
+
+        if (chartConfig.chartTitle){
+            panel.title.innerHTML = chartConfig.chartTitle;
         }
-        chartConfig.chartType = nodeType;
+
         createDropDown(optionsDiv);
         createOptions();
     };
@@ -159,8 +146,9 @@ bluewave.charts.PieEditor = function(parent, config) {
   /** Return chart configuration file
    */
     this.getConfig = function(){
-        let copy = Object.assign({},chartConfig);
-        return copy;
+        //let copy = Object.assign({},chartConfig);
+        //return copy;
+        return chartConfig;
     };
 
 
@@ -230,7 +218,6 @@ bluewave.charts.PieEditor = function(parent, config) {
 
         let dataOptions = Object.keys(data[0]);
 
-        let dataOptions2 = data2?Object.keys(data2[0]):null;
 
         if(inputData[0].hasOwnProperty("links")) {
             dataOptions = nodeTypeList;
@@ -239,7 +226,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         pieInputs.value.clear();
         pieInputs.key.clear();
         if (!inputData[0].hasOwnProperty("links")) {
-        dataOptions.forEach((val)=>{
+            dataOptions.forEach((val)=>{
                 if(!isNaN(data[0][val])){
                     pieInputs.value.add(val,val);
                 } else{
@@ -247,16 +234,14 @@ bluewave.charts.PieEditor = function(parent, config) {
                 }
             });
         } else {
-        dataOptions.forEach((val)=>{
-            pieInputs.key.add(val, val);
-        });
+            dataOptions.forEach((val)=>{
+                pieInputs.key.add(val, val);
+            });
             pieInputs.value.add("quantity");
         }
 
         pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
         pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
-
-
     };
 
 
@@ -271,7 +256,6 @@ bluewave.charts.PieEditor = function(parent, config) {
         parent.appendChild(table);
 
         createPieDropdown(tbody);
-
     };
 
 
@@ -362,7 +346,7 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   //** editStyle
   //**************************************************************************
-    var editStyle = function(chartType){
+    var editStyle = function(){
 
       //Create styleEditor as needed
         if (!styleEditor){
