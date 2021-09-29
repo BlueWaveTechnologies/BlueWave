@@ -60,7 +60,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (plotArea) plotArea.selectAll("*").remove();
+        if (plotArea) plotArea.node().innerHTML = ""; //selectAll("*").remove();
     };
 
 
@@ -72,6 +72,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
+            me.clear();
 
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
@@ -144,7 +145,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 if (opacity == null) opacity = 1;
                 if (startOpacity == null) startOpacity = 0;
                 if (endOpacity == null) endOpacity = 0;
-                
+
 
                 let groupData = d3.nest()
                     .key(function(d){return d[group];})
@@ -155,12 +156,10 @@ bluewave.charts.LineChart = function(parent, config) {
                 //Draw group area
                 plotArea
                     .selectAll(".line")
-                    .append("path")
                     .data(groupData)
-                    // .enter()
+                    .enter()
+                    .append("path")
                     .attr("class", "line-area")
-                    .attr("fill", "#ff0000")
-                    .attr("stroke", "#ff0000")
                     .attr(
                         "d",function(d){
                         return d3
@@ -240,7 +239,7 @@ bluewave.charts.LineChart = function(parent, config) {
                             lastDataPointCopy.value = lastDataPointCopy[yKey];
                             drawLabelTag([lastDataPointCopy], lineColor, group);
                         });
-                             
+
                     }
 
 
@@ -262,13 +261,13 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 // Group case
                 // if (group!==null && group!==undefined){
-                        
+
                 //               dataSets = d3.nest()
                 //                 .key(function(d){return d[group];})
                 //                 .entries(data);
 
                 //                 }
- 
+
                 let xType = typeOfAxisValue();
 
                 var arr = [];
@@ -461,7 +460,7 @@ bluewave.charts.LineChart = function(parent, config) {
             label = "Add Label"
         }
 
-        
+
 
 //         if (isGroup){
 //             // console.log(xKey, yKey)
@@ -475,10 +474,10 @@ bluewave.charts.LineChart = function(parent, config) {
         // else{
             var lastItem = dataSet[dataSet.length-1];
             var lastKey = lastItem.key;
-            var lastVal = lastItem.value; 
+            var lastVal = lastItem.value;
             var keyType = typeOfAxisValue(dataSet[0].key);
         // }
-        
+
 
         if(keyType==="date"){
             var tx = x(new Date(lastKey))
