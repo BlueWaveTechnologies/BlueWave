@@ -128,7 +128,7 @@ bluewave.charts.LineChart = function(parent, config) {
             //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
             // }
 
-
+            ////////////////// Group Case //////////////////
             if (group!==null && group!==undefined){
 
                 //Keeping open to allow for multiple "group by" queries
@@ -169,7 +169,7 @@ bluewave.charts.LineChart = function(parent, config) {
                                 return x(d[xKey]);
                             })
                             .y0(plotHeight)
-                            .y(function (d) {
+                            .y1(function (d) {
                                 return y(parseFloat(d[yKey]));
                             })(d.values);
                         }
@@ -246,7 +246,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
             }
 
-            
+            ////////////////// Default Case //////////////////
             else{
 
                 //Set axes with merged data
