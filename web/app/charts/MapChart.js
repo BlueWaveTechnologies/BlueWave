@@ -227,7 +227,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var val = parseFloat(d[chartConfig.mapValue]);
                                 if (!isNaN(val) && val>0){
                                     var coord = path.centroid(feature);
-                                    //Need to readd the mapvalue code.
+                                    coord.push(val);
                                     if(!points.coords){
                                         points.coords = coord;
                                     }else{
@@ -361,7 +361,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                     var val = parseFloat(d[chartConfig.mapValue]);
                                     if (!isNaN(val) && val>0){
                                         var coord = path.centroid(feature);
-                                        //Need to readd the mapvalue code.
+                                        coord.push(val);
                                         if(!points.coords){
                                             points.coords = coord;
                                         }else{
@@ -463,7 +463,7 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var val = parseFloat(d[chartConfig.mapValue]);
                                 if (!isNaN(val) && val>0){
                                     var coord = path.centroid(feature);
-                                    //Need to readd the mapvalue code.
+                                    coord.push(val);
                                     if(!points.coords){
                                         points.coords = coord;
                                     }else{
@@ -758,7 +758,7 @@ bluewave.charts.MapChart = function(parent, config) {
             if (isNaN(coord[0]) || isNaN(coord[1])) return;
             var val = parseFloat(d[chartConfig.mapValue]);
             if (!isNaN(val)){
-                coord.push(coord);
+                coord.push(val);
                 hasValue = true;
             }
             coords.push(coord);
@@ -781,7 +781,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
         var c = chartConfig.pointColor;
         if (!c) c = "#ff3c38";
-        console.log(points);
 
         mapArea.append("g")
         .selectAll("whatever")
@@ -790,6 +789,7 @@ bluewave.charts.MapChart = function(parent, config) {
         .append("circle")
         .attr("r",function(coord){
             if (points.hasValue){
+                console.log(coord);
                 var val = coord[2];
                 if (isNaN(val) || val<=0) return r;
                 var p = val/extent[1];
@@ -804,6 +804,7 @@ bluewave.charts.MapChart = function(parent, config) {
             return r;
         })
         .attr("transform", function(d) {
+            console.log(d);
             return "translate(" + [d[0],d[1]] + ")";
         })
         .style("fill", c);
