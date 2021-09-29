@@ -210,7 +210,7 @@ bluewave.charts.MapChart = function(parent, config) {
               //Render states
                 renderStates();
 
-                var points;
+                var points = {};
               //Get points if we are using Geo Coords
                 if(chartConfig.pointData==="geoCoords") {
                     points = getPoints(data, chartConfig, projection);
@@ -227,8 +227,12 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var val = parseFloat(d[chartConfig.mapValue]);
                                 if (!isNaN(val) && val>0){
                                     var coord = path.centroid(feature);
-                                    coord.push(d[chartConfig.mapValue]);
-                                    points.coords.push(coord);
+                                    //Need to readd the mapvalue code.
+                                    if(!points.coords){
+                                        points.coords = coord;
+                                    }else{
+                                        points.coords.push(coord);
+                                    }
                                 }
                             }
                         }
@@ -340,7 +344,7 @@ bluewave.charts.MapChart = function(parent, config) {
             if (chartConfig.mapType === "Point"){
 
                 renderStates();
-                var points;
+                var points = {};
                 //Get points when we are called to get geoCoords
                 if(chartConfig.pointData==="geoCoords"){
                     points = getPoints(data, chartConfig, projection);
@@ -357,14 +361,17 @@ bluewave.charts.MapChart = function(parent, config) {
                                     var val = parseFloat(d[chartConfig.mapValue]);
                                     if (!isNaN(val) && val>0){
                                         var coord = path.centroid(feature);
-                                        coord.push(d[chartConfig.mapValue]);
-                                        coords.push(coord);
+                                        //Need to readd the mapvalue code.
+                                        if(!points.coords){
+                                            points.coords = coord;
+                                        }else{
+                                            points.coords.push(coord);
+                                        }
                                     }
                                 }
                             }
                         }
                     });
-                    points.coords = coords;
                 }
                 renderPoints(points, chartConfig, extent);
 
@@ -440,7 +447,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 .attr('stroke', 'white');
 
             if (chartConfig.mapType === "Point"){
-                var points;
+                var points = {};
                 //Get Points if we are using GeoCoords
                 if(chartConfig.pointData==="geoCoords"){
                     points = getPoints(data, chartConfig, projection);
@@ -456,8 +463,12 @@ bluewave.charts.MapChart = function(parent, config) {
                                 var val = parseFloat(d[chartConfig.mapValue]);
                                 if (!isNaN(val) && val>0){
                                     var coord = path.centroid(feature);
-                                    coord.push(d[chartConfig.mapValue]);
-                                    points.coords.push(coord);
+                                    //Need to readd the mapvalue code.
+                                    if(!points.coords){
+                                        points.coords = coord;
+                                    }else{
+                                        points.coords.push(coord);
+                                    }
                                 }
                             }
                         }
@@ -770,6 +781,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         var c = chartConfig.pointColor;
         if (!c) c = "#ff3c38";
+        console.log(points);
 
         mapArea.append("g")
         .selectAll("whatever")
