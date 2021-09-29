@@ -357,11 +357,11 @@ if(!bluewave.charts) bluewave.charts={};
         if (!chartConfig.mapLevel) return;
         if(chartConfig.mapType==="Point" && chartConfig.pointData===null) return;
         if (chartConfig.mapType==="Point" && (chartConfig.pointData==="geoCoords" &&
-            (chartConfig.latitude===null || chartConfig.longitude===null))){
+            (chartConfig.latitude===null || chartConfig.longitude===null || chartConfig.mapValue===null))){
             return;
         }
         if (chartConfig.mapType==="Point" && (chartConfig.pointData==="adminArea" &&
-            (chartConfig.mapLocation===null))){
+            (chartConfig.mapLocation===null || chartConfig.mapValue===null))){
             return;
         }
         if(chartConfig.mapType==="Area" && (chartConfig.mapValue===null ||
