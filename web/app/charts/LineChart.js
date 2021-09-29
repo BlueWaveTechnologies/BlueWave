@@ -131,23 +131,62 @@ bluewave.charts.LineChart = function(parent, config) {
 
             if (group!==null && group!==undefined){
 
+                //Keeping open to allow for multiple "group by" queries
+                let i = 0;
+                let lineColor = chartConfig["lineColor" + i];// == null ? "#6699CC" : chartConfig["lineColor" + i]);
+                let lineWidth = chartConfig["lineWidth" + i];// == null ? 1.5 : chartConfig["lineWidth" + i]);
+                let opacity = chartConfig["opacity" + i];// == null ? chartConfig.opacity);
+                let startOpacity = chartConfig["startOpacity" + i];// == null ? chartConfig.startOpacity);
+                let endOpacity = chartConfig["endOpacity" + i];// == null ? chartConfig.endOpacity);
+
+                if (lineColor == null) lineColor = "#6699CC";
+                if (lineWidth == null) lineWidth = 1.5;
+                if (opacity == null) opacity = 1;
+                if (startOpacity == null) startOpacity = 0;
+                if (endOpacity == null) endOpacity = 0;
+                
+
                 let groupData = d3.nest()
                     .key(function(d){return d[group];})
                     .entries(data);
 
                 displayAxis(xKey,yKey,data);
 
+                //Draw group area
+                plotArea
+                    .selectAll(".line")
+                    .append("path")
+                    .data(groupData)
+                    // .enter()
+                    .attr("class", "line-area")
+                    .attr("fill", "#ff0000")
+                    .attr("stroke", "#ff0000")
+                    .attr(
+                        "d",function(d){
+                        return d3
+                            .area()
+                            .x(function (d) {
+                                return x(d[xKey]);
+                            })
+                            .y0(plotHeight)
+                            .y(function (d) {
+                                return y(parseFloat(d[yKey]));
+                            })(d.values);
+                        }
+                    );
 
+                addColorGradient(lineColor, startOpacity, endOpacity);
+
+                //Draw group line
                 plotArea
                     .selectAll(".line")
                     .data(groupData)
                     .enter()
                     .append("path")
                     .attr("fill", "none")
-                    .attr("class", "line-path")
-                    .attr("stroke", chartConfig.lineColor)
-                    .attr("stroke-width", chartConfig.lineWidth)
-                    .attr("opacity", chartConfig.opacity)
+                    .attr("stroke", lineColor)
+                    .attr("stroke-width", lineWidth)
+                    .attr("opacity", opacity)
                     .attr(
                         "d",function(d){
                         return d3
@@ -163,48 +202,47 @@ bluewave.charts.LineChart = function(parent, config) {
 
                     //Draw thick line for selection purposes
 
-                    let keyType = typeOfAxisValue(groupData[0].key);
+                    // let keyType = typeOfAxisValue(groupData[0].key);
 
-                    plotArea
-                        .append("path")
-                        .datum(groupData)
-                        .attr("dataset", 0)
-                        .attr("fill", "none")
-                        .attr("stroke", "#ff0000")
-                        .attr("stroke-width", 10)
-                        .attr("opacity", 1)
-                        .attr(
-                            "d",d3.line()
-                            .x(function(d){
-                                if(keyType==="date"){
-                                    return x(new Date(d.key));
-                                }else{
-                                    return x(d.key);
-                                }
-                            })
-                            .y(function(d){
-                                return y(d["value"]);
-                            })
-                        )
-                        .on("click", function(){
-                            me.onClick(this);
-                        });
+                plotArea
+                    .selectAll(".line")
+                    .data(groupData)
+                    .enter()
+                    .append("path")
+                    .attr("dataset", 0)
+                    .attr("fill", "none")
+                    .attr("stroke", "#ff0000")
+                    .attr("stroke-width", 10)
+                    .attr("opacity", 0)
+                    .attr(
+                        "d", function (d) {
+                            return d3
+                                .line()
+                                .x(function (d) {
+                                    return x(d[xKey]);
+                                })
+                                .y(function (d) {
+                                    return y(parseFloat(d[yKey]));
+                                })(d.values);
+                        }
+                    )
+                    .on("click", function () {
+                        me.onClick(this);
+                    });
 
+                    //Add group endtags
                     if(chartConfig.endTags){
-                        // groupData.forEach((g)=>{
-                        //    drawLabelTag(g, chartConfig.lineColor, chartConfig.group); 
-                        // })
-//                         let newData = d3.nest()
-//                         .key(function(d){return d[xKey];})
-//                         .rollup(function(d){
-//                             return d3.sum(d,function(g){
-//                                 return g[yKey];
-//                             });
-//                     }).entries(data);
-// console.log(newData)
-//                         drawLabelTag(groupData[0], chartConfig.lineColor, chartConfig.group)
-                        
+
+                        groupData.forEach(function(g){
+                            let tempData = g.values;
+                            let lastDataPointCopy = {...tempData[tempData.length-1]};
+                            lastDataPointCopy.key = lastDataPointCopy[xKey];
+                            lastDataPointCopy.value = lastDataPointCopy[yKey];
+                            drawLabelTag([lastDataPointCopy], lineColor, group);
+                        });
+                             
                     }
+
 
             }
 
@@ -230,8 +268,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 //                 .entries(data);
 
                 //                 }
-                                // console.log(data)
-                                // console.log(dataSets)
+ 
                 let xType = typeOfAxisValue();
 
                 var arr = [];
@@ -266,9 +303,17 @@ bluewave.charts.LineChart = function(parent, config) {
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
 
-                    let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
-                    let startOpacity = (chartConfig["startOpacity" + i] ?? chartConfig.startOpacity);
-                    let endOpacity = (chartConfig["endOpacity" + i] ?? chartConfig.endOpacity);
+                    // let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
+                    // let startOpacity = (chartConfig["startOpacity" + i] ?? chartConfig.startOpacity);
+                    // let endOpacity = (chartConfig["endOpacity" + i] ?? chartConfig.endOpacity);
+
+                    let lineColor = chartConfig["lineColor" + i];
+                    let startOpacity = chartConfig["startOpacity" + i];
+                    let endOpacity = chartConfig["endOpacity" + i];
+
+                    if (lineColor == null) lineColor = chartConfig.lineColor;
+                    if (startOpacity == null) startOpacity = chartConfig.startOpacity;
+                    if (endOpacity == null) endOpacity = chartConfig.endOpacity;
 
                     let keyType = typeOfAxisValue(sumData[0].key);
 
@@ -294,22 +339,8 @@ bluewave.charts.LineChart = function(parent, config) {
                         );
 
 
-                  //Add linear gradient
-                    plotArea
-                        .append("defs")
-                        .append("linearGradient")
-                        .attr("id", "fill-gradient")
-                        .attr("x1", "0%").attr("y1", "0%")
-                        .attr("x2", "0%").attr("y2", "100%")
-                        .selectAll("stop")
-                        .data([
-                            {offset: "0%", color: lineColor, opacity: startOpacity},
-                            {offset: "100%", color: lineColor, opacity: endOpacity}
-                        ])
-                        .enter().append("stop")
-                        .attr("offset", (d) => d.offset )
-                        .attr("stop-color", (d) => d.color )
-                        .attr("stop-opacity", (d) => d.opacity );
+                  //Add color gradient
+                    addColorGradient(lineColor, startOpacity, endOpacity);
 
                 }
 
@@ -319,9 +350,17 @@ bluewave.charts.LineChart = function(parent, config) {
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
 
-                    let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
-                    let lineWidth = (chartConfig["lineWidth" + i] ?? chartConfig.lineWidth);
-                    let opacity = (chartConfig["opacity" + i] ?? chartConfig.opacity);
+                    // let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
+                    // let lineWidth = (chartConfig["lineWidth" + i] ?? chartConfig.lineWidth);
+                    // let opacity = (chartConfig["opacity" + i] ?? chartConfig.opacity);
+
+                    let lineColor = chartConfig["lineColor" + i];
+                    let lineWidth = chartConfig["lineWidth" + i];
+                    let opacity = chartConfig["opacity" + i];
+
+                    if (lineColor == null) lineColor = chartConfig.lineColor;
+                    if (lineWidth == null) lineWidth = chartConfig.lineWidth;
+                    if (opacity == null) opacity = chartConfig.opacity;
 
                     let keyType = typeOfAxisValue(sumData[0].key);
 
@@ -374,6 +413,7 @@ bluewave.charts.LineChart = function(parent, config) {
                             me.onClick(this);
                         });
 
+
                     //Display end tags if checked
                     if(chartConfig.endTags){
                         drawLabelTag(sumData, lineColor, chartConfig["label" + i]);
@@ -415,16 +455,30 @@ bluewave.charts.LineChart = function(parent, config) {
   //** drawEndLabels
   //**************************************************************************
 
-    var drawLabelTag = function(dataSet, color, label){
+    var drawLabelTag = function(dataSet, color, label, isGroup, xKey, yKey){
 
         if(!label){
             label = "Add Label"
         }
 
-        var lastItem = dataSet[dataSet.length-1];
-        var lastKey = lastItem.key;
-        var lastVal = lastItem.value; 
-        var keyType = typeOfAxisValue(dataSet[0].key);
+        
+
+//         if (isGroup){
+//             // console.log(xKey, yKey)
+//            var firstSet = dataSet[0]
+//            var lastItem = dataSet[dataSet.length-1];
+//            var lastKey = lastItem[xKey]
+//            var lastVal = lastItem[yKey]
+//            var keyType = typeOfAxisValue(firstSet[xKey])
+// // console.log(dataSet[0], lastItem, lastKey, lastVal)
+//         }
+        // else{
+            var lastItem = dataSet[dataSet.length-1];
+            var lastKey = lastItem.key;
+            var lastVal = lastItem.value; 
+            var keyType = typeOfAxisValue(dataSet[0].key);
+        // }
+        
 
         if(keyType==="date"){
             var tx = x(new Date(lastKey))
@@ -468,7 +522,31 @@ bluewave.charts.LineChart = function(parent, config) {
             .text(label);
 
     };
-    
+
+  //**************************************************************************
+  //** addColorGradient
+  //**************************************************************************
+        var addColorGradient = function(lineColor, startOpacity, endOpacity){
+
+            plotArea
+                .append("defs")
+                .append("linearGradient")
+                .attr("id", "fill-gradient")
+                .attr("x1", "0%").attr("y1", "0%")
+                .attr("x2", "0%").attr("y2", "100%")
+                .selectAll("stop")
+                .data([
+                    { offset: "0%", color: lineColor, opacity: startOpacity },
+                    { offset: "100%", color: lineColor, opacity: endOpacity }
+                ])
+                .enter().append("stop")
+                .attr("offset", (d) => d.offset)
+                .attr("stop-color", (d) => d.color)
+                .attr("stop-opacity", (d) => d.opacity);
+
+
+        };
+
   //**************************************************************************
   //** displayAxis
   //**************************************************************************
