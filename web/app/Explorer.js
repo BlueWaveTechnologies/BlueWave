@@ -63,20 +63,6 @@ bluewave.Explorer = function(parent, config) {
         innerDiv.appendChild(dashboardPanel);
         addShowHide(dashboardPanel);
         dashboardPanel.hide();
-        console.log("the inner div initially in init function is", innerDiv)
-
-
-      // create dashboard panel MBR
-      // create dashboardItem minimum bounding rectangle to contain all dashboardItems
-        // dashboardPanelMBR = createDashboardMBR(dashboardPanel);
-
-        
-        // create MBR for preview panel
-        dashboardPanelMBR = document.createElement("div");
-        dashboardPanelMBR.style.height = "100%";
-        dashboardPanelMBR.classList.add("dashboardPanelMBR");
-        dashboardPanel.appendChild(dashboardPanelMBR);
-        console.log("this item was created in the explorer init ", dashboardPanelMBR)
 
 
       //Create editor
@@ -2349,9 +2335,7 @@ bluewave.Explorer = function(parent, config) {
   //** updateDashboard
   //**************************************************************************
     var updateDashboard = function(){
-        console.log("update dashboard called")
-        // addShowHide(dashboardPanelMBR);
-        // dashboardPanelMBR.show();
+
       //Find layout node
         var layoutNode;
         for (var key in nodes) {
@@ -2375,7 +2359,7 @@ bluewave.Explorer = function(parent, config) {
       //Render dashboard items
         for (var key in layoutNode.config) {
             if (layoutNode.config.hasOwnProperty(key)){
-                var rect = layoutNode.config[key];
+                var layout = layoutNode.config[key];
                 var node = nodes[key];
                 var connected = checkConnection(layoutNode, node);
                 if (!connected) continue;
@@ -2383,36 +2367,36 @@ bluewave.Explorer = function(parent, config) {
                 var chartConfig = node.config;
                 if (!chartConfig) chartConfig = {};
                 var title = chartConfig.chartTitle;
-                console.log("setting width and height of dashboardItem to ", rect.w, rect.h)
-                // var dashboardItem = createDashboardItem(dashboardPanel,{
-                console.log('found the dashboardpanelmbr', dashboardPanelMBR)
-                var dashboardItem = createDashboardItem(dashboardPanelMBR,{
 
-                    // width: rect.w,
-                    // height: rect.h,
-                    width: rect.widthPercentage,
-                    height: rect.heightPercentage,
+                var dashboardItem = createDashboardItem(dashboardPanel,{
                     title: title,
                     subtitle: ""
                 });
-                console.log("got here for dashboard item", dashboardItem)
-
-                var div = dashboardItem.el;
-                div.style.position = "absolute";
-                div.style.top = rect.y + "px";
-                div.style.left = rect.x + "px";
 
 
                 var innerDiv = dashboardItem.innerDiv;
-                console.log("inner div is ", innerDiv)
                 onRender(innerDiv, function(){
-                    console.log("this is getting rendered")
+
+                    var div = dashboardItem.el;
+                    div.style.position = "absolute";
+                    div.style.width = layout.width;
+                    div.style.height = layout.height;
+                    div.style.top = layout.top;
+                    div.style.left = layout.left;
+
+
                     var chartContainer = document.createElement("div");
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
                     innerDiv.style.overflow = "hidden";
-                    chartContainer.style.width = rect.imageWidth;
-                    chartContainer.style.height = rect.imageHeight;
+                    if (layout.imageWidth>=layout.imageHeight){
+                        chartContainer.style.width = "100%";
+                        chartContainer.style.height = ((layout.imageHeight*100)/layout.imageWidth) + "%";
+                    }
+                    else{
+                        chartContainer.style.height = "100%";
+                        chartContainer.style.width = ((layout.imageWidth*100)/layout.imageHeight) + "%";
+                    }
                     innerDiv.appendChild(chartContainer);
 
 
@@ -2471,31 +2455,31 @@ bluewave.Explorer = function(parent, config) {
                         if (node.type==="pieChart"){
                             var pieChart = new bluewave.charts.PieChart(chartContainer,{});
                             pieChart.update(chartConfig, data);
-                            console.log("the value of rect passing in is ",rect)
-                            resizeSVG(dashboardItem, rect);
-                            addDashboardEventListener(dashboardItem,rect);
+                            console.log("the value of layout passing in is ",layout)
+                            resizeSVG(dashboardItem, layout);
+                            addDashboardEventListener(dashboardItem,layout);
 
                         }
                         else if (node.type==="barChart"){
                             var barChart = new bluewave.charts.BarChart(chartContainer,{});
                             barChart.update(chartConfig, data);
-                            resizeSVG(dashboardItem, rect);
-                            addDashboardEventListener(dashboardItem,rect);
+                            resizeSVG(dashboardItem, layout);
+                            addDashboardEventListener(dashboardItem,layout);
 
                         }
                         else if (node.type==="lineChart"){
                             var lineChart = new bluewave.charts.LineChart(chartContainer,{});
 
                             lineChart.update(chartConfig, data);
-                            resizeSVG(dashboardItem, rect);
-                            addDashboardEventListener(dashboardItem,rect);
+                            resizeSVG(dashboardItem, layout);
+                            addDashboardEventListener(dashboardItem,layout);
 
                         }
                         else if (node.type==="scatterChart"){
                             var scatterChart = new bluewave.charts.ScatterChart(chartContainer,{});
                             scatterChart.update(chartConfig, data);
-                            resizeSVG(dashboardItem, rect);
-                            addDashboardEventListener(dashboardItem,rect);
+                            resizeSVG(dashboardItem, layout);
+                            addDashboardEventListener(dashboardItem,layout);
 
                         }
                         else if (node.type==="map"){
@@ -2526,8 +2510,8 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** resizeSVG
   //**************************************************************************
-    var resizeSVG = function(dashboardItem, rect,dashboardResizeStatus){
-
+    var resizeSVG = function(dashboardItem, rect, dashboardResizeStatus){
+if (true) return;
         console.log(dashboardItem.innerDiv.offsetWidth)
         console.log(dashboardItem.innerDiv.offsetHeight)
 
@@ -2616,9 +2600,9 @@ bluewave.Explorer = function(parent, config) {
             return dashboardQueue;
         }
     }
-  
-  
-  
+
+
+
   //**************************************************************************
   //** resizeDashboardItems
   //**************************************************************************
@@ -2637,7 +2621,7 @@ bluewave.Explorer = function(parent, config) {
 
         console.log("dashboard item list", dashboardItemList);
         if (typeof(dashboardItemList) !== "undefined"){
-   
+
             for ( var i=0 ; i<dashboardItemList["dashboardItem"].length; i++){
                 console.log("i variable is ", i);
 
@@ -2670,7 +2654,7 @@ bluewave.Explorer = function(parent, config) {
                 "dashboardItem":dashboardItem
                 });
             };
-                    
+
         }
     }
 
