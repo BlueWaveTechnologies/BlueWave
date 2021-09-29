@@ -340,12 +340,29 @@ bluewave.utils = {
         return div;
     },
 
+  //**************************************************************************
+  //** createDashboardMBR
+  //**************************************************************************
+    createDashboardMBR: function(parent, config){
+
+      // create MBR for preview panel
+      dashboardPanelMBR = document.createElement("div");
+      dashboardPanelMBR.style.height = "100%";
+      dashboardPanelMBR.classList.add("dashboardPanelMBR");
+      parent.appendChild(dashboardPanelMBR);
+
+    //   dashboardPanelMBR.hide();
+
+      return dashboardPanelMBR;
+      // I dont think we need this actually, because it should only show if its parent shows.
+      // dashboardPanelMBR.hide()
+    },
 
   //**************************************************************************
   //** createDashboardItem
   //**************************************************************************
     createDashboardItem: function(parent, config){
-
+        console.log("adding dashboard item to this thing",parent)
       //Set default config options
         var defaultConfig = {
             width: 360,
