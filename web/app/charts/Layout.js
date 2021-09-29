@@ -202,90 +202,34 @@ bluewave.charts.Layout = function(parent, config) {
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-      console.log("get config is called here")
-        
-      
+
+      //Compute bounding coordinates of all the dashboard items
+        var minX = Number.MAX_VALUE;
+        var maxX = 0;
+        var minY = Number.MAX_VALUE;
+        var maxY = 0;
+        for (var i in mainDiv.childNodes){
+            var dashboardItem = mainDiv.childNodes[i];
+            if (dashboardItem.nodeType===1){
+                var rect = javaxt.dhtml.utils.getRect(dashboardItem);
+                minX = Math.min(rect.left, minX);
+                maxX = Math.max(rect.right, maxX);
+                minY = Math.min(rect.top, minY);
+                maxY = Math.max(rect.bottom, maxY);
+            }
+        }
+        var width;
+        var width = maxX - minX;
+        var height = maxY - minY;
 
 
-        /////////////////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////
-
-         var minX = 9999999999999999;
-         var maxX = 0;
-         var minY = 9999999999999999;
-         var maxY = 0;
-
-         for (var i in mainDiv.childNodes){
-             var dashboardItem = mainDiv.childNodes[i];
-             if (dashboardItem.nodeType===1){
-                 var rect = javaxt.dhtml.utils.getRect(dashboardItem);
-                    // min and max X would be for the main div, for setting a new x y position
-                 minX = Math.min(rect.left, minX);
-                 console.log("resulting min x is ",JSON.stringify(minX,null,2))
-                 maxX = Math.max(rect.left+rect.width, maxX);
-                 console.log("resulting max x is ",JSON.stringify(maxX,null,2))
-                console.log("using rect for MBR ", rect);
-                 minY = Math.min(rect.top, minY);
-                 maxY = Math.max(rect.bottom+rect.height, maxY);
-
-             }
-         }
-         
-        // add the padding around each of the items inside the MBR
-        // maxX += padding;
-        // minX = minX - padding;
-        // // this is the base MBR div size
-        mainWidth = maxX - minX;
-        mainHeight = maxY - minY;
-        
-        console.log("resulting width and hieght for MBR is ",mainWidth, mainHeight)
-
-        /////////////////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////
-
-
+      //Generate layout config
         var layout = {};
         for (var i in mainDiv.childNodes){
             var dashboardItem = mainDiv.childNodes[i];
             if (dashboardItem.nodeType===1){
                 var rect = javaxt.dhtml.utils.getRect(dashboardItem);
-                var layoutParentDiv = javaxt.dhtml.utils.getRect(mainDiv);
-                var mainWidth = layoutParentDiv.width;
-                var mainHeight = layoutParentDiv.height;
-        /////////////////////////////////////////////////////////////////////////////////////
 
-                console.log("the whole layoutParentDiv object is", layoutParentDiv);
-                
-
-                // set a percentage that fits our screen to match the current default width and height
-                console.log("the inner layout div size is ", mainWidth, mainHeight)
-
-
-                percentageWidth = rect.width/mainWidth;
-
-
-
-                console.log("the percentage width is",(percentageWidth*100),"%")
-                
-                percentageHeight = rect.height/mainHeight;
-                
-                console.log("the percentage height is",(percentageHeight*100),"%")
-                console.log("the main width width and height set here is ", mainWidth, mainHeight)
- 
-
-        /////////////////////////////////////////////////////////////////////////////////////
                 var w = parseInt(dashboardItem.style.width);
                 if (isNaN(w)) w = rect.width;
 
@@ -299,24 +243,22 @@ bluewave.charts.Layout = function(parent, config) {
                 if (isNaN(y)) y = rect.y;
 
                 var img = dashboardItem.getElementsByTagName("img")[0];
-                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                // here we want to set the widht and heigth to percentages isntead
-                ////////////////////////////////////////////////////////////////////////////
+
                 layout[dashboardItem.inputID] = {
                     x: x,
                     y: y,
-                    w:w,
-                    h:h,
-                    widthPercentage:(`${percentageWidth*100}%`), 
-                    heightPercentage:(`${percentageHeight*100}%`), 
+                    w: w,
+                    h: h,
+                    left: Math.round(((rect.x-minX)/width)*100)+"%",
+                    top: Math.round(((rect.y-minY)/height)*100)+"%",
+                    width: Math.round((rect.width/width)*100)+"%",
+                    height: Math.round((rect.height/height)*100)+"%",
                     imageWidth: img.naturalWidth,
                     imageHeight: img.naturalHeight
                 };
-                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             }
         }
-        console.log("layout to return ", layout)
         return layout;
     };
 
