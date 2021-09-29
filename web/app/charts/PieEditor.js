@@ -218,8 +218,6 @@ bluewave.charts.PieEditor = function(parent, config) {
                 linksAndQuantityEntry.key = linkFullType;
                 linksAndQuantityEntry.value = linkQuantity;
 
-                var checkIfExist = linksAndQuantity.indexOf(entry => entry.key === linkFullType);
-                var chekIfExist2 = linksAndQuantity.indexOf(linksAndQuantityEntry);
                 var previousEntryIndex = linksAndQuantity.findIndex(entry => entry.key === linkFullType);
 
                 if (previousEntryIndex !== -1) {
