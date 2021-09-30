@@ -1766,7 +1766,7 @@ bluewave.Explorer = function(parent, config) {
   //** editLayout
   //**************************************************************************
     var editLayout = function(node){
-        console.log("edit layout of explorer - setting base width and height containers 1425 and 839, can try changing these to percentages.. probably wont make a difference")
+
       //Create layoutEditor as needed
         if (!layoutEditor){
 
@@ -1777,8 +1777,6 @@ bluewave.Explorer = function(parent, config) {
                 resizable: true,
                 beforeClose: function(){
                     var chartConfig = layoutEditor.getConfig();
-                    console.log(chartConfig);
-                    console.log("explorer width hegith",layoutEditor.width,layoutEditor.height)
                     var node = layoutEditor.getNode();
                     var orgConfig = node.config;
                     if (!orgConfig) orgConfig = {};
@@ -1802,7 +1800,6 @@ bluewave.Explorer = function(parent, config) {
             });
 
             layoutEditor = new bluewave.charts.Layout(win.getBody(), config);
-            console.log("the style border radius ehre probably doesn't make a difference to us here .. is 5px and 5px .. should maybe ad up to a 10px thing. or those 2 small paddings.")
             layoutEditor.el.style.borderRadius = "0 0 5px 5px";
 
             layoutEditor.show = function(){
