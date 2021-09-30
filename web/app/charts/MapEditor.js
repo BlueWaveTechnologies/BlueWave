@@ -289,15 +289,6 @@ if(!bluewave.charts) bluewave.charts={};
         if (inputType==="mapType"){
 
             if(value==="Point"){
-
-              //We clear out the values from the chartConfig
-                if(chartConfig.latitude !== null) chartConfig.latitude = null;
-                if(chartConfig.longitude !== null) chartConfig.longitude = null;
-                if(chartConfig.pointData !== null) chartConfig.pointData = null;
-                if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-                if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
-
-
               //Show the combox box inputs
                 mapInputs.mapLocation.hide();
                 mapInputs.mapValue.show();
@@ -305,36 +296,22 @@ if(!bluewave.charts) bluewave.charts={};
 
             }
             else if(value==="Area"){
-
-                if(chartConfig.latitude !== null) chartConfig.latitude = null;
-                if(chartConfig.longitude !== null) chartConfig.longitude = null;
-                if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-
                 mapInputs.lat.hide();
                 mapInputs.long.hide();
                 mapInputs.mapLocation.show();
                 mapInputs.mapValue.show();
                 mapInputs.pointData.hide();
             }
-
         }
         else if (inputType==="pointData"){
 
             if(value==="geoCoords"){
-                if(chartConfig.latitude !== null) chartConfig.latitude = null;
-                if(chartConfig.longitude !== null) chartConfig.longitude = null;
-                if(chartConfig.mapLocation !== null) chartConfig.mapLocation = null;
-
                 mapInputs.lat.show();
                 mapInputs.long.show();
                 mapInputs.mapLocation.hide();
 
             }
             else if(value==="adminArea"){
-                if(chartConfig.latitude !== null) chartConfig.latitude = null;
-                if(chartConfig.longitude !== null) chartConfig.longitude = null;
-                if(chartConfig.mapLocation !== null) chartConfig.mapLocation = null;
-
                 mapInputs.lat.hide();
                 mapInputs.long.hide();
                 mapInputs.mapLocation.show();
@@ -342,8 +319,6 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (inputType==="mapLevel"){
-            chartConfig.lat = null;
-            chartConfig.lon = null;
             createMapPreview();
         }
     };
