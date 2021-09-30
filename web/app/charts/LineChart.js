@@ -113,7 +113,7 @@ bluewave.charts.LineChart = function(parent, config) {
             }
             //set default values if not instantiated
             if (chartConfig.lineColor==null) chartConfig.lineColor = "#6699CC";
-            if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1.5;
+            if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1;
             if (chartConfig.opacity==null) chartConfig.opacity = 1;
             if (chartConfig.startOpacity==null) chartConfig.startOpacity = 0;
             if (chartConfig.endOpacity==null) chartConfig.endOpacity = 0;
@@ -133,19 +133,16 @@ bluewave.charts.LineChart = function(parent, config) {
             if (group!==null && group!==undefined){
 
                 //Keeping open to allow for multiple "group by" queries
-                let i = 0;
-                let lineColor = chartConfig["lineColor" + i];// == null ? "#6699CC" : chartConfig["lineColor" + i]);
-                let lineWidth = chartConfig["lineWidth" + i];// == null ? 1.5 : chartConfig["lineWidth" + i]);
-                let opacity = chartConfig["opacity" + i];// == null ? chartConfig.opacity);
-                let startOpacity = chartConfig["startOpacity" + i];// == null ? chartConfig.startOpacity);
-                let endOpacity = chartConfig["endOpacity" + i];// == null ? chartConfig.endOpacity);
+                let lineColor = chartConfig.lineColor;
+                let lineWidth = chartConfig.lineWidth;
+                let opacity = chartConfig.opacity;
+                let startOpacity = chartConfig.startOpacity;
+                let endOpacity = chartConfig.endOpacity;
 
-                if (lineColor == null) lineColor = "#6699CC";
-                if (lineWidth == null) lineWidth = 1.5;
-                if (opacity == null) opacity = 1;
-                if (startOpacity == null) startOpacity = 0;
-                if (endOpacity == null) endOpacity = 0;
-
+                // console.log(d3.selectAll(".form-input[name]"))
+                // d3.selectAll(".form-input[name]").hide()
+                // let labelField = document.querySelector(".form-input[name]");
+                // labelField.hide()
 
                 let groupData = d3.nest()
                     .key(function(d){return d[group];})
@@ -174,7 +171,20 @@ bluewave.charts.LineChart = function(parent, config) {
                         }
                     );
 
-                addColorGradient(lineColor, startOpacity, endOpacity);
+                //Add color gradient for each element in groupData
+                groupData.forEach(function(g){
+                    let lineColor = chartConfig[`lineColor${groupData.indexOf(g)}`];
+                    if (lineColor == null) lineColor = "#6699CC";
+
+                    let startOpacity = chartConfig[`startOpacity${groupData.indexOf(g)}`];
+                    if (startOpacity == null) startOpacity = 0;
+
+                    let endOpacity = chartConfig[`endOpacity${groupData.indexOf(g)}`];
+                    if (endOpacity == null) endOpacity = 0;
+
+                    addColorGradient(lineColor, startOpacity, endOpacity);
+                })
+                
 
                 //Draw group line
                 plotArea
@@ -183,9 +193,24 @@ bluewave.charts.LineChart = function(parent, config) {
                     .enter()
                     .append("path")
                     .attr("fill", "none")
-                    .attr("stroke", lineColor)
-                    .attr("stroke-width", lineWidth)
-                    .attr("opacity", opacity)
+                    .attr("stroke", function(d){
+
+                        let lineColor = chartConfig[`lineColor${groupData.indexOf(d)}`];
+                        return lineColor ? lineColor : "#6699CC";
+
+                    })
+                    .attr("stroke-width", function(d){
+
+                        let lineWidth = chartConfig[`lineWidth${groupData.indexOf(d)}`];
+                        return lineWidth ? lineWidth : 1;
+
+                    })
+                    .attr("opacity", function(d){
+
+                        let opacity = chartConfig[`opacity${groupData.indexOf(d)}`];
+                        return (opacity!=null) ? opacity : 1;
+
+                    })
                     .attr(
                         "d",function(d){
                         return d3
@@ -199,16 +224,16 @@ bluewave.charts.LineChart = function(parent, config) {
                         }
                     );
 
-                    //Draw thick line for selection purposes
 
-                    // let keyType = typeOfAxisValue(groupData[0].key);
-
+                //Draw thick line for selection purposes
                 plotArea
                     .selectAll(".line")
                     .data(groupData)
                     .enter()
                     .append("path")
-                    .attr("dataset", 0)
+                    .attr("dataset", function(d){
+                        return groupData.indexOf(d)
+                    })
                     .attr("fill", "none")
                     .attr("stroke", "#ff0000")
                     .attr("stroke-width", 10)
@@ -233,6 +258,9 @@ bluewave.charts.LineChart = function(parent, config) {
                     if(chartConfig.endTags){
 
                         groupData.forEach(function(g){
+                            let lineColor = chartConfig[`lineColor${groupData.indexOf(g)}`];
+                            if (lineColor == null) lineColor = chartConfig.lineColor;
+
                             let tempData = g.values;
                             let lastDataPointCopy = {...tempData[tempData.length-1]};
                             lastDataPointCopy.key = lastDataPointCopy[xKey];
@@ -259,15 +287,6 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 displayAxis("key","value", axisData);
 
-                // Group case
-                // if (group!==null && group!==undefined){
-
-                //               dataSets = d3.nest()
-                //                 .key(function(d){return d[group];})
-                //                 .entries(data);
-
-                //                 }
-
                 let xType = typeOfAxisValue();
 
                 var arr = [];
@@ -287,12 +306,6 @@ bluewave.charts.LineChart = function(parent, config) {
                             });
                     }).entries(dataSets[i]);
 
-                    // if(group){
-                    //     sumData = d3.nest()
-                    //     .key(function(d){return d[group];})
-                    //     .entries(data);
-                    // }
-
                     arr.push(sumData);
                 }
 
@@ -301,10 +314,6 @@ bluewave.charts.LineChart = function(parent, config) {
               //Draw areas under lines first!
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
-
-                    // let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
-                    // let startOpacity = (chartConfig["startOpacity" + i] ?? chartConfig.startOpacity);
-                    // let endOpacity = (chartConfig["endOpacity" + i] ?? chartConfig.endOpacity);
 
                     let lineColor = chartConfig["lineColor" + i];
                     let startOpacity = chartConfig["startOpacity" + i];
@@ -348,10 +357,6 @@ bluewave.charts.LineChart = function(parent, config) {
               //Draw lines
                 for (let i=0; i<arr.length; i++){
                     var sumData = arr[i];
-
-                    // let lineColor = (chartConfig["lineColor" + i] ?? chartConfig.lineColor);
-                    // let lineWidth = (chartConfig["lineWidth" + i] ?? chartConfig.lineWidth);
-                    // let opacity = (chartConfig["opacity" + i] ?? chartConfig.opacity);
 
                     let lineColor = chartConfig["lineColor" + i];
                     let lineWidth = chartConfig["lineWidth" + i];
@@ -454,29 +459,16 @@ bluewave.charts.LineChart = function(parent, config) {
   //** drawEndLabels
   //**************************************************************************
 
-    var drawLabelTag = function(dataSet, color, label, isGroup, xKey, yKey){
+    var drawLabelTag = function(dataSet, color, label){
 
         if(!label){
             label = "Add Label"
         }
 
-
-
-//         if (isGroup){
-//             // console.log(xKey, yKey)
-//            var firstSet = dataSet[0]
-//            var lastItem = dataSet[dataSet.length-1];
-//            var lastKey = lastItem[xKey]
-//            var lastVal = lastItem[yKey]
-//            var keyType = typeOfAxisValue(firstSet[xKey])
-// // console.log(dataSet[0], lastItem, lastKey, lastVal)
-//         }
-        // else{
-            var lastItem = dataSet[dataSet.length-1];
-            var lastKey = lastItem.key;
-            var lastVal = lastItem.value;
-            var keyType = typeOfAxisValue(dataSet[0].key);
-        // }
+        var lastItem = dataSet[dataSet.length - 1];
+        var lastKey = lastItem.key;
+        var lastVal = lastItem.value;
+        var keyType = typeOfAxisValue(dataSet[0].key);
 
 
         if(keyType==="date"){
