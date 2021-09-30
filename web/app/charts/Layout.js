@@ -19,7 +19,6 @@ bluewave.charts.Layout = function(parent, config) {
     };
     var titleDiv, body;
     var mainDiv;
-    console.log("the chart by default creates the dashboard item to the size of 350 x 250 pixels")
     var width = 350; //360
     var height = 250; //260
 
@@ -132,12 +131,8 @@ bluewave.charts.Layout = function(parent, config) {
 
                     var div = dashboardItem.el;
                     addResizeHandle(div);
-
-
-
                     div.inputID = key;
 
-                    var rect = layout[key]
 
                   //Update layout
                     if (layout && layout[key]){
@@ -148,7 +143,6 @@ bluewave.charts.Layout = function(parent, config) {
                         div.style.width = rect.w+"px";
                         div.style.height = rect.h+"px";
                     }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
                   //Add image
