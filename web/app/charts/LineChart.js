@@ -129,168 +129,19 @@ bluewave.charts.LineChart = function(parent, config) {
             //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
             // }
 
-            ////////////////// Group Case //////////////////
-            if (false){
 
-                //Keeping open to allow for multiple "group by" queries
-                let lineColor = chartConfig.lineColor;
-                let lineWidth = chartConfig.lineWidth;
-                let opacity = chartConfig.opacity;
-                let startOpacity = chartConfig.startOpacity;
-                let endOpacity = chartConfig.endOpacity;
-
-                //Hide label field if "group by"
-                let labelField = document.querySelector(".form-input[name=label0]");
-                let label = document.querySelector(".label0");
-                addShowHide(label);
-                addShowHide(labelField);
-                labelField.hide();
-                label.hide();
-
-                let groupData = d3.nest()
-                    .key(function(d){return d[group];})
-                    .entries(data);
-
-                displayAxis(xKey,yKey,data);
-
-                //Draw group area
-                plotArea
-                    .selectAll(".line")
-                    .data(groupData)
-                    .enter()
-                    .append("path")
-                    .attr("class", "line-area")
-                    .attr(
-                        "d",function(d){
-                        return d3
-                            .area()
-                            .x(function (d) {
-                                return x(d[xKey]);
-                            })
-                            .y0(plotHeight)
-                            .y1(function (d) {
-                                return y(parseFloat(d[yKey]));
-                            })(d.values);
-                        }
-                    );
-
-                //Add color gradient for each element in groupData
-                groupData.forEach(function(g){
-                    let lineColor = chartConfig[`lineColor${groupData.indexOf(g)}`];
-                    if (lineColor == null) lineColor = "#6699CC";
-
-                    let startOpacity = chartConfig[`startOpacity${groupData.indexOf(g)}`];
-                    if (startOpacity == null) startOpacity = 0;
-
-                    let endOpacity = chartConfig[`endOpacity${groupData.indexOf(g)}`];
-                    if (endOpacity == null) endOpacity = 0;
-
-                    addColorGradient(lineColor, startOpacity, endOpacity);
-                })
-                
-
-                //Draw group line
-                plotArea
-                    .selectAll(".line")
-                    .data(groupData)
-                    .enter()
-                    .append("path")
-                    .attr("fill", "none")
-                    .attr("stroke", function(d){
-
-                        let lineColor = chartConfig[`lineColor${groupData.indexOf(d)}`];
-                        return lineColor ? lineColor : "#6699CC";
-
-                    })
-                    .attr("stroke-width", function(d){
-
-                        let lineWidth = chartConfig[`lineWidth${groupData.indexOf(d)}`];
-                        return lineWidth ? lineWidth : 1;
-
-                    })
-                    .attr("opacity", function(d){
-
-                        let opacity = chartConfig[`opacity${groupData.indexOf(d)}`];
-                        return (opacity!=null) ? opacity : 1;
-
-                    })
-                    .attr(
-                        "d",function(d){
-                        return d3
-                            .line()
-                            .x(function (d) {
-                                return x(d[xKey]);
-                            })
-                            .y(function (d) {
-                                return y(parseFloat(d[yKey]));
-                            })(d.values);
-                        }
-                    );
-
-
-                //Draw thick line for selection purposes
-                plotArea
-                    .selectAll(".line")
-                    .data(groupData)
-                    .enter()
-                    .append("path")
-                    .attr("dataset", function(d){
-                        return groupData.indexOf(d)
-                    })
-                    .attr("fill", "none")
-                    .attr("stroke", "#ff0000")
-                    .attr("stroke-width", 10)
-                    .attr("opacity", 0)
-                    .attr(
-                        "d", function (d) {
-                            return d3
-                                .line()
-                                .x(function (d) {
-                                    return x(d[xKey]);
-                                })
-                                .y(function (d) {
-                                    return y(parseFloat(d[yKey]));
-                                })(d.values);
-                        }
-                    )
-                    .on("click", function () {
-                        me.onClick(this);
+            //Set axes with merged data
+            var axisData = d3.nest()
+                .key(function (d) { return d[xKey]; })
+                .rollup(function (d) {
+                    return d3.max(d, function (g) {
+                        return g[yKey];
                     });
-
-                    //Add group endtags
-                    if(chartConfig.endTags){
-
-                        groupData.forEach(function(g){
-                            let lineColor = chartConfig[`lineColor${groupData.indexOf(g)}`];
-                            if (lineColor == null) lineColor = chartConfig.lineColor;
-
-                            let tempData = g.values;
-                            let lastDataPointCopy = {...tempData[tempData.length-1]};
-                            lastDataPointCopy.key = lastDataPointCopy[xKey];
-                            lastDataPointCopy.value = lastDataPointCopy[yKey];
-                            drawLabelTag([lastDataPointCopy], lineColor, group);
-                        });
-
-                    }
-
-
-            }
-
-            ////////////////// Default Case //////////////////
-            else{
-
-                //Set axes with merged data
-                var axisData = d3.nest()
-                    .key(function(d){return d[xKey];})
-                    .rollup(function(d){
-                        return d3.max(d,function(g){
-                            return g[yKey];
-                        });
                 }).entries(mergedData);
 
-                displayAxis("key","value", axisData);
+            displayAxis("key", "value", axisData);
 
-                let xType = typeOfAxisValue();
+            let xType = typeOfAxisValue();
 
                 //Reformat data if "group by" is selected
                 if(group){
@@ -307,13 +158,13 @@ bluewave.charts.LineChart = function(parent, config) {
                     .key(function(d){return d[group];})
                     .entries(data);
 
-                    let newDataSets = [];
+                    let tempDataSets = [];
                     groupData.forEach(function(g){
 
-                        newDataSets.push(g.values)
+                        tempDataSets.push(g.values)
                     })
 
-                dataSets = newDataSets;
+                dataSets = tempDataSets;
                 // displayAxis(xKey,yKey,data);
                 }
 
@@ -454,7 +305,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 };
 
-            };
+            
 
             //Draw grid lines if option is checked
             if(chartConfig.xGrid || chartConfig.yGrid){
