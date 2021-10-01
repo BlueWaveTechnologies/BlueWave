@@ -212,9 +212,23 @@ bluewave.charts.Layout = function(parent, config) {
                 maxY = Math.max(rect.bottom, maxY);
             }
         }
-        var width;
         var width = maxX - minX;
         var height = maxY - minY;
+
+
+      //Compute max width/height as a ratio of the bounding coordinate
+        var maxWidth, maxHeight;
+        if (width>=height){
+            maxWidth = 1;
+            maxHeight = height/width;
+        }
+        else{
+            maxHeight = 1;
+            maxWidth = width/height;
+        }
+        if (maxWidth<1) maxWidth = 1-maxWidth;
+        if (maxHeight<1) maxHeight = 1-maxHeight;
+
 
 
       //Generate layout config
@@ -245,8 +259,8 @@ bluewave.charts.Layout = function(parent, config) {
                     h: h,
                     left: Math.round(((rect.x-minX)/width)*100)+"%",
                     top: Math.round(((rect.y-minY)/height)*100)+"%",
-                    width: Math.round((rect.width/width)*100)+"%",
-                    height: Math.round((rect.height/height)*100)+"%",
+                    width: Math.round((rect.width/width)*maxWidth*100)+"%",
+                    height: Math.round((rect.height/height)*maxHeight*100)+"%",
                     imageWidth: img.naturalWidth,
                     imageHeight: img.naturalHeight
                 };
