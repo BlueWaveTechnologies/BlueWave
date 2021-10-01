@@ -130,7 +130,7 @@ bluewave.charts.LineChart = function(parent, config) {
             // }
 
             ////////////////// Group Case //////////////////
-            if (group!==null && group!==undefined){
+            if (false){
 
                 //Keeping open to allow for multiple "group by" queries
                 let lineColor = chartConfig.lineColor;
@@ -292,6 +292,31 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 let xType = typeOfAxisValue();
 
+                //Reformat data if "group by" is selected
+                if(group){
+
+                    //Hide label field
+                    let labelField = document.querySelector(".form-input[name=label0]");
+                    let label = document.querySelector(".label0");
+                    addShowHide(label);
+                    addShowHide(labelField);
+                    labelField.hide();
+                    label.hide();
+
+                    let groupData = d3.nest()
+                    .key(function(d){return d[group];})
+                    .entries(data);
+
+                    let newDataSets = [];
+                    groupData.forEach(function(g){
+
+                        newDataSets.push(g.values)
+                    })
+
+                dataSets = newDataSets;
+                // displayAxis(xKey,yKey,data);
+                }
+
                 var arr = [];
                 for (let i=0; i<dataSets.length; i++){
 
@@ -423,7 +448,8 @@ bluewave.charts.LineChart = function(parent, config) {
 
                     //Display end tags if checked
                     if(chartConfig.endTags){
-                        drawLabelTag(sumData, lineColor, chartConfig["label" + i]);
+                        let label = (group || chartConfig["label" + i]);
+                        drawLabelTag(sumData, lineColor, label);
                     }
 
                 };
