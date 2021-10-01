@@ -375,7 +375,7 @@ bluewave.ChartEditor = function(parent, config) {
                     createLabel("Group By"),
                     createDropdown("group", plotInputs),
 
-                    createLabel("Label"),
+                    createLabel("Label", "label0"),
                     { name: "label0", label: "", type: "text" }
 
                 ]
@@ -424,9 +424,10 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createLabel
   //**************************************************************************
-    var createLabel = function(label){
+    var createLabel = function(label, className){
         var row = document.createElement("div");
         row.className = "form-label";
+        row.classList.add(className);
         row.innerText = label + ":";
         return {
             name: "",

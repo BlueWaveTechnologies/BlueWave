@@ -139,10 +139,13 @@ bluewave.charts.LineChart = function(parent, config) {
                 let startOpacity = chartConfig.startOpacity;
                 let endOpacity = chartConfig.endOpacity;
 
-                // console.log(d3.selectAll(".form-input[name]"))
-                // d3.selectAll(".form-input[name]").hide()
-                // let labelField = document.querySelector(".form-input[name]");
-                // labelField.hide()
+                //Hide label field if "group by"
+                let labelField = document.querySelector(".form-input[name=label0]");
+                let label = document.querySelector(".label0");
+                addShowHide(label);
+                addShowHide(labelField);
+                labelField.hide();
+                label.hide();
 
                 let groupData = d3.nest()
                     .key(function(d){return d[group];})
@@ -702,6 +705,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
     var drawGridlines = bluewave.utils.drawGridlines;
     var drawLabels = bluewave.utils.drawLabels;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();
 };
