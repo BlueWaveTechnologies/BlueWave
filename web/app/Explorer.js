@@ -2381,14 +2381,8 @@ bluewave.Explorer = function(parent, config) {
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
                     innerDiv.style.overflow = "hidden";
-                    if (layout.imageWidth>=layout.imageHeight){
-                        chartContainer.style.width = "100%";
-                        chartContainer.style.height = ((layout.imageHeight*100)/layout.imageWidth) + "%";
-                    }
-                    else{
-                        chartContainer.style.height = "100%";
-                        chartContainer.style.width = ((layout.imageWidth*100)/layout.imageHeight) + "%";
-                    }
+                    chartContainer.style.width = "100%";
+                    chartContainer.style.height = "100%";
                     innerDiv.appendChild(chartContainer);
 
 
