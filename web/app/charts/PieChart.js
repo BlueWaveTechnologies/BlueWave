@@ -205,7 +205,7 @@ bluewave.charts.PieChart = function(parent, config) {
                   });
 
 
-              //Update scale as needed
+              //Update pieArea as needed
                 var box = labelGroup.node().getBBox();
                 if (box.width>width || box.height>height){
                     var scale, x, y;
@@ -220,7 +220,10 @@ bluewave.charts.PieChart = function(parent, config) {
                         y = box.height-height; //not sure about this...
                     }
 
-                    pieArea.attr("transform",
+                    pieArea
+                      .attr("width", box.width)
+                      .attr("height", box.height)
+                      .attr("transform",
                         "translate(" + x + "," + y + ") " +
                         "scale(" + scale + ")"
                     );
