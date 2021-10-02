@@ -20,11 +20,11 @@ bluewave.charts.ScatterChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, scatterArea, line, regression;
-        var xAxis, yAxis;
-        var axisWidth, axisHeight;
-        var x, y, xBand, yBand;
-        var timeAxis;
+    var svg, chart, scatterArea, line, regression;
+    var xAxis, yAxis;
+    var axisWidth, axisHeight;
+    var x, y, xBand, yBand;
+    var timeAxis;
 
 
   //**************************************************************************
@@ -51,7 +51,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
             });
         }
 
-        scatterArea = svg.append("g").append("g");
+        chart = svg.append("g").append("g");
     };
 
 
@@ -59,7 +59,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (scatterArea) scatterArea.selectAll("*").remove();
+        if (chart) chart.selectAll("*").remove();
     };
 
 
@@ -76,11 +76,17 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
+            chart
+                .attr("width", width)
+                .attr("height", height);
+
+
             var margin = config.margin;
             axisHeight = height - margin.top - margin.bottom;
             axisWidth = width - margin.left - margin.right;
             var plotHeight = height - margin.top - margin.bottom;
             var plotWidth = width - margin.left - margin.right;
+            scatterArea = chart.append("g");
             scatterArea
                 .attr("width", plotWidth)
                 .attr("height", plotHeight)

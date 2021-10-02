@@ -20,7 +20,7 @@ bluewave.charts.BarChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, plotArea;
+    var svg, chart, plotArea;
     var xAxis, yAxis;
     var axisWidth, axisHeight;
     var x, y, xBand, yBand;
@@ -51,7 +51,7 @@ bluewave.charts.BarChart = function(parent, config) {
             });
         }
 
-        plotArea = svg.append("g").append("g");
+        chart = svg.append("g").append("g");
     };
 
 
@@ -59,7 +59,7 @@ bluewave.charts.BarChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (plotArea) plotArea.selectAll("*").remove();
+        if (chart) chart.selectAll("*").remove();
     };
 
 
@@ -74,11 +74,16 @@ bluewave.charts.BarChart = function(parent, config) {
 
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
+            chart
+                .attr("width", width)
+                .attr("height", height);
+
             var margin = config.margin;
             axisHeight = height - margin.top - margin.bottom;
             axisWidth = width - margin.left - margin.right;
             var plotHeight = height - margin.top - margin.bottom;
             var plotWidth = width - margin.left - margin.right;
+            plotArea = chart.append("g");
             plotArea
                 .attr("width", plotWidth)
                 .attr("height", plotHeight)
@@ -104,7 +109,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 xKey2 = chartConfig.xAxis2;
                 yKey2 = chartConfig.yAxis2;
             }
-            
+
 
             var data1 = data[0];
             var data2 = data[1];
@@ -125,7 +130,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
             var getBarColor = function(d){
                 //TODO: check which dataset this belongs to and call getColor()
-                
+
                 return (chartConfig.barColor || "#6699CC");
             };
 
@@ -144,7 +149,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 displayAxis("value", "key", sumData);
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = chartConfig.yAxis;
-            } 
+            }
 
             width = plotWidth;
             height = plotHeight;
@@ -228,7 +233,7 @@ bluewave.charts.BarChart = function(parent, config) {
                             return width/sumData.length-5;
                         })
                         .attr("fill", getBarColor);
-                } 
+                }
                 // else if(timeAxis === "y")
                 else if (chartConfig.barLayout === "horizontal") {
 
@@ -252,36 +257,36 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("fill", getBarColor);
                 }
             }
-            
-            
-            
+
+
+
             //Create d3 event listeners for bars
             var bars = plotArea.selectAll("rect").data(data);
-            bars.on("mouseover", function(){ 
+            bars.on("mouseover", function(){
                 d3.select(this).transition().duration(100).attr("opacity", "0.8")
             });
 
             bars.on("mouseout", function(){
                 d3.select(this).transition().duration(100).attr("opacity", "1.0")
             });
-            
+
             var getSiblings = function(bar){
                 var arr = [];
-                bars.each(function() { 
+                bars.each(function() {
                     arr.push(this);
-                }); 
+                });
                 return arr;
             };
-            
+
             bars.on("click", function(){
                 me.onClick(this, getSiblings(this));
             });
-            
+
             bars.on("dblclick", function(){
                 me.onDblClick(this, getSiblings(this));
             });
-            
-            
+
+
             //Draw grid lines
             if(chartConfig.xGrid || chartConfig.yGrid){
                 drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
@@ -293,11 +298,11 @@ bluewave.charts.BarChart = function(parent, config) {
                     axisHeight, axisWidth, margin, bottomLabel, leftLabel);
             }
 
-            
+
             //Display legend
             // var legendContainer = document.querySelector(".bar-legend");
             // if(chartConfig.barLegend && !document.querySelector(".bar-legend")){
-                 
+
             //     var div = d3.select(parent).append("div");
 
             //     div
@@ -315,14 +320,14 @@ bluewave.charts.BarChart = function(parent, config) {
             //      .style("top", 0 + "px")
             //      .style("cursor", "move")
             //      .style("text-align", "center")
-                
-                
+
+
             //     //Temporary drag function - will make a better one
             //      .call(d3.drag()
             //         .on('start.interrupt', function () {
             //         div.interrupt();
             //     })
-            //     .on('start drag', function () {             
+            //     .on('start drag', function () {
             //         div.style('top', d3.event.y  + 'px')
             //         div.style('left', d3.event.x  + 'px')
             //     }))
@@ -334,7 +339,7 @@ bluewave.charts.BarChart = function(parent, config) {
             //      .style("width", "1.618em")
             //      .style("margin", "auto 10px auto 0px")
             //      .style("border-radius", "2px")
-                 
+
 
             // }else if(!chartConfig.barLegend){
             //     let legendContainer = document.querySelector(".bar-legend");
@@ -342,7 +347,7 @@ bluewave.charts.BarChart = function(parent, config) {
             // }
 
 
-            
+
         });
     };
 
