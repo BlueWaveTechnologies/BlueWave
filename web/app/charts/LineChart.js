@@ -20,7 +20,7 @@ bluewave.charts.LineChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, plotArea;
+    var svg, chart, plotArea;
     var xAxis, yAxis;
     var axisWidth, axisHeight;
     var x, y, xBand, yBand;
@@ -52,7 +52,7 @@ bluewave.charts.LineChart = function(parent, config) {
             });
         }
 
-        plotArea = svg.append("g").append("g");
+        chart = svg.append("g").append("g");
     };
 
 
@@ -60,7 +60,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (plotArea) plotArea.selectAll("*").remove();
+        if (chart) chart.selectAll("*").remove();
     };
 
 
@@ -75,11 +75,17 @@ bluewave.charts.LineChart = function(parent, config) {
 
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
+            chart
+                .attr("width", width)
+                .attr("height", height);
+
+
             var margin = config.margin;
             axisHeight = height - margin.top - margin.bottom;
             axisWidth = width - margin.left - margin.right;
             var plotHeight = height - margin.top - margin.bottom;
             var plotWidth = width - margin.left - margin.right;
+            plotArea = chart.append("g");
             plotArea
                 .attr("width", plotWidth)
                 .attr("height", plotHeight)
