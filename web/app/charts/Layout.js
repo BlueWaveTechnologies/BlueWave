@@ -257,10 +257,10 @@ bluewave.charts.Layout = function(parent, config) {
                     y: y,
                     w: w,
                     h: h,
-                    left: Math.round(((rect.x-minX)/width)*100)+"%",
-                    top: Math.round(((rect.y-minY)/height)*100)+"%",
-                    width: Math.round((rect.width/width)*maxWidth*100)+"%",
-                    height: Math.round((rect.height/height)*maxHeight*100)+"%",
+                    left: round(((rect.x-minX)/width)*100, 4)+"%",
+                    top: round(((rect.y-minY)/height)*100, 4)+"%",
+                    width: round((rect.width/width)*maxWidth*100, 4)+"%",
+                    height: round((rect.height/height)*maxHeight*100, 4)+"%",
                     imageWidth: img.naturalWidth,
                     imageHeight: img.naturalHeight
                 };
@@ -592,6 +592,7 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var round = javaxt.dhtml.utils.round;
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
     var createDashboardItem = bluewave.utils.createDashboardItem;
