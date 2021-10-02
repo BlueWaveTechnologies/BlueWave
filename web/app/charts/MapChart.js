@@ -14,12 +14,6 @@ bluewave.charts.MapChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         style: {
-        },
-        margin: {
-            top: 15,
-            right: 5,
-            bottom: 65,
-            left: 82
         }
     };
     var svg, mapArea; //d3 elements
