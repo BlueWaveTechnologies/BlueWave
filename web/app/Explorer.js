@@ -2290,35 +2290,116 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** updateLayout
   //**************************************************************************
+  /** Used to update the size and position of all the dashboard items in the
+   *  layout.
+   */
     var updateLayout = function(){
         if (me.getView()!=="Edit"){
             var dashboardItems = dashboardPanel.childNodes;
             for (var i=0; i<dashboardItems.length; i++){
                 var dashboardItem = dashboardItems[i];
                 if (dashboardItem.nodeType===1){
-
-                    var svgs = dashboardItem.getElementsByTagName("svg");
-                    if (svgs.length>0){
-                        var svg = svgs[0];
-                        var chartContainer = svg.parentNode;
-                        var rect = javaxt.dhtml.utils.getRect(chartContainer);
-
-
-                      //Update dimensions of the svg
-                        d3.select(svg)
-                        .attr("width",rect.width)
-                        .attr("height",rect.height);
-
-                      //Update scaling of the first g
-                        var g = d3.select(svg.getElementsByTagName("g")[0]);
-                        var g2 = d3.select(g.node().getElementsByTagName("g")[0]);
-                        var scale = rect.width/g2.attr("width");
-                        g.attr("transform",`scale(${scale})`);
-
-                    }
-
+                    updateDashboardItem(dashboardItem);
                 }
             }
+        }
+    };
+
+
+  //**************************************************************************
+  //** updateDashboardItem
+  //**************************************************************************
+  /** Used to update the size and position of an individual dashboard item
+   *  in s layout.
+   */
+    var updateDashboardItem = function(dashboardItem){
+        var svgs = dashboardItem.getElementsByTagName("svg");
+        if (svgs.length>0){
+            var svg = svgs[0];
+            var chartContainer = svg.parentNode;
+            var rect = javaxt.dhtml.utils.getRect(chartContainer.parentNode);
+
+
+          //Update dimensions of the svg
+            d3.select(svg)
+            .attr("width",rect.width)
+            .attr("height",rect.height);
+
+
+          //Update scaling of the first g
+            var g = d3.select(svg.getElementsByTagName("g")[0]);
+            var g2 = d3.select(g.node().getElementsByTagName("g")[0]);
+            var width = parseFloat(g2.attr("width"));
+            var height = parseFloat(g2.attr("height"));
+
+
+            var scaleX = 1;
+            var scaleY = 1;
+            var translateX = 0;
+            var translateY = 0;
+            var transformList = g2.node().transform.baseVal;
+            for (var i=0; i<transformList.numberOfItems; i++){
+                var transform = transformList.getItem(i);
+                var m = transform.matrix;
+                switch (transform.type){
+                  case 2:
+                    translateX = m.e;
+                    translateY = m.f;
+                    break;
+                  case 3:
+                    scaleX = m.a;
+                    scaleY = m.d;
+                    break;
+                }
+            }
+            var scaledWidth = (width)*scaleX;
+            var scaledHeight = (height)*scaleY;
+
+
+
+          //Compute scale
+            var scale;
+            if (width>=height){
+                scale = rect.width/scaledWidth;
+                var h = scaledHeight*scale;
+                if (h>rect.height){
+                    scale = rect.height/scaledHeight;
+                }
+            }
+            else{
+                scale = rect.height/scaledHeight;
+                var w = scaledWidth*scale;
+                if (w>rect.width){
+                    scale = rect.width/scaledWidth;
+                }
+            }
+
+
+
+          //Compute x/y offset
+            var x = 0;
+            var y = 0;
+            if (translateX===0){ //center the chart
+                x = (rect.width/2)-((scaledWidth*scale)/2);
+            }
+            else{
+                //TODO: center chart using translateX
+            }
+
+            if (translateY===0){ //center the chart
+                y = (rect.height/2)-((scaledHeight*scale)/2);
+            }
+            else{
+                //TODO: center chart using translateY
+            }
+
+
+          //Apply transform
+            g.attr("transform",
+                "translate(" + x + "," + y + ") " +
+                "scale(" + scale + ")"
+            );
+
         }
     };
 
@@ -2381,8 +2462,8 @@ bluewave.Explorer = function(parent, config) {
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
                     innerDiv.style.overflow = "hidden";
-                    chartContainer.style.width = "100%";
-                    chartContainer.style.height = "100%";
+                    chartContainer.style.width = layout.imageWidth + "px";
+                    chartContainer.style.height = layout.imageHeight + "px";
                     innerDiv.appendChild(chartContainer);
 
 
@@ -2470,7 +2551,7 @@ bluewave.Explorer = function(parent, config) {
                         else{
                             console.log(node.type + " preview not implemented!");
                         }
-
+                        updateLayout();
                     }
                 });
             }
