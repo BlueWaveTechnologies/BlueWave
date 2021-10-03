@@ -55,15 +55,8 @@ bluewave.Explorer = function(parent, config) {
         div.appendChild(innerDiv);
 
 
-      //Create preview panel
-        dashboardPanel = document.createElement("div");
-        dashboardPanel.style.height = "100%";
-        dashboardPanel.style.position = "relative";
-        dashboardPanel.style.padding = "10px";
-        dashboardPanel.style.boxSizing = "border-box";
-
-        innerDiv.appendChild(dashboardPanel);
-        addShowHide(dashboardPanel);
+      //Create dashboard panel
+        dashboardPanel = createDashboard(innerDiv);
         dashboardPanel.hide();
 
 
@@ -107,7 +100,7 @@ bluewave.Explorer = function(parent, config) {
     this.clear = function(){
 
       //Clear dashboard panel
-        dashboardPanel.innerHTML = "";
+        dashboardPanel.clear();
 
       //Reset class variables
         id = name = thumbnail = null;
@@ -2298,12 +2291,11 @@ bluewave.Explorer = function(parent, config) {
    */
     var updateLayout = function(){
         if (me.getView()!=="Edit"){
-            var dashboardItems = dashboardPanel.childNodes;
+            dashboardPanel.resize();
+            var dashboardItems = dashboardPanel.getDashboardItems();
             for (var i=0; i<dashboardItems.length; i++){
                 var dashboardItem = dashboardItems[i];
-                if (dashboardItem.nodeType===1){
-                    updateSVG(dashboardItem);
-                }
+                updateSVG(dashboardItem);
             }
         }
     };
@@ -2409,6 +2401,90 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** createDashboard
+  //**************************************************************************
+  /** Creates a panel used to render dashboard items
+   */
+    var createDashboard = function(parent){
+        var outerDiv = document.createElement("div");
+        outerDiv.style.height = "100%";
+        outerDiv.style.textAlign = "center";
+        parent.appendChild(outerDiv);
+        addShowHide(outerDiv);
+
+
+        var paddedDiv = document.createElement("div");
+        paddedDiv.style.height = "100%";
+        paddedDiv.style.position = "relative";
+        paddedDiv.style.padding = "10px";
+        paddedDiv.style.boxSizing = "border-box";
+        paddedDiv.style.display = "inline-block";
+        outerDiv.appendChild(paddedDiv);
+
+        var innerDiv = document.createElement("div");
+        innerDiv.style.position = "relative";
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        paddedDiv.appendChild(innerDiv);
+
+
+
+        var childNodes = [];
+        var maxWidth = 0;
+        var maxHeight = 0;
+        outerDiv.add = function(el){
+            innerDiv.appendChild(el);
+            childNodes.push(el);
+            maxWidth = Math.max(maxWidth, parseFloat(el.style.width)+parseFloat(el.style.left))/100;
+            maxHeight = Math.max(maxHeight, parseFloat(el.style.height)+parseFloat(el.style.top))/100;
+        };
+        outerDiv.clear = function(){
+            innerDiv.innerHTML = "";
+            childNodes = [];
+            maxWidth = 0;
+            maxHeight = 0;
+        };
+        outerDiv.getDashboardItems = function(){
+            return childNodes;
+        };
+        outerDiv.resize = function(){
+
+            var width = outerDiv.offsetWidth;
+            var height = outerDiv.offsetHeight;
+
+            if (maxWidth===0 || maxHeight===0) return;
+
+            var w, h;
+            if (maxWidth>=maxHeight){
+                w = width;
+                h = w;
+
+                if (height<h*maxHeight){
+                    var d = height/(h*maxHeight);
+                    w = w*d;
+                    h = w;
+                }
+            }
+            else{
+                h = height;
+                w = h;
+
+                if (width<w*maxWidth){
+                    var d = width/(w*maxWidth);
+                    h = h*d;
+                    w = h;
+                }
+            }
+
+            paddedDiv.style.width = w + "px";
+            paddedDiv.style.height = h + "px";
+        };
+
+        return outerDiv;
+    };
+
+
+  //**************************************************************************
   //** updateDashboard
   //**************************************************************************
     var updateDashboard = function(){
@@ -2432,15 +2508,9 @@ bluewave.Explorer = function(parent, config) {
         if (!isDirty) return;
 
 
-      //Clear the dashboardPanel
-        dashboardPanel.innerHTML = "";
+      //Clear and resize the dashboardPanel
+        dashboardPanel.clear();
 
-
-      //Create a padded div to hold dashboard items
-        var paddedDiv = document.createElement("div");
-        paddedDiv.style.position = "relative";
-        paddedDiv.style.height = "100%";
-        dashboardPanel.appendChild(paddedDiv);
 
 
       //Render dashboard items
@@ -2465,7 +2535,8 @@ bluewave.Explorer = function(parent, config) {
                 outerDiv.style.height = layout.height;
                 outerDiv.style.top = layout.top;
                 outerDiv.style.left = layout.left;
-                paddedDiv.appendChild(outerDiv);
+                dashboardPanel.add(outerDiv);
+                dashboardPanel.resize();
 
 
               //Create an inner div for padding purposes
@@ -2598,6 +2669,9 @@ bluewave.Explorer = function(parent, config) {
             }
         }
 
+
+      //Some charts take a little longer to render so update again just in case
+        setTimeout(updateLayout,800);
     };
 
 
