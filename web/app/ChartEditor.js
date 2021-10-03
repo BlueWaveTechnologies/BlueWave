@@ -26,7 +26,6 @@ bluewave.ChartEditor = function(parent, config) {
     var previewArea;
     var pieChart, lineChart, barChart;
     var optionsDiv;
-    var linePaths;
     var pieInputs={
         key:"",
         value:""
@@ -59,12 +58,6 @@ bluewave.ChartEditor = function(parent, config) {
         xLabel:null,
         yLabel:null,
         inputs: []
-    };
-    var margin = {
-        top: 15,
-        right: 5,
-        bottom: 65,
-        left: 82
     };
     var styleEditor, colorPicker;
 
@@ -484,21 +477,15 @@ bluewave.ChartEditor = function(parent, config) {
         svg.attr("height", height);
 
 
-        pieChart = new bluewave.charts.PieChart(svg, {
-            margin: margin
-        });
+        pieChart = new bluewave.charts.PieChart(svg, {});
 
-        lineChart = new bluewave.charts.LineChart(svg, {
-            margin: margin
-        });
+        lineChart = new bluewave.charts.LineChart(svg, {});
         lineChart.onClick = function(line){
             var datasetID = d3.select(line).attr("dataset");
             editStyle("line", datasetID);
         };
 
-        barChart = new bluewave.charts.BarChart(svg, {
-            margin: margin
-        });
+        barChart = new bluewave.charts.BarChart(svg, {});
         barChart.onDblClick = function(bar, bars){
             chartConfig.barColor = d3.select(bar).attr("fill");
             editStyle("bar");
