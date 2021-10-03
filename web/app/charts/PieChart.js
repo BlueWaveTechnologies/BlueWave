@@ -13,12 +13,6 @@ bluewave.charts.PieChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: {
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0
-        }
     };
     var svg, pieArea;
 
@@ -30,24 +24,10 @@ bluewave.charts.PieChart = function(parent, config) {
 
         config = merge(config, defaultConfig);
 
-
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof SVGElement) {
-            svg = d3.select(parent);
-        }
-        else{
-            svg = d3.select(parent).append("svg");
-            onRender(parent, function(){
-                var width = parent.offsetWidth;
-                var height = parent.offsetHeight;
-                svg.attr("width", width);
-                svg.attr("height", height);
-            });
-        }
-
-        pieArea = svg.append("g").append("g");
+        initChart(parent, function(s, g){
+            svg = s;
+            pieArea = g;
+        });
     };
 
 
@@ -84,40 +64,37 @@ bluewave.charts.PieChart = function(parent, config) {
             pieData = pie(d3.entries(pieData));
 
 
-            var margin = config.margin;
+          //Get parent width/height
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
+
+
+
+          //Create group to store all the elements of the pie chart
+            var pieChart = pieArea.append("g");
+            pieChart.attr("transform",
+                "translate(" + width/2 + "," + height/2 + ")"
+            );
+
+
+          //Compute inner and outer radius for the pie chart
             var radius = Math.min(width, height) / 2;
-            if (width>=height){
-                radius = radius - margin.left - margin.right;
-            }
-            else{
-                radius = radius - margin.top - margin.bottom;
-            }
-
-
             var cutout = chartConfig.pieCutout;
             if (cutout==null) cutout = 0.65;
             var innerRadius = radius*cutout;
-            var arc = d3.arc()
-                .innerRadius(innerRadius)
-                .outerRadius(radius);
-
-            pieArea
-                .attr("width", width)
-                .attr("height", height)
-                .attr(
-                    "transform",
-                    "translate(" + width/2 + "," + height/2 + ")"
-                );
 
 
-            pieArea.append("g")
-                .selectAll("whatever")
+
+          //Render pie chart
+            var pieGroup = pieChart.append("g");
+            pieGroup.attr("name", "pie");
+            pieGroup.selectAll("*")
                 .data(pieData)
                 .enter()
                 .append("path")
-                .attr("d", arc)
+                .attr("d", d3.arc()
+                    .innerRadius(innerRadius)
+                    .outerRadius(radius))
                 .attr("fill", function (d) {
                     return getColor(d.data.key);
                 })
@@ -146,7 +123,8 @@ bluewave.charts.PieChart = function(parent, config) {
 
               //Add the polylines between chart and labels:
                 let endPoints = [];
-                var lineGroup = pieArea.append("g");
+                var lineGroup = pieChart.append("g");
+                lineGroup.attr("name", "lines");
                 lineGroup.selectAll("*")
                   .data(pieData)
                   .enter()
@@ -177,7 +155,7 @@ bluewave.charts.PieChart = function(parent, config) {
 
               //Add the polylines between chart and labels:
                 var positions = [];
-                var labelGroup = pieArea.append("g");
+                var labelGroup = pieChart.append("g");
                 labelGroup.attr("name", "labels");
                 labelGroup.selectAll("*")
                   .data(pieData)
@@ -205,7 +183,7 @@ bluewave.charts.PieChart = function(parent, config) {
                   });
 
 
-              //Update pieArea as needed
+              //Update pieChart as needed
                 var box = labelGroup.node().getBBox();
                 if (box.width>width || box.height>height){
                     var scale, x, y;
@@ -220,9 +198,8 @@ bluewave.charts.PieChart = function(parent, config) {
                         y = box.height-height; //not sure about this...
                     }
 
-                    pieArea
-                      .attr("width", box.width)
-                      .attr("height", box.height)
+
+                    pieChart
                       .attr("transform",
                         "translate(" + x + "," + y + ") " +
                         "scale(" + scale + ")"
@@ -239,6 +216,7 @@ bluewave.charts.PieChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
+    var initChart = bluewave.utils.initChart;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();
