@@ -35,23 +35,10 @@ bluewave.charts.ScatterChart = function(parent, config) {
         config = merge(config, defaultConfig);
 
 
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof SVGElement) {
-            svg = d3.select(parent);
-        }
-        else{
-            svg = d3.select(parent).append("svg");
-            onRender(parent, function(){
-                var width = parent.offsetWidth;
-                var height = parent.offsetHeight;
-                svg.attr("width", width);
-                svg.attr("height", height);
-            });
-        }
-
-        chart = svg.append("g").append("g");
+        initChart(parent, function(s, g){
+            svg = s;
+            chart = g;
+        });
     };
 
 
@@ -76,11 +63,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
-            chart
-                .attr("width", width)
-                .attr("height", height);
-
-
             var margin = config.margin;
             axisHeight = height - margin.top - margin.bottom;
             axisWidth = width - margin.left - margin.right;
@@ -419,6 +401,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
+    var initChart = bluewave.utils.initChart;
 
     init();
 
