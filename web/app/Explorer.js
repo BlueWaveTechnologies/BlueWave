@@ -58,6 +58,9 @@ bluewave.Explorer = function(parent, config) {
       //Create preview panel
         dashboardPanel = document.createElement("div");
         dashboardPanel.style.height = "100%";
+        dashboardPanel.style.position = "relative";
+        dashboardPanel.style.padding = "10px";
+        dashboardPanel.style.boxSizing = "border-box";
 
         innerDiv.appendChild(dashboardPanel);
         addShowHide(dashboardPanel);
@@ -2299,7 +2302,7 @@ bluewave.Explorer = function(parent, config) {
             for (var i=0; i<dashboardItems.length; i++){
                 var dashboardItem = dashboardItems[i];
                 if (dashboardItem.nodeType===1){
-                    updateDashboardItem(dashboardItem);
+                    updateSVG(dashboardItem);
                 }
             }
         }
@@ -2307,12 +2310,12 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** updateDashboardItem
+  //** updateSVG
   //**************************************************************************
   /** Used to update the size and position of an individual dashboard item
    *  in s layout.
    */
-    var updateDashboardItem = function(dashboardItem){
+    var updateSVG = function(dashboardItem){
         var svgs = dashboardItem.getElementsByTagName("svg");
         if (svgs.length>0){
             var svg = svgs[0];
@@ -2326,18 +2329,19 @@ bluewave.Explorer = function(parent, config) {
             .attr("height",rect.height);
 
 
-          //Update scaling of the first g
-            var g = d3.select(svg.getElementsByTagName("g")[0]);
-            var g2 = d3.select(g.node().getElementsByTagName("g")[0]);
-            var width = parseFloat(g2.attr("width"));
-            var height = parseFloat(g2.attr("height"));
-
-
+          //Get attributes of the second "g" element in the svg. Assumes that
+          //the first "g" element is reserved exclusively for us to manipulate
+          //in this class. All chart types should have a outer "g" like this.
+            var g = svg.getElementsByTagName("g")[0]; //reserved for explorer
+            var g2 = g.getElementsByTagName("g")[0]; //used by individual charts
+            var box = g2.getBBox();
+            var width = box.width;
+            var height = box.height;
             var scaleX = 1;
             var scaleY = 1;
             var translateX = 0;
             var translateY = 0;
-            var transformList = g2.node().transform.baseVal;
+            var transformList = g2.transform.baseVal;
             for (var i=0; i<transformList.numberOfItems; i++){
                 var transform = transformList.getItem(i);
                 var m = transform.matrix;
@@ -2352,13 +2356,13 @@ bluewave.Explorer = function(parent, config) {
                     break;
                 }
             }
-            var scaledWidth = (width)*scaleX;
-            var scaledHeight = (height)*scaleY;
 
 
 
           //Compute scale
             var scale;
+            var scaledWidth = (width)*scaleX;
+            var scaledHeight = (height)*scaleY;
             if (width>=height){
                 scale = rect.width/scaledWidth;
                 var h = scaledHeight*scale;
@@ -2394,8 +2398,8 @@ bluewave.Explorer = function(parent, config) {
             }
 
 
-          //Apply transform
-            g.attr("transform",
+          //Apply transform to the first g
+            d3.select(g).attr("transform",
                 "translate(" + x + "," + y + ") " +
                 "scale(" + scale + ")"
             );
@@ -2426,12 +2430,24 @@ bluewave.Explorer = function(parent, config) {
       //TODO: Check if layout is dirty
         var isDirty = true;
         if (!isDirty) return;
+
+
+      //Clear the dashboardPanel
         dashboardPanel.innerHTML = "";
+
+
+      //Create a padded div to hold dashboard items
+        var paddedDiv = document.createElement("div");
+        paddedDiv.style.position = "relative";
+        paddedDiv.style.height = "100%";
+        dashboardPanel.appendChild(paddedDiv);
 
 
       //Render dashboard items
         for (var key in layoutNode.config) {
             if (layoutNode.config.hasOwnProperty(key)){
+
+
                 var layout = layoutNode.config[key];
                 var node = nodes[key];
                 var connected = checkConnection(layoutNode, node);
@@ -2441,23 +2457,45 @@ bluewave.Explorer = function(parent, config) {
                 if (!chartConfig) chartConfig = {};
                 var title = chartConfig.chartTitle;
 
-                var dashboardItem = createDashboardItem(dashboardPanel,{
+
+              //Create absolute div for the dashboard item
+                var outerDiv = document.createElement("div");
+                outerDiv.style.position = "absolute";
+                outerDiv.style.width = layout.width;
+                outerDiv.style.height = layout.height;
+                outerDiv.style.top = layout.top;
+                outerDiv.style.left = layout.left;
+                paddedDiv.appendChild(outerDiv);
+
+
+              //Create an inner div for padding purposes
+                var innerDiv = document.createElement("div");
+                innerDiv.style.width = "100%";
+                innerDiv.style.height = "100%";
+                innerDiv.style.padding = "10px";
+                innerDiv.style.boxSizing = "border-box";
+                outerDiv.appendChild(innerDiv);
+
+
+              //Create dashboard item
+                var dashboardItem = createDashboardItem(innerDiv,{
                     title: title,
-                    subtitle: ""
+                    subtitle: "",
+                    width: "100%",
+                    height: "100%"
                 });
 
 
-                var innerDiv = dashboardItem.innerDiv;
-                onRender(innerDiv, function(){
-
-                    var div = dashboardItem.el;
-                    div.style.position = "absolute";
-                    div.style.width = layout.width;
-                    div.style.height = layout.height;
-                    div.style.top = layout.top;
-                    div.style.left = layout.left;
+              //Update default style. Remove padding and margin because the
+              //inner div handles that.
+                var div = dashboardItem.el;
+                div.style.padding = "0px";
+                div.style.margin = "0px";
 
 
+              //Function used to create a overflow container for charts
+                var createChartContainer = function(){
+                    var innerDiv = dashboardItem.innerDiv;
                     var chartContainer = document.createElement("div");
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
@@ -2465,10 +2503,12 @@ bluewave.Explorer = function(parent, config) {
                     chartContainer.style.width = layout.imageWidth + "px";
                     chartContainer.style.height = layout.imageHeight + "px";
                     innerDiv.appendChild(chartContainer);
+                    return chartContainer;
+                };
 
 
+                onRender(dashboardItem.innerDiv, function(){
                     if (node.type==="addData"){
-                        div.style.padding = "0px";
 
                         var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
                             columns: chartConfig.columns,
@@ -2495,17 +2535,16 @@ bluewave.Explorer = function(parent, config) {
                     }
                     else if (node.type==="sankeyChart" || node.type==="supplyChain"){
 
-                    //Instantiate sankeyEditor as needed
+                      //Instantiate sankeyEditor as needed
                         if (!sankeyEditor) editSankey(node, true);
 
-                    //Get sankey config and data
+                      //Get sankey config and data
                         sankeyEditor.update(node.config, getSupplyChainInputs(node));
                         var sankeyConfig = sankeyEditor.getConfig();
                         var data = sankeyEditor.getSankeyData();
 
-                    //Render sankeyChart
-                        var sankeyChart = new bluewave.charts.SankeyChart(chartContainer,config);
-
+                      //Render sankeyChart
+                        var sankeyChart = new bluewave.charts.SankeyChart(createChartContainer(),config);
                         sankeyChart.update(sankeyConfig.style,data);
 
                     }
@@ -2520,19 +2559,19 @@ bluewave.Explorer = function(parent, config) {
                             }
                         }
                         if (node.type==="pieChart"){
-                            var pieChart = new bluewave.charts.PieChart(chartContainer,{});
+                            var pieChart = new bluewave.charts.PieChart(createChartContainer(),{});
                             pieChart.update(chartConfig, data);
                         }
                         else if (node.type==="barChart"){
-                            var barChart = new bluewave.charts.BarChart(chartContainer,{});
+                            var barChart = new bluewave.charts.BarChart(createChartContainer(),{});
                             barChart.update(chartConfig, data);
                         }
                         else if (node.type==="lineChart"){
-                            var lineChart = new bluewave.charts.LineChart(chartContainer,{});
+                            var lineChart = new bluewave.charts.LineChart(createChartContainer(),{});
                             lineChart.update(chartConfig, data);
                         }
                         else if (node.type==="scatterChart"){
-                            var scatterChart = new bluewave.charts.ScatterChart(chartContainer,{});
+                            var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
                             scatterChart.update(chartConfig, data);
                         }
                         else if (node.type==="map"){
@@ -2544,15 +2583,17 @@ bluewave.Explorer = function(parent, config) {
 
                             //Render mapChart
                             // var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
-                            var mapChart = new bluewave.charts.MapChart(chartContainer,config);
+                            var mapChart = new bluewave.charts.MapChart(createChartContainer(),config);
 
                             mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
                         }
                         else{
                             console.log(node.type + " preview not implemented!");
                         }
-                        updateLayout();
                     }
+
+                    updateSVG(div);
+
                 });
             }
         }
