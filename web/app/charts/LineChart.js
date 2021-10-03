@@ -132,7 +132,7 @@ bluewave.charts.LineChart = function(parent, config) {
             let xType = typeOfAxisValue();
 
                 //Reformat data if "group by" is selected
-                if(group){
+                if(group !== null && group !== undefined){
 
                     //Hide label field
                     let labelField = document.querySelector(".form-input[name=label0]");
@@ -287,7 +287,8 @@ bluewave.charts.LineChart = function(parent, config) {
 
                     //Display end tags if checked
                     if(chartConfig.endTags){
-                        let label = (group || chartConfig["label" + i]);
+                        let thisDataSet = dataSets[i][0];
+                        let label = (thisDataSet[group] || chartConfig["label" + i]);
                         drawLabelTag(sumData, lineColor, label);
                     }
 
