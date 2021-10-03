@@ -26,7 +26,6 @@ bluewave.ChartEditor = function(parent, config) {
     var previewArea;
     var pieChart, lineChart, barChart;
     var optionsDiv;
-    var linePaths;
     var pieInputs={
         key:"",
         value:""
@@ -61,10 +60,10 @@ bluewave.ChartEditor = function(parent, config) {
         inputs: []
     };
     var margin = {
-        top: 15,
-        right: 5,
-        bottom: 65,
-        left: 82
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0
     };
     var styleEditor, colorPicker;
 
