@@ -154,8 +154,8 @@ bluewave.charts.Layout = function(parent, config) {
 
           //Instantiate Packery
             var packery = new Packery(mainDiv, {
-                columnWidth: 25,
-                gutter: 25,
+                columnWidth: 5,
+                gutter: 5,
                 initLayout: false // disable initial layout
             });
 
@@ -226,8 +226,6 @@ bluewave.charts.Layout = function(parent, config) {
             maxHeight = 1;
             maxWidth = width/height;
         }
-        if (maxWidth<1) maxWidth = 1-maxWidth;
-        if (maxHeight<1) maxHeight = 1-maxHeight;
 
 
 
@@ -257,8 +255,8 @@ bluewave.charts.Layout = function(parent, config) {
                     y: y,
                     w: w,
                     h: h,
-                    left: round(((rect.x-minX)/width)*100, 4)+"%",
-                    top: round(((rect.y-minY)/height)*100, 4)+"%",
+                    left: round(((rect.x-minX)/width)*maxWidth*100, 4)+"%",
+                    top: round(((rect.y-minY)/height)*maxHeight*100, 4)+"%",
                     width: round((rect.width/width)*maxWidth*100, 4)+"%",
                     height: round((rect.height/height)*maxHeight*100, 4)+"%",
                     imageWidth: img.naturalWidth,
