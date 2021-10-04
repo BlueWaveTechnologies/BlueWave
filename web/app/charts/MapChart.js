@@ -14,12 +14,6 @@ bluewave.charts.MapChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         style: {
-        },
-        margin: {
-            top: 15,
-            right: 5,
-            bottom: 65,
-            left: 82
         }
     };
     var svg, mapArea; //d3 elements
@@ -35,23 +29,12 @@ bluewave.charts.MapChart = function(parent, config) {
     var init = function(){
         config = merge(config, defaultConfig);
 
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof d3.selection){
-            svg = d3.select(parent);
-        }
-        else {
-            svg = d3.select(parent).append("svg");
-            onRender(parent, function(){
-                var width = parent.offsetWidth;
-                var height = parent.offsetHeight;
-                svg.attr("width", width);
-                svg.attr("height", height);
-            });
-        }
+        initChart(parent, function(s, g){
+            svg = s;
+            mapArea = g;
+        });
 
-        mapArea = svg.append("g").append("g");
+
         readOnly = false;
         svg.call(d3.zoom()
             .scaleExtent([1, 1])
@@ -967,6 +950,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
+    var initChart = bluewave.utils.initChart;
 
     init();
 };
