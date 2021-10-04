@@ -301,7 +301,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 )
                 .on("click", function(d){
                     me.onClick(this);
-                    raiseCorrespondingTag(tags, i)
+                    if(chartConfig.endTags) raiseCorrespondingTag(tags, i);
                 });
                 
 
