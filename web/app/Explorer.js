@@ -55,11 +55,8 @@ bluewave.Explorer = function(parent, config) {
         div.appendChild(innerDiv);
 
 
-      //Create preview panel
-        dashboardPanel = document.createElement("div");
-        dashboardPanel.style.height = "100%";
-        innerDiv.appendChild(dashboardPanel);
-        addShowHide(dashboardPanel);
+      //Create dashboard panel
+        dashboardPanel = createDashboard(innerDiv);
         dashboardPanel.hide();
 
 
@@ -85,6 +82,7 @@ bluewave.Explorer = function(parent, config) {
         parent.appendChild(div);
         me.el = div;
         addShowHide(me);
+        addResizeListener(div, updateLayout);
     };
 
 
@@ -102,7 +100,7 @@ bluewave.Explorer = function(parent, config) {
     this.clear = function(){
 
       //Clear dashboard panel
-        dashboardPanel.innerHTML = "";
+        dashboardPanel.clear();
 
       //Reset class variables
         id = name = thumbnail = null;
@@ -1113,6 +1111,7 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+
   //**************************************************************************
   //** addEventListeners
   //**************************************************************************
@@ -1766,6 +1765,7 @@ bluewave.Explorer = function(parent, config) {
 
       //Create layoutEditor as needed
         if (!layoutEditor){
+
             var win = createNodeEditor({
                 title: "Edit Layout",
                 width: 1425, //Up to 4 dashboard items at 250px width
@@ -1773,7 +1773,6 @@ bluewave.Explorer = function(parent, config) {
                 resizable: true,
                 beforeClose: function(){
                     var chartConfig = layoutEditor.getConfig();
-                    console.log(chartConfig);
                     var node = layoutEditor.getNode();
                     var orgConfig = node.config;
                     if (!orgConfig) orgConfig = {};
@@ -1795,7 +1794,6 @@ bluewave.Explorer = function(parent, config) {
                     }
                 }
             });
-
 
             layoutEditor = new bluewave.charts.Layout(win.getBody(), config);
             layoutEditor.el.style.borderRadius = "0 0 5px 5px";
@@ -2285,14 +2283,211 @@ bluewave.Explorer = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** updateLayout
+  //**************************************************************************
+  /** Used to update the size and position of all the dashboard items in the
+   *  layout.
+   */
+    var updateLayout = function(){
+        if (me.getView()!=="Edit"){
+            dashboardPanel.resize();
+            var dashboardItems = dashboardPanel.getDashboardItems();
+            for (var i=0; i<dashboardItems.length; i++){
+                var dashboardItem = dashboardItems[i];
+                updateSVG(dashboardItem);
+            }
+        }
+    };
 
+
+  //**************************************************************************
+  //** updateSVG
+  //**************************************************************************
+  /** Used to update the size and position of an individual dashboard item
+   *  in s layout.
+   */
+    var updateSVG = function(dashboardItem){
+        var svgs = dashboardItem.getElementsByTagName("svg");
+        if (svgs.length>0){
+            var svg = svgs[0];
+            var chartContainer = svg.parentNode;
+            var rect = javaxt.dhtml.utils.getRect(chartContainer.parentNode);
+
+
+          //Update dimensions of the svg
+            d3.select(svg)
+            .attr("width",rect.width)
+            .attr("height",rect.height);
+
+
+          //Get attributes of the second "g" element in the svg. Assumes that
+          //the first "g" element is reserved exclusively for us to manipulate
+          //in this class. All chart types should have a outer "g" like this.
+            var g = svg.getElementsByTagName("g")[0]; //reserved for explorer
+            var g2 = g.getElementsByTagName("g")[0]; //used by individual charts
+            var box = g2.getBBox();
+            var width = box.width;
+            var height = box.height;
+            var scaleX = 1;
+            var scaleY = 1;
+            var translateX = 0;
+            var translateY = 0;
+            var transformList = g2.transform.baseVal;
+            for (var i=0; i<transformList.numberOfItems; i++){
+                var transform = transformList.getItem(i);
+                var m = transform.matrix;
+                switch (transform.type){
+                  case 2:
+                    translateX = m.e;
+                    translateY = m.f;
+                    break;
+                  case 3:
+                    scaleX = m.a;
+                    scaleY = m.d;
+                    break;
+                }
+            }
+
+
+
+          //Compute scale
+            var scale;
+            var scaledWidth = (width)*scaleX;
+            var scaledHeight = (height)*scaleY;
+            if (width>=height){
+                scale = rect.width/scaledWidth;
+                var h = scaledHeight*scale;
+                if (h>rect.height){
+                    scale = rect.height/scaledHeight;
+                }
+            }
+            else{
+                scale = rect.height/scaledHeight;
+                var w = scaledWidth*scale;
+                if (w>rect.width){
+                    scale = rect.width/scaledWidth;
+                }
+            }
+
+
+
+          //Compute x/y offset
+            var x = 0;
+            var y = 0;
+            if (translateX===0){ //center the chart
+                x = (rect.width/2)-((scaledWidth*scale)/2);
+            }
+            else{
+                //TODO: center chart using translateX
+            }
+
+            if (translateY===0){ //center the chart
+                y = (rect.height/2)-((scaledHeight*scale)/2);
+            }
+            else{
+                //TODO: center chart using translateY
+            }
+
+
+          //Apply transform to the first g
+            d3.select(g).attr("transform",
+                "translate(" + x + "," + y + ") " +
+                "scale(" + scale + ")"
+            );
+
+        }
+    };
+
+
+  //**************************************************************************
+  //** createDashboard
+  //**************************************************************************
+  /** Creates a panel used to render dashboard items
+   */
+    var createDashboard = function(parent){
+        var outerDiv = document.createElement("div");
+        outerDiv.style.height = "100%";
+        outerDiv.style.textAlign = "center";
+        parent.appendChild(outerDiv);
+        addShowHide(outerDiv);
+
+
+        var paddedDiv = document.createElement("div");
+        paddedDiv.style.height = "100%";
+        paddedDiv.style.position = "relative";
+        paddedDiv.style.padding = "10px";
+        paddedDiv.style.boxSizing = "border-box";
+        paddedDiv.style.display = "inline-block";
+        outerDiv.appendChild(paddedDiv);
+
+        var innerDiv = document.createElement("div");
+        innerDiv.style.position = "relative";
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        paddedDiv.appendChild(innerDiv);
+
+
+
+        var childNodes = [];
+        var maxWidth = 0;
+        var maxHeight = 0;
+        outerDiv.add = function(el){
+            innerDiv.appendChild(el);
+            childNodes.push(el);
+            maxWidth = Math.max(maxWidth, parseFloat(el.style.width)+parseFloat(el.style.left))/100;
+            maxHeight = Math.max(maxHeight, parseFloat(el.style.height)+parseFloat(el.style.top))/100;
+        };
+        outerDiv.clear = function(){
+            innerDiv.innerHTML = "";
+            childNodes = [];
+            maxWidth = 0;
+            maxHeight = 0;
+        };
+        outerDiv.getDashboardItems = function(){
+            return childNodes;
+        };
+        outerDiv.resize = function(){
+
+            var width = outerDiv.offsetWidth;
+            var height = outerDiv.offsetHeight;
+
+            if (maxWidth===0 || maxHeight===0) return;
+
+            var w, h;
+            if (maxWidth>=maxHeight){
+                w = width;
+                h = w;
+
+                if (height<h*maxHeight){
+                    var d = height/(h*maxHeight);
+                    w = w*d;
+                    h = w;
+                }
+            }
+            else{
+                h = height;
+                w = h;
+
+                if (width<w*maxWidth){
+                    var d = width/(w*maxWidth);
+                    h = h*d;
+                    w = h;
+                }
+            }
+
+            paddedDiv.style.width = w + "px";
+            paddedDiv.style.height = h + "px";
+        };
+
+        return outerDiv;
+    };
 
 
   //**************************************************************************
   //** updateDashboard
   //**************************************************************************
     var updateDashboard = function(){
-
 
       //Find layout node
         var layoutNode;
@@ -2311,13 +2506,19 @@ bluewave.Explorer = function(parent, config) {
       //TODO: Check if layout is dirty
         var isDirty = true;
         if (!isDirty) return;
-        dashboardPanel.innerHTML = "";
+
+
+      //Clear and resize the dashboardPanel
+        dashboardPanel.clear();
+
 
 
       //Render dashboard items
         for (var key in layoutNode.config) {
             if (layoutNode.config.hasOwnProperty(key)){
-                var rect = layoutNode.config[key];
+
+
+                var layout = layoutNode.config[key];
                 var node = nodes[key];
                 var connected = checkConnection(layoutNode, node);
                 if (!connected) continue;
@@ -2326,33 +2527,59 @@ bluewave.Explorer = function(parent, config) {
                 if (!chartConfig) chartConfig = {};
                 var title = chartConfig.chartTitle;
 
-                var dashboardItem = createDashboardItem(dashboardPanel,{
-                    width: rect.w,
-                    height: rect.h,
+
+              //Create absolute div for the dashboard item
+                var outerDiv = document.createElement("div");
+                outerDiv.style.position = "absolute";
+                outerDiv.style.width = layout.width;
+                outerDiv.style.height = layout.height;
+                outerDiv.style.top = layout.top;
+                outerDiv.style.left = layout.left;
+                dashboardPanel.add(outerDiv);
+                dashboardPanel.resize();
+
+
+              //Create an inner div for padding purposes
+                var innerDiv = document.createElement("div");
+                innerDiv.style.width = "100%";
+                innerDiv.style.height = "100%";
+                innerDiv.style.padding = "10px";
+                innerDiv.style.boxSizing = "border-box";
+                outerDiv.appendChild(innerDiv);
+
+
+              //Create dashboard item
+                var dashboardItem = createDashboardItem(innerDiv,{
                     title: title,
-                    subtitle: ""
+                    subtitle: "",
+                    width: "100%",
+                    height: "100%"
                 });
 
+
+              //Update default style. Remove padding and margin because the
+              //inner div handles that.
                 var div = dashboardItem.el;
-                div.style.position = "absolute";
-                div.style.top = rect.y + "px";
-                div.style.left = rect.x + "px";
+                div.style.padding = "0px";
+                div.style.margin = "0px";
 
 
-                var innerDiv = dashboardItem.innerDiv;
-                onRender(innerDiv, function(){
-
+              //Function used to create a overflow container for charts
+                var createChartContainer = function(){
+                    var innerDiv = dashboardItem.innerDiv;
                     var chartContainer = document.createElement("div");
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
                     innerDiv.style.overflow = "hidden";
-                    chartContainer.style.width = rect.imageWidth;
-                    chartContainer.style.height = rect.imageHeight;
+                    chartContainer.style.width = layout.imageWidth + "px";
+                    chartContainer.style.height = layout.imageHeight + "px";
                     innerDiv.appendChild(chartContainer);
+                    return chartContainer;
+                };
 
 
+                onRender(dashboardItem.innerDiv, function(){
                     if (node.type==="addData"){
-                        div.style.padding = "0px";
 
                         var grid = new javaxt.dhtml.DataGrid(dashboardItem.innerDiv, {
                             columns: chartConfig.columns,
@@ -2379,17 +2606,16 @@ bluewave.Explorer = function(parent, config) {
                     }
                     else if (node.type==="sankeyChart" || node.type==="supplyChain"){
 
-                    //Instantiate sankeyEditor as needed
+                      //Instantiate sankeyEditor as needed
                         if (!sankeyEditor) editSankey(node, true);
 
-                    //Get sankey config and data
+                      //Get sankey config and data
                         sankeyEditor.update(node.config, getSupplyChainInputs(node));
                         var sankeyConfig = sankeyEditor.getConfig();
                         var data = sankeyEditor.getSankeyData();
 
-                    //Render sankeyChart
-                        var sankeyChart = new bluewave.charts.SankeyChart(chartContainer,config);
-
+                      //Render sankeyChart
+                        var sankeyChart = new bluewave.charts.SankeyChart(createChartContainer(),config);
                         sankeyChart.update(sankeyConfig.style,data);
 
                     }
@@ -2404,25 +2630,20 @@ bluewave.Explorer = function(parent, config) {
                             }
                         }
                         if (node.type==="pieChart"){
-                            var pieChart = new bluewave.charts.PieChart(chartContainer,{});
+                            var pieChart = new bluewave.charts.PieChart(createChartContainer(),{});
                             pieChart.update(chartConfig, data);
-                            resizeSVG(dashboardItem, rect);
                         }
                         else if (node.type==="barChart"){
-                            var barChart = new bluewave.charts.BarChart(chartContainer,{});
+                            var barChart = new bluewave.charts.BarChart(createChartContainer(),{});
                             barChart.update(chartConfig, data);
-                            resizeSVG(dashboardItem, rect);
                         }
                         else if (node.type==="lineChart"){
-                            var lineChart = new bluewave.charts.LineChart(chartContainer,{});
-
+                            var lineChart = new bluewave.charts.LineChart(createChartContainer(),{});
                             lineChart.update(chartConfig, data);
-                            resizeSVG(dashboardItem, rect);
                         }
                         else if (node.type==="scatterChart"){
-                            var scatterChart = new bluewave.charts.ScatterChart(chartContainer,{});
+                            var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
                             scatterChart.update(chartConfig, data);
-                            resizeSVG(dashboardItem, rect);
                         }
                         else if (node.type==="map"){
                             //Instantiate mapEditor as needed
@@ -2433,37 +2654,24 @@ bluewave.Explorer = function(parent, config) {
 
                             //Render mapChart
                             // var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
-                            var mapChart = new bluewave.charts.MapChart(chartContainer,config);
+                            var mapChart = new bluewave.charts.MapChart(createChartContainer(),config);
 
                             mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
                         }
                         else{
                             console.log(node.type + " preview not implemented!");
                         }
-
                     }
+
+                    updateSVG(div);
+
                 });
             }
         }
 
-    };
 
-
-  //**************************************************************************
-  //** resizeSVG
-  //**************************************************************************
-    var resizeSVG = function(dashboardItem, rect){
-
-      //Find and update svg
-        var svg = dashboardItem.innerDiv.getElementsByTagName("svg")[0];
-        d3.select(svg)
-        .attr("width",rect.w)
-        .attr("height",rect.h);
-
-
-      //Find and update first "g" element in the svg
-        var g = d3.select(svg.getElementsByTagName("g")[0]);
-        g.attr("transform",`scale(${rect.w/rect.imageWidth})`);
+      //Some charts take a little longer to render so update again just in case
+        setTimeout(updateLayout,800);
     };
 
 
@@ -2557,6 +2765,7 @@ bluewave.Explorer = function(parent, config) {
     var del = javaxt.dhtml.utils.delete;
     var get = bluewave.utils.get;
     var destroy = javaxt.dhtml.utils.destroy;
+    var addResizeListener = javaxt.dhtml.utils.addResizeListener;
 
 
     init();
