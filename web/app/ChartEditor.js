@@ -367,7 +367,7 @@ bluewave.ChartEditor = function(parent, config) {
                     createLabel("Y-Axis"),
                     createDropdown("yAxis", plotInputs),
 
-                    createLabel("Group By"),
+                    createLabel("Separate By"),
                     createDropdown("group", plotInputs),
 
                     createLabel("Label", "label0"),
