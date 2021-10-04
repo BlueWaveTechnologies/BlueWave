@@ -95,6 +95,7 @@ bluewave.charts.LineChart = function(parent, config) {
         let xKey2;
         let yKey2;
         let group;
+        let tags = {};
 
         if(chartConfig.xAxis===null || chartConfig.yAxis===null){
             return;
@@ -298,17 +299,26 @@ bluewave.charts.LineChart = function(parent, config) {
                         return y(d["value"]);
                     })
                 )
-                .on("click", function(){
+                .on("click", function(d){
                     me.onClick(this);
+                    raiseCorrespondingTag(tags, i)
                 });
+                
 
 
           //Display end tags if checked
             if (chartConfig.endTags){
                 let thisDataSet = dataSets[i][0];
                 let label = (thisDataSet[group] || chartConfig["label" + i]);
-                drawLabelTag(sumData, lineColor, label);
+                let tag = createLabelTag(sumData, lineColor, label);
+
+                tags[`dataset${i}`] = {
+                    poly: tag.poly,
+                    text: tag.text
+                };
             }
+
+
         };
 
 
@@ -333,9 +343,9 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** drawEndLabels
+  //** createLabelTag
   //**************************************************************************
-    var drawLabelTag = function(dataSet, color, label){
+    var createLabelTag = function(dataSet, color, label){
         if(!label){
             label = "Add Label"
         }
@@ -387,6 +397,11 @@ bluewave.charts.LineChart = function(parent, config) {
             .style("fill", "#fff")
             .text(label);
 
+        return {
+            poly: poly,
+            text: text
+        };
+
     };
 
 
@@ -415,6 +430,24 @@ bluewave.charts.LineChart = function(parent, config) {
 
     };
 
+  //**************************************************************************
+  //** raiseCorrespondingTag
+  //**************************************************************************
+    var raiseCorrespondingTag = function(tags, i) {
+        
+        var tag = tags[`dataset${i}`];
+        var poly = tag.poly.node().cloneNode(true);
+        var text = tag.text.node().cloneNode(true);
+
+        tag.poly.remove();
+        tag.text.remove();
+
+        plotArea.node().appendChild(poly);
+        plotArea.node().appendChild(text);
+
+        tag.poly = d3.select(poly);
+        tag.text = d3.select(text);
+  };
 
   //**************************************************************************
   //** displayAxis
