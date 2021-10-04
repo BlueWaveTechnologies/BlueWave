@@ -472,7 +472,8 @@ bluewave.charts.MapChart = function(parent, config) {
                             });
                             if(notNaN){
                                 if(!points.coords){
-                                    points.coords = coord;
+                                    points.coords = [];
+                                    points.coords.push(coord);
                                 }else{
                                     points.coords.push(coord);
                                 }
@@ -743,7 +744,6 @@ bluewave.charts.MapChart = function(parent, config) {
         var c = chartConfig.pointColor;
         if (!c) c = "#ff3c38";
 
-        console.log(points);
         mapArea.append("g")
         .selectAll("whatever")
         .data(points.coords)
