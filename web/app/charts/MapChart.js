@@ -216,29 +216,10 @@ bluewave.charts.MapChart = function(parent, config) {
                     points = getPoints(data, chartConfig, projection);
                 }
 
-
-              //If we are using Admin Area instead of Geo Coords
+                //Get Centroids when using Admin Area
                 if (chartConfig.pointData==="adminArea"){
-                    data.forEach(function(d){
-                        var county = d[chartConfig.mapLocation];
-                        for (var i = 0; i < counties.features.length; i++){
-                            var feature = counties.features[i];
-                            if (county === feature.id){
-                                var val = parseFloat(d[chartConfig.mapValue]);
-                                if (!isNaN(val) && val>0){
-                                    var coord = path.centroid(feature);
-                                    coord.push(val);
-                                    if(!points.coords){
-                                        points.coords = coord;
-                                    }else{
-                                        points.coords.push(coord);
-                                    }
-                                }
-                            }
-                        }
-                    });
+                    getCentroids(data, points, states, chartConfig, path);
                 }
-
 
               //Render points
                 renderPoints(points, chartConfig, extent);
@@ -352,26 +333,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
                 //Get Centroids when using Admin Area
                 if (chartConfig.pointData==="adminArea"){
-                    data.forEach(function(d){
-                        var state = d[chartConfig.mapLocation];
-                        for (var i = 0; i < states.features.length; i++){
-                            var feature = states.features[i];
-                            if (state === feature.properties.code){
-                                if (chartConfig.mapValue){
-                                    var val = parseFloat(d[chartConfig.mapValue]);
-                                    if (!isNaN(val) && val>0){
-                                        var coord = path.centroid(feature);
-                                        coord.push(val);
-                                        if(!points.coords){
-                                            points.coords = coord;
-                                        }else{
-                                            points.coords.push(coord);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
+                    getCentroids(data, points, states, chartConfig, path);
                 }
                 renderPoints(points, chartConfig, extent);
 
@@ -436,7 +398,6 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
-            console.log(countries.features);
           //Render countries
             mapArea.selectAll("path")
                 .data(countries.features)
@@ -455,25 +416,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
                 //Use Centroids if we are instead using Admin Area
                 if(chartConfig.pointData==="adminArea"){
-                    data.forEach(function(d){
-                        var country = d[chartConfig.mapLocation];
-                        for (var i = 0; i < counties.features.length; i++){
-                            var feature = countries.features[i];
-                            if (country === feature.properties.code){
-                                var val = parseFloat(d[chartConfig.mapValue]);
-                                if (!isNaN(val) && val>0){
-                                    var coord = path.centroid(feature);
-                                    coord.push(val);
-                                    if(!points.coords){
-                                        points.coords = coord;
-                                    }else{
-                                        points.coords.push(coord);
-                                    }
-                                }
-                            }
-                        }
-                    });
-
+                    getCentroids(data, points, countries, chartConfig, path);
                 }
                 renderPoints(points, chartConfig, extent);
             }
@@ -522,6 +465,41 @@ bluewave.charts.MapChart = function(parent, config) {
             me.onUpdate();
         }
     };
+
+  //**************************************************************************
+  //** getCentroids
+  //**************************************************************************
+    var getCentroids = function(data, points, geographic, chartConfig, path){
+
+        data.forEach(function(d){
+            var value = d[chartConfig.mapLocation];
+            for (var i = 0; i < geographic.features.length; i++){
+                var feature = geographic.features[i];
+                if (value === feature.properties.code){
+                    if (chartConfig.mapValue){
+                        var val = parseFloat(d[chartConfig.mapValue]);
+                        if (!isNaN(val) && val>0){
+                            var notNaN = true;
+                            var coord = path.centroid(feature);
+                            coord.push(val);
+                            coord.forEach(function(c){
+                                if(isNaN(c)){
+                                    notNaN = false;
+                                }
+                            });
+                            if(notNaN){
+                                if(!points.coords){
+                                    points.coords = coord;
+                                }else{
+                                    points.coords.push(coord);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
 
   //**************************************************************************
@@ -782,6 +760,7 @@ bluewave.charts.MapChart = function(parent, config) {
         var c = chartConfig.pointColor;
         if (!c) c = "#ff3c38";
 
+        console.log(points);
         mapArea.append("g")
         .selectAll("whatever")
         .data(points.coords)
@@ -789,7 +768,6 @@ bluewave.charts.MapChart = function(parent, config) {
         .append("circle")
         .attr("r",function(coord){
             if (points.hasValue){
-                console.log(coord);
                 var val = coord[2];
                 if (isNaN(val) || val<=0) return r;
                 var p = val/extent[1];
@@ -804,7 +782,6 @@ bluewave.charts.MapChart = function(parent, config) {
             return r;
         })
         .attr("transform", function(d) {
-            console.log(d);
             return "translate(" + [d[0],d[1]] + ")";
         })
         .style("fill", c);
