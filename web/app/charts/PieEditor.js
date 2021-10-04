@@ -28,11 +28,13 @@ bluewave.charts.PieEditor = function(parent, config) {
     var optionsDiv;
     var pieInputs={
         key:"",
-        value:""
+        value:"",
+        direction:""
     };
     var chartConfig = {
         pieKey:null,
         pieValue:null,
+        pieDirection:null,
         chartTitle:null
     };
     var margin = {
@@ -178,30 +180,37 @@ bluewave.charts.PieEditor = function(parent, config) {
 
             for (var node in inputData[0].nodes) {
                 var nodeType =inputData[0].nodes[node].type;
+                var nodeName = inputData[0].nodes[node].name;
                 if (nodeTypeList.indexOf(nodeType) === -1) {
                 nodeTypeList.push(nodeType);
                 }
                 var nodeAndTypeEntry = {};
                 nodeAndTypeEntry.id = node;
                 nodeAndTypeEntry.type = nodeType;
+                nodeAndTypeEntry.name = nodeName;
                 nodeAndType.push(nodeAndTypeEntry);
             }
 
             for (var link in inputData[0].links) {
                 var linkStartType = "";
                 var linkEndType = "";
+                var linkStartName = "";
+                var linkEndName = "";
                 var linkQuantity = inputData[0].links[link].quantity;
 
                 for (var entry of nodeAndType) {
                     if (link.startsWith(entry.id)) {
                         linkStartType = entry.type;
+                        linkStartName = entry.name;
                     }
                     if (link.endsWith(entry.id)) {
                         linkEndType = entry.type;
+                        linkEndName = entry.name;
                     }
 
                 }
-                var linkFullType = linkStartType + " to " + linkEndType;
+//                var linkFullType = linkStartType + " to " + linkEndType;
+                var linkFullType = linkStartName + " to " + linkEndName;
                 var linksAndQuantityEntry = {};
                 linksAndQuantityEntry.key = linkFullType;
                 linksAndQuantityEntry.value = linkQuantity;
@@ -238,10 +247,13 @@ bluewave.charts.PieEditor = function(parent, config) {
                 pieInputs.key.add(val, val);
             });
             pieInputs.value.add("quantity");
+            pieInputs.direction.add("Inbound");
+            pieInputs.direction.add("Outbound");
         }
 
         pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
         pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
+        pieInputs.direction.setValue(chartConfig.pieDirection,chartConfig.pieDirection);
     };
 
 
@@ -263,8 +275,10 @@ bluewave.charts.PieEditor = function(parent, config) {
   //** createPieDropdown
   //**************************************************************************
     var createPieDropdown = function(tbody){
-        dropdownItem(tbody,"pieKey","Key",createPiePreview,pieInputs,"key");
-        dropdownItem(tbody,"pieValue","Value",createPiePreview,pieInputs,"value");
+        dropdownItem(tbody,"pieKey","Group By",createPiePreview,pieInputs,"key");
+        dropdownItem(tbody,"pieValue","Value Type",createPiePreview,pieInputs,"value");
+        dropdownItem(tbody,"pieDirection","Direction",createPiePreview,pieInputs,"direction");
+
     };
 
 
@@ -327,6 +341,12 @@ bluewave.charts.PieEditor = function(parent, config) {
             if (data.hasOwnProperty("links")) {
             data = linksAndQuantity.slice();
             data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
+
+            if(chartConfig.pieDirection === "Inbound") {
+                data = data.filter(entry => entry.key.endsWith(chartConfig.pieKey));
+            } else {
+                data = data.filter(entry => entry.key.startsWith(chartConfig.pieKey));
+            }
             let scData = [];
             data.forEach(function(entry, index) {
                 let scEntry = {};
