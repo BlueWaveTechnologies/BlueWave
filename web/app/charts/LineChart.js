@@ -59,256 +59,270 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-            me.clear();
+            renderChart(chartConfig, data, parent);
+        });
+    };
 
-            var width = parent.offsetWidth;
-            var height = parent.offsetHeight;
-            var margin = config.margin;
-            axisHeight = height - margin.top - margin.bottom;
-            axisWidth = width - margin.left - margin.right;
-            var plotHeight = height - margin.top - margin.bottom;
-            var plotWidth = width - margin.left - margin.right;
-            plotArea = chart.append("g");
+
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+    var renderChart = function(chartConfig, data, parent){
+        me.clear();
+
+        var width = parent.offsetWidth;
+        var height = parent.offsetHeight;
+        var margin = config.margin;
+        axisHeight = height - margin.top - margin.bottom;
+        axisWidth = width - margin.left - margin.right;
+        var plotHeight = height - margin.top - margin.bottom;
+        var plotWidth = width - margin.left - margin.right;
+        plotArea = chart.append("g");
+        plotArea
+            .attr("width", plotWidth)
+            .attr("height", plotHeight)
+            .attr(
+                "transform",
+                "translate(" + margin.left + "," + (margin.top) + ")"
+            );
+
+
+
+         // Setup:
+        // Check that axis exist and are populated
+        let xKey;
+        let yKey;
+        let xKey2;
+        let yKey2;
+        let group;
+
+        if(chartConfig.xAxis===null || chartConfig.yAxis===null){
+            return;
+        }else{
+            xKey = chartConfig.xAxis;
+            yKey = chartConfig.yAxis;
+            group = chartConfig.group;
+        }
+
+        if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
+            xKey2 = chartConfig.xAxis2;
+            yKey2 = chartConfig.yAxis2;
+        }
+
+
+        var data1 = data[0];
+        var data2 = data[1];
+        dataSets = data;
+        data = data1;
+
+        var mergedData = d3.merge(dataSets);
+        // if (data2!==null && data2!==undefined && xKey2 && yKey2){
+        //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
+        // }
+
+
+        //Set axes with merged data
+        var axisData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.max(d, function (g) {
+                    return g[yKey];
+                });
+            }).entries(mergedData);
+
+        displayAxis("key", "value", axisData);
+
+        let xType = typeOfAxisValue();
+
+
+      //Reformat data if "group by" is selected
+        if(group !== null && group !== undefined){
+
+            //Hide label field
+            let labelField = document.querySelector(".form-input[name=label0]");
+            let label = document.querySelector(".label0");
+            addShowHide(label);
+            addShowHide(labelField);
+            labelField.hide();
+            label.hide();
+
+            let groupData = d3.nest()
+            .key(function(d){return d[group];})
+            .entries(data);
+
+            let tempDataSets = [];
+            groupData.forEach(function(g){
+
+                tempDataSets.push(g.values)
+            })
+
+            dataSets = tempDataSets;
+            // displayAxis(xKey,yKey,data);
+        }
+
+
+        var arr = [];
+        for (let i=0; i<dataSets.length; i++){
+
+            if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
+                xKey = chartConfig[`xAxis${i+1}`];
+                yKey = chartConfig[`yAxis${i+1}`];
+                if(!xKey || !yKey) continue;
+            }
+
+            var sumData = d3.nest()
+                .key(function(d){return d[xKey];})
+                .rollup(function(d){
+                    return d3.sum(d,function(g){
+                        return g[yKey];
+                    });
+            }).entries(dataSets[i]);
+
+            arr.push(sumData);
+        }
+
+
+
+      //Update chartConfig with line colors
+        var colors = bluewave.utils.getColorPalette(true);
+        var prevColor;
+        for (let i=0; i<arr.length; i++){
+            var lineColor = chartConfig["lineColor" + i];
+            if (!lineColor){
+                while (true){
+                    if (colors.length===0) colors = bluewave.utils.getColorPalette(true);
+                    lineColor = colors.shift();
+                    if (lineColor!=prevColor) break;
+                }
+                chartConfig["lineColor" + i] = lineColor;
+            }
+            prevColor = lineColor;
+        }
+
+
+
+
+      //Draw areas under lines first!
+        for (let i=0; i<arr.length; i++){
+            var sumData = arr[i];
+
+            let lineColor = chartConfig["lineColor" + i];
+            let startOpacity = chartConfig["startOpacity" + i];
+            let endOpacity = chartConfig["endOpacity" + i];
+            let keyType = typeOfAxisValue(sumData[0].key);
+
+
+          //Define and fill area under line
             plotArea
-                .attr("width", plotWidth)
-                .attr("height", plotHeight)
+                .append("path")
+                .datum(sumData)
+                .attr("class", "line-area")
                 .attr(
-                    "transform",
-                    "translate(" + margin.left + "," + (margin.top) + ")"
+                    "d", d3.area()
+                    .x(function(d){
+                         if(keyType==="date"){
+                            return x(new Date(d.key));
+                        }else{
+                            return x(d.key);
+                        }
+                    })
+                    .y0(plotHeight)
+                    .y1(function(d){
+                        return y(d["value"])
+                    })
                 );
 
 
-
-             // Setup:
-            // Check that axis exist and are populated
-            let xKey;
-            let yKey;
-            let xKey2;
-            let yKey2;
-            let group;
-
-            if(chartConfig.xAxis===null || chartConfig.yAxis===null){
-                return;
-            }else{
-                xKey = chartConfig.xAxis;
-                yKey = chartConfig.yAxis;
-                group = chartConfig.group;
-            }
-
-            if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-                xKey2 = chartConfig.xAxis2;
-                yKey2 = chartConfig.yAxis2;
-            }
-            //set default values if not instantiated
-            if (chartConfig.lineColor==null) chartConfig.lineColor = "#6699CC";
-            if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1;
-            if (chartConfig.opacity==null) chartConfig.opacity = 1;
-            if (chartConfig.startOpacity==null) chartConfig.startOpacity = 0;
-            if (chartConfig.endOpacity==null) chartConfig.endOpacity = 0;
+          //Add color gradient
+            addColorGradient(lineColor, startOpacity, endOpacity);
+        }
 
 
-            var data1 = data[0];
-            var data2 = data[1];
-            dataSets = data;
-            data = data1;
 
-            var mergedData = d3.merge(dataSets);
-            // if (data2!==null && data2!==undefined && xKey2 && yKey2){
-            //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-            // }
+      //Draw lines
+        for (let i=0; i<arr.length; i++){
+            var sumData = arr[i];
+
+            let lineColor = chartConfig["lineColor" + i];
+            let lineWidth = chartConfig["lineWidth" + i];
+            let opacity = chartConfig["opacity" + i];
 
 
-            //Set axes with merged data
-            var axisData = d3.nest()
-                .key(function (d) { return d[xKey]; })
-                .rollup(function (d) {
-                    return d3.max(d, function (g) {
-                        return g[yKey];
-                    });
-                }).entries(mergedData);
+            if (lineWidth == null) lineWidth = 1;
+            if (opacity == null) opacity = 1;
 
-            displayAxis("key", "value", axisData);
+            let keyType = typeOfAxisValue(sumData[0].key);
 
-            let xType = typeOfAxisValue();
 
-                //Reformat data if "group by" is selected
-                if(group !== null && group !== undefined){
-
-                    //Hide label field
-                    let labelField = document.querySelector(".form-input[name=label0]");
-                    let label = document.querySelector(".label0");
-                    addShowHide(label);
-                    addShowHide(labelField);
-                    labelField.hide();
-                    label.hide();
-
-                    let groupData = d3.nest()
-                    .key(function(d){return d[group];})
-                    .entries(data);
-
-                    let tempDataSets = [];
-                    groupData.forEach(function(g){
-
-                        tempDataSets.push(g.values)
+          //Draw line
+            plotArea
+                .append("path")
+                .datum(sumData)
+                .attr("fill", "none")
+                .attr("stroke", lineColor)
+                .attr("stroke-width", lineWidth)
+                .attr("opacity", opacity)
+                .attr(
+                    "d",d3.line()
+                    .x(function(d){
+                        if(keyType==="date"){
+                            return x(new Date(d.key));
+                        }else{
+                            return x(d.key);
+                        }
                     })
+                    .y(function(d){
+                        return y(d["value"]);
+                    })
+                );
 
-                dataSets = tempDataSets;
-                // displayAxis(xKey,yKey,data);
-                }
-
-                var arr = [];
-                for (let i=0; i<dataSets.length; i++){
-
-                    if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
-                        xKey = chartConfig[`xAxis${i+1}`];
-                        yKey = chartConfig[`yAxis${i+1}`];
-                        if(!xKey || !yKey) continue;
-                    }
-
-                    var sumData = d3.nest()
-                        .key(function(d){return d[xKey];})
-                        .rollup(function(d){
-                            return d3.sum(d,function(g){
-                                return g[yKey];
-                            });
-                    }).entries(dataSets[i]);
-
-                    arr.push(sumData);
-                }
-
-
-
-              //Draw areas under lines first!
-                for (let i=0; i<arr.length; i++){
-                    var sumData = arr[i];
-
-                    let lineColor = chartConfig["lineColor" + i];
-                    let startOpacity = chartConfig["startOpacity" + i];
-                    let endOpacity = chartConfig["endOpacity" + i];
-
-                    if (lineColor == null) lineColor = chartConfig.lineColor;
-                    if (startOpacity == null) startOpacity = chartConfig.startOpacity;
-                    if (endOpacity == null) endOpacity = chartConfig.endOpacity;
-
-                    let keyType = typeOfAxisValue(sumData[0].key);
+          //Draw thick line for selection purposes
+            plotArea
+                .append("path")
+                .datum(sumData)
+                .attr("dataset", i)
+                .attr("fill", "none")
+                .attr("stroke", "#ff0000")
+                .attr("stroke-width", 10)
+                .attr("opacity", 0)
+                .attr(
+                    "d",d3.line()
+                    .x(function(d){
+                        if(keyType==="date"){
+                            return x(new Date(d.key));
+                        }else{
+                            return x(d.key);
+                        }
+                    })
+                    .y(function(d){
+                        return y(d["value"]);
+                    })
+                )
+                .on("click", function(){
+                    me.onClick(this);
+                });
 
 
-                  //Define and fill area under line
-                    plotArea
-                        .append("path")
-                        .datum(sumData)
-                        .attr("class", "line-area")
-                        .attr(
-                            "d", d3.area()
-                            .x(function(d){
-                                 if(keyType==="date"){
-                                    return x(new Date(d.key));
-                                }else{
-                                    return x(d.key);
-                                }
-                            })
-                            .y0(plotHeight)
-                            .y1(function(d){
-                                return y(d["value"])
-                            })
-                        );
-
-
-                  //Add color gradient
-                    addColorGradient(lineColor, startOpacity, endOpacity);
-
-                }
-
-
-
-              //Draw lines
-                for (let i=0; i<arr.length; i++){
-                    var sumData = arr[i];
-
-                    let lineColor = chartConfig["lineColor" + i];
-                    let lineWidth = chartConfig["lineWidth" + i];
-                    let opacity = chartConfig["opacity" + i];
-
-                    if (lineColor == null) lineColor = chartConfig.lineColor;
-                    if (lineWidth == null) lineWidth = chartConfig.lineWidth;
-                    if (opacity == null) opacity = chartConfig.opacity;
-
-                    let keyType = typeOfAxisValue(sumData[0].key);
-
-
-                  //Draw line
-                    plotArea
-                        .append("path")
-                        .datum(sumData)
-                        .attr("fill", "none")
-                        .attr("stroke", lineColor)
-                        .attr("stroke-width", lineWidth)
-                        .attr("opacity", opacity)
-                        .attr(
-                            "d",d3.line()
-                            .x(function(d){
-                                if(keyType==="date"){
-                                    return x(new Date(d.key));
-                                }else{
-                                    return x(d.key);
-                                }
-                            })
-                            .y(function(d){
-                                return y(d["value"]);
-                            })
-                        );
-
-                  //Draw thick line for selection purposes
-                    plotArea
-                        .append("path")
-                        .datum(sumData)
-                        .attr("dataset", i)
-                        .attr("fill", "none")
-                        .attr("stroke", "#ff0000")
-                        .attr("stroke-width", 10)
-                        .attr("opacity", 0)
-                        .attr(
-                            "d",d3.line()
-                            .x(function(d){
-                                if(keyType==="date"){
-                                    return x(new Date(d.key));
-                                }else{
-                                    return x(d.key);
-                                }
-                            })
-                            .y(function(d){
-                                return y(d["value"]);
-                            })
-                        )
-                        .on("click", function(){
-                            me.onClick(this);
-                        });
-
-
-                    //Display end tags if checked
-                    if(chartConfig.endTags){
-                        let thisDataSet = dataSets[i][0];
-                        let label = (thisDataSet[group] || chartConfig["label" + i]);
-                        drawLabelTag(sumData, lineColor, label);
-                    }
-
-                };
-
-            
-
-            //Draw grid lines if option is checked
-            if(chartConfig.xGrid || chartConfig.yGrid){
-                drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+          //Display end tags if checked
+            if (chartConfig.endTags){
+                let thisDataSet = dataSets[i][0];
+                let label = (thisDataSet[group] || chartConfig["label" + i]);
+                drawLabelTag(sumData, lineColor, label);
             }
-
-          //Draw labels if checked
-            if(chartConfig.xLabel || chartConfig.yLabel){
-                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                    axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
-            }
+        };
 
 
-        });
+
+      //Draw grid lines if option is checked
+        if (chartConfig.xGrid || chartConfig.yGrid){
+            drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+        }
+
+      //Draw labels if checked
+        if (chartConfig.xLabel || chartConfig.yLabel){
+            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
+        }
     };
 
 
@@ -319,17 +333,9 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** getLinePaths
-  //**************************************************************************
-
-    this.getLinePaths = function(){  return plotArea.selectAll(".thick-line");  };
-
-  //**************************************************************************
   //** drawEndLabels
   //**************************************************************************
-
     var drawLabelTag = function(dataSet, color, label){
-
         if(!label){
             label = "Add Label"
         }
@@ -383,29 +389,32 @@ bluewave.charts.LineChart = function(parent, config) {
 
     };
 
+
   //**************************************************************************
   //** addColorGradient
   //**************************************************************************
-        var addColorGradient = function(lineColor, startOpacity, endOpacity){
+    var addColorGradient = function(lineColor, startOpacity, endOpacity){
+        if (startOpacity == null) startOpacity = 0;
+        if (endOpacity == null) endOpacity = 0;
 
-            plotArea
-                .append("defs")
-                .append("linearGradient")
-                .attr("id", "fill-gradient")
-                .attr("x1", "0%").attr("y1", "0%")
-                .attr("x2", "0%").attr("y2", "100%")
-                .selectAll("stop")
-                .data([
-                    { offset: "0%", color: lineColor, opacity: startOpacity },
-                    { offset: "100%", color: lineColor, opacity: endOpacity }
-                ])
-                .enter().append("stop")
-                .attr("offset", (d) => d.offset)
-                .attr("stop-color", (d) => d.color)
-                .attr("stop-opacity", (d) => d.opacity);
+        plotArea
+            .append("defs")
+            .append("linearGradient")
+            .attr("id", "fill-gradient")
+            .attr("x1", "0%").attr("y1", "0%")
+            .attr("x2", "0%").attr("y2", "100%")
+            .selectAll("stop")
+            .data([
+                { offset: "0%", color: lineColor, opacity: startOpacity },
+                { offset: "100%", color: lineColor, opacity: endOpacity }
+            ])
+            .enter().append("stop")
+            .attr("offset", (d) => d.offset)
+            .attr("stop-color", (d) => d.color)
+            .attr("stop-opacity", (d) => d.opacity);
 
+    };
 
-        };
 
   //**************************************************************************
   //** displayAxis
@@ -569,7 +578,6 @@ bluewave.charts.LineChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var initChart = bluewave.utils.initChart;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
     var drawGridlines = bluewave.utils.drawGridlines;
     var drawLabels = bluewave.utils.drawLabels;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
