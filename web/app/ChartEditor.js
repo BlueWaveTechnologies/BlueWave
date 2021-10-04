@@ -139,12 +139,14 @@ bluewave.ChartEditor = function(parent, config) {
             if (input!=null) inputs[i] = d3.csvParse(input);
         }
         inputData = inputs;
-        if(config !== null && config !== undefined){
-            Object.keys(config).forEach(val=>{
-                chartConfig[val] = config[val]? config[val]:null;
-            });
-            panel.title.innerHTML = config.chartTitle;
+
+
+        if (config) chartConfig = config;
+
+        if (chartConfig.chartTitle){
+            panel.title.innerHTML = chartConfig.chartTitle;
         }
+
         chartConfig.chartType = nodeType;
         createForm(optionsDiv);
         createOptions();
@@ -701,7 +703,7 @@ bluewave.ChartEditor = function(parent, config) {
                             }
                         ]
                     },
-                    
+
                     {
                         group: "General",
                         items: [
@@ -784,7 +786,7 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="line"){
 
-            var dataSetTitle = (datasetID)=>{if(datasetID){return `Data Set ${datasetID + 1}` }};
+            var dataSetTitle = (datasetID)=>{if(datasetID){return `Data Set ${datasetID + 1}`; }};
           //Add style options
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
@@ -889,28 +891,27 @@ bluewave.ChartEditor = function(parent, config) {
                 form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
 
                 form.onChange = function(){
-                let settings = form.getData();
-                chartConfig["lineColor" + n] = settings.lineColor;
-                chartConfig["lineWidth" + n] = settings.lineThickness;
-                chartConfig["opacity" + n] = settings.lineOpacity/100;
-                chartConfig["startOpacity" + n] = settings.startOpacity/100;
-                chartConfig["endOpacity" + n] = settings.endOpacity/100;
-                createLinePreview();
-                }
+                    let settings = form.getData();
+                    chartConfig["lineColor" + n] = settings.lineColor;
+                    chartConfig["lineWidth" + n] = settings.lineThickness;
+                    chartConfig["opacity" + n] = settings.lineOpacity/100;
+                    chartConfig["startOpacity" + n] = settings.startOpacity/100;
+                    chartConfig["endOpacity" + n] = settings.endOpacity/100;
+                    createLinePreview();
+                };
 
-            }else{
+            }
+            else{
 
-          //Process onChange events
-            form.onChange = function(){
-
-                let settings = form.getData();
-                chartConfig.lineColor = settings.lineColor;
-                chartConfig.lineWidth = settings.lineThickness;
-                chartConfig.opacity = settings.lineOpacity/100;
-                chartConfig.startOpacity = settings.startOpacity/100;
-                chartConfig.endOpacity = settings.endOpacity/100;
-                createLinePreview();
-
+              //Process onChange events
+                form.onChange = function(){
+                    let settings = form.getData();
+                    chartConfig.lineColor = settings.lineColor;
+                    chartConfig.lineWidth = settings.lineThickness;
+                    chartConfig.opacity = settings.lineOpacity/100;
+                    chartConfig.startOpacity = settings.startOpacity/100;
+                    chartConfig.endOpacity = settings.endOpacity/100;
+                    createLinePreview();
                 };
             }
 
