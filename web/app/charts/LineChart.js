@@ -88,27 +88,24 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-         // Setup:
-        // Check that axis exist and are populated
-        let xKey;
-        let yKey;
+
+      //Check that axis exist and are populated
+        var xKey = chartConfig.xAxis;
+        var yKey = chartConfig.yAxis;
+        if (xKey===null || yKey===null) return;
+
+
         let xKey2;
         let yKey2;
-        let group;
-        let tags = {};
-
-        if(chartConfig.xAxis===null || chartConfig.yAxis===null){
-            return;
-        }else{
-            xKey = chartConfig.xAxis;
-            yKey = chartConfig.yAxis;
-            group = chartConfig.group;
-        }
-
         if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
             xKey2 = chartConfig.xAxis2;
             yKey2 = chartConfig.yAxis2;
         }
+
+
+        var group = chartConfig.group;
+        var showLabels = chartConfig.endTags;
+        if (showLabels!==false) showLabels = chartConfig.endTags = true;
 
 
         var data1 = data[0];
@@ -162,6 +159,7 @@ bluewave.charts.LineChart = function(parent, config) {
         }
 
 
+      //Create dataset to render
         var arr = [];
         for (let i=0; i<dataSets.length; i++){
 
@@ -201,9 +199,21 @@ bluewave.charts.LineChart = function(parent, config) {
         }
 
 
+        var chartElements = [];
+        for (let i=0; i<arr.length; i++){
+            chartElements.push({
+               area: null,
+               line: null,
+               line2: null,
+               tag: null
+            });
+        }
+
 
 
       //Draw areas under lines first!
+        var fillGroup = plotArea.append("g");
+        fillGroup.attr("name", "fill");
         for (let i=0; i<arr.length; i++){
             var sumData = arr[i];
 
@@ -212,12 +222,18 @@ bluewave.charts.LineChart = function(parent, config) {
             let endOpacity = chartConfig["endOpacity" + i];
             let keyType = typeOfAxisValue(sumData[0].key);
 
-            //Add color gradient to area
-            let className = "fill-gradient-" + i;          
-            addColorGradient(lineColor, startOpacity, endOpacity, className);
 
-            //Define and fill area under line
-            plotArea
+          //Don't render area if the start and end opacity is 0
+            if (startOpacity===0 && endOpacity===0) continue;
+
+
+          //Add color gradient to area
+            let className = "fill-gradient-" + i;
+            addColorGradient(lineColor, startOpacity, endOpacity, className, fillGroup);
+
+
+          //Define and fill area under line
+            chartElements[i].area = fillGroup
                 .append("path")
                 .datum(sumData)
                 .attr("fill", `url(#${className})`)
@@ -235,12 +251,14 @@ bluewave.charts.LineChart = function(parent, config) {
                         return y(d["value"])
                     })
                 );
-            
+
         }
 
 
 
       //Draw lines
+        var lineGroup = plotArea.append("g");
+        lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
             var sumData = arr[i];
 
@@ -256,7 +274,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
           //Draw line
-            plotArea
+            chartElements[i].line = lineGroup
                 .append("path")
                 .datum(sumData)
                 .attr("fill", "none")
@@ -278,7 +296,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 );
 
           //Draw thick line for selection purposes
-            plotArea
+            chartElements[i].line2 = lineGroup
                 .append("path")
                 .datum(sumData)
                 .attr("dataset", i)
@@ -300,25 +318,28 @@ bluewave.charts.LineChart = function(parent, config) {
                     })
                 )
                 .on("click", function(d){
-                    me.onClick(this);
-                    if(chartConfig.endTags) raiseCorrespondingTag(tags, i);
+                    var datasetID = parseInt(d3.select(this).attr("dataset"));
+                    raiseLine(chartElements[datasetID]);
+                    me.onClick(this, datasetID, d);
                 });
-                
+
 
 
           //Display end tags if checked
-            if (chartConfig.endTags){
-                let thisDataSet = dataSets[i][0];
-                let label = (thisDataSet[group] || chartConfig["label" + i]);
-                let tag = createLabelTag(sumData, lineColor, label);
-
-                tags[`dataset${i}`] = {
-                    poly: tag.poly,
-                    text: tag.text
-                };
+            if (showLabels){
+                var label;
+                if (group){
+                    let d = dataSets[i][0];
+                    label = d[group];
+                    if (!label) label = group + " " + i;
+                }
+                else{
+                    label = chartConfig["label" + i];
+                    if (!label) label = "Series " + (i+1);
+                }
+                var line = chartElements[i].line2;
+                chartElements[i].tag = createLabel(sumData, lineColor, label, line);
             }
-
-
         };
 
 
@@ -339,16 +360,13 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** onClick
   //**************************************************************************
-    this.onClick = function(line){};
+    this.onClick = function(line, datasetID, renderedData){};
 
 
   //**************************************************************************
   //** createLabelTag
   //**************************************************************************
-    var createLabelTag = function(dataSet, color, label){
-        if(!label){
-            label = "Add Label"
-        }
+    var createLabel = function(dataSet, color, label, line){
 
         var lastItem = dataSet[dataSet.length - 1];
         var lastKey = lastItem.key;
@@ -387,7 +405,10 @@ bluewave.charts.LineChart = function(parent, config) {
         var poly = plotArea.append("polygon")
             .attr("points", vertices.join(" "))
             .attr("transform", "translate("+ (tx+(a)) +","+ (ty-(a)) +")")
-            .style("fill", color);
+            .style("fill", color)
+            .on("click", function(d){
+                line.dispatch('click');
+            });
 
       //Add label
         var text = plotArea.append("text")
@@ -395,7 +416,10 @@ bluewave.charts.LineChart = function(parent, config) {
             .attr("dy", ".35em")
             .attr("text-anchor", "start")
             .style("fill", "#fff")
-            .text(label);
+            .text(label)
+            .on("click", function(d){
+                line.dispatch('click');
+            });
 
         return {
             poly: poly,
@@ -408,46 +432,78 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** addColorGradient
   //**************************************************************************
-    var addColorGradient = function(lineColor, startOpacity, endOpacity, className){
+    var addColorGradient = function(lineColor, startOpacity, endOpacity, className, parent){
         if (startOpacity == null) startOpacity = 0;
         if (endOpacity == null) endOpacity = 0;
 
-        plotArea
-            .append("defs")
-            .append("linearGradient")
-            .attr("id", className)
-            .attr("x1", "0%").attr("y1", "0%")
-            .attr("x2", "0%").attr("y2", "100%")
-            .selectAll("stop")
-            .data([
-                { offset: "0%", color: lineColor, opacity: startOpacity },
-                { offset: "100%", color: lineColor, opacity: endOpacity }
-            ])
-            .enter().append("stop")
-            .attr("offset", (d) => d.offset)
-            .attr("stop-color", (d) => d.color)
-            .attr("stop-opacity", (d) => d.opacity);
+        parent
+        .append("defs")
+        .append("linearGradient")
+        .attr("id", className)
+        .attr("x1", "0%").attr("y1", "0%")
+        .attr("x2", "0%").attr("y2", "100%")
+        .selectAll("stop")
+        .data([
+            { offset: "0%", color: lineColor, opacity: startOpacity },
+            { offset: "100%", color: lineColor, opacity: endOpacity }
+        ])
+        .enter().append("stop")
+        .attr("offset", (d) => d.offset)
+        .attr("stop-color", (d) => d.color)
+        .attr("stop-opacity", (d) => d.opacity);
 
     };
 
+
   //**************************************************************************
-  //** raiseCorrespondingTag
+  //** raiseLine
   //**************************************************************************
-    var raiseCorrespondingTag = function(tags, i) {
-        
-        var tag = tags[`dataset${i}`];
-        var poly = tag.poly.node().cloneNode(true);
-        var text = tag.text.node().cloneNode(true);
+    var raiseLine = function(chartElements) {
+        if (!chartElements) return;
 
-        tag.poly.remove();
-        tag.text.remove();
+try{
 
-        plotArea.node().appendChild(poly);
-        plotArea.node().appendChild(text);
+      //Remove and reinsert lines
+        var line = chartElements.line;
+        var line2 = chartElements.line2;
+        var lineGroup = chartElements.line.node().parentNode;
+        var l = line.node().cloneNode(true);
+        var l2 = line2.node().cloneNode(true);
+//        console.log(lineGroup);
+//        console.log(l);
+//        line.remove();
+//        line2.remove();
+//        lineGroup.appendChild(1);
+//        lineGroup.appendChild(12);
+//        chartElements.line = l;
+//        chartElements.line2 = l2
 
-        tag.poly = d3.select(poly);
-        tag.text = d3.select(text);
-  };
+
+}
+catch(e){
+    console.log(e);
+}
+
+      //Remove and reinsert tag
+        var tag = chartElements.tag;
+        if (tag){
+            var tagParent = tag.poly.node().parentNode;
+            console.log(tagParent);
+            var poly = tag.poly.node().cloneNode(true);
+            var text = tag.text.node().cloneNode(true);
+
+            tag.poly.remove();
+            tag.text.remove();
+
+            tagParent.appendChild(poly);
+            tagParent.appendChild(text);
+
+            chartElements.tag.poly = d3.select(poly);
+            chartElements.tag.text = d3.select(text);
+        }
+
+    };
+
 
   //**************************************************************************
   //** displayAxis
