@@ -872,7 +872,7 @@ bluewave.ChartEditor = function(parent, config) {
             form.findField("endOpacity").setValue(endOpacity*100);
 
             //Single line edit case
-            if(datasetID !== undefined && datasetID !== null){
+            if(datasetID){
 
                let n = `${datasetID}`;
 
