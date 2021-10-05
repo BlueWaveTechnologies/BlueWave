@@ -687,6 +687,20 @@ bluewave.charts.MapChart = function(parent, config) {
             });
     };
 
+  //**************************************************************************
+  //** convertWKT
+  //**************************************************************************
+  //Converts a wkt into a GeoJSON
+    var convertWK = function(){
+        var geojson_options = {};
+        var wkt_format = new ol.Format.WKT();
+        var wktFeature = wkt_format.read(val);
+        var wkt_options = {};
+        var geojson_format = new ol.Format.GeoJSON(wkt_options);
+        var geoFeature = geojson_format.write(testFeature);
+        console.log(geoFeature);
+        return geoFeature;
+    }
 
   //**************************************************************************
   //** getPoints
