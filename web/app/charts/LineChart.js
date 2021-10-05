@@ -212,12 +212,15 @@ bluewave.charts.LineChart = function(parent, config) {
             let endOpacity = chartConfig["endOpacity" + i];
             let keyType = typeOfAxisValue(sumData[0].key);
 
+            //Add color gradient to area
+            let className = "fill-gradient-" + i;          
+            addColorGradient(lineColor, startOpacity, endOpacity, className);
 
-          //Define and fill area under line
+            //Define and fill area under line
             plotArea
                 .append("path")
                 .datum(sumData)
-                .attr("class", "line-area")
+                .attr("fill", `url(#${className})`)
                 .attr(
                     "d", d3.area()
                     .x(function(d){
@@ -232,10 +235,7 @@ bluewave.charts.LineChart = function(parent, config) {
                         return y(d["value"])
                     })
                 );
-
-
-          //Add color gradient
-            addColorGradient(lineColor, startOpacity, endOpacity);
+            
         }
 
 
@@ -408,14 +408,14 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** addColorGradient
   //**************************************************************************
-    var addColorGradient = function(lineColor, startOpacity, endOpacity){
+    var addColorGradient = function(lineColor, startOpacity, endOpacity, className){
         if (startOpacity == null) startOpacity = 0;
         if (endOpacity == null) endOpacity = 0;
 
         plotArea
             .append("defs")
             .append("linearGradient")
-            .attr("id", "fill-gradient")
+            .attr("id", className)
             .attr("x1", "0%").attr("y1", "0%")
             .attr("x2", "0%").attr("y2", "100%")
             .selectAll("stop")
