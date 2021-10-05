@@ -491,8 +491,7 @@ bluewave.ChartEditor = function(parent, config) {
         pieChart = new bluewave.charts.PieChart(svg, {});
 
         lineChart = new bluewave.charts.LineChart(svg, {});
-        lineChart.onClick = function(line){
-            var datasetID = d3.select(line).attr("dataset");
+        lineChart.onClick = function(line, datasetID){
             editStyle("line", datasetID);
         };
 
