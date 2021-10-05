@@ -756,21 +756,20 @@ bluewave.ChartEditor = function(parent, config) {
             form.onChange = function(){
                 var settings = form.getData();
 
-
                 if (settings.xGrid==="true") settings.xGrid = true;
-                else if (settings.xGrid==="false") settings.xGrid = false;
+                else settings.xGrid = false;
 
                 if (settings.yGrid==="true") settings.yGrid = true;
-                else if (settings.yGrid==="false") settings.yGrid = false;
+                else settings.yGrid = false;
 
                 if (settings.xLabel==="true") settings.xLabel = true;
-                else if (settings.xLabel==="false") settings.xLabel = false;
+                else settings.xLabel = false;
 
                 if (settings.yLabel==="true") settings.yLabel = true;
-                else if (settings.yLabel==="false") settings.yLabel = false;
+                else settings.yLabel = false;
 
                 if (settings.endTags==="true") settings.endTags = true;
-                else if (settings.endTags==="false") settings.endTags = false;
+                else settings.endTags = false;
 
 
                 chartConfig.xGrid = settings.xGrid;
