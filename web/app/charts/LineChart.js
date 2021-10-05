@@ -461,34 +461,15 @@ bluewave.charts.LineChart = function(parent, config) {
     var raiseLine = function(chartElements) {
         if (!chartElements) return;
 
-try{
+      //Raise line
+        chartElements.line.raise();
+        chartElements.line2.raise();
 
-      //Remove and reinsert lines
-        var line = chartElements.line;
-        var line2 = chartElements.line2;
-        var lineGroup = chartElements.line.node().parentNode;
-        var l = line.node().cloneNode(true);
-        var l2 = line2.node().cloneNode(true);
-//        console.log(lineGroup);
-//        console.log(l);
-//        line.remove();
-//        line2.remove();
-//        lineGroup.appendChild(1);
-//        lineGroup.appendChild(12);
-//        chartElements.line = l;
-//        chartElements.line2 = l2
-
-
-}
-catch(e){
-    console.log(e);
-}
 
       //Remove and reinsert tag
         var tag = chartElements.tag;
         if (tag){
             var tagParent = tag.poly.node().parentNode;
-            console.log(tagParent);
             var poly = tag.poly.node().cloneNode(true);
             var text = tag.text.node().cloneNode(true);
 
