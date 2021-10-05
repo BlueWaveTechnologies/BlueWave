@@ -136,14 +136,6 @@ bluewave.charts.LineChart = function(parent, config) {
       //Reformat data if "group by" is selected
         if(group !== null && group !== undefined){
 
-            //Hide label field
-            let labelField = document.querySelector(".form-input[name=label0]");
-            let label = document.querySelector(".label0");
-            addShowHide(label);
-            addShowHide(labelField);
-            labelField.hide();
-            label.hide();
-
             let groupData = d3.nest()
             .key(function(d){return d[group];})
             .entries(data);
@@ -650,7 +642,6 @@ bluewave.charts.LineChart = function(parent, config) {
     var initChart = bluewave.utils.initChart;
     var drawGridlines = bluewave.utils.drawGridlines;
     var drawLabels = bluewave.utils.drawLabels;
-    var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();
 };

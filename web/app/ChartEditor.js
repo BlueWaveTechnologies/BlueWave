@@ -371,7 +371,7 @@ bluewave.ChartEditor = function(parent, config) {
                     createDropdown("group", plotInputs),
 
                     createLabel("Label", "label0"),
-                    { name: "label0", label: "", type: "text" }
+                    { name: "label", label: "", type: "text" }
 
                 ]
             }
@@ -387,6 +387,9 @@ bluewave.ChartEditor = function(parent, config) {
 
                         createLabel("Y-Axis"),
                         createDropdown(`yAxis${i+1}`, plotInputs),
+
+                        createLabel("Separate By"),
+                        createDropdown(`group{i+1}`, plotInputs),
 
                         createLabel("Label"),
                         { name: ("label"+i), label: "", type: "text" }
@@ -410,6 +413,28 @@ bluewave.ChartEditor = function(parent, config) {
 
         form.onChange = function(input, value){
             var key = input.name;
+
+            var idx = key.indexOf("group");
+            if (idx>-1){
+                var id = key.substring("group".length);
+                var labelField = form.findField("label"+id);
+                var labelText = labelField.row.previousSibling;
+                if (!labelField.hide){
+                    addShowHide(labelField.row);
+                    addShowHide(labelText);
+                }
+
+
+                if (value){
+                    labelField.row.hide();
+                    labelText.hide();
+                }
+                else{
+                    labelField.row.show();
+                    labelText.show();
+                }
+            }
+
             chartConfig[key] = value;
             createLinePreview();
         };
@@ -719,10 +744,10 @@ bluewave.ChartEditor = function(parent, config) {
                                     }
 
                                 ]
-                            },
+                            }
 
                         ]
-                    },
+                    }
                 ]
             });
 
@@ -1185,6 +1210,7 @@ bluewave.ChartEditor = function(parent, config) {
   //** Utils
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createTable = javaxt.dhtml.utils.createTable;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
