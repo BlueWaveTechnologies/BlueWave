@@ -894,7 +894,7 @@ li.tree-node:hover {
 .chart-editor-options {
     width: 220px;
     height: 100%;
-    padding: 0px 6px;
+    padding: 0px 14px 0 6px;
     border-radius: 0 0 0 5px;
     border-right: 1px solid #dcdcdc;
 }
