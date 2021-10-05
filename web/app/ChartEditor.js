@@ -37,28 +37,7 @@ bluewave.ChartEditor = function(parent, config) {
         yAxis2:null,
         group:null
     };
-    var chartConfig = {
-        pieKey:null,
-        pieValue:null,
-        xAxis:null,
-        yAxis:null,
-        chartType:null,
-        chartTitle:null,
-        nodeId:null,
-        lineColor:null,
-        lineWidth:null,
-        opacity:null,
-        startOpacity:null,
-        endOpacity:null,
-        xGrid:null,
-        yGrid:null,
-        barLayout: null,
-        barLegend:null,
-        barColor:null,
-        xLabel:null,
-        yLabel:null,
-        endTags: null
-    };
+    var chartConfig = {};
     var styleEditor, colorPicker;
 
 
@@ -76,12 +55,21 @@ bluewave.ChartEditor = function(parent, config) {
         me.el = table;
         var td;
 
+
+      //Create chart options
         td = document.createElement("td");
+        td.style.height = "100%";
         tr.appendChild(td);
-        let div = document.createElement("div");
-        div.className = "chart-editor-options";
-        td.appendChild(div);
-        optionsDiv = div;
+        var outerDiv = document.createElement("div");
+        outerDiv.className = "chart-editor-options";
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflow = "hidden";
+        outerDiv.style.overflowY = "auto";
+        td.appendChild(outerDiv);
+        optionsDiv = document.createElement("div");
+        optionsDiv.style.position = "absolute";
+        outerDiv.appendChild(optionsDiv);
 
 
       //Create chart preview
@@ -90,7 +78,14 @@ bluewave.ChartEditor = function(parent, config) {
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        panel = createDashboardItem(td,{
+
+        var outerDiv = document.createElement("div");
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflow = "hidden";
+        td.appendChild(outerDiv);
+
+        panel = createDashboardItem(outerDiv,{
             width: "100%",
             height: "100%",
             title: "Untitled",
@@ -98,6 +93,7 @@ bluewave.ChartEditor = function(parent, config) {
         });
         previewArea = panel.innerDiv;
         panel.el.className = "";
+        panel.el.style.position = "absolute";
 
 
       //Allow users to change the title associated with the chart
@@ -203,8 +199,6 @@ bluewave.ChartEditor = function(parent, config) {
         let dataOptions2 = data2?Object.keys(data2[0]):null;
         switch(chartConfig.chartType){
             case 'pieChart':
-                pieInputs.value.clear();
-                pieInputs.key.clear();
                 dataOptions.forEach((val)=>{
                     if(!isNaN(data[0][val])){
                         pieInputs.value.add(val,val);
@@ -212,39 +206,42 @@ bluewave.ChartEditor = function(parent, config) {
                         pieInputs.key.add(val,val);
                     }
                 });
-                pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
-                pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
+                pieInputs.key.setValue(chartConfig.pieKey, true);
+                pieInputs.value.setValue(chartConfig.pieValue, true);
+
+                createPiePreview();
+
                 break;
             case 'barChart':
-                plotInputs.xAxis.clear();
-                plotInputs.yAxis.clear();
+
                 dataOptions.forEach((val)=>{
                     plotInputs.xAxis.add(val,val);
                     plotInputs.yAxis.add(val,val);
                 });
-                plotInputs.xAxis.setValue(chartConfig.xAxis,chartConfig.xAxis);
-                plotInputs.yAxis.setValue(chartConfig.yAxis,chartConfig.yAxis);
+                plotInputs.xAxis.setValue(chartConfig.xAxis, true);
+                plotInputs.yAxis.setValue(chartConfig.yAxis, true);
                 if(dataOptions2){
                     dataOptions2.forEach(val=>{
                         plotInputs.xAxis2.add(val,val);
                         plotInputs.yAxis2.add(val,val);
                     });
                 }
+
+                createBarPreview();
+
                 break;
             case 'lineChart':
-                plotInputs.xAxis.clear();
-                plotInputs.yAxis.clear();
-                plotInputs.group.clear();
+                plotInputs.group.add("", "");
                 dataOptions.forEach((val)=>{
                     plotInputs.xAxis.add(val,val);
                     plotInputs.yAxis.add(val,val);
                     plotInputs.group.add(val,val);
                 });
-                plotInputs.xAxis.setValue(chartConfig.xAxis,chartConfig.xAxis);
-                plotInputs.yAxis.setValue(chartConfig.yAxis,chartConfig.yAxis);
-                plotInputs.group.setValue(chartConfig.group,chartConfig.group);
+                plotInputs.xAxis.setValue(chartConfig.xAxis, true);
+                plotInputs.yAxis.setValue(chartConfig.yAxis, true);
+                plotInputs.group.setValue(chartConfig.group, true);
 
-                // Add dropdown values for each data set
+              //Add dropdown values for each data set
                 for (let i=1; i<inputData.length; i++){
                     let multiLineDataOptions = Object.keys(inputData[i][0]);
 
@@ -255,11 +252,14 @@ bluewave.ChartEditor = function(parent, config) {
                         plotInputs[xAxisN].add(val, val);
                         plotInputs[yAxisN].add(val, val);
 
-                        plotInputs[xAxisN].setValue(chartConfig[xAxisN], chartConfig[xAxisN]);
-                        plotInputs[yAxisN].setValue(chartConfig[yAxisN], chartConfig[yAxisN]);
+                        plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
+                        plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
                     });
 
                 }
+
+                createLinePreview();
+
                 break;
             default:
                 break;
@@ -414,6 +414,7 @@ bluewave.ChartEditor = function(parent, config) {
         form.onChange = function(input, value){
             var key = input.name;
 
+          //Special case for "Separate By" option
             var idx = key.indexOf("group");
             if (idx>-1){
                 var id = key.substring("group".length);
@@ -433,6 +434,8 @@ bluewave.ChartEditor = function(parent, config) {
                     labelField.row.show();
                     labelText.show();
                 }
+
+                form.resize();
             }
 
             chartConfig[key] = value;
