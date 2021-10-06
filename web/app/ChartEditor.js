@@ -239,27 +239,42 @@ bluewave.ChartEditor = function(parent, config) {
                 });
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
-                plotInputs.group.setValue(chartConfig.group, true);
+                if (chartConfig.group){
+                    plotInputs.group.setValue(chartConfig.group, false);
+                }
+                else{
+                    var label = chartConfig.label;
+                    if (!label) label = "Series 1";
+                    plotInputs.label.setValue(label, true);
+                }
 
               //Add dropdown values for each data set
                 for (let i=1; i<inputData.length; i++){
+                    let xAxisN = `xAxis${i+1}`;
+                    let yAxisN = `yAxis${i+1}`;
+                    let groupN = `group${i+1}`;
+                    let labelN = `label${i+1}`;
+
+                    plotInputs[groupN].add("", "");
+
                     let multiLineDataOptions = Object.keys(inputData[i][0]);
-
                     multiLineDataOptions.forEach((val)=>{
-                        let xAxisN = `xAxis${i+1}`;
-                        let yAxisN = `yAxis${i+1}`;
-                        let groupN = `group${i+1}`;
-
                         plotInputs[xAxisN].add(val, val);
                         plotInputs[yAxisN].add(val, val);
-                        // plotInputs[groupN].add("", "");
                         plotInputs[groupN].add(val, val);
-
-                        plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
-                        plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
-                        plotInputs[groupN].setValue(chartConfig[groupN], true);
                     });
 
+                    plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
+                    plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+
+                    if (chartConfig[groupN]){
+                        plotInputs[groupN].setValue(chartConfig[groupN], false);
+                    }
+                    else{
+                        var label = chartConfig[labelN];
+                        if (!label) label = "Series " + (i+1);
+                        plotInputs[labelN].setValue(label, true);
+                    }
                 }
 
                 createLinePreview();
@@ -374,7 +389,7 @@ bluewave.ChartEditor = function(parent, config) {
                     createLabel("Separate By"),
                     createDropdown("group", plotInputs),
 
-                    createLabel("Label", "label0"),
+                    createLabel("Label", "label"),
                     { name: "label", label: "", type: "text" }
 
                 ]
@@ -396,7 +411,7 @@ bluewave.ChartEditor = function(parent, config) {
                         createDropdown(`group${i+1}`, plotInputs),
 
                         createLabel("Label"),
-                        { name: ("label"+i), label: "", type: "text" }
+                        { name: (`label${i+1}`), label: "", type: "text" }
 
                     ]
                 }
@@ -414,6 +429,15 @@ bluewave.ChartEditor = function(parent, config) {
             style: config.style.form,
             items: items
         });
+
+
+      //Update plotInputs with label field(s)
+        for (var i=0; i<inputData.length; i++){
+            var id = i>0 ? (i+1) : "";
+            var fieldName = "label"+id;
+            plotInputs[fieldName] = form.findField(fieldName);
+        }
+
 
         form.onChange = function(input, value){
             var key = input.name;
