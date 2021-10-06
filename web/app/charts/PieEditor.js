@@ -209,11 +209,13 @@ bluewave.charts.PieEditor = function(parent, config) {
                     }
 
                 }
-//                var linkFullType = linkStartType + " to " + linkEndType;
-                var linkFullType = linkStartName + " to " + linkEndName;
+
+                var linkFullType = linkStartType + " to " + linkEndName;
                 var linksAndQuantityEntry = {};
                 linksAndQuantityEntry.key = linkFullType;
                 linksAndQuantityEntry.value = linkQuantity;
+                linksAndQuantityEntry.sendType = linkStartType;
+                linksAndQuantityEntry.receiveType = linkEndType;
 
                 var previousEntryIndex = linksAndQuantity.findIndex(entry => entry.key === linkFullType);
 
@@ -232,8 +234,14 @@ bluewave.charts.PieEditor = function(parent, config) {
             dataOptions = nodeTypeList;
         }
 
-        pieInputs.value.clear();
+        if(typeof pieInputs.value == "object") {
+            pieInputs.value.clear();
+        }
+
         pieInputs.key.clear();
+
+
+
         if (!inputData[0].hasOwnProperty("links")) {
             dataOptions.forEach((val)=>{
                 if(!isNaN(data[0][val])){
@@ -246,13 +254,16 @@ bluewave.charts.PieEditor = function(parent, config) {
             dataOptions.forEach((val)=>{
                 pieInputs.key.add(val, val);
             });
-            pieInputs.value.add("quantity");
+//            pieInputs.value.add("quantity");
+            chartConfig.pieValue = "quantity";
             pieInputs.direction.add("Inbound");
             pieInputs.direction.add("Outbound");
         }
 
         pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
-        pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
+        if(typeof pieInputs.value == "object") {
+            pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
+        }
         pieInputs.direction.setValue(chartConfig.pieDirection,chartConfig.pieDirection);
     };
 
@@ -276,7 +287,9 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
     var createPieDropdown = function(tbody){
         dropdownItem(tbody,"pieKey","Group By",createPiePreview,pieInputs,"key");
-        dropdownItem(tbody,"pieValue","Value Type",createPiePreview,pieInputs,"value");
+        if (!inputData[0].hasOwnProperty("links")) {
+            dropdownItem(tbody,"pieValue","Value Type",createPiePreview,pieInputs,"value");
+        }
         dropdownItem(tbody,"pieDirection","Direction",createPiePreview,pieInputs,"direction");
 
     };
@@ -343,9 +356,9 @@ bluewave.charts.PieEditor = function(parent, config) {
             data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
 
             if(chartConfig.pieDirection === "Inbound") {
-                data = data.filter(entry => entry.key.endsWith(chartConfig.pieKey));
+                data = data.filter(entry => entry.receiveType.endsWith(chartConfig.pieKey));
             } else {
-                data = data.filter(entry => entry.key.startsWith(chartConfig.pieKey));
+                data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
             }
             let scData = [];
             data.forEach(function(entry, index) {
