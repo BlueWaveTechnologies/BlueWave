@@ -328,8 +328,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     if (!label) label = group + " " + i;
                 }
                 else{
-                    var labelKey = "label";
-                    if (i>0) labelKey += i;
+                    var labelKey = "label" + (i>0 ? i+1 : "");
                     label = chartConfig[labelKey];
                     if (!label) label = "Series " + (i+1);
                 }
