@@ -1434,6 +1434,7 @@ bluewave.Explorer = function(parent, config) {
                 title: "Edit Chart",
                 width: 1060,
                 height: 600,
+                resizable: true,
                 beforeClose: function(){
                     var chartConfig = chartEditor.getConfig();
                     var node = chartEditor.getNode();
