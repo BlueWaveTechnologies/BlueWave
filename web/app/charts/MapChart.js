@@ -16,7 +16,7 @@ bluewave.charts.MapChart = function(parent, config) {
         style: {
         }
     };
-    var svg, mapArea; //d3 elements
+    var svg, mapArea, zoom; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
@@ -36,9 +36,9 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
         readOnly = false;
-        svg.call(d3.zoom()
-            .scaleExtent([1, 1])
-            .on('zoom', recenter));
+        zoom = d3.zoom().scaleExtent([1, 1])
+            .on('zoom', recenter)
+        svg.call(zoom);
     };
 
 
@@ -79,6 +79,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         if (mapArea) mapArea.node().innerHTML = "";
+        svg.call(zoom.transform, d3.zoomIdentity);
         options = [];
     };
 

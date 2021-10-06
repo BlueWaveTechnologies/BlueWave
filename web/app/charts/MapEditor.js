@@ -319,8 +319,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (inputType==="mapLevel"){
-            if(chartConfig.lat) delete chartConfig.lat;
-            if(chartConfig.lon) delete chartConfig.lon;
+            chartConfig.changeMapLevel = true;
             createMapPreview();
         }
     };
@@ -353,8 +352,14 @@ if(!bluewave.charts) bluewave.charts={};
             var data = inputData[0];
             mapChart.update(chartConfig, data);
             mapChart.onRecenter = function(lat, lon){
-                chartConfig.lat = lat;
-                chartConfig.lon = lon;
+                if(!chartConfig.changeMapLevel){
+                    chartConfig.lat = lat;
+                    chartConfig.lon = lon;
+                }else{
+                    delete chartConfig.lat;
+                    delete chartConfig.lon;
+                    chartConfig.changeMapLevel = false;
+                }
             };
         });
     };
