@@ -156,13 +156,13 @@ bluewave.charts.LineChart = function(parent, config) {
         for (let i=0; i<dataSets.length; i++){
 
             let xAxisN = chartConfig[`xAxis${i+1}`];
-            let yAxisN = chartConfig[`yAxis${i+1}`];  
+            let yAxisN = chartConfig[`yAxis${i+1}`];
 
             //If axes not picked, skip pushing/rendering this dataset
             if ((!xAxisN || !yAxisN) && !group && i>0) continue;
 
             if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
-                
+
                 xKey = xAxisN;
                 yKey = yAxisN;
             }
@@ -184,19 +184,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
       //Update chartConfig with line colors
         var colors = bluewave.utils.getColorPalette(true);
-        // var prevColor;
         for (let i=0; i<arr.length; i++){
             var lineColor = chartConfig["lineColor" + i];
             if (!lineColor){
-                // while (true){
-                //     if (colors.length===0) colors = bluewave.utils.getColorPalette(true);
-                //     lineColor = colors.shift();
-                //     if (lineColor!=prevColor) break;
-                // }
                 lineColor = colors[i%colors.length];
                 chartConfig["lineColor" + i] = lineColor;
             }
-            // prevColor = lineColor;
         }
 
 
@@ -335,9 +328,10 @@ bluewave.charts.LineChart = function(parent, config) {
                     if (!label) label = group + " " + i;
                 }
                 else{
-                    label = chartConfig["label" + i];
+                    var labelKey = "label";
+                    if (i>0) labelKey += i;
+                    label = chartConfig[labelKey];
                     if (!label) label = "Series " + (i+1);
-                    if (i===0) label = (chartConfig["label"] || "Series 1");
                 }
                 var line = chartElements[i].line2;
                 chartElements[i].tag = createLabel(sumData, lineColor, label, line);
