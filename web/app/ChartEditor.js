@@ -248,12 +248,16 @@ bluewave.ChartEditor = function(parent, config) {
                     multiLineDataOptions.forEach((val)=>{
                         let xAxisN = `xAxis${i+1}`;
                         let yAxisN = `yAxis${i+1}`;
+                        let groupN = `group${i+1}`;
 
                         plotInputs[xAxisN].add(val, val);
                         plotInputs[yAxisN].add(val, val);
+                        // plotInputs[groupN].add("", "");
+                        plotInputs[groupN].add(val, val);
 
                         plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
                         plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+                        plotInputs[groupN].setValue(chartConfig[groupN], true);
                     });
 
                 }
@@ -389,7 +393,7 @@ bluewave.ChartEditor = function(parent, config) {
                         createDropdown(`yAxis${i+1}`, plotInputs),
 
                         createLabel("Separate By"),
-                        createDropdown(`group{i+1}`, plotInputs),
+                        createDropdown(`group${i+1}`, plotInputs),
 
                         createLabel("Label"),
                         { name: ("label"+i), label: "", type: "text" }
@@ -447,10 +451,9 @@ bluewave.ChartEditor = function(parent, config) {
   //**************************************************************************
   //** createLabel
   //**************************************************************************
-    var createLabel = function(label, className){
+    var createLabel = function(label){
         var row = document.createElement("div");
         row.className = "form-label";
-        row.classList.add(className);
         row.innerText = label + ":";
         return {
             name: "",
@@ -1088,19 +1091,19 @@ bluewave.ChartEditor = function(parent, config) {
 
 
                 if (settings.xGrid==="true") settings.xGrid = true;
-                else if (settings.xGrid==="false") settings.xGrid = false;
+                else settings.xGrid = false;
 
                 if (settings.yGrid==="true") settings.yGrid = true;
-                else if (settings.yGrid==="false") settings.yGrid = false;
+                else settings.yGrid = false;
 
                 if (settings.legend==="true") settings.legend = true;
-                else if (settings.legend==="false") settings.legend = false;
+                else settings.legend = false;
 
                 if (settings.xLabel==="true") settings.xLabel = true;
-                else if (settings.xLabel==="false") settings.xLabel = false;
+                else settings.xLabel = false;
 
                 if (settings.yLabel==="true") settings.yLabel = true;
-                else if (settings.yLabel==="false") settings.yLabel = false;
+                else settings.yLabel = false;
 
 
                 chartConfig.barLayout = settings.layout;

@@ -92,7 +92,7 @@ bluewave.charts.LineChart = function(parent, config) {
       //Check that axis exist and are populated
         var xKey = chartConfig.xAxis;
         var yKey = chartConfig.yAxis;
-        if (xKey===null || yKey===null) return;
+        if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
 
         let xKey2;
@@ -155,11 +155,19 @@ bluewave.charts.LineChart = function(parent, config) {
         var arr = [];
         for (let i=0; i<dataSets.length; i++){
 
+            let xAxisN = chartConfig[`xAxis${i+1}`];
+            let yAxisN = chartConfig[`yAxis${i+1}`];  
+
+            //If axes not picked, skip pushing/rendering this dataset
+            if ((!xAxisN || !yAxisN) && !group && i>0) continue;
+
             if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
-                xKey = chartConfig[`xAxis${i+1}`];
-                yKey = chartConfig[`yAxis${i+1}`];
-                if(!xKey || !yKey) continue;
+                
+                xKey = xAxisN;
+                yKey = yAxisN;
             }
+
+            // if(!xKey || !yKey) continue;
 
             var sumData = d3.nest()
                 .key(function(d){return d[xKey];})
@@ -176,18 +184,19 @@ bluewave.charts.LineChart = function(parent, config) {
 
       //Update chartConfig with line colors
         var colors = bluewave.utils.getColorPalette(true);
-        var prevColor;
+        // var prevColor;
         for (let i=0; i<arr.length; i++){
             var lineColor = chartConfig["lineColor" + i];
             if (!lineColor){
-                while (true){
-                    if (colors.length===0) colors = bluewave.utils.getColorPalette(true);
-                    lineColor = colors.shift();
-                    if (lineColor!=prevColor) break;
-                }
+                // while (true){
+                //     if (colors.length===0) colors = bluewave.utils.getColorPalette(true);
+                //     lineColor = colors.shift();
+                //     if (lineColor!=prevColor) break;
+                // }
+                lineColor = colors[i%colors.length];
                 chartConfig["lineColor" + i] = lineColor;
             }
-            prevColor = lineColor;
+            // prevColor = lineColor;
         }
 
 
@@ -328,6 +337,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 else{
                     label = chartConfig["label" + i];
                     if (!label) label = "Series " + (i+1);
+                    if (i===0) label = (chartConfig["label"] || "Series 1");
                 }
                 var line = chartElements[i].line2;
                 chartElements[i].tag = createLabel(sumData, lineColor, label, line);
