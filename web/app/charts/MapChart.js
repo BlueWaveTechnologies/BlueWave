@@ -16,10 +16,8 @@ bluewave.charts.MapChart = function(parent, config) {
         style: {
         }
     };
-    var geojson_options = {};
-    var wkt_format = new ol.Format.WKT();
-    var wkt_options = {};
-    var geojson_format = new ol.Format.GeoJSON(wkt_options);
+    var WKT = new ol.format.WKT();
+    var geojson = new ol.format.GeoJSON();
     var svg, mapArea; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
@@ -132,6 +130,7 @@ bluewave.charts.MapChart = function(parent, config) {
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
 
         var mapLevel = chartConfig.mapLevel;
+        var geo = convertWKT();
         if (mapLevel === "counties"){
 
             projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
@@ -695,9 +694,9 @@ bluewave.charts.MapChart = function(parent, config) {
   //** convertWKT
   //**************************************************************************
   //Converts a wkt into a GeoJSON
-    var convertWK = function(val){
-        var wktFeature = wkt_format.read(val);
-        var geoFeature = geojson_format.write(testFeature);
+    var convertWKT = function(val){
+        var features = WKT.readFeatures(str);
+        var geoJSONObject = new GeoJSON().writeFeaturesObject(features);
         console.log(geoFeature);
         return geoFeature;
     }
