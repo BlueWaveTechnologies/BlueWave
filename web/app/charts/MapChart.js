@@ -16,7 +16,7 @@ bluewave.charts.MapChart = function(parent, config) {
         style: {
         }
     };
-    var svg, mapArea, zoom; //d3 elements
+    var svg, mapArea; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
@@ -28,17 +28,8 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     var init = function(){
         config = merge(config, defaultConfig);
-
-        initChart(parent, function(s, g){
-            svg = s;
-            mapArea = g;
-        });
-
-
+        initChart(parent);
         readOnly = false;
-        zoom = d3.zoom().scaleExtent([1, 1])
-            .on('zoom', recenter)
-        svg.call(zoom);
     };
 
 
@@ -78,8 +69,22 @@ bluewave.charts.MapChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (mapArea) mapArea.node().innerHTML = "";
-        svg.call(zoom.transform, d3.zoomIdentity);
+        projection = null;
+
+
+
+
+      //Remove svg completely! This is to avoid issues with the zoom function...
+        var s = svg.node();
+        parent = s.parentNode;
+        parent.removeChild(s);
+
+        svg = null;
+        mapArea = null;
+
+      //Init chart space
+        initChart(parent);
+
         options = [];
     };
 
@@ -112,6 +117,10 @@ bluewave.charts.MapChart = function(parent, config) {
   //** update
   //**************************************************************************
     var update = function(parent, chartConfig, data){
+
+        delete chartConfig.lon;
+        delete chartConfig.lat;
+
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
@@ -984,11 +993,26 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** initChart
+  //**************************************************************************
+    var initChart = function(parent){
+        bluewave.utils.initChart(parent, function(s, g){
+            svg = s;
+            mapArea = g;
+        });
+
+
+        readOnly = false;
+        svg.call(d3.zoom().scaleExtent([1, 1])
+            .on('zoom', recenter));
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-    var initChart = bluewave.utils.initChart;
 
     init();
 };
