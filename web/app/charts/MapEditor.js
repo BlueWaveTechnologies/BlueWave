@@ -38,6 +38,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel:null,
         colorScale:null
     };
+    var changeMapLevel = false;
     var styleEditor, colorPicker;
 
 
@@ -121,6 +122,7 @@ if(!bluewave.charts) bluewave.charts={};
         inputData = [];
         chartConfig = {};
         panel.title.innerHTML = "Untitled";
+        changeMapLevel = false;
 
       //Clear map inputs
         if (mapInputs){
@@ -319,7 +321,9 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (inputType==="mapLevel"){
-            chartConfig.changeMapLevel = true;
+            delete chartConfig.lon;
+            delete chartConfig.lat;
+            changeMapLevel = true;
             createMapPreview();
         }
     };
@@ -352,13 +356,13 @@ if(!bluewave.charts) bluewave.charts={};
             var data = inputData[0];
             mapChart.update(chartConfig, data);
             mapChart.onRecenter = function(lat, lon){
-                if(!chartConfig.changeMapLevel){
+                if(!changeMapLevel){
                     chartConfig.lat = lat;
                     chartConfig.lon = lon;
                 }else{
                     delete chartConfig.lat;
                     delete chartConfig.lon;
-                    chartConfig.changeMapLevel = false;
+                    changeMapLevel = false;
                 }
             };
         });
