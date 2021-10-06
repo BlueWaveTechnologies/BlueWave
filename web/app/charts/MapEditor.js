@@ -319,6 +319,8 @@ if(!bluewave.charts) bluewave.charts={};
             }
         }
         else if (inputType==="mapLevel"){
+            if(chartConfig.lat) delete chartConfig.lat;
+            if(chartConfig.lon) delete chartConfig.lon;
             createMapPreview();
         }
     };
