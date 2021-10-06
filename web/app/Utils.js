@@ -1241,18 +1241,11 @@ bluewave.utils = {
   //**************************************************************************
     initChart: function(parent, callback, scope){
         var svg;
-        var ready = function(){
-            var g = svg.append("g");
-            if (callback) callback.apply(scope,[svg, g]);
-        };
-
         if (parent instanceof d3.selection){
             svg = parent;
-            ready();
         }
         else if (parent instanceof SVGElement) {
             svg = d3.select(parent);
-            ready();
         }
         else{
             svg = d3.select(parent).append("svg");
@@ -1261,9 +1254,11 @@ bluewave.utils = {
                 var height = parent.offsetHeight;
                 svg.attr("width", width);
                 svg.attr("height", height);
-                ready();
             });
         }
+
+        var g = svg.append("g");
+        if (callback) callback.apply(scope,[svg, g]);
     },
 
 
