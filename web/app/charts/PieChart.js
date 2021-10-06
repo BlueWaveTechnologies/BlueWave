@@ -57,12 +57,11 @@ bluewave.charts.PieChart = function(parent, config) {
                 return acc;
             },{});
 
-
             var pie = d3.pie().value(function (d) {
                 return d.value;
             });
-            pieData = pie(d3.entries(pieData));
 
+            pieData = pie(d3.entries(pieData));
 
           //Get parent width/height
             var width = parent.offsetWidth;
