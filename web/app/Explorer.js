@@ -16,7 +16,7 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, scatterEditor, mapEditor, userManager; //popup dialogs
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager; //popup dialogs
     var windows = [];
     var zoom = 0;
 
@@ -389,13 +389,15 @@ bluewave.Explorer = function(parent, config) {
                 button.supplyChain.enable();
 
 
-              //Special case for SupplyChain nodes
+              //Enable map and pieChart buttons as needed
                 for (var key in nodes) {
                     if (nodes.hasOwnProperty(key)){
                         var node = nodes[key];
+                        if (node.type==="supplyChain" || node.type==="sankeyChart"){
+                            button.pieChart.enable();
+                        }
                         if (node.type==="supplyChain"){
                             button.map.enable();
-                            break;
                         }
                     }
                 }
@@ -804,36 +806,55 @@ bluewave.Explorer = function(parent, config) {
             var inputNode = nodes[outputID];
 
 
-          //Ensure that charts can't be connected to other charts
-            if (node.type.indexOf("Chart")>0){
-                if (inputNode.type.indexOf("Chart")>0){
-                    drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
-                    return;
-                }
-            }
+
+            var acceptConnection = function(){
+                node.inputs[outputID] = inputNode;
+                node.ondblclick();
+            };
+
+            var removeConnection = function(){
+                drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
+            };
 
 
-          //Ensure that Map can only be connected by addData or supplyChain nodes
             if (node.type === "map"){
-                if (inputNode.type != "addData" && inputNode.type != "supplyChain"){
-                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
-                   return;
+                if (inputNode.type == "addData" || inputNode.type == "supplyChain"){
+                    acceptConnection();
+                }
+                else{
+                   removeConnection();
                 }
             }
-
-
-          //Ensure that Sankey can only be connected by a supplyChain node
-            if (node.type === "sankeyChart"){
-                if (inputNode.type != "supplyChain"){
-                   drawflow.removeSingleConnection(info.output_id, info.input_id, info.output_class, info.input_class);
-                   return;
+            else if (node.type === "pieChart"){
+                if (inputNode.type == "addData" || inputNode.type == "sankeyChart" || inputNode.type == "supplyChain"){
+                    acceptConnection();
+                }
+                else{
+                   removeConnection();
                 }
             }
+            else if (node.type === "sankeyChart"){
+                if (inputNode.type == "supplyChain"){
+                    acceptConnection();
+                }
+                else{
+                   removeConnection();
+                }
+            }
+            else{
 
+              //For all other nodes, ensure that charts can't be connected to other charts
+                if (node.type.indexOf("Chart")>0){
+                    if (inputNode.type.indexOf("Chart")>0){
+                        removeConnection();
+                        return;
+                    }
+                }
 
-          //If we're still here, update node and open editor
-            node.inputs[outputID] = inputNode;
-            node.ondblclick();
+              //If we're still here, accept the connection
+                acceptConnection();
+            }
+
         });
         drawflow.on('nodeRemoved', function(nodeID) {
             removeInputs(nodes, nodeID);
@@ -1206,6 +1227,12 @@ bluewave.Explorer = function(parent, config) {
                     editScatter(this);
                 };
                 break;
+            case "pieChart" :
+
+                node.ondblclick = function(){
+                    editPie(this);
+                };
+                break;
             case "supplyChain":
 
                 node.ondblclick = function(){
@@ -1407,6 +1434,7 @@ bluewave.Explorer = function(parent, config) {
                 title: "Edit Chart",
                 width: 1060,
                 height: 600,
+                resizable: true,
                 beforeClose: function(){
                     var chartConfig = chartEditor.getConfig();
                     var node = chartEditor.getNode();
@@ -1658,6 +1686,74 @@ bluewave.Explorer = function(parent, config) {
 
         scatterEditor.update(node.config, data);
         scatterEditor.show();
+    };
+
+  //**************************************************************************
+  //** editPie
+  //**************************************************************************
+    var editPie = function(node){
+        if (!pieEditor){
+            var win = createNodeEditor({
+                 title: "Edit Pie Chart",
+                 width: 1060,
+                 height: 600,
+                 beforeClose: function(){
+                     var pieConfig = pieEditor.getConfig();
+                     var node = pieEditor.getNode();
+                     var orgConfig = node.config;
+                     if (!orgConfig) orgConfig = {};
+                     if (isDirty(pieConfig, orgConfig)){
+                         node.config = pieConfig;
+                         waitmask.show();
+                         var el = pieEditor.getChart();
+                         createPreview(el, function(canvas){
+                             node.preview = canvas.toDataURL("image/png");
+                             createThumbnail(node, canvas);
+                             updateTitle(node, node.config.chartTitle);
+                             win.close();
+                             waitmask.hide();
+                         }, this);
+                     }
+                     else{
+                         win.close();
+                     }
+                 }
+            });
+
+            pieEditor = new bluewave.charts.PieEditor(win.getBody(), config);
+
+            pieEditor.show = function(){
+              win.show();
+            };
+
+            pieEditor.hide = function(){
+              win.hide();
+            };
+        }
+
+
+      //Add custom getNode() method to the pieEditor to return current node
+        pieEditor.getNode = function(){
+            return node;
+        };
+
+
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
+            }
+        }
+
+        pieEditor.update(node.config, data);
+        pieEditor.show();
     };
 
 
@@ -2617,6 +2713,17 @@ bluewave.Explorer = function(parent, config) {
                       //Render sankeyChart
                         var sankeyChart = new bluewave.charts.SankeyChart(createChartContainer(),config);
                         sankeyChart.update(sankeyConfig.style,data);
+
+                        if (node.type === "pieChart") {
+                            if (!pieEditor) editPie(node);
+                            pieEditor.update(node.config, getSupplyChainInputs(node));
+
+                            var pieConfig = pieEditor.getConfig();
+                            var data = pieEditor.getSankeyData();
+
+                            var pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv, config);
+                            pieChart.update(pieConfig.style, data);
+                       }
 
                     }
                     else{
