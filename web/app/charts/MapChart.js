@@ -129,15 +129,6 @@ bluewave.charts.MapChart = function(parent, config) {
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
 
         var mapLevel = chartConfig.mapLevel;
-//        var geometries = [];
-//        if(data[0][chartConfig.mapLocation].includes("(")){
-//            data.forEach(function(d){
-//                if(d[chartConfig.mapLocation].includes("(")){
-//                   var geometry = convertWKT(d[chartConfig.mapLocation]);
-//                   geometries.push(geometry);
-//                }
-//            });
-//        }
         var useWKT = false;
         if(data[0][chartConfig.mapLocation].includes("(")){
             useWKT = true;
@@ -228,13 +219,16 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             else if(chartConfig.mapType === "Area"){
 
-                var area = selectArea(data, chartConfig);
+                var area;
+                if(!useWKT){
+                    area = selectArea(data, chartConfig);
+                }else{
+                    area = "WKT";
+                }
                 if (area==="counties"){
 
                   //Render Counties
                     var countyPolygons = renderCounties();
-
-
 
                   //Map countyIDs to data values
                     var values = {};
@@ -268,6 +262,11 @@ bluewave.charts.MapChart = function(parent, config) {
                 else if (area==="censusDivisions"){ //render census divisions
                     var statePolygons = renderStates(true);
                     updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
+                }
+                else if(area==="WKT"){  //Render based on WKT Geometry
+                    renderCounties();
+                    renderStates();
+                    renderWKT(data, chartConfig, colorScale)
                 }
                 else{
                     renderCounties();
@@ -700,6 +699,33 @@ bluewave.charts.MapChart = function(parent, config) {
                 return getColor(d[0]);
             });
     };
+  //**************************************************************************
+  //** renderWKT
+  //**************************************************************************
+    var renderWKT = function(data, chartConfig, colorScale){
+        var geometries =[];
+        data.forEach(function(d){
+            if(d[chartConfig.mapLocation].includes("(")){
+                var geometry = convertWKT(d[chartConfig.mapLocation]);
+                geometry.mapValue = d[chartConfig.mapValue];
+                geometries.push(geometry);
+            }
+        }
+
+        mapArea.append("g")
+            .selectAll("whatever")
+            .data(geometries)
+            .enter()
+            .append("path")
+            .attr('d', path)
+            .attr('fill', function(geometry){
+                var v = parseFloat(values[geometry.mapValue]);
+                if (isNaN(v) || v<0) v = 0;
+                var fill = colorScale[chartConfig.colorScale](v);
+                if (!fill) return 'none';
+                return fill;
+            })
+    }
 
   //**************************************************************************
   //** convertWKT
@@ -869,7 +895,6 @@ bluewave.charts.MapChart = function(parent, config) {
             var location = d[chartConfig.mapLocation];
             if (typeof location === 'undefined') return;
             var censusDivision = getCensusDivision(d[chartConfig.mapLocation]);
-
 
             counties.features.every(function(county){
                 if (county.id===location){
