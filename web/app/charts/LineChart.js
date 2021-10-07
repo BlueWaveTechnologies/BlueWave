@@ -506,7 +506,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
             //Temporary, will break other stuff
             .tickFormat(d3.format("d"))
+            // .tickFormat(10, "")
+            // if(scaleOption==="logarithmic"){
+            //     yAxis.tickFormat(d3.format("d"))
+            // }
             );
+            
     };
 
 
@@ -613,7 +618,14 @@ bluewave.charts.LineChart = function(parent, config) {
                     .domain([1, max])
                     .range(axisRange);
 
-                }  
+                }
+                // else if(scaleOption==="exponential"){
+                //     scale = d3
+                //     .scalePow()
+                //     .exponent(2)
+                //     .domain([0, max])
+                //     .range(axisRange);
+                // }
                 break;
         }
         return {
