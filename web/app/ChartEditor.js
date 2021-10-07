@@ -693,10 +693,54 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="lineChart"){
 
+            //Create scaling dropdown
+            var scaleDropdown = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox,
+                    readOnly: true
+
+                }
+            );
+            scaleDropdown.add("Linear", "linear");
+            scaleDropdown.add("Logarithmic", "logarithmic");
+            // var scaleInputs = {};
+            // scaleInputs.add("Linear", "linear");
+            // scaleInputs.add("Logarithmic", "logarithmic");
+
+            // var scaleDropdown = createDropdown("scalingOptions", scaleInputs)
+            
+            scaleDropdown.setValue("linear");
 
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
+                    {
+                        group: "General",
+                        items: [
+
+                            {
+                                name: "scaleOptions",
+                                label: "Scaling Options",
+                                type: scaleDropdown
+                            },
+                            {
+                                name: "endTags",
+                                label: "Display End Tags",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                        checked: true
+                                    }
+
+                                ]
+                            }
+                            
+
+                        ]
+                    },
                     {
                         group: "X-Axis",
                         items: [
@@ -758,26 +802,7 @@ bluewave.ChartEditor = function(parent, config) {
                         ]
                     },
 
-                    {
-                        group: "General",
-                        items: [
-
-                            {
-                                name: "endTags",
-                                label: "Display End Tags",
-                                type: "checkbox",
-                                options: [
-                                    {
-                                        label: "",
-                                        value: true,
-                                        checked: true
-                                    }
-
-                                ]
-                            }
-
-                        ]
-                    }
+                    
                 ]
             });
 
@@ -806,6 +831,10 @@ bluewave.ChartEditor = function(parent, config) {
             var endTags = chartConfig.endTags;
             tagField.setValue(endTags===true ? true : false);
 
+            var scalingField = form.findField("scaleOptions");
+            var scale = chartConfig.scaleOption;
+            scalingField.setValue(scale==="logarithmic" ? "logarithmic" : "linear");
+
 
           //Process onChange events
             form.onChange = function(){
@@ -826,7 +855,10 @@ bluewave.ChartEditor = function(parent, config) {
                 if (settings.endTags==="true") settings.endTags = true;
                 else settings.endTags = false;
 
+                // if(settings.scaleOptions==="logarithmic") settings.scaleOptions="logarithmic";
+                // else settings.scaleOptions = "linear";
 
+                chartConfig.scaleOption = settings.scaleOptions;
                 chartConfig.xGrid = settings.xGrid;
                 chartConfig.yGrid = settings.yGrid;
                 chartConfig.xLabel = settings.xLabel;

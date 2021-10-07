@@ -26,6 +26,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var x, y, xBand, yBand;
     var timeAxis;
     var dataSets;
+    var scaleOption;
 
 
   //**************************************************************************
@@ -102,6 +103,9 @@ bluewave.charts.LineChart = function(parent, config) {
             yKey2 = chartConfig.yAxis2;
         }
 
+        scaleOption = chartConfig.scaleOption;
+        if (!scaleOption) scaleOption = chartConfig.scaleOption = "linear";
+        // useLogScale = true;
 
         var group = chartConfig.group;
         var showLabels = chartConfig.endTags;
@@ -216,6 +220,17 @@ bluewave.charts.LineChart = function(parent, config) {
             let endOpacity = chartConfig["endOpacity" + i];
             let keyType = typeOfAxisValue(sumData[0].key);
 
+            var getX = function(d){
+                if(keyType==="date"){
+                    return x(new Date(d.key));
+                }else{
+                    return x(d.key);
+                }
+            };
+
+            var getY = function(d){
+                return (scaleOption === "logarithmic") ? y(d["value"]+1):y(d["value"]);
+            };
 
           //Don't render area if the start and end opacity is 0
             if (startOpacity===0 && endOpacity===0) continue;
@@ -233,17 +248,9 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr("fill", `url(#${className})`)
                 .attr(
                     "d", d3.area()
-                    .x(function(d){
-                         if(keyType==="date"){
-                            return x(new Date(d.key));
-                        }else{
-                            return x(d.key);
-                        }
-                    })
+                    .x(getX)
                     .y0(plotHeight)
-                    .y1(function(d){
-                        return y(d["value"])
-                    })
+                    .y1(getY)
                 );
 
         }
@@ -277,16 +284,8 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr("opacity", opacity)
                 .attr(
                     "d",d3.line()
-                    .x(function(d){
-                        if(keyType==="date"){
-                            return x(new Date(d.key));
-                        }else{
-                            return x(d.key);
-                        }
-                    })
-                    .y(function(d){
-                        return y(d["value"]);
-                    })
+                    .x(getX)
+                    .y(getY)
                 );
 
           //Draw thick line for selection purposes
@@ -300,16 +299,8 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr("opacity", 0)
                 .attr(
                     "d",d3.line()
-                    .x(function(d){
-                        if(keyType==="date"){
-                            return x(new Date(d.key));
-                        }else{
-                            return x(d.key);
-                        }
-                    })
-                    .y(function(d){
-                        return y(d["value"]);
-                    })
+                    .x(getX)
+                    .y(getY)
                 )
                 .on("click", function(d){
                     var datasetID = parseInt(d3.select(this).attr("dataset"));
@@ -507,7 +498,15 @@ bluewave.charts.LineChart = function(parent, config) {
 
         yAxis = plotArea
             .append("g")
-            .call(d3.axisLeft(y));
+            .call(d3.axisLeft(y)
+            // .tickFormat(function(){
+            //     if(scaleOption==="logarithmic") return d3.format("d");
+            //     else return d3.format("")
+            // })
+
+            //Temporary, will break other stuff
+            .tickFormat(d3.format("d"))
+            );
     };
 
 
@@ -602,10 +601,19 @@ bluewave.charts.LineChart = function(parent, config) {
                     }
                 });
 
-                scale = d3
+                if(scaleOption === "linear"){
+                    scale = d3
                     .scaleLinear()
                     .domain([0, max])
                     .range(axisRange);
+
+                }else if(scaleOption === "logarithmic"){
+                    scale = d3
+                    .scaleLog()
+                    .domain([1, max])
+                    .range(axisRange);
+
+                }  
                 break;
         }
         return {
