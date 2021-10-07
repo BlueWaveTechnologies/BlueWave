@@ -119,7 +119,6 @@ bluewave.charts.MapChart = function(parent, config) {
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
-
       //Set color scale
         var colorScale = {
             "blue": d3.scaleQuantile(extent, d3.schemeBlues[7]),
@@ -130,7 +129,19 @@ bluewave.charts.MapChart = function(parent, config) {
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
 
         var mapLevel = chartConfig.mapLevel;
-        var geo = convertWKT();
+        var geometries = [];
+        if(data[0][chartConfig.mapLocation].includes("(")){
+            data.forEach(function(d){
+                if(d[chartConfig.mapLocation].includes("(")){
+                   var geometry = convertWKT(d[chartConfig.mapLocation]);
+                   geometries.push(geometry);
+                }
+            });
+        }
+        var useWKT = false;
+        if(data[0][chartConfig.mapLocation].includes("(")){
+            useWKT = true;
+        }
         if (mapLevel === "counties"){
 
             projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
@@ -693,12 +704,10 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** convertWKT
   //**************************************************************************
-  //Converts a wkt into a GeoJSON
+  //Converts a wkt into a Geometry object;
     var convertWKT = function(val){
-        var features = WKT.readFeatures(str);
-        var geoJSONObject = new GeoJSON().writeFeaturesObject(features);
-        console.log(geoFeature);
-        return geoFeature;
+        var geometry = WKT.readGeometry(val);
+        return geometry;
     }
 
   //**************************************************************************
