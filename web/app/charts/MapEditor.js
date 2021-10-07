@@ -31,12 +31,14 @@ if(!bluewave.charts) bluewave.charts={};
     var mapInputs = {
         projection:null,
         mapType:null,
+        pointData:null,
         lat:null,
         long:null,
         mapValue:null,
         mapLevel:null,
         colorScale:null
     };
+    var changeMapLevel = false;
     var styleEditor, colorPicker;
 
 
@@ -62,6 +64,7 @@ if(!bluewave.charts) bluewave.charts={};
         td.appendChild(div);
         createInput(div,"mapType","Map Type",showHideDropDowns);
         createInput(div,"mapLevel","Map Level",showHideDropDowns);
+        createInput(div,"pointData", "Point Data",showHideDropDowns);
         createInput(div,"latitude","Latitude",createMapPreview,"lat");
         createInput(div,"longitude","Longitude",createMapPreview,"long");
         createInput(div,"mapLocation","Location Data",createMapPreview);
@@ -119,6 +122,7 @@ if(!bluewave.charts) bluewave.charts={};
         inputData = [];
         chartConfig = {};
         panel.title.innerHTML = "Untitled";
+        changeMapLevel = false;
 
       //Clear map inputs
         if (mapInputs){
@@ -178,6 +182,8 @@ if(!bluewave.charts) bluewave.charts={};
             mapInputs.mapType.add("Point", "Point");
             mapInputs.mapType.add("Area", "Area");
 
+            mapInputs.pointData.add("Geographic Coordinates", "geoCoords");
+            mapInputs.pointData.add("Admin Area", "adminArea");
 
             mapInputs.mapLevel.add("States", "counties");
             mapInputs.mapLevel.add("Country", "states");
@@ -203,9 +209,12 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.mapLevel.show();
         mapInputs.mapValue.show();
         if (chartConfig.mapType==="Point"){
-            if (chartConfig.latitude && chartConfig.longitude){
-                mapInputs.lat.show();
-                mapInputs.long.show();
+            mapInputs.pointData.show();
+            if(chartConfig.pointData==="geoCoords"){
+                if (chartConfig.latitude && chartConfig.longitude){
+                    mapInputs.lat.show();
+                    mapInputs.long.show();
+                }
             }
         }
 
@@ -214,6 +223,7 @@ if(!bluewave.charts) bluewave.charts={};
         mapInputs.mapType.setValue(chartConfig.mapType, true);
         mapInputs.mapLevel.setValue(chartConfig.mapLevel, true);
         mapInputs.mapValue.setValue(chartConfig.mapValue, true);
+        mapInputs.pointData.setValue(chartConfig.pointData, true);
         mapInputs.lat.setValue(chartConfig.latitude, true);
         mapInputs.long.setValue(chartConfig.longitude, true);
 
@@ -281,37 +291,39 @@ if(!bluewave.charts) bluewave.charts={};
         if (inputType==="mapType"){
 
             if(value==="Point"){
-
-              //We clear out the values from the chartConfig
-                if(chartConfig.latitude !== null) chartConfig.latitude = null;
-                if(chartConfig.longitude !== null) chartConfig.longitude = null;
-                if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-                if(chartConfig.mapLevel !== null) chartConfig.mapLevel = null;
-
-
               //Show the combox box inputs
-                mapInputs.lat.show();
-                mapInputs.long.show();
                 mapInputs.mapLocation.hide();
                 mapInputs.mapValue.show();
+                mapInputs.pointData.show();
 
             }
             else if(value==="Area"){
-
-                if(chartConfig.latitude !== null) chartConfig.latitude = null;
-                if(chartConfig.longitude !== null) chartConfig.longitude = null;
-                if(chartConfig.mapValue !== null) chartConfig.mapValue = null;
-
                 mapInputs.lat.hide();
                 mapInputs.long.hide();
                 mapInputs.mapLocation.show();
                 mapInputs.mapValue.show();
+                mapInputs.pointData.hide();
             }
+        }
+        else if (inputType==="pointData"){
 
+            if(value==="geoCoords"){
+                mapInputs.lat.show();
+                mapInputs.long.show();
+                mapInputs.mapLocation.hide();
+
+            }
+            else if(value==="adminArea"){
+                mapInputs.lat.hide();
+                mapInputs.long.hide();
+                mapInputs.mapLocation.show();
+
+            }
         }
         else if (inputType==="mapLevel"){
-            chartConfig.lat = null;
-            chartConfig.lon = null;
+            delete chartConfig.lon;
+            delete chartConfig.lat;
+            changeMapLevel = true;
             createMapPreview();
         }
     };
@@ -323,9 +335,13 @@ if(!bluewave.charts) bluewave.charts={};
     var createMapPreview = function(){
         if (!chartConfig.mapType) return;
         if (!chartConfig.mapLevel) return;
-
-        if (chartConfig.mapType==="Point" &&
-            (chartConfig.latitude===null || chartConfig.longitude===null)){
+        if(chartConfig.mapType==="Point" && chartConfig.pointData===null) return;
+        if (chartConfig.mapType==="Point" && (chartConfig.pointData==="geoCoords" &&
+            (chartConfig.latitude===null || chartConfig.longitude===null || chartConfig.mapValue===null))){
+            return;
+        }
+        if (chartConfig.mapType==="Point" && (chartConfig.pointData==="adminArea" &&
+            (chartConfig.mapLocation===null || chartConfig.mapValue===null))){
             return;
         }
         if(chartConfig.mapType==="Area" && (chartConfig.mapValue===null ||
@@ -340,8 +356,14 @@ if(!bluewave.charts) bluewave.charts={};
             var data = inputData[0];
             mapChart.update(chartConfig, data);
             mapChart.onRecenter = function(lat, lon){
-                chartConfig.lat = lat;
-                chartConfig.lon = lon;
+                if(!changeMapLevel){
+                    chartConfig.lat = lat;
+                    chartConfig.lon = lon;
+                }else{
+                    delete chartConfig.lat;
+                    delete chartConfig.lon;
+                    changeMapLevel = false;
+                }
             };
         });
     };
