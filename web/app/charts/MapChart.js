@@ -129,15 +129,15 @@ bluewave.charts.MapChart = function(parent, config) {
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
 
         var mapLevel = chartConfig.mapLevel;
-        var geometries = [];
-        if(data[0][chartConfig.mapLocation].includes("(")){
-            data.forEach(function(d){
-                if(d[chartConfig.mapLocation].includes("(")){
-                   var geometry = convertWKT(d[chartConfig.mapLocation]);
-                   geometries.push(geometry);
-                }
-            });
-        }
+//        var geometries = [];
+//        if(data[0][chartConfig.mapLocation].includes("(")){
+//            data.forEach(function(d){
+//                if(d[chartConfig.mapLocation].includes("(")){
+//                   var geometry = convertWKT(d[chartConfig.mapLocation]);
+//                   geometries.push(geometry);
+//                }
+//            });
+//        }
         var useWKT = false;
         if(data[0][chartConfig.mapLocation].includes("(")){
             useWKT = true;
@@ -214,7 +214,11 @@ bluewave.charts.MapChart = function(parent, config) {
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, states, chartConfig, path, projection);
+                    if(useWKT){
+                        points = getPointsWKT(data, chartConfig, projection);
+                    }else{
+                        points = getCentroids(data, states, chartConfig, path, projection);
+                    }
                 }
 
 
@@ -328,13 +332,16 @@ bluewave.charts.MapChart = function(parent, config) {
 
               //Get points
                 var points = {};
-                if (chartConfig.pointData==="geoCoords"){
+                if (chartConfig.pointData==="geoCoords") {
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, states, chartConfig, path, projection);
+                    if(useWKT){
+                        points = getPointsWKT(data, chartConfig, projection);
+                    }else{
+                        points = getCentroids(data, states, chartConfig, path, projection);
+                    }
                 }
-
 
               //Render points
                 renderPoints(points, chartConfig, extent);
@@ -413,11 +420,15 @@ bluewave.charts.MapChart = function(parent, config) {
 
               //Get points
                 var points = {};
-                if (chartConfig.pointData==="geoCoords"){
+                if (chartConfig.pointData==="geoCoords") {
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, countries, chartConfig, path, projection);
+                    if(useWKT){
+                        points = getPointsWKT(data, chartConfig, projection);
+                    }else{
+                        points = getCentroids(data, states, chartConfig, path, projection);
+                    }
                 }
 
               //Render points
@@ -698,6 +709,36 @@ bluewave.charts.MapChart = function(parent, config) {
         var geometry = WKT.readGeometry(val);
         return geometry;
     }
+
+  //**************************************************************************
+  //** getPointsWKT
+  //**************************************************************************
+      var getPointsWKT = function(data, chartConfig, projection){
+        var coords = [];
+        var hasValue;
+        data.forEach(function(d){
+            if(d[chartConfig.mapLocation].includes("(")){
+                var geometry = convertWKT(d[chartConfig.mapLocation]);
+                var coordinates = geometry.flatCoordinates;
+                var lon = parseFloat(coordinates[0]);
+                var lat = parseFloat(coordinates[1]);
+                if (isNaN(lat) || isNaN(lon)) return;
+                var coord = projection([lon, lat]);
+                if (!coord) return;
+                if (isNaN(coord[0]) || isNaN(coord[1])) return;
+                var val = parseFloat(d[chartConfig.mapValue]);
+                if (!isNaN(val)){
+                    coord.push(val);
+                    hasValue = true;
+                }
+                coords.push(coord);
+            }
+        });
+        return {
+            coords: coords,
+            hasValue: hasValue
+        };
+      }
 
   //**************************************************************************
   //** getPoints
