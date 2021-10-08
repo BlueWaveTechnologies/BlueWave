@@ -105,7 +105,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
         scaleOption = chartConfig.scaleOption;
         if (!scaleOption) scaleOption = chartConfig.scaleOption = "linear";
-        // useLogScale = true;
+
 
         var group = chartConfig.group;
         var showLabels = chartConfig.endTags;
@@ -476,11 +476,12 @@ bluewave.charts.LineChart = function(parent, config) {
   //** displayAxis
   //**************************************************************************
     var displayAxis = function(xKey,yKey,chartData){
+
         let axisTemp = createAxisScale(xKey,'x',chartData);
         x = axisTemp.scale;
         xBand = axisTemp.band;
 
-        axisTemp = createAxisScale(yKey,'y',chartData);
+        axisTemp = createAxisScale(yKey,'y',chartData, scaleOption);
         y = axisTemp.scale;
         yBand = axisTemp.band;
 
@@ -498,14 +499,9 @@ bluewave.charts.LineChart = function(parent, config) {
 
         yAxis = plotArea
             .append("g")
-            .call(d3.axisLeft(y)
-            // .tickFormat(function(){
-            //     if(scaleOption==="logarithmic") return d3.format("d");
-            //     else return d3.format("")
-            // })
-
-            //Temporary, will break other stuff
-            .tickFormat(d3.format("d"))
+            .call(
+                d3.axisLeft(y)
+                .tickFormat(d3.format("d"))
             );
     };
 
@@ -543,21 +539,24 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** createAxisScale
   //**************************************************************************
-    var createAxisScale = function(key,axisName,chartData){
+    var createAxisScale = function(key, axisName, chartData, scaleOption){
         let scale;
         let band;
         let type = typeOfAxisValue(chartData[0][key]);
-        let max = 0;
-        let timeRange;
+
+
         let axisRange;
         let axisRangePadded;
-        if(axisName === "x"){
+        if (axisName === "x"){
             axisRange = [0,axisWidth];
             axisRangePadded = [10,axisWidth-10];
-        }else{
+        }
+        else{
             axisRange = [axisHeight,0];
             axisRangePadded = [axisHeight-10,10];
         }
+
+
 
         switch (type) {
             case "string":
@@ -571,9 +570,10 @@ bluewave.charts.LineChart = function(parent, config) {
                 .range(axisRange)
                 .padding(0.2);
                 break;
+
             case "date":
 
-                timeRange = [new Date(chartData[0][key]),new Date(chartData[chartData.length-1][key])];
+                var timeRange = [new Date(chartData[0][key]),new Date(chartData[chartData.length-1][key])];
                 chartData.map((val) => {
                     val[key] = new Date(val[key]);
                     return val;
@@ -592,30 +592,42 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 timeAxis = axisName;
                 break;
-            default:
 
-                chartData.forEach((val) => {
-                    let curVal = parseFloat(val[key]);
-                    if (curVal > max) {
-                        max = curVal;
-                    }
-                });
+            default: //number
 
-                if(scaleOption === "linear"){
-                    scale = d3
-                    .scaleLinear()
-                    .domain([0, max])
-                    .range(axisRange);
+                var extent = d3.extent(chartData, function(d) { return parseFloat(d[key]); });
+                var minVal = extent[0];
+                var maxVal = extent[1];
+                if (minVal == maxVal) maxVal = minVal + 1;
 
-                }else if(scaleOption === "logarithmic"){
-                    scale = d3
-                    .scaleLog()
-                    .domain([1, max])
-                    .range(axisRange);
 
-                }  
+                if (scaleOption === "linear"){
+
+                    if (minVal>0) minVal=1;
+
+                    scale = d3.scaleLinear()
+                    .domain([minVal, maxVal]);
+
+                }
+                else if (scaleOption === "logarithmic"){
+
+
+                    minVal = Math.pow(10, Math.floor(Math.log10(minVal+1)));
+                    maxVal = Math.pow(10, Math.ceil(Math.log10(maxVal)));
+
+
+                    scale = d3.scaleLog()
+                    .domain([minVal, maxVal]);
+
+                }
+
+                scale.range(axisRange);
+
+
                 break;
         }
+
+
         return {
             scale,
             band
