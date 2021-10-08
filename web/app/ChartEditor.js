@@ -555,15 +555,6 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.barColor = d3.select(bar).attr("fill");
             editStyle("bar");
 
-            /*
-            getColorPicker(currColor).onChange = function(c){
-                for (var i=0; i<bars.length; i++){
-                    var bar = d3.select(bars[i]);
-                    bar.attr("fill", c.hexString);
-                    chartConfig.barColor = c.hexString;
-                }
-            };
-            */
         };
     };
 
@@ -871,7 +862,6 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="line"){
 
-            var dataSetTitle = (datasetID)=>{if(datasetID){return `Data Set ${datasetID + 1}`; }};
           //Add style options
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,

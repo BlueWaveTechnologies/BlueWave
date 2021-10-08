@@ -499,10 +499,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
         yAxis = plotArea
             .append("g")
-            .call(
-                d3.axisLeft(y)
-                .tickFormat(d3.format("d"))
+            .call(scaleOption==="linear" ? d3.axisLeft(y) : 
+                    d3.axisLeft(y)
+                    .ticks(10, ",")
+                    .tickFormat(d3.format("d"))
             );
+            
     };
 
 
@@ -568,7 +570,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     })
                 )
                 .range(axisRange)
-                .padding(0.2);
+                .padding(1);
                 break;
 
             case "date":
@@ -582,12 +584,12 @@ bluewave.charts.LineChart = function(parent, config) {
                 scale = d3
                     .scaleTime()
                     .domain(timeRange)
-                    .rangeRound(axisRangePadded);
+                    .rangeRound(axisRange);
 
                 band = d3
                     .scaleBand()
                     .domain(d3.timeDay.range(...scale.domain()))
-                    .rangeRound(axisRangePadded)
+                    .rangeRound(axisRange)
                     .padding(0.2);
 
                 timeAxis = axisName;
