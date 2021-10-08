@@ -130,7 +130,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         var mapLevel = chartConfig.mapLevel;
         var useWKT = false;
-        if(data[0][chartConfig.mapLocation].includes("(")){
+        if(chartConfig.mapLocation && data[0][chartConfig.mapLocation].includes("(")){
             useWKT = true;
         }
         if (mapLevel === "counties"){
@@ -266,7 +266,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 else if(area==="WKT"){  //Render based on WKT Geometry
                     renderCounties();
                     renderStates();
-                    renderWKT(data, chartConfig, colorScale)
+                    renderWKT(data, chartConfig, colorScale, path);
                 }
                 else{
                     renderCounties();
@@ -350,7 +350,12 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
               //Render data using the most suitable geometry type
-                var area = selectArea(data, chartConfig);
+                var area;
+                if(!useWKT){
+                    area = selectArea(data, chartConfig);
+                }else{
+                    area = "WKT";
+                }
                 if (area==="counties"){ //render counties
 
                     var values = {};
@@ -702,16 +707,18 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** renderWKT
   //**************************************************************************
-    var renderWKT = function(data, chartConfig, colorScale){
+    var renderWKT = function(data, chartConfig, colorScale, path){
         var geometries =[];
-        data.forEach(function(d){
-            if(d[chartConfig.mapLocation].includes("(")){
-                var geometry = convertWKT(d[chartConfig.mapLocation]);
-                geometry.mapValue = d[chartConfig.mapValue];
-                geometries.push(geometry);
-            }
-        }
-
+//        data.forEach(function(d){
+//            if(d[chartConfig.mapLocation].includes("(")){
+//                var geometry = convertWKT(d[chartConfig.mapLocation]);
+//                geometry.mapValue = d[chartConfig.mapValue];
+//                geometries.push(geometry);
+//            }
+//        }
+        var geometry = convertWKT("POLYGON((-87.906471 43.038902, -95.992775 36.153980, -75.704722 36.076944, -87.906471 43.038902))");
+        console.log(geometry);
+        geometries.push(geometry);
         mapArea.append("g")
             .selectAll("whatever")
             .data(geometries)
@@ -719,7 +726,7 @@ bluewave.charts.MapChart = function(parent, config) {
             .append("path")
             .attr('d', path)
             .attr('fill', function(geometry){
-                var v = parseFloat(values[geometry.mapValue]);
+                var v = parseFloat([geometry.mapValue]);
                 if (isNaN(v) || v<0) v = 0;
                 var fill = colorScale[chartConfig.colorScale](v);
                 if (!fill) return 'none';
