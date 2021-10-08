@@ -128,7 +128,7 @@ bluewave.charts.LineChart = function(parent, config) {
             .key(function (d) { return d[xKey]; })
             .rollup(function (d) {
                 return d3.max(d, function (g) {
-                    return g[yKey];
+                    return parseFloat(g[yKey]);
                 });
             }).entries(mergedData);
 
@@ -499,12 +499,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
         yAxis = plotArea
             .append("g")
-            .call(scaleOption==="linear" ? d3.axisLeft(y) : 
+            .call(scaleOption==="linear" ? d3.axisLeft(y) :
                     d3.axisLeft(y)
                     .ticks(10, ",")
                     .tickFormat(d3.format("d"))
             );
-            
+
     };
 
 
