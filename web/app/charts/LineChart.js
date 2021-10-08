@@ -229,7 +229,8 @@ bluewave.charts.LineChart = function(parent, config) {
             };
 
             var getY = function(d){
-                return (scaleOption === "logarithmic") ? y(d["value"]+1):y(d["value"]);
+                var v = parseFloat(d["value"]);
+                return (scaleOption === "logarithmic") ? y(v+1):y(v);
             };
 
           //Don't render area if the start and end opacity is 0
@@ -616,6 +617,8 @@ bluewave.charts.LineChart = function(parent, config) {
 
                     minVal = Math.pow(10, Math.floor(Math.log10(minVal+1)));
                     maxVal = Math.pow(10, Math.ceil(Math.log10(maxVal)));
+
+                    if (minVal>=10) minVal = minVal/10;
 
 
                     scale = d3.scaleLog()
