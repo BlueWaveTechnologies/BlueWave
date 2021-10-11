@@ -128,9 +128,6 @@ bluewave.charts.LineChart = function(parent, config) {
             .rollup(function (d) {
                 return d3.max(d, function (g) {
                     return parseFloat(g[yKey]);
-                    //Are there any cases where parseFloat might be a problem? I mean line chart
-                    //is always gonna have a number for output right?
-                    // return g[yKey];
                 });
             }).entries(mergedData);
 
@@ -140,7 +137,6 @@ bluewave.charts.LineChart = function(parent, config) {
             .rollup(function (d) {
                 return d3.min(d, function (g) {
                     return parseFloat(g[yKey]);
-                    // return g[yKey];
                 });
             }).entries(mergedData);
 
