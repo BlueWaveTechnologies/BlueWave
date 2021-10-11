@@ -122,17 +122,30 @@ bluewave.charts.LineChart = function(parent, config) {
         //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
         // }
 
-
-        //Set axes with merged data
-        var axisData = d3.nest()
+        //Get max line
+        var maxData = d3.nest()
             .key(function (d) { return d[xKey]; })
             .rollup(function (d) {
                 return d3.max(d, function (g) {
                     return parseFloat(g[yKey]);
+                    //Are there any cases where parseFloat might be a problem? I mean line chart
+                    //is always gonna have a number for output right?
+                    // return g[yKey];
                 });
             }).entries(mergedData);
 
-        displayAxis("key", "value", axisData);
+        //Get minimum line
+        var minData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.min(d, function (g) {
+                    return parseFloat(g[yKey]);
+                    // return g[yKey];
+                });
+            }).entries(mergedData);
+
+         //Set axes with merged data
+        displayAxis("key", "value", maxData, minData);
 
         let xType = typeOfAxisValue();
 
@@ -151,7 +164,6 @@ bluewave.charts.LineChart = function(parent, config) {
             })
 
             dataSets = tempDataSets;
-            // displayAxis(xKey,yKey,data);
         }
 
 
@@ -227,7 +239,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     return x(d.key);
                 }
             };
-
+// Why are we adding 1 here if I forget to ask? to avoid log(0)=-inf?
             var getY = function(d){
                 var v = parseFloat(d["value"]);
                 return (scaleOption === "logarithmic") ? y(v+1):y(v);
@@ -367,7 +379,7 @@ bluewave.charts.LineChart = function(parent, config) {
             var tx = x(lastKey)
         }
 
-        var ty = y(lastVal);
+        var ty = (scaleOption==="logarithmic") ? y(lastVal+1) : y(lastVal);
 
         var temp = plotArea.append("text")
             .attr("dy", ".35em")
@@ -476,13 +488,13 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** displayAxis
   //**************************************************************************
-    var displayAxis = function(xKey,yKey,chartData){
+    var displayAxis = function(xKey,yKey,chartData,minData){
 
-        let axisTemp = createAxisScale(xKey,'x',chartData);
+        let axisTemp = createAxisScale(xKey,'x',chartData,minData);
         x = axisTemp.scale;
         xBand = axisTemp.band;
 
-        axisTemp = createAxisScale(yKey,'y',chartData, scaleOption);
+        axisTemp = createAxisScale(yKey,'y',chartData, minData, scaleOption);
         y = axisTemp.scale;
         yBand = axisTemp.band;
 
@@ -542,7 +554,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** createAxisScale
   //**************************************************************************
-    var createAxisScale = function(key, axisName, chartData, scaleOption){
+    var createAxisScale = function(key, axisName, chartData, minData, scaleOption){
         let scale;
         let band;
         let type = typeOfAxisValue(chartData[0][key]);
@@ -598,11 +610,13 @@ bluewave.charts.LineChart = function(parent, config) {
 
             default: //number
 
-                var extent = d3.extent(chartData, function(d) { return parseFloat(d[key]); });
-                var minVal = extent[0];
-                var maxVal = extent[1];
+                // var extent = d3.extent(chartData, function(d) { return parseFloat(d[key]); });
+                // var minVal = extent[0];
+                // var maxVal = extent[1];
+                //Having objects for both the min and max lines could possibly come in handy
+                var minVal = d3.min(minData, function(d) { return parseFloat(d[key]);} );
+                var maxVal = d3.max(chartData, function(d) { return parseFloat(d[key]);} );
                 if (minVal == maxVal) maxVal = minVal + 1;
-
 
                 if (scaleOption === "linear"){
 
@@ -614,12 +628,9 @@ bluewave.charts.LineChart = function(parent, config) {
                 }
                 else if (scaleOption === "logarithmic"){
 
-
-                    minVal = Math.pow(10, Math.floor(Math.log10(minVal+1)));
-                    maxVal = Math.pow(10, Math.ceil(Math.log10(maxVal)));
-
-                    if (minVal>=10) minVal = minVal/10;
-
+                    // minVal = Math.pow(10, Math.floor(Math.log10(minVal+1)));
+                    // maxVal = Math.pow(10, Math.ceil(Math.log10(maxVal)));
+                    if(minVal<1) minVal = 1;
 
                     scale = d3.scaleLog()
                     .domain([minVal, maxVal]);
