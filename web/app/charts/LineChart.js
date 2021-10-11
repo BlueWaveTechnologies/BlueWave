@@ -14,7 +14,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         margin: {
-            top: 15,
+            top: 25,
             right: 75,
             bottom: 65,
             left: 82
@@ -629,7 +629,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     if(minVal<1) minVal = 1;
 
                     scale = d3.scaleLog()
-                    .domain([minVal, maxVal]);
+                    .domain([minVal, maxVal+1]);
 
                 }
 
