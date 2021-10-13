@@ -155,6 +155,7 @@ bluewave.charts.MapChart = function(parent, config) {
           //Render state boundaries
             var renderStates = function(renderPolygons){
                 if (renderPolygons===true){
+                    //console.log(states.features);
                     return countyMap.selectAll("whatever")
                     .data(states.features)
                     .enter()
