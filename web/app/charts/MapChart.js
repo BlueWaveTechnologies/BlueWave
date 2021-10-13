@@ -265,9 +265,16 @@ bluewave.charts.MapChart = function(parent, config) {
                     updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
                 }
                 else if(area==="WKT"){  //Render based on WKT Geometry
-                    renderCounties();
-                    renderStates();
-                    renderWKT(data, chartConfig, colorScale, path);
+                    var countyPolygons = renderCounties();
+                    var statePolygons = renderStates(true);
+                    countyPolygons.each(function() {
+                        var path = d3.select(this);
+                        var fillColor = path.attr('fill');
+                        path.attr('fill', function(d){
+                            return "lightgrey";
+                        });
+                    });
+                    renderWKT(data, chartConfig, colorScale, path, countyMap);
                 }
                 else{
                     renderCounties();
@@ -708,7 +715,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** renderWKT
   //**************************************************************************
-    var renderWKT = function(data, chartConfig, colorScale, path){
+    var renderWKT = function(data, chartConfig, colorScale, path, map){
         var geometries =[];
 //        data.forEach(function(d){
 //            if(d[chartConfig.mapLocation].includes("(")){
@@ -720,19 +727,13 @@ bluewave.charts.MapChart = function(parent, config) {
         var geometry = convertWKT("POLYGON((-87.906471 43.038902, -95.992775 36.153980, -75.704722 36.076944, -87.906471 43.038902))");
         console.log(geometry);
         geometries.push(geometry);
-        mapArea.append("g")
-            .selectAll("whatever")
+        map.selectAll("stuff")
             .data(geometries)
             .enter()
             .append("path")
             .attr('d', path)
-            .attr('fill', function(geometry){
-                var v = parseFloat([geometry.mapValue]);
-                if (isNaN(v) || v<0) v = 0;
-                var fill = colorScale[chartConfig.colorScale](v);
-                if (!fill) return 'none';
-                return fill;
-            })
+            .attr('fill', 'green')
+            .attr('stroke', 'white');
     }
 
   //**************************************************************************
