@@ -380,10 +380,10 @@ bluewave.charts.PieEditor = function(parent, config) {
                     var x = a[chartConfig.pieKey];
                     var y = b[chartConfig.pieKey];
                     if (chartConfig.pieSortDir === "Descending") {
-                        return x.localeCompare(y);
+                        return y.localeCompare(x);
                     }
                     else{
-                        return y.localeCompare(x);
+                        return x.localeCompare(y);
                     }
                 });
             }
