@@ -29,12 +29,16 @@ bluewave.charts.PieEditor = function(parent, config) {
     var pieInputs={
         key:"",
         value:"",
-        direction:""
+        direction:"",
+        sort:"",
+        sortDir:""
     };
     var chartConfig = {
         pieKey:null,
         pieValue:null,
         pieDirection:null,
+        pieSort:null,
+        pieSortDir:null,
         chartTitle:null
     };
     var margin = {
@@ -258,13 +262,21 @@ bluewave.charts.PieEditor = function(parent, config) {
             chartConfig.pieValue = "quantity";
             pieInputs.direction.add("Inbound");
             pieInputs.direction.add("Outbound");
+            pieInputs.direction.setValue(chartConfig.pieDirection,chartConfig.pieDirection);
+
         }
+
+
+        pieInputs.sort.add("None");
+        pieInputs.sort.add("Type");
+        pieInputs.sort.add("Value");
+        pieInputs.sortDir.add("Ascending");
+        pieInputs.sortDir.add("Descending");
 
         pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
         if(typeof pieInputs.value == "object") {
             pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
         }
-        pieInputs.direction.setValue(chartConfig.pieDirection,chartConfig.pieDirection);
     };
 
 
@@ -290,7 +302,11 @@ bluewave.charts.PieEditor = function(parent, config) {
         if (!inputData[0].hasOwnProperty("links")) {
             dropdownItem(tbody,"pieValue","Value Type",createPiePreview,pieInputs,"value");
         }
-        dropdownItem(tbody,"pieDirection","Direction",createPiePreview,pieInputs,"direction");
+        if (inputData[0].hasOwnProperty("links")) {
+            dropdownItem(tbody,"pieDirection","Direction",createPiePreview,pieInputs,"direction");
+        }
+        dropdownItem(tbody,"pieSort","Sort By",createPiePreview,pieInputs,"sort");
+        dropdownItem(tbody,"pieSortDir","Sort Direction",createPiePreview,pieInputs,"sortDir");
 
     };
 
@@ -360,6 +376,7 @@ bluewave.charts.PieEditor = function(parent, config) {
             } else {
                 data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
             }
+            //if (chartConfig.pieSortDIrection == ...
             let scData = [];
             data.forEach(function(entry, index) {
                 let scEntry = {};
@@ -371,6 +388,17 @@ bluewave.charts.PieEditor = function(parent, config) {
             });
             data = scData;
             }
+
+            if(chartConfig.pieSort === "Type") {
+                data = data.sort();
+            } else if(chartConfig.pieSort === "Value") {
+                data = data.sort((a,b) => b[chartConfig.pieValue] - a[chartConfig.pieValue]);
+            }
+
+            if (chartConfig.pieSortDir === "Descending") {
+                data = data.reverse();
+            }
+
             pieChart.update(chartConfig, data);
         });
     };
