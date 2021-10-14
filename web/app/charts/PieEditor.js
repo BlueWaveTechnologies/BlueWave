@@ -375,15 +375,31 @@ bluewave.charts.PieEditor = function(parent, config) {
             }
 
             if (chartConfig.pieSort === "Key") {
-                data = data.sort();
+                data.sort(function(a, b){
+                    var x = a[chartConfig.pieKey];
+                    var y = b[chartConfig.pieKey];
+                    if (chartConfig.pieSortDir === "Descending") {
+                        return x.localeCompare(y);
+                    }
+                    else{
+                        return y.localeCompare(x);
+                    }
+                });
             }
             else if(chartConfig.pieSort === "Value") {
-                data = data.sort((a,b) => b[chartConfig.pieValue] - a[chartConfig.pieValue]);
+                data = data.sort(function(a,b){
+                    var x = a[chartConfig.pieValue];
+                    var y = b[chartConfig.pieValue];
+                    if (chartConfig.pieSortDir === "Descending") {
+                        return y - x;
+                    }
+                    else{
+                        return x-y;
+                    }
+                });
             }
 
-            if (chartConfig.pieSortDir === "Descending") {
-                data = data.reverse();
-            }
+
 
             pieChart.update(chartConfig, data);
         });
