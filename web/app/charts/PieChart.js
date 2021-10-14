@@ -57,9 +57,17 @@ bluewave.charts.PieChart = function(parent, config) {
                 return acc;
             },{});
 
+            var padding = 0;
+            if (typeof chartConfig.piePadding !== "undefined") {
+                padding = chartConfig.piePadding;
+            }
+
             var pie = d3.pie().value(function (d) {
                 return d.value;
-            });
+            })
+            .padAngle(padding);
+
+
 
             pieData = pie(d3.entries(pieData));
 

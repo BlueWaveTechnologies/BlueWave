@@ -434,6 +434,12 @@ bluewave.charts.PieEditor = function(parent, config) {
                                     value: false
                                 }
                             ]
+                        },
+                        {
+                            name: "padding",
+                            label: "Padding",
+                            type: "text",
+                            placeholder: "Enter numerical value"
                         }
                     ]
                 }
@@ -456,10 +462,18 @@ bluewave.charts.PieEditor = function(parent, config) {
             labelField.setValue(labels===true ? true : false);
 
 
+          //Set initial value for padding and update
+          var padding = chartConfig.piePadding;
+          if (padding==null) padding = 0.0;
+          chartConfig.piePadding = padding;
+          form.findField("padding").setValue(padding);
+
+
           //Process onChange events
             form.onChange = function(){
                 var settings = form.getData();
                 chartConfig.pieCutout = settings.cutout/100;
+                chartConfig.piePadding = settings.padding;
                 if (settings.labels==="true") settings.labels = true;
                 else if (settings.labels==="false") settings.labels = false;
                 chartConfig.pieLabels = settings.labels;
