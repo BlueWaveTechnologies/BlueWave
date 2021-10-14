@@ -298,6 +298,8 @@ bluewave.charts.PieEditor = function(parent, config) {
         pieInputs[inputType].onChange = function(name, value){
             if (chartConfigRef==="pieSort"){
                 if (value.length>0){
+                    chartConfig[chartConfigRef] = value;
+
                     var dir = pieInputs.sortDir.getValue();
                     if (!dir) dir = "Ascending";
 
@@ -306,7 +308,6 @@ bluewave.charts.PieEditor = function(parent, config) {
                     pieInputs.sortDir.add("Descending");
 
                     pieInputs.sortDir.setValue(dir); //this will call createPreview()
-                    chartConfig[chartConfigRef] = value;
                 }
                 else{
                     delete chartConfig[chartConfigRef];
