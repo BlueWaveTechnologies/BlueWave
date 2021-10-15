@@ -221,7 +221,7 @@ bluewave.charts.MapChart = function(parent, config) {
             else if(chartConfig.mapType === "Area"){
 
                 var area;
-                if(!useWKT){
+                if(true){
                     area = selectArea(data, chartConfig);
                 }else{
                     area = "WKT";
@@ -359,7 +359,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
               //Render data using the most suitable geometry type
                 var area;
-                if(!useWKT){
+                if(true){
                     area = selectArea(data, chartConfig);
                 }else{
                     area = "WKT";
@@ -486,7 +486,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         }
                     });
                 if(useWKT){
-                    renderWKT(data, chartConfig, colorScale, path, mapArea);
+                    //renderWKT(data, chartConfig, colorScale, path, mapArea);
                 }
             }
             else if(chartConfig.mapType === "Links"){
