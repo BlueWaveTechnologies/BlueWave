@@ -465,7 +465,7 @@ bluewave.charts.PieEditor = function(parent, config) {
 
       //Tweak height of the label field and set initial value
         var labelField = form.findField("labels");
-        labelField.row.style.height = "68px";
+        labelField.row.style.height = "90px";
         var labels = chartConfig.pieLabels;
         labelField.setValue(labels===true ? true : false);
 
