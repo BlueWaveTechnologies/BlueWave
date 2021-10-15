@@ -4,9 +4,9 @@ import os
 from os.path import dirname
 
 # use directory containing main.html
-mainLocation = os.path.dirname(os.getcwd())+"/BlueWave/web/"
+mainLocation = os.path.dirname(os.getcwd())+"/BlueWave/web"
 # set directory for rebuilt main.html
-newLocation = os.path.dirname(os.getcwd())+"/BlueWave/compiledProjectDirectory/"
+newLocation = os.path.dirname(os.getcwd())+"/BlueWave/compiledProjectDirectory"
 
 
 
