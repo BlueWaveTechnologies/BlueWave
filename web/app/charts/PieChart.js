@@ -203,11 +203,22 @@ bluewave.charts.PieChart = function(parent, config) {
                     }
 
 
+                  //Apply scaling and position
                     pieChart
                       .attr("transform",
                         "translate(" + x + "," + y + ") " +
                         "scale(" + scale + ")"
                     );
+
+
+                  //Update position
+                    var d = javaxt.dhtml.utils.getRect(parent).y - javaxt.dhtml.utils.getRect(pieChart.node()).y;
+                    pieChart
+                      .attr("transform",
+                        "translate(" + x + "," + (y+d) + ") " +
+                        "scale(" + scale + ")"
+                    );
+
                 }
             }
         });
