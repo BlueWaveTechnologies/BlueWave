@@ -33,7 +33,7 @@ jobs:
       - name: create Project Directory
         run: mkdir compiledProjectDirectory
 
-    ### Minify JS and consolidate into one file and change main.html bluewave reference
+    ### Minify JS and consolidate into one file 
 
      # Minify web/app file directory into individually minified files
       - name: minify web/app directory
@@ -51,20 +51,6 @@ jobs:
         uses: JesseTG/rm@v1.0.2
         with:
           path: web/app
-
-     # replace main.html file with new reference to minified bluewave file
-      - name: setup python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8 #install the python needed
-      - name: Install Python dependencies
-        uses: py-actions/py-dependency-install@v2
-        with:
-          path: "scripts/githubWorkflowActions/requirements.txt"
-      - name: execute editHTML script 
-        run: |
-          python scripts/githubWorkflowActions/editMainHtmlFile.py
-
 
     ### Prepare machine to generate jar file
       
@@ -104,6 +90,22 @@ jobs:
      # copy all Release assets to compiled project Directory
       - name: copy all files/folders to compiled project Directory
         run: cp -r web models lib bluewave.jar compiledProjectDirectory
+
+
+
+     # replace main.html file with new reference to minified bluewave file
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8 #install the python needed
+      - name: Install Python dependencies
+        uses: py-actions/py-dependency-install@v2
+        with:
+          path: "scripts/githubWorkflowActions/requirements.txt"
+      - name: execute editHTML script 
+        run: |
+          python scripts/githubWorkflowActions/editMainHtmlFile.py
+
 
 
 

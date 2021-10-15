@@ -4,9 +4,9 @@ import os
 from os.path import dirname
 
 # use directory containing main.html
-mainLocation = os.path.dirname(os.getcwd())+"/BlueWave/web"
+mainLocation = os.path.dirname(os.getcwd())+"/compiledProjectDirectory/web"
 # set directory for rebuilt main.html
-newLocation = os.path.dirname(os.getcwd())+"/compiledProjectDirectory"
+# newLocation = os.path.dirname(os.getcwd())+"/compiledProjectDirectory"
 
 
 
@@ -21,7 +21,7 @@ itemsToRemove = [
 
 with open(mainLocation + "/main.html", "r") as f:
     lines = f.readlines()
-with open(newLocation + "/main.html", "w+") as f:
+with open(mainLocation + "/main.html", "w+") as f:
     for line in lines:
         writeLine = True
         for removeWord in itemsToRemove:
