@@ -16,8 +16,8 @@ bluewave.charts.MapChart = function(parent, config) {
         style: {
         }
     };
-    var WKT = new ol.format.WKT();
-    var geojson = new ol.format.GeoJSON();
+    var WKT = new ol.format.WKT(); //the WKT Format for OpenLayers
+    var geoJSON = new ol.format["GeoJSON"]();  //the geoJSON format for OpenLayers
     var svg, mapArea; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
@@ -394,6 +394,10 @@ bluewave.charts.MapChart = function(parent, config) {
                     var statePolygons = renderStates();
                     updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
                 }
+                else if(area==="WKT"){
+                    var statePolygons = renderStates(true);
+                    renderWKT(data, chartConfig, colorScale, path, worldMap);
+                }
                 else{
                     renderStates();
                 }
@@ -481,6 +485,9 @@ bluewave.charts.MapChart = function(parent, config) {
                             return "lightgrey";
                         }
                     });
+                if(useWKT){
+                    renderWKT(data, chartConfig, colorScale, path, mapArea);
+                }
             }
             else if(chartConfig.mapType === "Links"){
                 getData("PortsOfEntry", function(ports){
@@ -716,7 +723,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //** renderWKT
   //**************************************************************************
     var renderWKT = function(data, chartConfig, colorScale, path, map){
-        var geometries =[];
+        var collectionOfFeatures =[];
 //        data.forEach(function(d){
 //            if(d[chartConfig.mapLocation].includes("(")){
 //                var geometry = convertWKT(d[chartConfig.mapLocation]);
@@ -724,25 +731,27 @@ bluewave.charts.MapChart = function(parent, config) {
 //                geometries.push(geometry);
 //            }
 //        }
-        var geometry = convertWKT("POLYGON((-87.906471 43.038902, -95.992775 36.153980, -75.704722 36.076944, -87.906471 43.038902))");
-        console.log(geometry);
-        geometries.push(geometry);
+        var geoJSONObject = convertWKT("POLYGON((-87.906471 43.038902, -95.992775 36.153980, -75.704722 36.076944, -87.906471 43.038902))");
+//        console.log(geoJSONObject);
+        geoJSONObject.geometry.coordinates[0].reverse(); //This reverses the coordinate order, which is requried for d3 to work properly.
+//        console.log(geoJSONObject);
+        collectionOfFeatures.push(geoJSONObject);
         map.selectAll("stuff")
-            .data(geometries)
+            .data(collectionOfFeatures)
             .enter()
             .append("path")
             .attr('d', path)
-            .attr('fill', 'green')
+            .attr('fill', "green")
             .attr('stroke', 'white');
     }
 
   //**************************************************************************
   //** convertWKT
   //**************************************************************************
-  //Converts a wkt into a Geometry object;
+  //Converts a wkt into a geoJSON object;
     var convertWKT = function(val){
-        var geometry = WKT.readGeometry(val);
-        return geometry;
+        var geoJSONObject = geoJSON.writeFeatureObject(WKT.readFeature(val));
+        return geoJSONObject;
     }
 
   //**************************************************************************
