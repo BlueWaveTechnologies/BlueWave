@@ -471,7 +471,6 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
       //Set initial value for padding and update
-      //endCharacter = "", min=0, max=100, interval=5
         createSlider("padding", form, "%", 0, 100, 1);
         var padding = chartConfig.piePadding;
         if (padding==null) padding = 0.0;
@@ -485,7 +484,7 @@ bluewave.charts.PieEditor = function(parent, config) {
             var settings = form.getData();
             chartConfig.pieCutout = settings.cutout/100;
 
-            var maxPadding = 3;
+            var maxPadding = 5;
             chartConfig.piePadding = (settings.padding*maxPadding)/100;
 
             if (settings.labels==="true") settings.labels = true;
