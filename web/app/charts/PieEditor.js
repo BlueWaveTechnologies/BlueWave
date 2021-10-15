@@ -463,10 +463,12 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
           //Set initial value for padding and update
+          createSlider("padding", form, " degrees");
           var padding = chartConfig.piePadding;
           if (padding==null) padding = 0.0;
           chartConfig.piePadding = padding;
           form.findField("padding").setValue(padding);
+
 
 
           //Process onChange events

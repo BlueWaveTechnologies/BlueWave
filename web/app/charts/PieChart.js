@@ -59,7 +59,8 @@ bluewave.charts.PieChart = function(parent, config) {
 
             var padding = 0;
             if (typeof chartConfig.piePadding !== "undefined") {
-                padding = chartConfig.piePadding;
+                padding = chartConfig.piePadding * Math.PI / 180;
+              
             }
 
             var pie = d3.pie().value(function (d) {
