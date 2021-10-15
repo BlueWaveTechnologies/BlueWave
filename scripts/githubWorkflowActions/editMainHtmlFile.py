@@ -21,7 +21,7 @@ itemsToRemove = [
 
 with open(mainLocation + "/main.html", "r") as f:
     lines = f.readlines()
-with open(newLocation + "/main.html", "w") as f:
+with open(newLocation + "/main.html", "w+") as f:
     for line in lines:
         writeLine = True
         for removeWord in itemsToRemove:
