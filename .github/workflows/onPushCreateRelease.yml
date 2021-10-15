@@ -1,10 +1,5 @@
 on:
   push:
-    # Sequence of patterns matched against refs/tags
-    # tags:
-    #   - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-    # branches:
-    #   - master
     tags:
     - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
@@ -17,16 +12,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        # with:
-          # dir: ./web/app
-          # output: ./javaxt-minified
-
           
-
-
-
-
-      ##################################################### Create Externally facing Release ############################################
 
      # create the release to serve as a place to export to
       - name: Create Release
@@ -38,207 +24,31 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            Changes in this Release
-            - First Change
-            - Second Change
+            BlueWave Release ${{ github.ref }}
           draft: false
           prerelease: false
 
 
+      ### Minify JS and consolidate into one file and change main.html bluewave files reference
 
-      ##################################################### Minify web/app file directory into individually minified files ############################################
-
-      # here we minify the files
+      # Minify web/app file directory into individually minified files
       - name: minify web/app directory
         uses: nizarmah/auto-minify@v2.1
         with:
           directory: ./web/app
           overwrite: true
 
-      ##################################################### Append all minified files of web/app into a single file (bluewave.js) ############################################
-
+      # Append all minified files of web/app into a single file (bluewave.js)
       - name: Stack minified files into one 
         run: find ./web/app -name '*.js' -exec cat {} \; > ./web/bluewave.js
 
-
-
-
-      ##################################################### Prepare machine to generate jar file ############################################
-
-      # add/instantiate JDK 11 on runner 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v2
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-
-      #################### uninstall and reinstall maven #####################
-      - name: check version 0
-        run: mvn -version
-
-      - name: uninstall maven
-        run: sudo apt remove maven
-      - name: reinstall maven
-        run: sudo apt install maven
-
-      - name: check version 1
-        run: mvn -version
-      ##################################################### build jar file ############################################
-
-
-      # test multiple different types of building patterns
-
-
-      - name: build jar - simple
-        run: mvn install
-      - name: copy jar -base 
-        run: |
-          cp target/bluewave-1.0.0.jar bluewaveSimple.jar
-          cp -r target/lib libSimple
-
-
-
-      - name: Build jar - base
-        run: mvn --batch-mode install verify -X -U
-        # run: mvn --batch-mode install verify -U
-      - name: Build jar - base
-        # run: mvn --batch-mode install verify -X -U
-        run: mvn --batch-mode install verify -U
-
-      - name: copy jar -base 
-        run: |
-          cp target/bluewave-1.0.0.jar bluewaveBase0-0.jar
-          cp -r target/lib lib
-          cp -r target/lib lib0-0
-      #####################################################################################
-      - name: Build jar 1-0 - compiler:compile - batch
-        # run: mvn --batch-mode install verify -X -U
-        run: mvn --batch-mode install verify -U
-
-      - name: copy jar 1-0  - compiler:compile
-        run: |
-          cp target/bluewave-1.0.0.jar bluewave1-0.jar
-          cp -r target/lib lib1-0
-
-      #####################################################################################
-
-      #####################################################################################
-      - name: Build jar 2-0  - checksums- batch
-        # run: mvn --batch-mode install verify -X -U
-        run: mvn --batch-mode -C install verify -U
-
-      - name: copy jar 2-0  - checksums
-        run: |
-          cp target/bluewave-1.0.0.jar bluewave2-0.jar
-          cp -r target/lib lib2-0
-
-      #####################################################################################
-      #####################################################################################
-      - name: Build jar 3-0  - batch
-        # run: mvn --batch-mode install verify -X -U
-        run: mvn --batch-mode install verify -U
-
-      - name: copy jar 3-0  -  batch
-        run: |
-          cp target/bluewave-1.0.0.jar bluewave3-0.jar
-          cp -r target/lib lib3-0
-
-      #####################################################################################
-
-
-      #####################################################################################
-      - name: Build jar 1-1 - compiler:compile - no batch
-        # run: mvn --batch-mode install verify -X -U
-        run: mvn install verify -U
-
-      - name: copy jar 1-0  - compiler:compile - no batch
-        run: |
-          cp target/bluewave-1.0.0.jar bluewave1-1.jar
-          cp -r target/lib lib1-1
-
-      #####################################################################################
-
-      #####################################################################################
-      - name: Build jar 2-1  - checksums - no batch
-        # run: mvn --batch-mode install verify -X -U
-        run: mvn  -C install verify -U
-
-      - name: copy jar 2-0  - checksums - no batch
-        run: |
-          cp target/bluewave-1.0.0.jar bluewave2-1.jar
-          cp -r target/lib lib2-1
-
-      #####################################################################################
-      #####################################################################################
-      - name: Build jar 3-1  - no batch
-        # run: mvn --batch-mode install verify -X -U
-        run: mvn install verify -U
-
-      - name: copy jar 3-1  - no batch
-        run: |
-          cp target/bluewave-1.0.0.jar bluewave3-1.jar
-          cp -r target/lib lib3-1
-
-      #####################################################################################
-
-
-      ###############################
+      # delete web/app directory so it's not included in release
       - name: Remove Web/app directory from web folder
         uses: JesseTG/rm@v1.0.2
         with:
           path: web/app
-        
 
-
-
-      ##################################################### Add jar file and bluewave.js to new directory ############################################
-      # need a script here to move around files
-
-      # - uses: actions/checkout@master
-      # - name: copy jar file to compiled Project Directory
-      #   uses: canastro/copy-file-action@master
-      #   with:
-      #     source: "bluewave-1.0.0.jar"
-          # target: "./compiledProjectDirectory/bluewave-1.0.0-"+ ${{ github.ref }}+".jar"
-
-
-
-      - name: create Project Directory
-        run: mkdir compiledProjectDirectory
-
-      - name: print our directory
-        run: dir 
-
-      - name: print our directory src
-        run: dir src
-
-      - name: print our inner directory src
-        run: dir src/main
-      
-      - name: print our directory lib
-        run: dir lib
-
-      - name: print our directory web
-        run: dir web
-      
-      - name: print our directory target
-        run: dir target
-
-      - name: print our directory compiled
-        run: dir compiledProjectDirectory
-
-      # - name: copy web folder to compiled project Directory
-      - name: copy all files/folders to compiled project Directory
-
-        # run: cp -r web models lib bluewave.jar compiledProjectDirectory
-        run: cp -r pom.xml web models lib* bluewave*.jar compiledProjectDirectory
-
-
-
-
-      ##################################################### replace main.html file with new reference to minified bluewave file into new dest ############################################
-      
+      # replace main.html file with new reference to minified bluewave file
       - name: setup python
         uses: actions/setup-python@v2
         with:
@@ -252,27 +62,61 @@ jobs:
           python scripts/githubWorkflowActions/editMainHtmlFile.py
 
 
+      ### Prepare machine to generate jar file
+      
+      # add/instantiate JDK 11 on runner 
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
 
 
-      ##################################################### Package new directory into zip file ############################################
+      # install maven 3.6.3 (current default latest version Ubuntu)
+      - name: install maven
+        run: sudo apt install maven
+
+      # show current maven version in Github Actions output (should be 3.6.3) 
+      # Note: errors may occur when using other versions
+      - name: check Maven Version 
+        run: mvn -version
 
 
-      # put the project in a zip file
+      ### build jar file
+
+      # build jar file 
+      - name: build jar 
+        run: mvn --batch-mode install verify -U -X
+
+      # copy jar file to main directory
+      - name: copy jar
+        run: |
+          cp target/bluewave-1.0.0.jar bluewave-${{github.ref}}.jar
+          cp -r target/lib lib
+
+  
+      ### Add all compiled project files to new directory
+
+      # create directory 
+      - name: create Project Directory
+        run: mkdir compiledProjectDirectory
+
+      # copy all Release assets to compiled project Directory
+      - name: copy all files/folders to compiled project Directory
+        run: cp -r web models lib bluewave.jar compiledProjectDirectory
+
+
+
+      # Package new directory into zip file       
       - name: add minified project to a zip
         uses: papeloto/action-zip@v1
         with:
-          # files: ./web/app
           files: ./compiledProjectDirectory
           
           recursive: true
           dest: bluewave-${{github.ref}}.zip
 
-
-
-
-      ##################################################### add project folder to Release ############################################
-
-           # create the artifact & append to the Release
+      # add project to Release
       - name: Upload Packaged project to Release
         id: upload-release-asset-minified
         uses: actions/upload-release-asset@v1
