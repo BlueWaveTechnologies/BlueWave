@@ -429,6 +429,11 @@ bluewave.charts.PieEditor = function(parent, config) {
                             type: "text"
                         },
                         {
+                            name: "padding",
+                            label: "Padding",
+                            type: "text"
+                        },
+                        {
                             name: "labels",
                             label: "Labels",
                             type: "radio",
@@ -443,12 +448,6 @@ bluewave.charts.PieEditor = function(parent, config) {
                                     value: false
                                 }
                             ]
-                        },
-                        {
-                            name: "padding",
-                            label: "Padding",
-                            type: "text",
-                            placeholder: "Enter numerical value"
                         }
                     ]
                 }
@@ -471,25 +470,29 @@ bluewave.charts.PieEditor = function(parent, config) {
         labelField.setValue(labels===true ? true : false);
 
 
-          //Set initial value for padding and update
-          createSlider("padding", form, " degrees");
-          var padding = chartConfig.piePadding;
-          if (padding==null) padding = 0.0;
-          chartConfig.piePadding = padding;
-          form.findField("padding").setValue(padding);
+      //Set initial value for padding and update
+      //endCharacter = "", min=0, max=100, interval=5
+        createSlider("padding", form, "%", 0, 100, 1);
+        var padding = chartConfig.piePadding;
+        if (padding==null) padding = 0.0;
+        chartConfig.piePadding = padding;
+        form.findField("padding").setValue(padding);
 
 
 
-          //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
-                chartConfig.pieCutout = settings.cutout/100;
-                chartConfig.piePadding = settings.padding;
-                if (settings.labels==="true") settings.labels = true;
-                else if (settings.labels==="false") settings.labels = false;
-                chartConfig.pieLabels = settings.labels;
-                createPreview();
-            };
+      //Process onChange events
+        form.onChange = function(){
+            var settings = form.getData();
+            chartConfig.pieCutout = settings.cutout/100;
+
+            var maxPadding = 3;
+            chartConfig.piePadding = (settings.padding*maxPadding)/100;
+
+            if (settings.labels==="true") settings.labels = true;
+            else if (settings.labels==="false") settings.labels = false;
+            chartConfig.pieLabels = settings.labels;
+            createPreview();
+        };
 
 
 
