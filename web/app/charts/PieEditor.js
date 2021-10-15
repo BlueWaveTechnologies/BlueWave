@@ -13,7 +13,6 @@ bluewave.charts.PieEditor = function(parent, config) {
     var panel;
     var inputData = [];
     var linksAndQuantity = [];
-    var svg;
     var previewArea;
     var pieChart;
     var optionsDiv;
@@ -31,12 +30,6 @@ bluewave.charts.PieEditor = function(parent, config) {
         pieSort:null,
         pieSortDir:null,
         chartTitle:null
-    };
-    var margin = {
-        top: 15,
-        right: 5,
-        bottom: 65,
-        left: 82
     };
     var styleEditor;
 
@@ -94,7 +87,7 @@ bluewave.charts.PieEditor = function(parent, config) {
 
       //Initialize chart area when ready
         onRender(previewArea, function(){
-            initializeChartSpace();
+            pieChart = new bluewave.charts.PieChart(previewArea, {});
         });
     };
 
@@ -324,29 +317,10 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** initializeChartSpace
-  //**************************************************************************
-    var initializeChartSpace = function(){
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
-
-        svg = d3.select(previewArea).append("svg");
-        svg.attr("width", width);
-        svg.attr("height", height);
-
-
-        pieChart = new bluewave.charts.PieChart(svg, {
-            margin: margin
-        });
-    };
-
-
-  //**************************************************************************
   //** createPreview
   //**************************************************************************
     var createPreview = function(){
         if (chartConfig.pieKey===null || chartConfig.pieValue===null) return;
-
 
 
         onRender(previewArea, function(){
@@ -377,33 +351,37 @@ bluewave.charts.PieEditor = function(parent, config) {
 
             if (chartConfig.pieSort === "Key") {
                 data.sort(function(a, b){
-                    var x = a[chartConfig.pieKey];
-                    var y = b[chartConfig.pieKey];
-                    if (chartConfig.pieSortDir === "Descending") {
-                        return y.localeCompare(x);
-                    }
-                    else{
-                        return x.localeCompare(y);
-                    }
+                    return sort(a[chartConfig.pieKey],b[chartConfig.pieKey]);
                 });
             }
             else if(chartConfig.pieSort === "Value") {
                 data = data.sort(function(a,b){
-                    var x = a[chartConfig.pieValue];
-                    var y = b[chartConfig.pieValue];
-                    if (chartConfig.pieSortDir === "Descending") {
-                        return y - x;
-                    }
-                    else{
-                        return x-y;
-                    }
+                    a = parseFloat(a[chartConfig.pieValue]);
+                    b = parseFloat(b[chartConfig.pieValue]);
+                    return sort(a,b);
                 });
             }
 
-
-
             pieChart.update(chartConfig, data);
         });
+    };
+
+
+  //**************************************************************************
+  //** sort
+  //**************************************************************************
+    var sort = function(x,y){
+
+        var compareStrings = (typeof x === "string" && typeof y === "string");
+
+        if (chartConfig.pieSortDir === "Descending") {
+            if (compareStrings) return y.localeCompare(x);
+            else return y-x;
+        }
+        else{
+            if (compareStrings) return x.localeCompare(y);
+            else return x-y;
+        }
     };
 
 
