@@ -429,6 +429,11 @@ bluewave.charts.PieEditor = function(parent, config) {
                             type: "text"
                         },
                         {
+                            name: "padding",
+                            label: "Padding",
+                            type: "text"
+                        },
+                        {
                             name: "labels",
                             label: "Labels",
                             type: "radio",
@@ -460,15 +465,28 @@ bluewave.charts.PieEditor = function(parent, config) {
 
       //Tweak height of the label field and set initial value
         var labelField = form.findField("labels");
-        labelField.row.style.height = "68px";
+        labelField.row.style.height = "90px";
         var labels = chartConfig.pieLabels;
         labelField.setValue(labels===true ? true : false);
+
+
+      //Set initial value for padding and update
+        createSlider("padding", form, "%", 0, 100, 1);
+        var padding = chartConfig.piePadding;
+        if (padding==null) padding = 0.0;
+        chartConfig.piePadding = padding;
+        form.findField("padding").setValue(padding);
+
 
 
       //Process onChange events
         form.onChange = function(){
             var settings = form.getData();
             chartConfig.pieCutout = settings.cutout/100;
+
+            var maxPadding = 5;
+            chartConfig.piePadding = (settings.padding*maxPadding)/100;
+
             if (settings.labels==="true") settings.labels = true;
             else if (settings.labels==="false") settings.labels = false;
             chartConfig.pieLabels = settings.labels;
