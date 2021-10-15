@@ -24,12 +24,8 @@ bluewave.ChartEditor = function(parent, config) {
     var inputData = [];
     var svg;
     var previewArea;
-    var pieChart, lineChart, barChart;
+    var lineChart, barChart;
     var optionsDiv;
-    var pieInputs={
-        key:"",
-        value:""
-    };
     var plotInputs = {
         xAxis:null,
         yAxis:null,
@@ -158,7 +154,6 @@ bluewave.ChartEditor = function(parent, config) {
         panel.title.innerHTML = "Untitled";
         optionsDiv.innerHTML = "";
 
-        if (pieChart) pieChart.clear();
         if (lineChart) lineChart.clear();
         if (barChart) barChart.clear();
 
@@ -198,20 +193,6 @@ bluewave.ChartEditor = function(parent, config) {
         let dataOptions = Object.keys(data[0]);
         let dataOptions2 = data2?Object.keys(data2[0]):null;
         switch(chartConfig.chartType){
-            case 'pieChart':
-                dataOptions.forEach((val)=>{
-                    if(!isNaN(data[0][val])){
-                        pieInputs.value.add(val,val);
-                    }else{
-                        pieInputs.key.add(val,val);
-                    }
-                });
-                pieInputs.key.setValue(chartConfig.pieKey, true);
-                pieInputs.value.setValue(chartConfig.pieValue, true);
-
-                createPiePreview();
-
-                break;
             case 'barChart':
 
                 dataOptions.forEach((val)=>{
@@ -292,9 +273,6 @@ bluewave.ChartEditor = function(parent, config) {
     var createForm = function(parent){
 
         switch(chartConfig.chartType){
-            case "pieChart":
-                createPieChartOptions(parent);
-                break;
             case "barChart":
                 createBarChartOptions(parent);
                 break;
@@ -304,15 +282,6 @@ bluewave.ChartEditor = function(parent, config) {
             default:
                 break;
         }
-    };
-
-
-  //**************************************************************************
-  //** createPieChartOptions
-  //**************************************************************************
-    var createPieChartOptions = function(parent){
-        createInput(parent,"pieKey","Key",createPiePreview,pieInputs,"key");
-        createInput(parent,"pieValue","Value",createPiePreview,pieInputs,"value");
     };
 
 
@@ -543,8 +512,6 @@ bluewave.ChartEditor = function(parent, config) {
         svg.attr("height", height);
 
 
-        pieChart = new bluewave.charts.PieChart(svg, {});
-
         lineChart = new bluewave.charts.LineChart(svg, {});
         lineChart.onClick = function(line, datasetID){
             editStyle("line", datasetID);
@@ -558,17 +525,6 @@ bluewave.ChartEditor = function(parent, config) {
         };
     };
 
-
-  //**************************************************************************
-  //** createPiePreview
-  //**************************************************************************
-    var createPiePreview = function(){
-        if (chartConfig.pieKey===null || chartConfig.pieValue===null) return;
-        onRender(previewArea, function(){
-            var data = inputData[0];
-            pieChart.update(chartConfig, data);
-        });
-    };
 
 
   //**************************************************************************
@@ -613,76 +569,7 @@ bluewave.ChartEditor = function(parent, config) {
         var body = styleEditor.getBody();
         body.innerHTML = "";
         var form;
-        if (chartType==="pieChart"){
-            form = new javaxt.dhtml.Form(body, {
-                style: config.style.form,
-                items: [
-                    {
-                        group: "Style",
-                        items: [
-                            {
-                                name: "color",
-                                label: "Color",
-                                type: new javaxt.dhtml.ComboBox(
-                                    document.createElement("div"),
-                                    {
-                                        style: config.style.combobox
-                                    }
-                                )
-                            },
-                            {
-                                name: "cutout",
-                                label: "Cutout",
-                                type: "text"
-                            },
-                            {
-                                name: "labels",
-                                label: "Labels",
-                                type: "radio",
-                                alignment: "vertical",
-                                options: [
-                                    {
-                                        label: "True",
-                                        value: true
-                                    },
-                                    {
-                                        label: "False",
-                                        value: false
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            });
-
-
-          //Update cutout field (add slider) and set initial value
-            createSlider("cutout", form, "%");
-            var cutout = chartConfig.pieCutout;
-            if (cutout==null) cutout = 0.65;
-            chartConfig.pieCutout = cutout;
-            form.findField("cutout").setValue(cutout*100);
-
-
-          //Tweak height of the label field and set initial value
-            var labelField = form.findField("labels");
-            labelField.row.style.height = "68px";
-            var labels = chartConfig.pieLabels;
-            labelField.setValue(labels===true ? true : false);
-
-
-          //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
-                chartConfig.pieCutout = settings.cutout/100;
-                if (settings.labels==="true") settings.labels = true;
-                else if (settings.labels==="false") settings.labels = false;
-                chartConfig.pieLabels = settings.labels;
-                createPiePreview();
-            };
-        }
-        else if (chartType==="lineChart"){
+        if (chartType==="lineChart"){
 
             //Create scaling dropdown
             var scaleDropdown = new javaxt.dhtml.ComboBox(
@@ -700,7 +587,7 @@ bluewave.ChartEditor = function(parent, config) {
             // scaleInputs.add("Logarithmic", "logarithmic");
 
             // var scaleDropdown = createDropdown("scalingOptions", scaleInputs)
-            
+
             scaleDropdown.setValue("linear");
 
             form = new javaxt.dhtml.Form(body, {
@@ -728,7 +615,7 @@ bluewave.ChartEditor = function(parent, config) {
 
                                 ]
                             }
-                            
+
 
                         ]
                     },
@@ -793,7 +680,7 @@ bluewave.ChartEditor = function(parent, config) {
                         ]
                     },
 
-                    
+
                 ]
             });
 

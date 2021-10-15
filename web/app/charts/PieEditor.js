@@ -7,41 +7,29 @@ if(!bluewave) var bluewave={};
  *   Panel used to edit pie chart
  *
  ******************************************************************************/
-/**
- *   Data Flow:
- *   init - stubs out chart areas
- *   initializeChartSpace - stubs out chart spaces
- *   Update - chart information and config is passed in.
- *   createDropDown - initializes chart Type specific dropdowns
- *   createOptions - adds chart input options from updated Data
- *      pie chart creation.
- ******************************************************************************/
 
 bluewave.charts.PieEditor = function(parent, config) {
     var me = this;
     var panel;
     var inputData = [];
     var linksAndQuantity = [];
-    var svg;
     var previewArea;
     var pieChart;
     var optionsDiv;
     var pieInputs={
         key:"",
         value:"",
-        direction:""
+        direction:"",
+        sort:"",
+        sortDir:""
     };
     var chartConfig = {
         pieKey:null,
         pieValue:null,
         pieDirection:null,
+        pieSort:null,
+        pieSortDir:null,
         chartTitle:null
-    };
-    var margin = {
-        top: 15,
-        right: 5,
-        bottom: 65,
-        left: 82
     };
     var styleEditor;
 
@@ -99,7 +87,7 @@ bluewave.charts.PieEditor = function(parent, config) {
 
       //Initialize chart area when ready
         onRender(previewArea, function(){
-            initializeChartSpace();
+            pieChart = new bluewave.charts.PieChart(previewArea, {});
         });
     };
 
@@ -124,8 +112,8 @@ bluewave.charts.PieEditor = function(parent, config) {
             panel.title.innerHTML = chartConfig.chartTitle;
         }
 
-        createDropDown(optionsDiv);
-        createOptions();
+        createOptions(optionsDiv);
+        createPreview();
     };
 
 
@@ -148,8 +136,6 @@ bluewave.charts.PieEditor = function(parent, config) {
   /** Return chart configuration file
    */
     this.getConfig = function(){
-        //let copy = Object.assign({},chartConfig);
-        //return copy;
         return chartConfig;
     };
 
@@ -165,19 +151,19 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   //** createOptions
   //**************************************************************************
-  /** Initializes Options for Dropdowns.
-   */
-    var createOptions = function() {
+    var createOptions = function(parent) {
         var data = inputData[0];
-        var data2 = inputData[1];
 
 
-        var nodeAndType = [];
-        var nodeTypeList = [];
+        var hasLinks = data.hasOwnProperty("links");
+        var dataOptions;
 
-        if (data.hasOwnProperty("links")) {
+
+        if (hasLinks) {
             data = Object.values(inputData[0].links);
 
+            var nodeTypeList = [];
+            var nodeAndType = [];
             for (var node in inputData[0].nodes) {
                 var nodeType =inputData[0].nodes[node].type;
                 var nodeName = inputData[0].nodes[node].name;
@@ -225,80 +211,64 @@ bluewave.charts.PieEditor = function(parent, config) {
                     linksAndQuantity.push(linksAndQuantityEntry);
                 }
             }
-        }
 
-        let dataOptions = Object.keys(data[0]);
-
-
-        if(inputData[0].hasOwnProperty("links")) {
             dataOptions = nodeTypeList;
         }
-
-        if(typeof pieInputs.value == "object") {
-            pieInputs.value.clear();
+        else{
+            dataOptions = Object.keys(data[0]);
         }
 
-        pieInputs.key.clear();
 
-
-
-        if (!inputData[0].hasOwnProperty("links")) {
-            dataOptions.forEach((val)=>{
-                if(!isNaN(data[0][val])){
-                    pieInputs.value.add(val,val);
-                } else{
-                   pieInputs.key.add(val,val);
-                }
-            });
-        } else {
-            dataOptions.forEach((val)=>{
-                pieInputs.key.add(val, val);
-            });
-//            pieInputs.value.add("quantity");
-            chartConfig.pieValue = "quantity";
-            pieInputs.direction.add("Inbound");
-            pieInputs.direction.add("Outbound");
-        }
-
-        pieInputs.key.setValue(chartConfig.pieKey,chartConfig.pieKey);
-        if(typeof pieInputs.value == "object") {
-            pieInputs.value.setValue(chartConfig.pieValue,chartConfig.pieValue);
-        }
-        pieInputs.direction.setValue(chartConfig.pieDirection,chartConfig.pieDirection);
-    };
-
-
-  //**************************************************************************
-  //** createDropDown
-  //**************************************************************************
-    var createDropDown = function(parent){
 
         var table = createTable();
         var tbody = table.firstChild;
         table.style.height = "";
         parent.appendChild(table);
 
-        createPieDropdown(tbody);
-    };
 
-
-  //**************************************************************************
-  //** createPieDropdown
-  //**************************************************************************
-    var createPieDropdown = function(tbody){
-        dropdownItem(tbody,"pieKey","Group By",createPiePreview,pieInputs,"key");
-        if (!inputData[0].hasOwnProperty("links")) {
-            dropdownItem(tbody,"pieValue","Value Type",createPiePreview,pieInputs,"value");
+        if (hasLinks){
+            createDropdown(tbody,"pieKey","Group By","key");
+            createDropdown(tbody,"pieDirection","Direction","direction");
+            dataOptions.forEach((val)=>{
+                pieInputs.key.add(val, val);
+            });
+            chartConfig.pieValue = "quantity";
+            pieInputs.direction.add("Inbound");
+            pieInputs.direction.add("Outbound");
+            pieInputs.direction.setValue(chartConfig.pieDirection, true);
         }
-        dropdownItem(tbody,"pieDirection","Direction",createPiePreview,pieInputs,"direction");
+        else{
+            createDropdown(tbody,"pieKey","Key","key");
+            createDropdown(tbody,"pieValue","Value","value");
+            dataOptions.forEach((val)=>{
+                if (!isNaN(data[0][val])){
+                    pieInputs.value.add(val,val);
+                }
+                else{
+                   pieInputs.key.add(val,val);
+                }
+            });
 
+            createDropdown(tbody,"pieSort","Sort By","sort");
+            pieInputs.sort.add("");
+            pieInputs.sort.add("Key");
+            pieInputs.sort.add("Value");
+
+            createDropdown(tbody,"pieSortDir","Sort Direction","sortDir");
+        }
+
+
+        pieInputs.key.setValue(chartConfig.pieKey, true);
+        if(typeof pieInputs.value == "object") {
+            pieInputs.value.setValue(chartConfig.pieValue, true);
+        }
     };
 
 
   //**************************************************************************
-  //** dropdownItem
+  //** createDropdown
   //**************************************************************************
-    var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
+    var createDropdown = function(tbody,chartConfigRef,displayName,inputType){
         var tr, td;
 
         tr = document.createElement("tr");
@@ -313,66 +283,105 @@ bluewave.charts.PieEditor = function(parent, config) {
         tr.appendChild(td);
 
 
-        input[inputType] = new javaxt.dhtml.ComboBox(td, {
+        pieInputs[inputType] = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
-        input[inputType].clear();
-        input[inputType].onChange = function(name,value){
-            chartConfig[chartConfigRef] = value;
-            callBack();
+        pieInputs[inputType].clear();
+        pieInputs[inputType].onChange = function(name, value){
+            if (chartConfigRef==="pieSort"){
+                if (value.length>0){
+                    chartConfig[chartConfigRef] = value;
+
+                    var dir = pieInputs.sortDir.getValue();
+                    if (!dir) dir = "Ascending";
+
+                    pieInputs.sortDir.clear();
+                    pieInputs.sortDir.add("Ascending");
+                    pieInputs.sortDir.add("Descending");
+
+                    pieInputs.sortDir.setValue(dir); //this will call createPreview()
+                }
+                else{
+                    delete chartConfig[chartConfigRef];
+                    pieInputs.sortDir.clear();
+                    createPreview();
+                }
+            }
+            else{
+                chartConfig[chartConfigRef] = value;
+                createPreview();
+            }
         };
     };
 
 
   //**************************************************************************
-  //** initializeChartSpace
+  //** createPreview
   //**************************************************************************
-    var initializeChartSpace = function(){
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
-
-        svg = d3.select(previewArea).append("svg");
-        svg.attr("width", width);
-        svg.attr("height", height);
+    var createPreview = function(){
+        if (chartConfig.pieKey===null || chartConfig.pieValue===null) return;
 
 
-        pieChart = new bluewave.charts.PieChart(svg, {
-            margin: margin
+        onRender(previewArea, function(){
+            var data = inputData[0];
+            if (data.hasOwnProperty("links")) {
+                data = linksAndQuantity.slice();
+                data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
+
+                if(chartConfig.pieDirection === "Inbound") {
+                    data = data.filter(entry => entry.receiveType.endsWith(chartConfig.pieKey));
+                }
+                else {
+                    data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
+                }
+
+                //if (chartConfig.pieSortDIrection == ...
+                let scData = [];
+                data.forEach(function(entry, index) {
+                    let scEntry = {};
+                    if (entry.key.includes(chartConfig.pieKey)) {
+                        scEntry[chartConfig.pieKey] = entry.key;
+                        scEntry[chartConfig.pieValue] = entry.value;
+                    }
+                    scData.push(scEntry);
+                });
+                data = scData;
+            }
+
+            if (chartConfig.pieSort === "Key") {
+                data.sort(function(a, b){
+                    return sort(a[chartConfig.pieKey],b[chartConfig.pieKey]);
+                });
+            }
+            else if(chartConfig.pieSort === "Value") {
+                data = data.sort(function(a,b){
+                    a = parseFloat(a[chartConfig.pieValue]);
+                    b = parseFloat(b[chartConfig.pieValue]);
+                    return sort(a,b);
+                });
+            }
+
+            pieChart.update(chartConfig, data);
         });
-
     };
 
 
   //**************************************************************************
-  //** createPiePreview
+  //** sort
   //**************************************************************************
-    var createPiePreview = function(){
-        if (chartConfig.pieKey===null || chartConfig.pieValue===null) return;
-        onRender(previewArea, function(){
-            var data = inputData[0];
-            if (data.hasOwnProperty("links")) {
-            data = linksAndQuantity.slice();
-            data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
+    var sort = function(x,y){
 
-            if(chartConfig.pieDirection === "Inbound") {
-                data = data.filter(entry => entry.receiveType.endsWith(chartConfig.pieKey));
-            } else {
-                data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
-            }
-            let scData = [];
-            data.forEach(function(entry, index) {
-                let scEntry = {};
-                if (entry.key.includes(chartConfig.pieKey)) {
-                    scEntry[chartConfig.pieKey] = entry.key;
-                    scEntry[chartConfig.pieValue] = entry.value;
-                }
-                scData.push(scEntry);
-            });
-            data = scData;
-            }
-            pieChart.update(chartConfig, data);
-        });
+        var compareStrings = (typeof x === "string" && typeof y === "string");
+
+        if (chartConfig.pieSortDir === "Descending") {
+            if (compareStrings) return y.localeCompare(x);
+            else return y-x;
+        }
+        else{
+            if (compareStrings) return x.localeCompare(y);
+            else return x-y;
+        }
     };
 
 
@@ -447,19 +456,19 @@ bluewave.charts.PieEditor = function(parent, config) {
         });
 
 
-          //Update cutout field (add slider) and set initial value
-            createSlider("cutout", form, "%");
-            var cutout = chartConfig.pieCutout;
-            if (cutout==null) cutout = 0.65;
-            chartConfig.pieCutout = cutout;
-            form.findField("cutout").setValue(cutout*100);
+      //Update cutout field (add slider) and set initial value
+        createSlider("cutout", form, "%");
+        var cutout = chartConfig.pieCutout;
+        if (cutout==null) cutout = 0.65;
+        chartConfig.pieCutout = cutout;
+        form.findField("cutout").setValue(cutout*100);
 
 
-          //Tweak height of the label field and set initial value
-            var labelField = form.findField("labels");
-            labelField.row.style.height = "68px";
-            var labels = chartConfig.pieLabels;
-            labelField.setValue(labels===true ? true : false);
+      //Tweak height of the label field and set initial value
+        var labelField = form.findField("labels");
+        labelField.row.style.height = "68px";
+        var labels = chartConfig.pieLabels;
+        labelField.setValue(labels===true ? true : false);
 
 
           //Set initial value for padding and update
@@ -479,7 +488,7 @@ bluewave.charts.PieEditor = function(parent, config) {
                 if (settings.labels==="true") settings.labels = true;
                 else if (settings.labels==="false") settings.labels = false;
                 chartConfig.pieLabels = settings.labels;
-                createPiePreview();
+                createPreview();
             };
 
 
@@ -495,7 +504,6 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
-    var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
