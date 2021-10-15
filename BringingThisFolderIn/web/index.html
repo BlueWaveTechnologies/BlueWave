@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" xml:lang="en">
+<head>
+<title>Loading...</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+<script src="lib/javaxt/javaxt.js" type="text/javascript"></script>
+<script src="lib/javaxt/express.js" type="text/javascript"></script>
+<link href="lib/javaxt/express.css" type="text/css" rel="stylesheet" />
+<link href="style/landing.css" type="text/css" rel="stylesheet" />
+</head>
+<body>
+
+<script type="text/javascript">
+//<![CDATA[
+window.onload = function() {
+
+    javaxt.dhtml.utils.updateDOM();
+
+
+  //Create waitmask as needed
+    var waitmask = document.waitmask;
+    if (!waitmask) waitmask = document.waitmask = new javaxt.express.WaitMask(document.body);
+    else{
+        var parent = waitmask.el.parentNode;
+        if (!parent) document.body.appendChild(waitmask.el);
+    }
+
+
+
+  //Instantiate page loader
+    var pageLoader = new javaxt.dhtml.PageLoader();
+    var loadPage = function(url){
+        pageLoader.loadPage(url,
+            function(){
+                waitmask.hide();
+            },
+            onFailure
+        );
+    };
+
+
+
+  //Error handler
+    var onFailure = function(request){
+        var status = request.status;
+        if (status==400 || status==401 || status==403){
+            loadPage("login.html");
+        }
+        else{
+            waitmask.hide();
+            //_error.removeAttr("style").show();
+            console.log("Communication Failure. Server might be down or unresponsive. Please contact your system administrator.");
+            loadPage("login.html");
+        }
+    };
+
+
+
+  //Login or redirect user
+    waitmask.show();
+    javaxt.dhtml.utils.get("whoami", {
+        success: function(text, xml, url, request){
+            request.abort();
+            request = null;
+
+            javaxt.dhtml.utils.get("user?username="+text, {
+                success: function(text, xml, url, request){
+                    var user = JSON.parse(text);
+                    request.abort();
+                    request = null;
+
+                    document.user = user;
+                    var url = "main.html";
+                    loadPage(url);
+                },
+                failure: onFailure
+            });
+
+        },
+        failure: onFailure
+    });
+
+};
+//]]>
+</script>
+</body>
+</html>

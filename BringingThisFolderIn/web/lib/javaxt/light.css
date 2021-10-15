@@ -1,0 +1,882 @@
+/******************************************************************************
+*  Default Theme Stylesheet
+*******************************************************************************
+*
+*  Common style definitions for JavaXT components and applications. This
+*  stylesheet renders components in a blue and while theme.
+*
+******************************************************************************/
+
+html, body {
+    height:100%;
+    margin:0;
+}
+
+body {
+    background: #fff;
+    color: #000000;
+}
+
+body, textarea, input, select, td, th {
+    font-family:helvetica,arial,verdana,sans-serif;
+    font-size:14px;
+}
+
+input, select, textarea { /* Allows overriding native style of form elements on iPad */
+    -webkit-appearance: none;
+    -webkit-border-radius:0;
+    border-radius: 0;
+}
+
+*:focus, select:focus, textarea:focus, input:focus{
+    outline:0;
+}
+
+.middle {
+    position: relative;
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+}
+
+.center {
+    margin: 0 auto;
+}
+
+
+.noselect, .javaxt-noselect {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    -ms-user-select: none;
+    -khtml-user-select: none;
+    user-select: none;
+}
+
+
+/**************************************************************************/
+/** Panel
+/**************************************************************************/
+/** The following classes are used to define the style for a panel. Panels
+ *  consist of a header, toolbar, body, and footer.
+ */
+
+.panel-header {
+    background: #0f6391;
+    height: 36px;
+    cursor: default;
+    border-bottom: 1px solid #6a9ebb;
+}
+
+.panel-title {
+    color: white;
+    text-align: center;
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 16px;
+    line-height: 36px; /*Should match panel-header height*/
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    -ms-user-select: none;
+    -khtml-user-select: none;
+    user-select: none;
+}
+
+.panel-toolbar {
+    /*background: #208ec9; blue*/
+    background: #d4d4d4;
+    height: 37px;
+    padding: 0 5px;
+    /*border-top: 1px solid #f2f7fd;*/
+    border-bottom: 1px solid #8f8f8f;
+    background-image: linear-gradient(to bottom, #f9f9f9, #cfcfcf);
+}
+
+.panel-body {
+    background: #FFFFFF;
+}
+
+
+
+
+
+/**************************************************************************/
+/** Toolbar Items
+/**************************************************************************/
+/** The following classes are used to define the style for items rendered
+ *  in a panel toolbar.
+ */
+
+.toolbar-button, .toolbar-button-hover, .toolbar-button-selected {
+    height: 28px;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0px 7px;
+    margin: 3px 0 0 0;
+    color: #272727;
+    /*background: #208ec9; /* Same as toolbar background */
+    /*border: 1px solid #208ec9; /* Same as toolbar background */
+    border: 1px solid rgba(0,0,0,0);
+}
+
+.toolbar-button-label {
+    font-family: helvetica, arial, verdana, sans-serif;
+    font-size: 14px;
+    white-space: nowrap;
+    color: #272727;
+}
+
+.toolbar-button-hover {
+    background: #d2e3ed;
+    border: 1px solid #adadad;
+}
+
+.toolbar-button-selected {
+    background: #d2e3ed;
+    border: 1px solid #adadad;
+}
+
+/* Padding for button icons */
+.toolbar-button-icon {
+    margin: 0 5px 0 0px;
+}
+
+/* Menu pulldown icon (triangle) */
+.toolbar-button-menu-icon {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #525252;
+    margin-left: 10px;
+}
+
+
+/* Selected menu button. Remove radius on the bottom. */
+.panel-toolbar-menubutton-selected {
+    background: #d2e3ed;
+    border: 1px solid #adadad;
+    /*border-bottom: 0px;*/
+    border-radius: 3px 3px 0 0;
+}
+
+/* Selected toggle button. Add inner shadows when selected. */
+.panel-toolbar-togglebutton-selected {
+    background: #bababa;
+    border: 1px solid #6c6a6a;
+    -webkit-box-shadow: inset 0px 0px 4px #787878;
+    -moz-box-shadow: inset 0px 0px 4px #787878;
+    box-shadow: inset 1px 4px 9px 0px #787878;
+}
+
+.toolbar-spacer {
+    display: inline-block;
+    position: relative;
+    width: 0px;
+    height: 23px;
+    margin: 0 8px 3px 8px;
+    border-left: 1px solid #adadad;
+    border-right: 1px solid #fff;
+}
+
+
+
+/**************************************************************************/
+/** Form Inputs
+/**************************************************************************/
+/** The following classes are used to define the style for form inputs
+ *  defined in the javaxt.dhtml.Form control.
+ */
+
+.form-input {
+
+    border-radius: 4px;
+    -moz-border-radius: 4px;
+    -webkit-border-radius: 4px;
+
+
+    color: #363636;
+    display: inline-block;
+    font-size: 14px;
+    height: 28px;
+    line-height: 28px;
+    padding: 2px 4px;
+    vertical-align: middle;
+
+
+    transition: border 0.2s linear 0s, box-shadow 0.2s linear 0s;
+    -webkit-transition: all 0.20s ease-in-out;
+    -moz-transition: all 0.20s ease-in-out;
+    -ms-transition: all 0.20s ease-in-out;
+    -o-transition: all 0.20s ease-in-out;
+
+
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+.form-label {
+    color: #636363;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: default;
+    padding: 5px 10px 0 0;
+    vertical-align: top;
+}
+
+
+/**************************************************************************/
+/** Form Radio
+/**************************************************************************/
+/** The following classes are used to define the style for radio inputs
+ */
+.form-radio {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    padding: 0px;
+    margin: 4px 5px 4px 1px;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #b9b9b9;
+    border-radius: 100%;
+    background: #fff;
+}
+
+.form-radio:checked:before {
+    display: block;
+    height: 8px;
+    width: 8px;
+    position: relative;
+    left: 3px;
+    top: 3px;
+    background: #2a79bf;
+    border-radius: 100%;
+    content: '';
+}
+
+.form-radio:focus {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+
+/**************************************************************************/
+/** Form Checkbox
+/**************************************************************************/
+/** The following classes are used to define the style for checkbox inputs
+ */
+.form-checkbox {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    padding: 0px;
+    margin: 4px 5px 4px 1px;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #b9b9b9;
+    background: #fff;
+}
+
+.form-checkbox:checked:before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 9px;
+    border: solid #2a79bf;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin: 2px 0px 0px 6px;
+}
+
+.form-checkbox:focus {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+
+/**************************************************************************/
+/** Form Buttons
+/**************************************************************************/
+/** The following classes are used to define the style for buttons in a
+ *  form (e.g. "Submit", "OK", "Cancel", etc).
+ */
+.form-button {
+    border-radius: 3px;
+    color: #363636;
+    display: inline-block;
+    font-size: 14px;
+    width: 80px;
+    height: 26px;
+    line-height: 24px;
+    vertical-align: middle;
+    background-color: #e4e4e4;
+    border: 1px solid #b4b4b4;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+    text-shadow: 1px 1px 0px rgb(255, 255, 255);
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.form-button:disabled,
+.form-button[disabled]{
+    opacity:0.75;
+    box-shadow: 0 0px 0px 0 rgba(0, 0, 0, 0.2);
+    cursor:default;
+}
+
+.form-button:hover {
+    background-color: #d2e3ed;
+    border-color: rgba(82, 168, 236, 0.8);
+}
+
+.form-button:disabled:hover {
+    background-color: #e4e4e4;
+    border: 1px solid #b4b4b4;
+}
+
+.form-button:active {
+    box-shadow: none;
+}
+.form-button:focus {
+    outline:0;
+}
+select:focus, textarea:focus, input:focus{
+    outline:0;
+}
+
+
+
+/**************************************************************************/
+/** Form Input With Button
+/**************************************************************************/
+/** The following classes are used define the style for custom form inputs
+ *  with buttons (e.g. DatePicker, ComboBox, etc.)
+ */
+.form-input-with-button { /* used in conjunction with form-input */
+    border-radius: 4px 0 0 4px;
+    -moz-border-radius: 4px 0 0 4px;
+    -webkit-border-radius: 4px 0 0 4px;
+    border-right: 0 none;
+}
+
+.form-input-button {  /* used in conjunction with form-button */
+    border-radius: 0 3px 3px 0;
+    -moz-border-radius: 0 3px 3px 0;
+    -webkit-border-radius: 0 3px 3px 0;
+    box-shadow: none;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin: 0;
+
+
+    /*Add 5px inner glow to mask neighbors in the sprite*/
+    -webkit-box-shadow: inset -5px 5px 5px 0px #e4e4e4, inset 5px -5px 5px 0px #e4e4e4;
+    -moz-box-shadow: inset -5px 5px 5px 0px #e4e4e4, inset 5px -5px 5px 0px #e4e4e4;
+    box-shadow: inset -5px 5px 5px 0px #e4e4e4, inset 5px -5px 5px 0px #e4e4e4;
+}
+
+/* Preserve 5px inner glow */
+.form-input-button:hover, .form-input-button:focus {
+    background-color: #d2e3ed;
+    box-shadow: inset -5px 5px 5px 0px #d2e3ed, inset 5px -5px 5px 0px #d2e3ed, /*5px inner mask*/
+                0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6); /*blue glow*/
+}
+
+
+/**************************************************************************/
+/** Form Menu
+/**************************************************************************/
+/** The following classes are used to define the style for menus in a
+ *  javaxt.dhtml.ComboBox.
+ */
+.form-input-menu {
+    border-radius: 0 0 4px 4px;
+    -moz-border-radius: 0 0 4px 4px;
+    -webkit-border-radius: 0 0 4px 4px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+    margin-top: -1px;
+}
+
+.form-input-menu-item {
+    color: #363636;
+    font-size: 14px;
+    height: 28px;
+    line-height: 28px;
+    padding: 0px 6px;
+    vertical-align: middle;
+    white-space: nowrap;
+    cursor: default;
+}
+
+.form-input-menu-item:hover {
+    background-color: aliceblue;
+}
+.form-input-menu-item:focus {
+    background-color: aliceblue;
+}
+.form-input-menu-item:focused {
+    background-color: aliceblue;
+}
+.form-input-menu-item-new { /* For a "new" menu option in a combobox menu. Used in conjuction with form-input-menu-item */
+    border-top: 1px solid #ccc;
+}
+
+
+/**************************************************************************/
+/** Form Group
+/**************************************************************************/
+/** The following classes are used to define the style for group boxes in
+ *  forms.
+ */
+
+.form-groupbox {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 16px 8px 12px 13px;
+}
+
+.form-grouplabel {
+    margin: 8px 0 0 7px;
+    background-color: #fff;
+    padding: 0 5px 0 5px;
+    color: #00468a;
+}
+
+
+
+/**************************************************************************/
+/** Pulldown Button Icon
+/**************************************************************************/
+.pulldown-button-icon { /*form-button form-input-button pulldown-button-icon*/
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlklEQVQ4jWNgGAUowNvbW9PBwUEAjxJGHx8f/dDQUB4MGV9f3+TAwMD/AQEB97y8vOSxafb392+BqrlkbGzMhSLr7++/MTAw8D8OQ+CaYdjb21sT3flKAQEBj7AYgqHZz8+vBqsHPT09ldENCQgImIysOSAgoBZPGGEaQpJmfIYQrRmbITj9TAg4ODgIeHp6apGleegAAME5Y+rCcN+AAAAAAElFTkSuQmCC);
+    background-position: 5px 5px;
+    background-repeat: no-repeat;
+    background-color: #e4e4e4;
+}
+
+
+
+/**************************************************************************/
+/** Callout Panel
+/**************************************************************************/
+/** The following classes are used to define the style for pop-up callouts
+ *  generated using the javaxt.dhtml.Callout class.
+ */
+
+.callout-panel, .callout-arrow {
+    border: 1px solid #adadad;
+    background: #f8f8f8;
+    cursor: pointer;
+}
+
+.callout-panel {
+    border-radius: 3px;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.callout-arrow {
+    width: 7px;
+    height: 7px;
+    padding: 12px;
+}
+
+
+/**************************************************************************/
+/** Menu Buttons
+/**************************************************************************/
+/** The following classes are used to define the style for buttons found in
+ *  a button menu.
+ */
+
+.menu-panel {
+    border: 1px solid #adadad;
+    /*border-top: 0px;*/
+    background: #f0f0f0;
+    cursor: pointer;
+    padding: 3px 3px;
+    z-index: 1;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+    border-radius: 0 0 3px 3px;
+    margin-top: -1px;
+    width: 150px;
+}
+
+.menu-button {
+    height: 28px;
+    border: 1px solid rgba(0,0,0,0);
+    border-radius: 3px;
+    /*background: #F6F6F6;*/
+    cursor: pointer;
+    padding: 0px 6px;
+    margin: 0px;
+    color: #2b2b2b;
+}
+
+.menu-button-hover {
+    border-color: #cccccc;
+    background: #f0f8ff;
+}
+
+.menu-button-icon {
+    margin: 0 6px 0 0;
+}
+
+
+/**************************************************************************/
+/** Window
+/**************************************************************************/
+/** The following classes are used to define the style for windows and
+ *  dialogs generated using the javaxt.dhtml.Window class.
+ */
+
+.window {
+    background: #ffffff;
+    border-radius: 8px;
+    display: inline-block;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+    min-width: 150px;
+    min-height: 75px;
+}
+
+.window-header {
+    background: #0f6391;
+    height: 36px;
+    cursor: default;
+    border-bottom: 1px solid #6a9ebb;
+
+    position: relative;
+    border-radius: 7px 7px 0px 0px;
+    border: 1px solid #2a79bf;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 4px 0px;
+    cursor: default;
+    overflow: hidden;
+}
+
+.window-title {
+    color: white;
+    text-align: center;
+    white-space: nowrap;
+    text-transform: uppercase;
+    line-height: 36px; /*Should match window-header height*/
+
+    position: absolute;
+    font-size: 14px;
+    text-align: left;
+    cursor: default;
+    padding-left: 9px;
+}
+
+.window-header-button-bar {
+    position: absolute;
+    right: 0;
+    padding: 6px 7px 0 0;
+}
+
+.window-header-button {
+    font-size: 18px;
+    border: 0;
+    color: #ffffff;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.window-header-button:hover {
+    background-color:#5b9bd2;
+    transition: 0.1s;
+    border-radius: 3px;
+}
+
+.window-mask {
+    background: rgba(23, 34, 42, 0.6)
+}
+
+.window-body {
+    padding: 7px;
+    vertical-align: top;
+}
+
+.alert-header { /* used in conjunction with window-header */
+    border: 1px solid #c9af53;
+    background-color: #cb6400;
+}
+
+.alert-header .window-header-button:hover {
+    background-color: #ea985c;
+}
+
+.alert-body, .confirm-body {
+    padding: 10px 10px 15px 15px;
+    line-height: 18px;
+}
+
+.button-div {
+    padding: 0 12px 12px 12px;
+    text-align: right;
+    position: relative;
+}
+
+
+/**************************************************************************/
+/** Table
+/**************************************************************************/
+/** Default style for grid controls
+ */
+.table-header {
+    height: 36px; /*table-header-col height + border */
+    border-bottom: 1px solid #ababab;
+    background: #eaeaea;
+    background-image: linear-gradient(to bottom, #f9f9f9, #e4e5e7);
+    /* box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 3px 10px 0 rgba(0, 0, 0, 0.19); */
+}
+
+.table-row, .table-row-selected {
+    background: #ffffff;
+    border-bottom: 1px solid #cccccc;
+}
+
+/* .table-row:nth-child(even) {background: #CCC} */
+.table-row:nth-child(odd) {
+    background: #F8F8F8;
+}
+
+
+.table-row:hover{
+    background-color:#EDF3FE;
+}
+
+.table-row-selected{
+    /*border-bottom-style:dotted;*/
+    /*border-color:#a3bae9;*/
+    background-color:#FFFFB1;
+}
+
+.table-col, .table-header-col {
+    font-family: helvetica,arial,verdana,sans-serif;
+    font-size: 14px;
+    white-space: nowrap;
+    color: #272727;
+
+    height: 35px;
+    line-height: 35px;
+
+
+    padding: 0 5px;
+    color: #272727;
+
+    /*
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    -webkit-text-overflow: ellipsis;
+    */
+}
+
+.table-header-col {
+    border-left: 1px solid #cccccc;
+    border-right: 1px solid #cccccc;
+    cursor: pointer;
+}
+
+.table-header-col:first-child{
+    border-left: none;
+}
+
+.table-col {
+    border-left: 0;
+    border-right: 0;
+}
+
+.table-resizeHandle {
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    margin: 0 -7px 0 0px;
+}
+
+
+.table-checkbox {
+    width: 13px;
+    height: 13px;
+    border: 1px solid #cccccc;
+    border-radius: 3px;
+    background: #F6F6F6;
+    cursor: pointer;
+    margin: 0px;
+    color: #2b2b2b
+}
+
+.table-checkbox {
+    border: 1px solid #9c9c9c;
+    background: #fff;
+}
+
+/* Up/down triangles that appear in the header */
+.table-icon-sort-asc, .table-icon-sort-desc {
+    width: 0;
+    height: 0;
+    position: absolute;
+    margin: -8px 0 0 5px;
+}
+
+.table-icon-sort-asc {
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid #525252;
+}
+
+.table-icon-sort-desc {
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #525252;
+}
+
+
+/**************************************************************************/
+/** Slider
+/**************************************************************************/
+
+.sliderGrove {
+    display: inline-block;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: padding-box;
+    box-sizing: padding-box;
+    -webkit-box-shadow: 2px 2px 4px #666;
+    -moz-box-shadow: 2px 2px 4px #666;
+    box-shadow: 2px 2px 4px #666;
+    height: 9px;
+    width: 277px;
+    padding: 1px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    background-image:
+        -webkit-gradient(linear, left top ,left bottom,
+                   from(#0a3a86),
+                   color-stop(.5, #4c8de7),
+                   color-stop(.95, #6babf5),
+                   to(#0a3a86)),
+                -webkit-gradient(linear, left top ,left bottom,
+                        from(#919191),
+                        color-stop(.5, #f0f0f0),
+                        color-stop(.5, #fff),
+                        color-stop(.95, #fff),
+                        to(#919191));
+    background-image:
+        -moz-linear-gradient(top,
+                   #0a3a86,
+                   #4c8de7 50%,
+                   #6babf5 95%,
+                   #0a3a86),
+                -moz-linear-gradient(top,
+                        #919191,
+                        #f0f0f0 50%,
+                        #fff 50%,
+                        #fff 95%,
+                        #919191);
+    background-repeat: no-repeat, repeat-x;
+}
+
+.sliderHandle {
+    position:relative;
+    -webkit-box-shadow: 2px 2px 3px #666;
+    -moz-box-shadow: 2px 2px 3px #666;
+    box-shadow: 2px 2px 3px #666;
+    height:20px;
+    width:20px;
+    left: 0px;
+    top: -6px;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    background-image:
+       -webkit-gradient(linear, left top, left bottom,
+               from(#aaa),
+               color-stop(.5, #ddd),
+               to(#ccc));
+    background-image:
+       -moz-linear-gradient(top,
+               #aaa,
+               #ddd 50%,
+               #ccc);
+    cursor: move;
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+.sliderHandle:hover, .sliderHandle.hover {
+    background-image:
+       -webkit-gradient(linear, left top, left bottom,
+               from(#6297f2),
+               color-stop(.5, #0251ae),
+               to(#6297f2));
+    background-image:
+       -moz-linear-gradient(top,
+               #6297f2,
+               #0251ae 50%,
+               #6297f2);
+}
+
+
+/**************************************************************************/
+/** iScroll
+/**************************************************************************/
+/** Custom style for iScroll */
+
+.iScrollHorizontalScrollbar,
+.iScrollVerticalScrollbar {
+    position: absolute;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.iScrollHorizontalScrollbar {
+    height: 8px;
+    left: 2px;
+    right: 2px;
+    bottom: 4px;
+}
+
+.iScrollVerticalScrollbar {
+    width: 8px;
+    bottom: 2px;
+    top: 2px;
+    right: 4px;
+}
+
+.iScrollHorizontalScrollbar.iScrollBothScrollbars {
+    right: 18px;
+}
+
+.iScrollVerticalScrollbar.iScrollBothScrollbars {
+    bottom: 18px;
+}
+
+.iScrollIndicator {
+    position: absolute;
+    background: #a7a7a7;
+    border: 0 none;
+    border-radius: 4px;
+}
+
+.iScrollHorizontalScrollbar .iScrollIndicator {
+    height: 100%;
+}
+
+.iScrollVerticalScrollbar .iScrollIndicator {
+    width: 100%;
+}

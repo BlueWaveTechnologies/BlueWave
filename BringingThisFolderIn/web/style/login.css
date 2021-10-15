@@ -1,0 +1,339 @@
+html, body {
+    height:100%;
+    margin: 0;
+}
+
+body {
+    background-color: #093958; /*Gray*/
+}
+
+
+select:focus, textarea:focus, input:focus{
+    outline:0;
+}
+
+/**************************************************************************/
+/** Placeholder text
+/**************************************************************************/
+
+    ::-webkit-input-placeholder {
+       color: rgba(166,170,169,0.5);
+    }
+
+    :-moz-placeholder { /* Firefox 18- */
+       color: rgba(166,170,169,0.5);
+    }
+
+    ::-moz-placeholder {  /* Firefox 19+ */
+       color: rgba(166,170,169,0.5);
+    }
+
+    :-ms-input-placeholder {
+       color: rgba(166,170,169,0.5);
+    }
+
+
+/**************************************************************************/
+/** Login container
+/**************************************************************************/
+
+    .login-container {
+        width: 350px;
+        height: 400px;
+        /*
+        opacity: 1;
+        visibility: visible;
+        -webkit-transition: opacity 0.35s cubic-bezier(0.39, 0.575, 0.565, 1);
+        transition: opacity 0.35s cubic-bezier(0.39, 0.575, 0.565, 1);
+        */
+        background: #e6e6e8;
+    }
+
+    .login-container, .login-container input, .login-container a {
+        font-family: 'Open Sans','Abel', sans-serif;
+        font-size: 16px;
+        color: #A8ABAA;
+    }
+
+
+
+@media (min-width:641px)  {
+
+    .login-container {
+        box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+        width: 456px;
+        height: 525px;
+        padding: 20px 72px 0 72px;
+        border-radius: 5px;
+        background-color: #bdd2e4;
+    }
+
+}
+
+
+/**************************************************************************/
+/** Login logo
+/**************************************************************************/
+
+    .login-logo {
+
+    }
+
+    @media (min-height: 481px)  {
+
+
+        .login-logo {
+            margin: -20px 0 56px 0;
+            background: url(../images/logo.png) no-repeat;
+            width: 600px;
+            height: 144px;
+            margin-left: -72px;
+            border-radius: 5px 5px 0 0;
+            background-position-x: 130px;
+            background-color: #1974a9;
+            color: #fff;
+            background-position-y: 40px;
+        }
+        .login-logo:after {
+            content:"BlueWave";
+            margin-left: 190px;
+            display: inline-block;
+            float: left;
+            font-size: 50px;
+            white-space: nowrap;
+            color: #fff;
+            margin-top: 37px;
+        }
+
+    }
+
+
+/**************************************************************************/
+/** Login error message
+/**************************************************************************/
+
+    .login-error {
+        font-size: 18px;
+        padding: 10px 0 10px 0;
+        color: #f7dbdb;
+        background-color: #bb2f2f;
+        margin: 0px 0 16px;
+        line-height: 40px;
+        border-radius: 5px;
+        height: 40px;
+    }
+
+
+
+/**************************************************************************/
+/** Borders for the Username and Password Inputs
+/**************************************************************************/
+
+    .login-username-input, .login-password-input {
+        border-top: 1px solid #b9b9b9;
+        border-left: 1px solid #b9b9b9;
+        border-right: 1px solid #b9b9b9;
+        padding: 0 4px 0 4px;
+        background-color: #FFFFFF;
+        transition: 0.4s;
+    }
+
+    .login-username-input{
+        border-radius: 8px 8px 0 0;
+    }
+
+    .login-password-input{
+        border-bottom: 1px solid #b9b9b9;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .login-username-input.disabled,
+    .login-password-input.disabled {
+        background-color: #efefef;
+    }
+    .login-username-input.disabled span,
+    .login-password-input.disabled span {
+        opacity: 1;
+    }
+
+
+/**************************************************************************/
+/** Icons for the Username and Password Inputs
+/**************************************************************************/
+
+    .login-form span {
+        display: inline-block;
+        float: left;
+        width: 44px;
+        height: 44px;
+        text-align: center;
+    }
+
+@media (min-width:641px)  {
+
+
+    .login-form span {
+        width: 56px;
+        height: 56px;
+
+    }
+}
+
+
+    .login-user-icon,
+    .login-lock-icon {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        background-repeat: no-repeat;
+        background-size: 24px 24px;
+        background-position: center center;
+        opacity: 0.5;
+    }
+
+
+
+    .login-user-icon {
+        background-image: url(../images/email.png);
+    }
+
+    .login-lock-icon {
+        background-image: url(../images/password_lock.png);
+    }
+
+
+
+
+/**************************************************************************/
+/** Username, Password, and Submit inputs
+/**************************************************************************/
+
+    .login-form input[type="text"],
+    .login-form input[type="password"],
+    .login-form input[type="submit"]{
+        border: none;
+        padding: 0;
+        -webkit-appearance: none;
+    }
+
+
+    /*
+    .login-form input[type="text"]:disabled ,
+    .login-form input[type="password"]:disabled {
+        background-color: #728596;
+    }
+    */
+
+
+    .login-form input[type="text"],
+    .login-form input[type="password"] {
+        background-color: inherit;
+        height: 44px;
+        border-left: 0px solid transparent;
+        color: #97989c;
+        margin-bottom: 0;
+        width: 306px;
+        -webkit-transition: all 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+        transition: all 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+    }
+
+
+
+
+    .login-form input[type="text"]:focus,
+    .login-form input[type="password"]:focus,
+    .login-form input[type="text"]:active,
+    .login-form input[type="password"]:active {
+        outline: none;
+        padding-left: 5px;
+        -webkit-transition: all 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+        transition: all 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+    }
+
+    .login-form input[type="submit"] {
+        background-color: rgba(255,144,21,1);
+        color: #e2f4ff;
+        margin-top: 1em;
+        margin-bottom: 1em;
+        font-size: 16px;
+        text-transform: uppercase;
+        font-weight: bold;
+        height: 53px;
+        width: 100%;
+        cursor: pointer;
+        border-radius: 8px;
+        -webkit-transition: background-color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1), color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+        transition: background-color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1), color 0.8s cubic-bezier(0.39, 0.575, 0.565, 1);
+        -webkit-transform: scaleY(0.9);
+        transform: scaleY(0.9);
+    }
+
+
+@media (min-width:641px)  {
+
+
+    .login-form input[type="text"],
+    .login-form input[type="password"],
+    .login-form input[type="submit"]{
+        font-size: 20px;
+    }
+
+
+    .login-form input[type="text"],
+    .login-form input[type="password"] {
+        height: 60px;
+        width: 100%;
+    }
+
+
+    .login-form input[type="submit"] {
+        height: 70px;
+        background-color: #1974a9;
+    }
+}
+
+
+    .login-form input[type="submit"]:hover,
+    .login-form input[type="submit"]:focus {
+        background-color: rgba(245,134,11,1);
+        color: #fefefe;
+        -webkit-transition: background-color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1), color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+        transition: background-color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1), color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+    }
+
+
+/**************************************************************************/
+/** Style for links on the bottom of the form
+/**************************************************************************/
+
+    .login-links {
+        width: 100%;
+        text-align: center;
+    }
+    .login-links p {
+        font-size: 11pt;
+        letter-spacing: 0.4px;
+        color: #7d7d7d;
+        margin: 0;
+        padding: 0;
+        line-height: 1.6em;
+    }
+
+    .login-links a {
+        text-decoration: none;
+        -webkit-transition: color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+        transition: color 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+    }
+
+    .login-links a:hover {
+        text-decoration: none;
+        color: #FF9015;
+    }
+
+
+@media (min-width:641px)  {
+    .login-links a {
+        font-size: 11pt;
+        color: #7d7d7d;
+    }
+}

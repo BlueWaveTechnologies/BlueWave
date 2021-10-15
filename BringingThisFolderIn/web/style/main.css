@@ -1,0 +1,1155 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans);
+
+html, body {
+    height:100%;
+    margin:0;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #000000;
+}
+
+body, textarea, input, select, td, th {
+    font-family: 'Open Sans',helvetica,arial,verdana,sans-serif;
+}
+
+
+/**************************************************************************/
+/** App Header
+/**************************************************************************/
+
+.app-header {
+    background-color: #007cba;
+    height: 86px;
+    color: #fff;
+}
+
+
+.app-header-icon {
+    background: url(../images/logo.png) no-repeat;
+    width: 43px;
+    height: 58px;
+    margin: 7px 0 0 14px;
+}
+
+.app-header-icon:after {
+    content:"BlueWave";
+    margin-left: 54px;
+    display: inline-block;
+    float: left;
+    font-size: 50px;
+    white-space: nowrap;
+    color: #fff;
+    margin-top: -6px;
+}
+
+.app-header-profile,
+.app-header-menu {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    margin: 3px;
+    border-radius: 50%;
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+}
+
+.app-header-profile {
+    background-color: #EE9549;
+    text-transform: uppercase;
+}
+
+ .app-header-profile:hover {
+    background-color: #ffb576;
+    transition: 0.4s;
+ }
+
+.app-header-menu {
+    background-color: #007cba;
+    margin-left: 0;
+ }
+
+ .app-header-menu .fas {
+    margin-top: 7px;
+}
+
+ .app-header-menu:hover {
+     background-color: #3baaff;
+     transition: 0.4s;
+ }
+
+ .app-menu {
+    padding: 3px 2px;
+    min-width: 180px;
+}
+
+.app-menu-item:hover {
+    background-color: #bee3ff;
+}
+
+.app-menu-item {
+    line-height: 39px;
+    font-size: 14px;
+    padding: 0 7px 0 0;
+    white-space: nowrap;
+}
+
+.app-menu-item .fas {
+    color:#3876ad;
+    text-align:center;
+    width: 35px;
+    font-size: 20px;
+    vertical-align: middle;
+}
+
+
+
+/* override the default style for the javaxt callout
+   prevents overflow issues in the app header
+*/
+.callout-arrow {
+    padding: 10px;
+}
+
+
+
+/**************************************************************************/
+/** Dashboard
+/**************************************************************************/
+
+.dashboard-title {
+    height: 70px;
+    background-color: #fcfcfc;
+    text-align: center;
+    line-height: 59px;
+    color: #007CBA;
+    font-size: 20px;
+}
+
+.dashboard-footer {
+    background-color: #e8e8e8;
+    color: #777;
+    font-size: 12px;
+    padding: 3px;
+    line-height: 20px;
+}
+
+.dashboard-back, .dashboard-next {
+    width: 35px;
+    height: 43px;
+    cursor: pointer;
+    display: block;
+    position: absolute;
+    top: 10px;
+}
+
+.dashboard-back {
+    left:10px;
+}
+
+.dashboard-next {
+    right:10px;
+}
+
+
+.dashboard-back:after, .dashboard-next:after {
+    content:"";
+    position:absolute;
+    border-right: 3px solid #007cba;
+    border-bottom: 3px solid #007cba;
+    width: 16px;
+    height: 16px;
+    margin: 12px 0px 0px 10px;
+}
+
+.dashboard-back:after{
+    transform: rotate(135deg);
+    -webkit-transform: rotate(135deg);
+}
+
+
+.dashboard-next:after {
+    transform: rotate(315deg);
+    -webkit-transform: rotate(315deg);
+}
+
+.dashboard-back:hover::after, .dashboard-next:hover::after {
+    transition: 0.2s;
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0px 0px 2px 0px rgba(255, 255, 255, 1) inset,
+        3px 7px 7px -1px rgba(82, 168, 236, 0.2);
+    outline: 0 none;
+}
+
+
+.dashboard-item {
+    background-color: #fff;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #e0e0e0;
+    display: inline-block;
+    float: left;
+}
+
+
+.dashboard-item-settings {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    font-size: 20px;
+    color: #9a9a9a;
+    cursor: pointer;
+    z-index: 2;
+    width: 32px;
+    height: 24px;
+    text-align: center;
+    padding-top: 8px;
+}
+
+.dashboard-item-settings:hover {
+    color: #2c7cba;
+    transition: 0.4s;
+}
+
+.dashboard-item .waitmask {
+    background-color: rgba(12,44,60,0.3);
+}
+
+
+.dashboard {
+    padding: 10px;
+}
+
+.dashboard-toolbar {
+    height: 36px;
+    padding: 4px 10px;
+    background-color: #e8e8e8;
+    border-top: 1px solid #dcdcdc;
+    border-bottom: 1px solid #dcdcdc;
+}
+
+.dashboard-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background-color: #adacac;
+  outline: none;
+  opacity: 0.7;
+  transition: opacity .2s;
+  cursor: pointer;
+}
+
+.dashboard-slider:hover {
+  opacity: 1;
+}
+
+
+/**************************************************************************/
+/** Dashboard Homepage
+/**************************************************************************/
+.dashboard-homepage {
+    background-color: #ececec;
+}
+
+.dashboard-homepage .dashboard-item {
+    float: none;
+}
+
+.dashboard-homepage .dashboard-item .fas {
+    color: #eaeaea;
+    font-size: 120px;
+}
+
+.dashboard-group {
+    border: 1px solid #c7c7c7;
+    margin: 30px 15px 20px;
+    border-radius: 0 5px 5px 5px;
+    background-color: #f5f5f5;
+    padding: 15px 10px;
+    position: relative;
+}
+
+.dashboard-group-label {
+    display: inline-block;
+    top: -21px;
+    position: absolute;
+    left: -1px;
+    padding: 2px 7px 0 7px;
+    background-color: #f5f5f5;
+    color: #585858;
+    font-size: 13px;
+    border: 1px solid #c7c7c7;
+    border-radius: 5px 5px 0 0;
+    border-bottom: 0 none;
+}
+/*
+.dashboard-group-label:after {
+    content: "";
+    position: absolute;
+    right: -1;
+    height: 50%;
+    width: 1px;
+    background: #f5f5f5;
+    bottom: 0;
+}
+.dashboard-group-label:before {
+    content: "";
+    position: absolute;
+    left: -1;
+    height: 50%;
+    width: 1px;
+    background: #f5f5f5;
+    bottom: 0;
+}
+*/
+
+/**************************************************************************/
+/** Dashboard Layout
+/**************************************************************************/
+
+.dashboard-layout {
+
+}
+.dashboard-layout:after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
+.dashboard-layout .dashboard-item {
+    background-color: #fff; /*#e7eff3;*/
+    border: 1px solid #e0e0e0;
+    box-sizing: border-box;
+    float: left;
+}
+
+.dashboard-layout .dashboard-item:hover {
+    background-color: #fff;
+    cursor: move;
+    transition: box-shadow 0.2s;
+
+
+    border: 1px solid #4ea9ff;
+    -webkit-box-shadow: 0 2px 20px 2px #4ea9ff;
+    box-shadow: 0 2px 20px 2px #4ea9ff;
+}
+
+.dashboard-layout .is-dragging,
+.dashboard-layout .is-positioning-post-drag {
+    background-color: #fff;
+    z-index: 2;
+}
+
+.dashboard-layout .packery-drop-placeholder {
+    outline: 1px dashed hsla(0, 0%, 0%, 0.5);
+    outline-offset: -2px;
+    transition: transform 0.2s;
+    background-color: rgba(0,0,0,0.1) !important;
+    border: none !important;
+}
+
+.dashboard-layout .dashboard-item {
+    margin: 0;
+}
+
+
+
+
+/**************************************************************************/
+/** DBView
+/**************************************************************************/
+
+li.tree-node:hover {
+    background: #5a606d !important;
+    cursor: pointer;
+}
+
+
+/**************************************************************************/
+/** Toolbar Icons
+/**************************************************************************/
+
+.toolbar-button-icon.fas {
+    color: #5a606d;
+    font-size: 16px;
+}
+
+.toolbar-button-icon.fas.fa-check-square {
+    color: green;
+}
+
+/*
+.toolbar-button-icon.fas.fa-trash {
+    color: #8c6c6c;
+}
+*/
+
+.toolbar-button-icon.fas.fa-copy {
+    color: #b59d71;
+}
+
+.toolbar-button-icon.fas.fa-plus-circle {
+    color: #008000; /*green*/
+}
+
+.toolbar-button-icon.fas.fa-edit {
+    color: #864a00; /*brown*/
+}
+
+.toolbar-button-icon.fas.fa-sync-alt {
+    color: #007cba; /*blue*/
+}
+
+.toolbar-button-icon.fas.fa-play {
+    color: #008000; /*green*/
+}
+
+.toolbar-button-icon.fas.fa-stop {
+    color: #000000;
+}
+
+
+/**************************************************************************/
+/** Map Legend
+/**************************************************************************/
+
+.map-legend {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    background-color: #fff;
+    padding: 7px;
+    border-radius: 3px;
+    box-shadow: 1px 4px 5px -1px rgba(0, 0, 0, 0.3);
+}
+
+
+.map-legend-circle, .map-legend-circle-outline {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: 2px 6px 2px 0;
+    float: left;
+}
+
+.map-legend-label {
+    color: #333;
+    font-size: 12px;
+    float: left;
+    line-height: 20px; /*should match map-legend-circle height (including margin)*/
+}
+
+
+/**************************************************************************/
+/** Screenshot Dialog
+/**************************************************************************/
+
+.screenshot-confirmation td {
+    font-size: 40px;
+}
+
+.screenshot-confirmation .far {
+    color:green;
+    font-size:72px;
+}
+
+
+/**************************************************************************/
+/** ICU Map
+/**************************************************************************/
+
+.icu-map-panel {
+    border-top:1px solid #dcdcdc;
+}
+
+.icu-map-list {
+    border-top:1px solid #dcdcdc;
+    border-right:1px solid #dcdcdc;
+}
+
+.icu-map-list .table-col,
+.icu-map-list .table-header-col{
+    font-size: 11px;
+    line-height: 14px;
+    white-space: normal;
+    padding-top: 3px;
+}
+
+.icu-map-legend {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    height: 45px;
+    width:  200px;
+    background-color: #fff;
+    padding: 7px;
+    border-radius: 3px;
+}
+
+.icu-map-legend-title {
+    font-weight: bold;
+    font-size: 12px;
+    margin: 0 0 3px 0;
+    text-align: center;
+}
+
+.icu-map-legend-label {
+    position: absolute;
+    right: 17px;
+    font-size: 11px;
+}
+
+
+
+/**************************************************************************/
+/** Tooltip
+/**************************************************************************/
+
+.tooltip-panel, .tooltip-arrow {
+    border: 1px solid #1d6479;
+    background: #459db7;
+}
+.tooltip-panel {
+    padding: 2px 7px 2px 3px !important;
+    color: #fff;
+    border-radius: 2px 4px 4px 2px;
+    border-radius: 4px;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+.tooltip-arrow {
+    width: 10px;
+    height: 10px;
+    padding: 10px;
+}
+
+
+
+/**************************************************************************/
+/** Toggle Button
+/**************************************************************************/
+
+.toggle-button-bar {
+    background-color: #718fb6; /*rgba(0,60,136,.5); */
+    display: inline-block;
+    padding: 2px;
+    border-radius:5px;
+}
+
+.toggle-button, .toggle-button-active {
+    display:inline-block;
+    border-radius: 0px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #ffffff;
+    height: 22px;
+    line-height: 22px;
+    min-width: 40px;
+    text-align: center;
+    padding: 0 7px;
+}
+
+.toggle-button:first-child, .toggle-button-active:first-child{
+    border-radius: 5px 0 0 5px;
+}
+
+.toggle-button:last-child, .toggle-button-active:last-child{
+    border-radius: 0 5px 5px 0;
+}
+
+.toggle-button:hover{
+    background-color: #6783a7;
+    box-shadow: inset -1px 1px 5px 0px #335177;
+}
+
+.toggle-button-active{
+    background-color: #335177;
+    color: #c7c7c7;
+    box-shadow: inset 0px 1px 2px 0px #000000;
+}
+
+
+
+/**************************************************************************/
+/** Drawflow Overrides
+/**************************************************************************/
+
+.drawflow-toolbar {
+    position: absolute;
+    top: 20px;
+    left:  15px;
+    background-color: #5a606d;
+    width: 50px;
+    border-radius: 5px;
+    box-shadow: 0 2px 15px 2px #cacaca;
+    border: 1px solid #000;
+    /*display: table;*/
+}
+
+
+.drawflow-toolbar-button,
+.drawflow-toolbar-button-hover,
+.drawflow-toolbar-button-selected {
+    height: 40px;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0px 7px;
+    margin: 2px 0 2px 2px;
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(0,0,0,0);
+    width: 30px;
+    overflow: hidden;
+}
+
+.drawflow-toolbar-button-hover {
+    background: #41454e;
+    border: 1px solid #020202;
+    color: #f3f3f3;
+}
+
+.drawflow-toolbar-button-selected {
+    background: #2b2e33;
+    border: 1px solid #020202;
+    color: #f3f3f3;
+}
+
+.drawflow-toolbar-button-icon {
+    font-size: 30px;
+    text-align: center;
+    width: 30px;
+    overflow: hidden;
+}
+.drawflow-toolbar-button-icon.fas.fa-project-diagram {
+    font-size: 22px;
+}
+
+
+.drag-drawflow {
+    line-height: 50px;
+    border-bottom: 1px solid #cacaca;
+    padding-left: 20px;
+    cursor: move;
+    user-select: none;
+}
+
+.drawflow {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.drawflow .drawflow-node {
+    background-color: #fff;
+    border: 1px solid #cacaca;
+    -webkit-box-shadow: 0 2px 15px 2px #cacaca;
+    box-shadow: 0 2px 15px 2px #cacaca;
+    padding: 0px;
+    width: 200px;
+}
+
+.drawflow .drawflow-node.selected  {
+    background: white;
+    border: 1px solid #4ea9ff;
+    -webkit-box-shadow: 0 2px 20px 2px #4ea9ff;
+    box-shadow: 0 2px 20px 2px #4ea9ff;
+}
+
+.drawflow .drawflow-node.selected .drawflow-node-title {
+    color: #22598c;
+}
+
+
+.drawflow .connection .main-path {
+    stroke: #4ea9ff;
+    stroke-width: 3px;
+}
+
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
+    height: 15px;
+    width: 15px;
+    border: 2px solid #cacaca;
+}
+
+.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
+    background: #4ea9ff;
+}
+
+.drawflow .drawflow-node .output {
+    right: 10px;
+}
+
+.drawflow .drawflow-node .input {
+    left: -10px;
+    background: white;
+}
+
+.drawflow > .drawflow-delete{
+    border: 2px solid #43b993;
+    background: white;
+    color: #43b993;
+    -webkit-box-shadow: 0 2px 20px 2px #43b993;
+    box-shadow: 0 2px 20px 2px #43b993;
+}
+
+.drawflow-delete{
+    border: 2px solid #ff4e4e;
+    background: white;
+    color: #ff4e4e;
+    -webkit-box-shadow: 0 2px 20px 2px #ff4e4e;
+    box-shadow: 0 2px 20px 2px #ff4e4e;
+    opacity: 0; /*controlled programatically*/
+}
+
+.drawflow-delete2 {
+
+    position: absolute;
+    display: block;
+    width: 30px;
+    height: 30px;
+    z-index: 4;
+    line-height: 30px;
+    font-weight: 700;
+    text-align: center;
+    border-radius: 50%;
+    font-family: monospace;
+    cursor: pointer;
+
+    border: 2px solid #ff4e4e;
+    background: white;
+    color: #ff4e4e;
+    -webkit-box-shadow: 0 2px 20px 2px #ff4e4e;
+    box-shadow: 0 2px 20px 2px #ff4e4e;
+
+    right: -15px;
+    top: -15px;
+}
+
+.drawflow-node-title {
+    height: 50px;
+    line-height: 50px;
+    background-color: #f7f7f7;
+    border-bottom: 1px solid #e9e9e9;
+    border-radius: 4px 4px 0px 0px;
+    padding-left: 10px;
+    overflow: hidden;
+}
+
+.drawflow-node-overlay{
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+
+    text-align: left;
+    overflow: hidden;
+}
+
+.drawflow-node-overlay div {
+    background-color:rgba(255,255,255,0.5);
+    padding: 5px 10px 0 10px;
+    color: #5a5a5a;
+    text-shadow: 3px 3px 5px white;
+    font-size: 12px;
+}
+
+
+.drawflow-node-title .fas {
+    margin: 0 5px 0 0;
+    font-size: 16px;
+}
+
+.drawflow-node-body {
+    width: 100%;
+    min-height: 100px;
+    text-align: center;
+    position: relative;
+}
+
+.drawflow-node-body .fas {
+    color:#eaeaea;
+    font-size:75px;
+    margin-top:10px;
+}
+
+.drawflow-node-title svg {
+    position: initial;
+}
+
+.drawflow-node .box {
+    padding: 10px 20px 20px 20px;
+    font-size: 14px;
+    color: #555555;
+
+}
+.drawflow-node .box p {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.drawflow .connection .point {
+    stroke: #cacaca;
+    stroke-width: 2;
+    fill: white;
+    transform: translate(-9999px, -9999px);
+}
+
+.drawflow .connection .point.selected, .drawflow .connection .point:hover {
+    fill: #4ea9ff;
+}
+
+.drawflow-save {
+    height: 32px;
+    background-color: #2ea44f;
+    border-radius: 6px;
+    position: absolute;
+    bottom: 20px;
+    right:  15px;
+    box-shadow: 0 2px 6px 0px #b5b5b5;
+    cursor: pointer;
+    color: #e8e8e8;
+    transition: 0.2s;
+}
+.drawflow-save:after {
+    content:"Save";
+    line-height: 32px;
+    margin: 0 15px;
+}
+
+.drawflow-save:hover{
+    background-color: #2c974b;
+    color: #fff;
+    box-shadow: 0 2px 6px 2px #b5b5b5;
+}
+
+
+/**************************************************************************/
+/** Grid panel
+/**************************************************************************/
+/** Graph paper background for the dashboard editors
+*/
+.grid-panel,
+.drawflow.parent-drawflow {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    background-size: 25px 25px;
+    background-image:
+    linear-gradient(to right, #f1f1f1 1px, transparent 1px),
+    linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
+}
+
+
+/**************************************************************************/
+/** Error Popup
+/**************************************************************************/
+/** The following classes are used to define the style for pop-up callouts
+ *  generated using the javaxt.dhtml.Callout class.
+ */
+
+.error-callout-panel, .error-callout-arrow {
+    border: 1px solid #8c0000;
+    background: #921d1d;
+    color: #fff;
+    cursor: pointer;
+}
+
+.error-callout-panel {
+    border-radius: 3px;
+    padding: 5px !important;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.error-callout-arrow {
+    width: 7px;
+    height: 7px;
+    padding: 12px;
+}
+
+.form-input-error {
+    background: #fff2f2;
+    border-color: #d66262;
+}
+
+
+
+/**************************************************************************/
+/** Chart Editor
+/**************************************************************************/
+
+.chart-editor-preview {
+    padding: 10px;
+}
+
+.chart-editor-preview .chart-title {
+    line-height: 20px;
+    height: 32px;
+}
+
+.chart-editor-options {
+    width: 220px;
+    height: 100%;
+    padding: 0px 14px 0 6px;
+    border-radius: 0 0 0 5px;
+    border-right: 1px solid #dcdcdc;
+}
+
+.chart-editor-options,
+.chart-editor-options .form-grouplabel {
+    background-color: #efefef;
+}
+
+.chart-editor-options .form-label {
+    height: 12px;
+    padding: 0;
+}
+
+
+/**************************************************************************/
+/** Admin Panel
+/**************************************************************************/
+
+.admin-panel {
+    border-top: 1px solid #dcdcdc;
+    width: 100%;
+    height: 100%;
+}
+
+.admin-sidebar {
+    width: 65px;
+    background-color: #19455a;
+}
+
+.admin-sidebar .fas {
+    color: #fff;
+    height: 65px;
+    width: 65px;
+    text-align: center;
+    font-size: 30px;
+    line-height: 65px;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.admin-sidebar .fas:hover{
+    background-color: #026698;
+}
+
+.admin-sidebar .selected {
+    background-color: #007cba;
+}
+
+.admin-landing-page {
+    text-align: center;
+    font-size: 200px;
+    color: #e6e6e6;
+}
+
+.user-status {
+    display: inline-block;
+    background-color: #ccc;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid #505050;
+    margin: 0 3px;
+}
+
+.admin-header {
+    font-size: 24px;
+    line-height: 53px;
+    color: #007CBA;
+    height: 55px;
+    padding: 10px;
+}
+
+
+.admin-header .fas {
+    display: inline-block;
+    font-size: 35px;
+    padding: 10px;
+    color: #f5f5f5;
+    background-color: #0474ab;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    float: left;
+    margin-right: 10px;
+}
+
+
+/**************************************************************************/
+/** Color Picker
+/**************************************************************************/
+
+.color-picker-header {
+    padding: 10px 0 4px;
+}
+
+.color-picker-option {
+    width: 50px;
+    height: 50px;
+    float: left;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.color-picker-option:hover {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+.color-picker-option .fas.fa-check {
+    color:#fff;
+    font-size: 25px;
+    padding: 13px;
+}
+
+.color-picker-new-option {
+    background-color: #fff;
+    border: 2px dashed #ccc;
+    height: 46px;
+}
+
+.color-picker-new-option .fas.fa-plus {
+    font-size: 30px;
+    color: #ccc;
+    margin: 8px 0 0 10px;
+}
+
+.color-picker-callout-panel, .color-picker-callout-arrow {
+    border: 1px solid #adadad;
+    background: #fff;
+    cursor: pointer;
+}
+
+.color-picker-callout-panel {
+    overflow: hidden;
+    background: none;
+    border: 0px none;
+    border-radius: 5px;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.color-picker-callout-arrow {
+    width: 12px;
+    height: 12px;
+    padding: 12px;
+}
+
+
+/**************************************************************************/
+/** D3 SVG Styles
+/**************************************************************************/
+
+svg text {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    -ms-user-select: none;
+    -khtml-user-select: none;
+    user-select: none;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
+.line:hover {
+  stroke-width: 4px;
+}
+
+
+.chart-title {
+    color: #000;
+    font-size: 15px;
+    font-weight: bold;
+    /*
+    line-height: 20px;
+    height: 32px;
+    */
+}
+
+.chart-title input[type="text"] {
+    width: 100%;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.chart-subtitle {
+    color: #8c8c8c;
+    font-size: 13px;
+}
+
+
+.countries {
+    fill: #f9f9f9;
+    stroke: #e0e0e0;
+    stroke-width: 0.5px;
+}
+
+.state-lines {
+  fill: #f5f5f5;
+  stroke: #000;
+  stroke-width: 0.5px;
+}
+
+
+.sankey-node rect {
+    fill-opacity: 0.9;
+    shape-rendering: crispEdges;
+}
+
+.sankey-node text {
+    pointer-events: none;
+    text-shadow: 0 1px 0 #fff;
+}
+
+.sankey-link {
+    fill: none;
+    stroke: #000;
+    stroke-opacity: 0.2;
+}
+
+.sankey-link:hover {
+    stroke-opacity: 0.5;
+}
+
+
+.graph-node circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.graph-link line {
+  stroke: #999;
+  stroke-opacity: 0.6;
+}
+
+
+.grid line {
+  stroke: lightgrey;
+  stroke-opacity: 0.7;
+  shape-rendering: crispEdges;
+}
+
+.grid path {
+  stroke-width: 0;
+}
+
+.tooltip {
+    position: absolute;
+    background-color: #fff;
+    padding: 5px 7px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    color: #636363;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}

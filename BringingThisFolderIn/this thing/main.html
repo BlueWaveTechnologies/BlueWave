@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" xml:lang="en">
+<head>
+<title>Loading...</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+
+<!-- Font Awesome -->
+<link href="lib/fontawesome/css/all.css" rel="stylesheet" />
+<script src="lib/fontawesome/fa.js" type="text/javascript"></script>
+
+
+<!-- Chroma -->
+<script src="lib/chroma/chroma.min.js" type="text/javascript"></script>
+
+<!-- IRO -->
+<script src="lib/iro/iro.min.js" type="text/javascript"></script>
+
+
+<!-- Chart.js
+<script src="lib/chartjs/Chart.min.js" type="text/javascript"></script>
+-->
+
+<!-- html2canvas -->
+<script src="lib/html2canvas/html2canvas.min.js" type="text/javascript"></script>
+
+<!-- D3 -->
+<script src="lib/d3/d3.v5.min.js" type="text/javascript"></script>
+<script src="lib/d3/topojson-client.min.js" type="text/javascript"></script>
+<script src="lib/d3/d3-sankey.min.js" type="text/javascript"></script>
+
+<!-- iScroll
+<script src="lib/iscroll/iscroll.js" type="text/javascript"></script>
+-->
+
+
+<!-- JavaXT -->
+<script src="lib/javaxt/javaxt.js" type="text/javascript"></script>
+<link href="lib/javaxt/light.css" type="text/css" rel="stylesheet" />
+<script src="lib/javaxt/style.js" type="text/javascript"></script>
+<script src="lib/javaxt/express.js" type="text/javascript"></script>
+<link href="lib/javaxt/express.css" type="text/css" rel="stylesheet" />
+
+
+<!-- OpenLayers -->
+<link  href="lib/openlayers/ol.css" rel="stylesheet" type="text/css" />
+<script src="lib/openlayers/ol.js" type="text/javascript"></script>
+
+
+<!-- DrawFlow -->
+<link  href="lib/drawflow/drawflow.min.css" rel="stylesheet" type="text/css" />
+<script src="lib/drawflow/drawflow.min.js" type="text/javascript"></script>
+
+
+<!-- Packery -->
+<script src="lib/packery/packery.min.js" type="text/javascript"></script>
+<script src="lib/packery/draggabilly.min.js" type="text/javascript"></script>
+
+
+<!-- CodeMirror -->
+<link  href="lib/codemirror/codemirror.css" rel="stylesheet" type="text/css" />
+<script src="lib/codemirror/codemirror.js" type="text/javascript"></script>
+<script src="lib/codemirror/cypher.js" type="text/javascript"></script>
+
+
+<!-- Kartographia -->
+<script src="lib/kartographia/kartographia.js" type="text/javascript"></script>
+
+
+<!-- JTS -->
+<script src="lib/jsts/jsts.min.js" type="text/javascript"></script>
+
+
+
+<!-- Application -->
+<link href="style/main.css" type="text/css" rel="stylesheet" />
+<link href="style/branding.css" type="text/css" rel="stylesheet" />
+<script src="app/Application.js" type="text/javascript"></script>
+<script src="app/Homepage.js" type="text/javascript"></script>
+<script src="app/Utils.js" type="text/javascript"></script>
+
+
+<!-- Dashboards -->
+<script src="app/dashboards/CovidDashboard.js" type="text/javascript"></script>
+<script src="app/dashboards/PPEDemand.js" type="text/javascript"></script>
+<script src="app/dashboards/SupplyChain.js" type="text/javascript"></script>
+<script src="app/dashboards/ICUMap.js" type="text/javascript"></script>
+<script src="app/dashboards/ImportSummary.js" type="text/javascript"></script>
+<script src="app/dashboards/EUAMap.js" type="text/javascript"></script>
+<script src="app/dashboards/ProductPurchases.js" type="text/javascript"></script>
+<script src="app/dashboards/GlobalSupplyChain.js" type="text/javascript"></script>
+
+
+<!-- Dashboard Creator -->
+<script src="app/Explorer.js" type="text/javascript"></script>
+<script src="app/Permissions.js" type="text/javascript"></script>
+<script src="app/ChartEditor.js" type="text/javascript"></script>
+<script src="app/charts/PieChart.js" type="text/javascript"></script>
+<script src="app/charts/PieEditor.js" type="text/javascript"></script>
+<script src="app/charts/BarChart.js" type="text/javascript"></script>
+<script src="app/charts/LineChart.js" type="text/javascript"></script>
+<script src="app/charts/SankeyChart.js" type="text/javascript"></script>
+<script src="app/charts/SankeyEditor.js" type="text/javascript"></script>
+<script src="app/charts/MapChart.js" type="text/javascript"></script>
+<script src="app/charts/MapEditor.js" type="text/javascript"></script>
+<script src="app/charts/ScatterChart.js" type="text/javascript"></script>
+<script src="app/charts/ScatterEditor.js" type="text/javascript"></script>
+<script src="app/charts/SupplyChainEditor.js" type="text/javascript"></script>
+<script src="app/charts/Layout.js" type="text/javascript"></script>
+
+
+<!-- Graph Stuff -->
+<script src="app/graph/GraphView.js" type="text/javascript"></script>
+<script src="app/graph/NodeView.js" type="text/javascript"></script>
+
+
+<!-- Admin Modules -->
+<script src="app/admin/AdminPanel.js" type="text/javascript"></script>
+<script src="app/admin/ConfigAdmin.js" type="text/javascript"></script>
+<script src="app/admin/UserAdmin.js" type="text/javascript"></script>
+<script src="app/admin/UserList.js" type="text/javascript"></script>
+<script src="app/admin/UserEditor.js" type="text/javascript"></script>
+<script src="app/admin/UserStats.js" type="text/javascript"></script>
+<script src="app/admin/GraphAdmin.js" type="text/javascript"></script>
+
+
+<!-- Misc -->
+<script src="app/Screenshot.js" type="text/javascript"></script>
+
+
+</head>
+<body>
+<script type="text/javascript">
+//<![CDATA[
+window.onload = function() {
+    if (!document.bluewave){
+        document.bluewave = new bluewave.Application(document.body, {
+            waitmask: document.waitmask
+        });
+    }
+    document.bluewave.update(document.user);
+};
+//]]>
+</script>
+<svg style="display: none;">
+  <defs>
+    <filter id="blur-filter">
+      <feGaussianBlur stdDeviation="3"></feGaussianBlur>
+    </filter>
+  </defs>
+</svg>
+</body>
+</html>
