@@ -94,6 +94,26 @@ jobs:
       - name: copy all files/folders to compiled project Directory
         run: cp -r web models lib bluewave-$GIT_TAG_NAME.jar compiledProjectDirectory
 
+      - name: print our directory
+        run: dir 
+
+      - name: print our directory src
+        run: dir src
+
+      - name: print our inner directory src
+        run: dir src/main
+      
+      - name: print our directory lib
+        run: dir lib
+
+      - name: print our directory web
+        run: dir web
+      
+      - name: print our directory target
+        run: dir target
+
+      - name: print our directory compiled
+        run: dir compiledProjectDirectory
 
 
      # replace main.html file with new reference to minified bluewave file
