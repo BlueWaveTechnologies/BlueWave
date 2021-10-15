@@ -29,7 +29,7 @@ jobs:
           prerelease: false
 
 
-      ### Minify JS and consolidate into one file and change main.html bluewave files reference
+      ### Minify JS and consolidate into one file and change main.html bluewave reference
 
       # Minify web/app file directory into individually minified files
       - name: minify web/app directory
