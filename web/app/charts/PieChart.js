@@ -35,7 +35,11 @@ bluewave.charts.PieChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (pieArea) pieArea.selectAll("*").remove();
+        if (pieArea){
+            pieArea.node().innerHTML = "";
+            //pieArea.selectAll("*").remove();
+            pieArea.attr("transform", null);
+        }
     };
 
 
@@ -202,15 +206,26 @@ bluewave.charts.PieChart = function(parent, config) {
                     else{
                         scale = height/box.height;
                         x = width/2;
-                        y = box.height-height; //not sure about this...
+                        y = (box.height+box.y); //not quite right...
                     }
 
 
+                  //Apply scaling and position
                     pieChart
                       .attr("transform",
                         "translate(" + x + "," + y + ") " +
                         "scale(" + scale + ")"
                     );
+
+
+                  //Update position
+                    var d = javaxt.dhtml.utils.getRect(parent).y - javaxt.dhtml.utils.getRect(pieChart.node()).y;
+                    pieChart
+                      .attr("transform",
+                        "translate(" + x + "," + (y+d) + ") " +
+                        "scale(" + scale + ")"
+                    );
+
                 }
             }
         });
