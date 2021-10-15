@@ -12,7 +12,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-          
+      
+      - name: test github reference tag
+        run: echo ${ GITHUB_REF/refs\/tags\// }
 
      # create the release to serve as a place to export to
       - name: Create Release
@@ -84,7 +86,7 @@ jobs:
           cp target/bluewave-1.0.0.jar bluewave-${{github.ref}}.jar
           cp -r target/lib lib
 
-  
+          
     ### Add all compiled project files to new directory
 
      # copy all Release assets to compiled project Directory
