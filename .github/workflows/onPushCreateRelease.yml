@@ -15,6 +15,10 @@ jobs:
       
       - name: test github reference tag
         run: echo ${ GITHUB_REF/refs\/tags\// }
+      - name: test github reference tag 2
+        run: echo "GIT_TAG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
+      - name: Show GitHub ref
+        run: echo "$GITHUB_REF"
 
      # create the release to serve as a place to export to
       - name: Create Release
