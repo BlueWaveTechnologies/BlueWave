@@ -10,15 +10,17 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      
-      - name: get tag reference id
-        uses: olegtarasov/get-tag@v2.1
+      - uses: olegtarasov/get-tag@v2.1
         id: tagName
         with:
           tagRegex: "foobar-(.*)"  # Optional. Returns specified group text as tag name. Full tag string is returned if regex is not defined.
           tagRegexGroup: 1 # Optional. Default is 1.
+          
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: get tag reference id
+        
           
       - name: Some other step # Output usage example
         with:
