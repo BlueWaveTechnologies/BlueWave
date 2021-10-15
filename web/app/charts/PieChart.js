@@ -36,7 +36,8 @@ bluewave.charts.PieChart = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         if (pieArea){
-            pieArea.selectAll("*").remove();
+            pieArea.node().innerHTML = "";
+            //pieArea.selectAll("*").remove();
             pieArea.attr("transform", null);
         }
     };
@@ -198,7 +199,7 @@ bluewave.charts.PieChart = function(parent, config) {
                     else{
                         scale = height/box.height;
                         x = width/2;
-                        y = height/2;
+                        y = (box.height+box.y); //not quite right...
                     }
 
 
