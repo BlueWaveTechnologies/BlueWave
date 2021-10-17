@@ -147,7 +147,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
       //Reformat data if "group by" is selected
-        if(group !== null && group !== undefined){
+        if(group !== null && group !== undefined && group !==""){
 
             let groupData = d3.nest()
             .key(function(d){return d[group];})
@@ -211,7 +211,8 @@ bluewave.charts.LineChart = function(parent, config) {
                area: null,
                line: null,
                line2: null,
-               tag: null
+               tag: null,
+               point: null
             });
         }
 
@@ -268,20 +269,30 @@ bluewave.charts.LineChart = function(parent, config) {
 
       //Draw lines
         var lineGroup = plotArea.append("g");
+        var circleGroup = plotArea.append("g");
+        circleGroup.attr("name", "circles");
         lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
             var sumData = arr[i];
 
             let lineColor = chartConfig["lineColor" + i];
+            let lineStyle = chartConfig["lineStyle" + i];
             let lineWidth = chartConfig["lineWidth" + i];
             let opacity = chartConfig["opacity" + i];
+
+            let pointRadius = chartConfig["pointRadius" + i];
+            let pointColor = chartConfig["pointColor" + i];
+            let pointType = chartConfig["pointType" + i];
 
 
             if (lineWidth == null) lineWidth = 1;
             if (opacity == null) opacity = 1;
+            if (lineStyle == null) lineStyle = "solid";
+
+            if (pointRadius == null) pointRadius = 2;
+            if (pointType == null) pointType = "none";
 
             let keyType = typeOfAxisValue(sumData[0].key);
-
 
           //Draw line
             chartElements[i].line = lineGroup
@@ -291,6 +302,13 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr("stroke", lineColor)
                 .attr("stroke-width", lineWidth)
                 .attr("opacity", opacity)
+                .attr("stroke-dasharray", function(d){
+                    if(lineStyle==="dashed") return "10, 10";
+                    else if(lineStyle==="dotted") return "0, 20"
+                })
+                .attr("stroke-linecap", function(d){
+                    if(lineStyle==="dotted") return "round";
+                })
                 .attr(
                     "d",d3.line()
                     .x(getX)
@@ -311,6 +329,27 @@ bluewave.charts.LineChart = function(parent, config) {
                     .x(getX)
                     .y(getY)
                 )
+                .on("click", function(d){
+                    var datasetID = parseInt(d3.select(this).attr("dataset"));
+                    raiseLine(chartElements[datasetID]);
+                    me.onClick(this, datasetID, d);
+                });
+
+            //Add circles
+            chartElements[i].point = circleGroup
+                .selectAll("points")
+                .data(sumData)
+                .enter()
+                .append("circle")
+                .attr("dataset", i)
+                .attr("fill", pointColor)
+                .attr("stroke", "none")
+                .attr("cx", getX )
+                .attr("cy", getY )
+                .attr("r", function(d){
+                    if (pointType==="all") return pointRadius;
+                    else return 0;
+                })
                 .on("click", function(d){
                     var datasetID = parseInt(d3.select(this).attr("dataset"));
                     raiseLine(chartElements[datasetID]);
@@ -459,6 +498,7 @@ bluewave.charts.LineChart = function(parent, config) {
       //Raise line
         chartElements.line.raise();
         chartElements.line2.raise();
+        chartElements.point.raise();
 
 
       //Remove and reinsert tag
