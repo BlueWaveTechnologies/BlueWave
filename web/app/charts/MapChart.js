@@ -114,6 +114,19 @@ bluewave.charts.MapChart = function(parent, config) {
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
+        //set the color the 'water'
+        var waterColor = chartConfig.waterColor;
+        if(!waterColor){
+            waterColor = "white";
+        }
+        svg.style('background-color', waterColor);
+
+        //Set the color of the land
+        var landColor = chartConfig.landColor;
+        if(!landColor){
+            landColor = "lightgray";
+        }
+
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
@@ -185,7 +198,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 countyPolygons.each(function() {
                     var path = d3.select(this);
                     path.attr('fill', function(d){
-                        return 'lightgray';
+                        return landColor;
                     });
                 });
 
@@ -289,7 +302,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 .data(countries.features)
                 .enter().append("path")
                 .attr('d', path)
-                .attr('fill', 'lightgray')
+                .attr('fill', landColor)
                 .attr('stroke', 'white');
 
 
@@ -392,7 +405,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 .enter()
                 .append("path")
                 .attr('d', path)
-                .attr('fill', 'lightgray')
+                .attr('fill', landColor)
                 .attr('stroke', 'white');
 
             if (chartConfig.mapType === "Point"){
@@ -441,7 +454,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         if(inData){
                             return colorScale[chartConfig.colorScale](d.properties.mapValue);
                         }else{
-                            return "lightgrey";
+                            return landColor;
                         }
                     });
             }

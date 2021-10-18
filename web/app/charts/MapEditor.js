@@ -450,6 +450,31 @@ if(!bluewave.charts) bluewave.charts={};
                             type: "text"
                         }
                     ]
+                },
+                {
+                    group: "Map Color Options",
+                    items: [
+                        {
+                            name: "waterColor",
+                            label: "Water Color",
+                            type: new javaxt.dhtml.ComboBox(
+                                document.createElement("div"),
+                                {
+                                    style: config.style.combobox
+                                }
+                            )
+                        },
+                        {
+                            name: "landColor",
+                            label: "Land Color",
+                            type: new javaxt.dhtml.ComboBox(
+                                document.createElement("div"),
+                                {
+                                    style: config.style.combobox
+                                }
+                            )
+                        }
+                    ]
                 }
             ];
 
@@ -477,9 +502,13 @@ if(!bluewave.charts) bluewave.charts={};
             });
 
 
-          //Update color field (add colorPicker) and set initial value
+          //Update color fields (add colorPicker) and set initial value
             createColorOptions("color", form);
+            createColorOptions("waterColor", form);
+            createColorOptions("landColor", form);
             form.findField("color").setValue(chartConfig.lineColor || "#ff3c38"); //red default
+            form.findField("waterColor").setValue(chartConfig.lineColor || "#ffffff"); //white default
+            form.findField("landColor").setValue(chartConfig.lineColor || "#d3d3d3"); //lightgrey default
 
 
           //Update cutout field (add slider) and set initial value
@@ -521,6 +550,8 @@ if(!bluewave.charts) bluewave.charts={};
                     var settings = form.getData();
                     chartConfig.pointColor = settings.color;
                     chartConfig.pointRadius = settings.radius;
+                    chartConfig.landColor = settings.landColor;
+                    chartConfig.waterColor = settings.waterColor;
                     chartConfig.lon = settings.centerHorizontal;
                     chartConfig.lat = settings.centerVertical;
                     createMapPreview();
@@ -531,6 +562,8 @@ if(!bluewave.charts) bluewave.charts={};
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.pointColor = settings.color;
+                    chartConfig.landColor = settings.landColor;
+                    chartConfig.waterColor = settings.waterColor;
                     chartConfig.pointRadius = settings.radius;
                     createMapPreview();
                 };
@@ -574,9 +607,40 @@ if(!bluewave.charts) bluewave.charts={};
                                     type: "text"
                                 }
                             ]
-                        }
+                        },
+                         {
+                             group: "Map Color Options",
+                             items: [
+                                 {
+                                     name: "waterColor",
+                                     label: "Water Color",
+                                     type: new javaxt.dhtml.ComboBox(
+                                         document.createElement("div"),
+                                         {
+                                             style: config.style.combobox
+                                         }
+                                     )
+                                 },
+                                 {
+                                     name: "landColor",
+                                     label: "Land Color",
+                                     type: new javaxt.dhtml.ComboBox(
+                                         document.createElement("div"),
+                                         {
+                                             style: config.style.combobox
+                                         }
+                                     )
+                                 }
+                             ]
+                         }
                     ]
                 });
+
+                //Set up the Color Picker
+                createColorOptions("waterColor", form);
+                createColorOptions("landColor", form);
+                form.findField("waterColor").setValue(chartConfig.lineColor || "#ffffff"); //white default
+                form.findField("landColor").setValue(chartConfig.lineColor || "#d3d3d3"); //lightgrey default
 
                 var horizontalField = form.findField("centerHorizontal");
                 var horizontal = chartConfig.lon;
@@ -606,6 +670,8 @@ if(!bluewave.charts) bluewave.charts={};
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.colorScale = settings.color;
+                    chartConfig.landColor = settings.landColor;
+                    chartConfig.waterColor = settings.waterColor;
                     chartConfig.lon = settings.centerHorizontal;
                     chartConfig.lat = settings.centerVertical;
                     createMapPreview();
@@ -632,15 +698,43 @@ if(!bluewave.charts) bluewave.charts={};
                                     name: "color",
                                     label: "Color",
                                     type: colorField
-                                }
+                                },
+                                {
+                                     name: "waterColor",
+                                     label: "Water Color",
+                                     type: new javaxt.dhtml.ComboBox(
+                                         document.createElement("div"),
+                                         {
+                                             style: config.style.combobox
+                                         }
+                                     )
+                                 },
+                                 {
+                                     name: "landColor",
+                                     label: "Land Color",
+                                     type: new javaxt.dhtml.ComboBox(
+                                         document.createElement("div"),
+                                         {
+                                             style: config.style.combobox
+                                         }
+                                     )
+                                 }
                             ]
                         }
                     ]
                 });
 
+                //Set up the Color Picker
+                createColorOptions("waterColor", form);
+                createColorOptions("landColor", form);
+                form.findField("waterColor").setValue(chartConfig.lineColor || "#ffffff"); //white default
+                form.findField("landColor").setValue(chartConfig.lineColor || "#d3d3d3"); //lightgrey default
+
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.colorScale = settings.color;
+                    chartConfig.landColor = settings.landColor;
+                    chartConfig.waterColor = settings.waterColor;
                     createMapPreview();
                 };
             }
@@ -662,11 +756,37 @@ if(!bluewave.charts) bluewave.charts={};
                                      name: "centerVertical",
                                      label: "Latitudinal Center",
                                      type: "text"
-                                 }
+                                 },
+                                  {
+                                       name: "waterColor",
+                                       label: "Water Color",
+                                       type: new javaxt.dhtml.ComboBox(
+                                           document.createElement("div"),
+                                           {
+                                               style: config.style.combobox
+                                           }
+                                       )
+                                   },
+                                   {
+                                       name: "landColor",
+                                       label: "Land Color",
+                                       type: new javaxt.dhtml.ComboBox(
+                                           document.createElement("div"),
+                                           {
+                                               style: config.style.combobox
+                                           }
+                                       )
+                                   }
                             ]
                         }
                     ]
                 });
+
+                //Set up the Color Picker
+                createColorOptions("waterColor", form);
+                createColorOptions("landColor", form);
+                form.findField("waterColor").setValue(chartConfig.lineColor || "#ffffff"); //white default
+                form.findField("landColor").setValue(chartConfig.lineColor || "#d3d3d3"); //lightgrey default
 
                 var horizontalField = form.findField("centerHorizontal");
                 var horizontal = chartConfig.lon;
@@ -696,6 +816,8 @@ if(!bluewave.charts) bluewave.charts={};
                     var settings = form.getData();
                     chartConfig.lon =  settings.centerHorizontal;
                     chartConfig.lat = settings.centerVertical;
+                    chartConfig.landColor = settings.landColor;
+                    chartConfig.waterColor = settings.waterColor;
                     createMapPreview();
                 };
             }
