@@ -672,7 +672,7 @@ bluewave.ChartEditor = function(parent, config) {
                                 ]
                             }
                         ]
-                    },
+                    }
 
 
                 ]
@@ -743,7 +743,8 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if (chartType==="line"){
 
-            //Create dropdown for line style
+
+          //Create dropdown for line style
             var lineDropdown = new javaxt.dhtml.ComboBox(
                 document.createElement("div"),
                 {
@@ -755,31 +756,22 @@ bluewave.ChartEditor = function(parent, config) {
             lineDropdown.add("Solid", "solid");
             lineDropdown.add("Dashed", "dashed");
             lineDropdown.add("Dotted", "dotted");
-
             lineDropdown.setValue("solid");
 
-            //Create dropdown for point style
-            var pointDropdown = new javaxt.dhtml.ComboBox(
-                document.createElement("div"),
-                {
-                    style: config.style.combobox,
-                    readOnly: true
 
-                }
-            );
-            pointDropdown.add("None", "none");
-            pointDropdown.add("All", "all");
-            pointDropdown.add("Inflection", "inflection");
-
-            pointDropdown.setValue("none");
 
           //Add style options
             form = new javaxt.dhtml.Form(body, {
                 style: config.style.form,
                 items: [
                     {
-                        group: "Line Style",
+                        group: "Stroke",
                         items: [
+                            {
+                                name: "lineStyle",
+                                label: "Type",
+                                type: lineDropdown
+                            },
                             {
                                 name: "lineColor",
                                 label: "Color",
@@ -789,11 +781,6 @@ bluewave.ChartEditor = function(parent, config) {
                                         style: config.style.combobox
                                     }
                                 )
-                            },
-                            {
-                                name: "lineStyle",
-                                label: "Line Style",
-                                type: lineDropdown
                             },
                             {
                                 name: "lineThickness",
@@ -808,11 +795,11 @@ bluewave.ChartEditor = function(parent, config) {
                         ]
                     },
                     {
-                        group: "Point Style",
+                        group: "Points",
                         items: [
                             {
                                 name: "pointColor",
-                                label: "Point Color",
+                                label: "Color",
                                 type: new javaxt.dhtml.ComboBox(
                                     document.createElement("div"),
                                     {
@@ -821,20 +808,15 @@ bluewave.ChartEditor = function(parent, config) {
                                 )
                             },
                             {
-                                name: "pointType",
-                                label: "Point Type",
-                                type: pointDropdown
-                            },
-                            {
                                 name: "pointRadius",
-                                label: "Point Radius",
+                                label: "Radius",
                                 type: "text"
                             }
 
                         ]
                     },
                     {
-                        group: "Fill Style",
+                        group: "Fill",
                         items: [
 
                             {
@@ -854,12 +836,10 @@ bluewave.ChartEditor = function(parent, config) {
 
 
 
-          //Global update fields for all lines
 
           //Update color field (add colorPicker) and set initial value
             createColorOptions("lineColor", form);
             createColorOptions("pointColor", form);
-            // form.findField("lineColor").setValue(chartConfig.lineColor || "#6699CC");
 
 
           //Update lineWidth field (add slider) and set initial value
@@ -891,27 +871,26 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.endOpacity = endOpacity;
             form.findField("endOpacity").setValue(endOpacity*100);
 
-            createSlider("pointRadius", form, "px", 1, 10, 1)
+            createSlider("pointRadius", form, "px", 0, 10, 1);
             var pointRadius = chartConfig.pointRadius;
-            if (isNaN(pointRadius)) pointRadius = 2;
+            if (isNaN(pointRadius)) pointRadius = 0;
             chartConfig.pointRadius = pointRadius;
             form.findField("pointRadius").setValue(pointRadius);
-            
+
 
             //Single line edit case
             if(datasetID !== null && datasetID !== undefined){
 
-               let n = `${datasetID}`;
+                let n = `${datasetID}`;
 
-               if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
-               if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
-               if( !chartConfig["lineStyle" + n] ) chartConfig["lineStyle" + n] = "solid";
-               if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;
-               if( isNaN(chartConfig["opacity" + n]) ) chartConfig["opacity" + n] = 1;
-               if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
-               if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
-               if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 2;
-               if( !chartConfig["pointType" + n] ) chartConfig["pointType" + n] = "none";
+                if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
+                if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
+                if( !chartConfig["lineStyle" + n] ) chartConfig["lineStyle" + n] = "solid";
+                if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;
+                if( isNaN(chartConfig["opacity" + n]) ) chartConfig["opacity" + n] = 1;
+                if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
+                if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
+                if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 0;
 
                 form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
                 form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
@@ -920,7 +899,6 @@ bluewave.ChartEditor = function(parent, config) {
                 form.findField("lineOpacity").setValue(chartConfig["opacity" + n]*100);
                 form.findField("startOpacity").setValue(chartConfig["startOpacity" + n]*100);
                 form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
-                form.findField("pointType").setValue(chartConfig["pointType" + n]);
                 form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
 
                 form.onChange = function(){
@@ -932,7 +910,6 @@ bluewave.ChartEditor = function(parent, config) {
                     chartConfig["startOpacity" + n] = settings.startOpacity/100;
                     chartConfig["endOpacity" + n] = settings.endOpacity/100;
                     chartConfig["pointColor" + n] = settings.pointColor;
-                    chartConfig["pointType" + n] = settings.pointType;
                     chartConfig["pointRadius" + n] = settings.pointRadius;
                     createLinePreview();
                 };
