@@ -236,6 +236,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     return x(d.key);
                 }
             };
+
 // Why are we adding 1 here if I forget to ask? to avoid log(0)=-inf?
             var getY = function(d){
                 var v = parseFloat(d["value"]);
@@ -280,19 +281,17 @@ bluewave.charts.LineChart = function(parent, config) {
             let lineWidth = chartConfig["lineWidth" + i];
             let opacity = chartConfig["opacity" + i];
 
-            let pointRadius = chartConfig["pointRadius" + i];
+            let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
+            if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
             let pointColor = chartConfig["pointColor" + i];
-            let pointType = chartConfig["pointType" + i];
-
 
             if (lineWidth == null) lineWidth = 1;
             if (opacity == null) opacity = 1;
             if (lineStyle == null) lineStyle = "solid";
 
-            if (pointRadius == null) pointRadius = 2;
-            if (pointType == null) pointType = "none";
 
             let keyType = typeOfAxisValue(sumData[0].key);
+
 
           //Draw line
             chartElements[i].line = lineGroup
@@ -303,8 +302,8 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr("stroke-width", lineWidth)
                 .attr("opacity", opacity)
                 .attr("stroke-dasharray", function(d){
-                    if(lineStyle==="dashed") return "10, 10";
-                    else if(lineStyle==="dotted") return "0, 20"
+                    if(lineStyle==="dashed") return "5, 5";
+                    else if(lineStyle==="dotted") return "0, 5";
                 })
                 .attr("stroke-linecap", function(d){
                     if(lineStyle==="dotted") return "round";
@@ -335,27 +334,28 @@ bluewave.charts.LineChart = function(parent, config) {
                     me.onClick(this, datasetID, d);
                 });
 
-            //Add circles
-            chartElements[i].point = circleGroup
-                .selectAll("points")
-                .data(sumData)
-                .enter()
-                .append("circle")
-                .attr("dataset", i)
-                .attr("fill", pointColor)
-                .attr("stroke", "none")
-                .attr("cx", getX )
-                .attr("cy", getY )
-                .attr("r", function(d){
-                    if (pointType==="all") return pointRadius;
-                    else return 0;
-                })
-                .on("click", function(d){
-                    var datasetID = parseInt(d3.select(this).attr("dataset"));
-                    raiseLine(chartElements[datasetID]);
-                    me.onClick(this, datasetID, d);
-                });
 
+          //Add circles
+            if (pointRadius){
+                chartElements[i].point = circleGroup
+                    .selectAll("points")
+                    .data(sumData)
+                    .enter()
+                    .append("circle")
+                    .attr("dataset", i)
+                    .attr("fill", pointColor)
+                    .attr("stroke", "none")
+                    .attr("cx", getX )
+                    .attr("cy", getY )
+                    .attr("r", function(d){
+                        return pointRadius;
+                    })
+                    .on("click", function(d){
+                        var datasetID = parseInt(d3.select(this).attr("dataset"));
+                        raiseLine(chartElements[datasetID]);
+                        me.onClick(this, datasetID, d);
+                    });
+            }
 
 
           //Display end tags if checked
@@ -498,7 +498,7 @@ bluewave.charts.LineChart = function(parent, config) {
       //Raise line
         chartElements.line.raise();
         chartElements.line2.raise();
-        chartElements.point.raise();
+        if (chartElements.point) chartElements.point.raise();
 
 
       //Remove and reinsert tag
