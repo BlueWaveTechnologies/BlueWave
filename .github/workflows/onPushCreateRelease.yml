@@ -115,7 +115,12 @@ jobs:
       - name: copy all files/folders to compiled project Directory
         run: cp -r web models lib bluewave-${{ env.tagName }}.jar compiledProjectDirectory
 
+      - name: print our directory compiled
+        run: dir compiledProjectDirectory
 
+      - name: print our directory compiled - web
+        run: dir compiledProjectDirectory/web
+        
      # replace main.html file with new reference to minified bluewave file
       - name: setup python
         uses: actions/setup-python@v2
