@@ -532,7 +532,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         createSlider("maximumSlices", form, "", 0, numSlices, 1);
         var maximumSlices = chartConfig.maximumSlices;
         if (maximumSlices==null) maximumSlices = numSlices;
-        form.findField("maximumSlices").setValue(maximumSlices);
+        form.findField("maximumSlices").setValue(maximumSlices>numSlices ? numSlices : maximumSlices);
 
 
       //Process onChange events
