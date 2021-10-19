@@ -461,16 +461,16 @@ bluewave.charts.PieEditor = function(parent, config) {
                         },
                         {
                             name: "maxSlicesOption",
-                            label: "Slices Option",
+                            label: "Show Other",
                             type: "radio",
                             alignment: "vertical",
                             options: [
                                 {
-                                    label: "Show Others",
+                                    label: "True",
                                     value: true
                                 },
                                 {
-                                    label: "Truncate",
+                                    label: "False",
                                     value: false
                                 }
                             ]
@@ -528,11 +528,11 @@ bluewave.charts.PieEditor = function(parent, config) {
         var maxSlicesOption = chartConfig.pieMaxSliceOpt;
         maxSliceOptField.setValue(maxSlicesOption==true ? true : false);
 
-        createSlider("maximumSlices", form, "", 0, inputData[0].length, 1);
+        var numSlices = inputData[0].length;
+        createSlider("maximumSlices", form, "", 0, numSlices, 1);
         var maximumSlices = chartConfig.maximumSlices;
-        if (maximumSlices==null) maximumSlices = 0;
-        chartConfig.maximumSlices = maximumSlices;
-        form.findField("maximumSlices").setValue(maximumSlices);
+        if (maximumSlices==null) maximumSlices = numSlices;
+        form.findField("maximumSlices").setValue(maximumSlices>numSlices ? numSlices : maximumSlices);
 
 
       //Process onChange events
