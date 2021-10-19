@@ -578,6 +578,8 @@ bluewave.utils = {
                 input.setValue(val);
             }
         });
+
+        return slider;
     },
 
 
