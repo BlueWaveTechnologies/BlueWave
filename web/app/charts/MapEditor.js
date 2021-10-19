@@ -448,7 +448,27 @@ if(!bluewave.charts) bluewave.charts={};
                             name: "radius",
                             label: "Radius",
                             type: "text"
-                        }
+                        },
+                        {
+                            name: "opacity",
+                            label: "Opacity",
+                            type: "text"
+                        },
+                         {
+                             name: "outlineWidth",
+                             label: "Outline Width",
+                             type: "text"
+                         },
+                         {
+                             name: "outlineColor",
+                             label: "Outline Color",
+                             type: new javaxt.dhtml.ComboBox(
+                                 document.createElement("div"),
+                                 {
+                                     style: config.style.combobox
+                                 }
+                             )
+                         }
                     ]
                 }
             ];
@@ -481,6 +501,9 @@ if(!bluewave.charts) bluewave.charts={};
             createColorOptions("color", form);
             form.findField("color").setValue(chartConfig.lineColor || "#ff3c38"); //red default
 
+          //Update color field (add colorPicker) and set initial value
+            createColorOptions("outlineColor", form);
+            form.findField("outlineColor").setValue(chartConfig.lineColor || "#ff3c38"); //red default
 
           //Update cutout field (add slider) and set initial value
             createSlider("radius", form, "px", 1, 20, 1);
@@ -489,6 +512,19 @@ if(!bluewave.charts) bluewave.charts={};
             chartConfig.pointRadius = radius;
             form.findField("radius").setValue(radius);
 
+            //Create Slider for Opacity
+            createSlider("opacity", form);
+            var opacity = chartConfig.opacity;
+            if (opacity==null) opacity = 100;
+            chartConfig.opacity = opacity;
+            form.findField("opacity").setValue(opacity);
+
+            //Create Slider for Outline Width
+            createSlider("outlineWidth", form, "px", 1, 20, 1);
+            var outlineWidth = chartConfig.outlineWidth;
+            if (outlineWidth==null) outlineWidth = 3;
+            chartConfig.outlineWidth = outlineWidth;
+            form.findField("outlineWidth").setValue(outlineWidth);
 
           //Process onChange events
             if (mapLevel==="states" || mapLevel==="world"){
@@ -520,7 +556,10 @@ if(!bluewave.charts) bluewave.charts={};
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.pointColor = settings.color;
+                    chartConfig.outlineColor = settings.outlineColor;
                     chartConfig.pointRadius = settings.radius;
+                    chartConfig.opacity = settings.opacity;
+                    chartConfig.outlineWidth = settings.outlineWidth;
                     chartConfig.lon = settings.centerHorizontal;
                     chartConfig.lat = settings.centerVertical;
                     createMapPreview();
@@ -531,7 +570,10 @@ if(!bluewave.charts) bluewave.charts={};
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.pointColor = settings.color;
+                    chartConfig.outlineColor = settings.outlineColor;
                     chartConfig.pointRadius = settings.radius;
+                    chartConfig.outlineWidth = settings.outlineWidth;
+                    chartConfig.opacity = settings.opacity;
                     createMapPreview();
                 };
             }
