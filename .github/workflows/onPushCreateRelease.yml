@@ -10,41 +10,21 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - uses: olegtarasov/get-tag@v2.1
-        id: tagName
-        with:
-          tagRegex: "foobar-(.*)"  # Optional. Returns specified group text as tag name. Full tag string is returned if regex is not defined.
-          tagRegexGroup: 1 # Optional. Default is 1.
-          
+
       - name: Checkout code
         uses: actions/checkout@v2
       
       - name: get tag reference id
-        
-          
-      - name: Some other step # Output usage example
-        with:
-          tagname: ${{ steps.tagName.outputs.tag }}
-          run: echo ${{ steps.tagName.outputs.tag }}
+            # parse the github reference tag from the direct input (github.ref)
+        run: |
+             githubRef=${{ github.ref }}
+             githubRef="${githubRef/'refs/tags'/''}"
+             githubRef="${githubRef/'/'/''}"
+             echo "tagName=$githubRef" >> $GITHUB_ENV
 
-      - name: Some other step 2 # Output usage example
-        with:
-          tagname: ${{ steps.tagName.outputs.tag }}
-          run: echo $tagname
-
-     # create the release to serve as a place to export to
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-        with:
-          tag_name: $GIT_TAG_NAME
-          release_name: Release $GIT_TAG_NAME
-          body: |
-            BlueWave Release $GIT_TAG_NAME
-          draft: false
-          prerelease: false
+      - name: Read exported variable - (test to verify the dynamic tagName Variable is global)
+        run: |
+          echo $tagName
 
 
      # create project directory 
@@ -98,37 +78,20 @@ jobs:
 
      # copy jar file to main directory
       - name: copy jar
+      #env:
+    #tagName: $tagName
+
         run: |
-          cp target/bluewave-1.0.0.jar bluewave-$GIT_TAG_NAME.jar
+          cp target/bluewave-1.0.0.jar bluewave-${{ env.tagName }}.jar
           cp -r target/lib lib
+
 
           
     ### Add all compiled project files to new directory
 
      # copy all Release assets to compiled project Directory
       - name: copy all files/folders to compiled project Directory
-        run: cp -r web models lib bluewave-$GIT_TAG_NAME.jar compiledProjectDirectory
-
-      - name: print our directory
-        run: dir 
-
-      - name: print our directory src
-        run: dir src
-
-      - name: print our inner directory src
-        run: dir src/main
-      
-      - name: print our directory lib
-        run: dir lib
-
-      - name: print our directory web
-        run: dir web
-      
-      - name: print our directory target
-        run: dir target
-
-      - name: print our directory compiled
-        run: dir compiledProjectDirectory
+        run: cp -r web models lib bluewave-${{ env.tagName }}.jar compiledProjectDirectory
 
 
      # replace main.html file with new reference to minified bluewave file
@@ -154,7 +117,24 @@ jobs:
           files: ./compiledProjectDirectory
           
           recursive: true
-          dest: bluewave-$GIT_TAG_NAME.zip
+          dest: bluewave-${{ env.tagName }}.zip
+
+
+
+     # create the release to serve as a place to export to
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions
+        with:
+          tag_name: ${{ env.tagName }}
+          release_name: Release ${{ env.tagName }}
+          body: |
+            BlueWave Release ${{ env.tagName }}
+          draft: false
+          prerelease: false
+
 
      # add project to Release
       - name: Upload Packaged project to Release
@@ -164,6 +144,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: bluewave-$GIT_TAG_NAME.zip
-          asset_name: bluewave-$GIT_TAG_NAME.zip
+          asset_path: bluewave-${{ env.tagName }}.zip
+          asset_name: bluewave-${{ env.tagName }}.zip
           asset_content_type: application/zip
