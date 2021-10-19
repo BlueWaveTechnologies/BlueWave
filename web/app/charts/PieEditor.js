@@ -1,4 +1,5 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.charts) bluewave.charts={};
 
 //******************************************************************************
 //**  PieEditor
