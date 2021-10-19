@@ -115,11 +115,11 @@ bluewave.charts.MapChart = function(parent, config) {
         var height = parent.offsetHeight;
 
         //set the color the 'water'
-        var waterColor = chartConfig.waterColor;
-        if(!waterColor){
-            waterColor = "white";
+        var backgroundColor = chartConfig.backgroundColor;
+        if(!backgroundColor){
+            backgroundColor = "white";
         }
-        svg.style('background-color', waterColor);
+        svg.style('background-color', backgroundColor);
 
         //Set the color of the land
         var landColor = chartConfig.landColor;
