@@ -514,7 +514,7 @@ if(!bluewave.charts) bluewave.charts={};
             createColorOptions("color", form);
             createColorOptions("backgroundColor", form);
             createColorOptions("landColor", form);
-            form.findField("color").setValue(chartConfig.lineColor || "#ff3c38"); //red default
+            form.findField("color").setValue(chartConfig.pointColor || "#ff3c38"); //red default
             form.findField("backgroundColor").setValue(chartConfig.backgroundColor);
             form.findField("landColor").setValue(chartConfig.landColor);
 
