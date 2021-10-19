@@ -371,8 +371,6 @@ bluewave.charts.PieEditor = function(parent, config) {
 
             if(chartConfig.maximumSlices !== 0 && chartConfig.maximumSlices !==null) {
 
-                data = data.sort((a,b) => b[chartConfig.pieValue] - a[chartConfig.pieValue]);
-
                 if (chartConfig.showOther == true && chartConfig.maximumSlices < data.length) {
                     //Show Others
                     var otherSlicesValue = data.slice(chartConfig.maximumSlices).map(entry => entry[chartConfig.pieValue]).reduce((prev, next) => parseFloat(prev) + parseFloat(next));
