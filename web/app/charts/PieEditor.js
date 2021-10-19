@@ -374,7 +374,7 @@ bluewave.charts.PieEditor = function(parent, config) {
                 if (chartConfig.showOther == true && chartConfig.maximumSlices < data.length) {
                     //Show Others
                     var otherSlicesValue = data.slice(chartConfig.maximumSlices).map(entry => entry[chartConfig.pieValue]).reduce((prev, next) => parseFloat(prev) + parseFloat(next));
-                    var otherSlicesEntry = {[chartConfig.pieKey]: "Others", [chartConfig.pieValue]: otherSlicesValue};
+                    var otherSlicesEntry = {[chartConfig.pieKey]: "Other", [chartConfig.pieValue]: otherSlicesValue};
                     data = data.slice(0, chartConfig.maximumSlices).concat(otherSlicesEntry);
                 } else {
                     //Truncate after max slice
