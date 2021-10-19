@@ -1154,21 +1154,6 @@ bluewave.ChartEditor = function(parent, config) {
 
 
 
-      //Form resize doesn't seem to be working correctly for the linechart.
-      //It might have something to do with the custom sliders. Probably a
-      //timing issue. The following is a workaround.
-        if (chartType==="line"){
-
-            setTimeout(function(){
-                var arr = body.getElementsByClassName("form-groupbox");
-                for (var i=0; i<arr.length; i++){
-                    var el = arr[i];
-                    var h = parseFloat(el.style.height);
-                    el.style.height = h+30 + "px";
-                }
-            }, 100);
-        }
-
       //Workaround for bar chart legend until editor is split up
         // if(chartType !== "barChart"){
         //     let legendContainer = document.querySelector(".bar-legend");
