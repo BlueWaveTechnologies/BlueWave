@@ -1,14 +1,26 @@
 ''' this script is for recreating HTML files run in github actions  '''
 
+# from beautifulsoup4 import BeautifulSoup as bs
+from bs4 import BeautifulSoup as bs
 import os
+import re
+import xml.etree.ElementTree as ET
+
+# Remove the last segment of the path
+base = os.path.dirname(os.path.abspath(__file__))
+
+
 from os.path import dirname
+import os
+# print( os.path.dirname(os.getcwd()))
 
-# use directory containing main.html
-mainLocation = os.path.dirname(os.getcwd())+"/web"
-# set directory for rebuilt main.html
-newLocation = os.path.dirname(os.getcwd())+"/compiledProjectDirectory/web"
+mainLocation = os.path.dirname(os.getcwd())+"/BlueWave/web/"
+    # f = open(mainLocation, "r")
+    # print(f.read())
+newLocation = os.path.dirname(os.getcwd())+"/BlueWave/compiledProjectDirectory/"
 
 
+# print(os.path.dirname(os.getcwd()))
 
 itemsToRemove = [
 'src="app', 
@@ -16,13 +28,13 @@ itemsToRemove = [
  "<!-- Graph Stuff -->",
   "<!-- Misc -->",
  "<!-- Dashboard Creator -->",
- "<!-- Dashboards -->"
+ "Dashboards"
  ]
 
-with open(mainLocation + "/BlueWave/main.html", "r") as f:
+with open(mainLocation + "/main.html", "r") as f:
     lines = f.readlines()
-with open(newLocation + "/main.html", "w+") as f:
-    for line in lines:        
+with open(newLocation + "/web/main.html", "w") as f:
+    for line in lines:
         writeLine = True
         for removeWord in itemsToRemove:
             if not removeWord in line:
