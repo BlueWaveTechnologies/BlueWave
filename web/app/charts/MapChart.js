@@ -778,23 +778,25 @@ bluewave.charts.MapChart = function(parent, config) {
             opacity = opacity/100;
         }
 
-        var outlineWidth = chartConfig.outlineWidth;
-        if(!opacity){
-            outlineWidth = "3px";
-        }
 
         var r = parseInt(chartConfig.pointRadius);
         if (isNaN(r)) r = 3;
         if (r<0) r = 1;
 
-        var c = chartConfig.pointColor;
-        if (!c) c = "#ff3c38";
+        var c = chartConfig.pointColor || "#ff3c38"; //red default
 
         var oc = chartConfig.outlineColor;
-        if (!oc) oc = "#ff3c38";
+        if (!oc) oc = c;
+
+
+        var outlineWidth = parseFloat(chartConfig.outlineWidth);
+        if (isNaN(outlineWidth) || outlineWidth<0) outlineWidth = 0;
+        if (outlineWidth>r) outlineWidth = r;
+
+
 
         mapArea.append("g")
-        .selectAll("whatever")
+        .selectAll("*")
         .data(points.coords)
         .enter()
         .append("circle")
@@ -819,7 +821,7 @@ bluewave.charts.MapChart = function(parent, config) {
         .attr("fill-opacity", opacity)
         .style("fill", c)
         .style("stroke", oc)
-        .style("stroke-width", outlineWidth);
+        .style("stroke-width", outlineWidth + "px");
     };
 
 
