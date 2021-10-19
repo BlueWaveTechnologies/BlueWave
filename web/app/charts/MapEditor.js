@@ -502,12 +502,12 @@ if(!bluewave.charts) bluewave.charts={};
                         },
                          {
                              name: "outlineWidth",
-                             label: "Outline Width",
+                             label: "Border Width",
                              type: "text"
                          },
                          {
                              name: "outlineColor",
-                             label: "Outline Color",
+                             label: "Border Color",
                              type: new javaxt.dhtml.ComboBox(
                                  document.createElement("div"),
                                  {
@@ -534,13 +534,14 @@ if(!bluewave.charts) bluewave.charts={};
             createColorOptions("color", form);
             createColorOptions("backgroundColor", form);
             createColorOptions("landColor", form);
-            form.findField("color").setValue(chartConfig.pointColor || "#ff3c38"); //red default
+            var pointFill = chartConfig.pointColor || "#ff3c38"; //red default
+            form.findField("color").setValue(pointFill);
             form.findField("backgroundColor").setValue(chartConfig.backgroundColor);
             form.findField("landColor").setValue(chartConfig.landColor);
 
           //Update color field (add colorPicker) and set initial value
             createColorOptions("outlineColor", form);
-            form.findField("outlineColor").setValue(chartConfig.outlineColor || "#ff3c38"); //red default
+            form.findField("outlineColor").setValue(chartConfig.outlineColor || pointFill);
 
           //Update cutout field (add slider) and set initial value
             createSlider("radius", form, "px", 1, 20, 1);
@@ -550,16 +551,16 @@ if(!bluewave.charts) bluewave.charts={};
             form.findField("radius").setValue(radius);
 
             //Create Slider for Opacity
-            createSlider("opacity", form);
+            createSlider("opacity", form, "%");
             var opacity = chartConfig.opacity;
             if (opacity==null) opacity = 100;
             chartConfig.opacity = opacity;
             form.findField("opacity").setValue(opacity);
 
             //Create Slider for Outline Width
-            createSlider("outlineWidth", form, "px", 1, 20, 1);
+            createSlider("outlineWidth", form, "px", 0, 20, 1);
             var outlineWidth = chartConfig.outlineWidth;
-            if (outlineWidth==null) outlineWidth = 3;
+            if (outlineWidth==null) outlineWidth = 0;
             chartConfig.outlineWidth = outlineWidth;
             form.findField("outlineWidth").setValue(outlineWidth);
 
