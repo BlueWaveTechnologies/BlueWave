@@ -494,7 +494,27 @@ if(!bluewave.charts) bluewave.charts={};
                             name: "radius",
                             label: "Radius",
                             type: "text"
-                        }
+                        },
+                        {
+                            name: "opacity",
+                            label: "Opacity",
+                            type: "text"
+                        },
+                         {
+                             name: "outlineWidth",
+                             label: "Border Width",
+                             type: "text"
+                         },
+                         {
+                             name: "outlineColor",
+                             label: "Border Color",
+                             type: new javaxt.dhtml.ComboBox(
+                                 document.createElement("div"),
+                                 {
+                                     style: config.style.combobox
+                                 }
+                             )
+                         }
                     ]
                 },
                 mapColors
@@ -514,10 +534,14 @@ if(!bluewave.charts) bluewave.charts={};
             createColorOptions("color", form);
             createColorOptions("backgroundColor", form);
             createColorOptions("landColor", form);
-            form.findField("color").setValue(chartConfig.pointColor || "#ff3c38"); //red default
+            var pointFill = chartConfig.pointColor || "#ff3c38"; //red default
+            form.findField("color").setValue(pointFill);
             form.findField("backgroundColor").setValue(chartConfig.backgroundColor);
             form.findField("landColor").setValue(chartConfig.landColor);
 
+          //Update color field (add colorPicker) and set initial value
+            createColorOptions("outlineColor", form);
+            form.findField("outlineColor").setValue(chartConfig.outlineColor || pointFill);
 
           //Update cutout field (add slider) and set initial value
             createSlider("radius", form, "px", 1, 20, 1);
@@ -526,6 +550,19 @@ if(!bluewave.charts) bluewave.charts={};
             chartConfig.pointRadius = radius;
             form.findField("radius").setValue(radius);
 
+            //Create Slider for Opacity
+            createSlider("opacity", form, "%");
+            var opacity = chartConfig.opacity;
+            if (opacity==null) opacity = 100;
+            chartConfig.opacity = opacity;
+            form.findField("opacity").setValue(opacity);
+
+            //Create Slider for Outline Width
+            createSlider("outlineWidth", form, "px", 0, 20, 1);
+            var outlineWidth = chartConfig.outlineWidth;
+            if (outlineWidth==null) outlineWidth = 0;
+            chartConfig.outlineWidth = outlineWidth;
+            form.findField("outlineWidth").setValue(outlineWidth);
 
           //Process onChange events
             if (mapLevel==="states" || mapLevel==="world"){
@@ -557,7 +594,10 @@ if(!bluewave.charts) bluewave.charts={};
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.pointColor = settings.color;
+                    chartConfig.outlineColor = settings.outlineColor;
                     chartConfig.pointRadius = settings.radius;
+                    chartConfig.opacity = settings.opacity;
+                    chartConfig.outlineWidth = settings.outlineWidth;
                     chartConfig.landColor = settings.landColor;
                     chartConfig.backgroundColor = settings.backgroundColor;
                     chartConfig.lon = settings.centerHorizontal;
@@ -570,9 +610,12 @@ if(!bluewave.charts) bluewave.charts={};
                 form.onChange = function(){
                     var settings = form.getData();
                     chartConfig.pointColor = settings.color;
+                    chartConfig.outlineColor = settings.outlineColor;
                     chartConfig.landColor = settings.landColor;
                     chartConfig.backgroundColor = settings.backgroundColor;
                     chartConfig.pointRadius = settings.radius;
+                    chartConfig.outlineWidth = settings.outlineWidth;
+                    chartConfig.opacity = settings.opacity;
                     createMapPreview();
                 };
             }
