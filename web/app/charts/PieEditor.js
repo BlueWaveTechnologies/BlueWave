@@ -427,7 +427,7 @@ bluewave.charts.PieEditor = function(parent, config) {
             style: config.style.form,
             items: [
                 {
-                    group: "Style",
+                    group: "General",
                     items: [
                         {
                             name: "color",
@@ -444,14 +444,24 @@ bluewave.charts.PieEditor = function(parent, config) {
                             label: "Cutout",
                             type: "text"
                         },
+                    ]
+                },
+                {
+                    group: "Slices",
+                    items: [
                         {
                             name: "padding",
                             label: "Padding",
                             type: "text"
                         },
                         {
+                            name: "maximumSlices",
+                            label: "Max Slices",
+                            type: "text"
+                        },
+                        {
                             name: "maxSlicesOption",
-                            label: "Maximum Slices Option",
+                            label: "Slices Option",
                             type: "radio",
                             alignment: "vertical",
                             options: [
@@ -464,15 +474,15 @@ bluewave.charts.PieEditor = function(parent, config) {
                                     value: false
                                 }
                             ]
-                        },
-                        {
-                            name: "maximumSlices",
-                            label: "Maximum Slices",
-                            type: "text"
-                        },
+                        }
+                    ]
+                },
+                {
+                    group: "Labels",
+                    items: [
                         {
                             name: "labels",
-                            label: "Labels",
+                            label: "Show Labels",
                             type: "radio",
                             alignment: "vertical",
                             options: [
@@ -502,7 +512,6 @@ bluewave.charts.PieEditor = function(parent, config) {
 
       //Tweak height of the label field and set initial value
         var labelField = form.findField("labels");
-        labelField.row.style.height = "90px";
         var labels = chartConfig.pieLabels;
         labelField.setValue(labels===true ? true : false);
 
@@ -516,25 +525,15 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
         var maxSliceOptField = form.findField("maxSlicesOption");
-        maxSliceOptField.row.style.height = "80px";
         var maxSlicesOption = chartConfig.pieMaxSliceOpt;
         maxSliceOptField.setValue(maxSlicesOption==true ? true : false);
 
-        createSlider("maximumSlices", form, " slices", 0, inputData[0].length, 1);
+        createSlider("maximumSlices", form, "", 0, inputData[0].length, 1);
         var maximumSlices = chartConfig.maximumSlices;
         if (maximumSlices==null) maximumSlices = 0;
         chartConfig.maximumSlices = maximumSlices;
         form.findField("maximumSlices").setValue(maximumSlices);
 
-        //Set groupbox height to match size of edit style
-        setTimeout(function(){
-                        var arr = body.getElementsByClassName("form-groupbox");
-                        for (var i=0; i<arr.length; i++){
-                            var el = arr[i];
-                            var h = parseFloat(el.style.height);
-                            el.style.height = h+30 + "px";
-                        }
-                    }, 100);
 
       //Process onChange events
         form.onChange = function(){
