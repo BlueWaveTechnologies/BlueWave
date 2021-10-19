@@ -336,8 +336,6 @@ bluewave.charts.PieEditor = function(parent, config) {
                 else {
                     data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
                 }
-
-                //if (chartConfig.pieSortDIrection == ...
                 let scData = [];
                 data.forEach(function(entry, index) {
                     let scEntry = {};
@@ -348,6 +346,8 @@ bluewave.charts.PieEditor = function(parent, config) {
                     scData.push(scEntry);
                 });
                 data = scData;
+
+
             }
 
             if (chartConfig.pieSort === "Key") {
@@ -361,6 +361,21 @@ bluewave.charts.PieEditor = function(parent, config) {
                     b = parseFloat(b[chartConfig.pieValue]);
                     return sort(a,b);
                 });
+            }
+
+            if(chartConfig.maximumSlices !== 0 && chartConfig.maximumSlices !==null) {
+
+                data = data.sort((a,b) => b[chartConfig.pieValue] - a[chartConfig.pieValue]);
+
+                if (chartConfig.pieMaxSliceOpt == true && chartConfig.maximumSlices < data.length) {
+                    //Show Others
+                    var otherSlicesValue = data.slice(chartConfig.maximumSlices).map(entry => entry[chartConfig.pieValue]).reduce((prev, next) => parseFloat(prev) + parseFloat(next));
+                    var otherSlicesEntry = {[chartConfig.pieKey]: "Others", [chartConfig.pieValue]: otherSlicesValue};
+                    data = data.slice(0, chartConfig.maximumSlices).concat(otherSlicesEntry);
+                } else {
+                    //Truncate after max slice
+                    data = data.slice(0, chartConfig.maximumSlices);
+                }
             }
 
             pieChart.update(chartConfig, data);
@@ -435,6 +450,27 @@ bluewave.charts.PieEditor = function(parent, config) {
                             type: "text"
                         },
                         {
+                            name: "maxSlicesOption",
+                            label: "Maximum Slices Option",
+                            type: "radio",
+                            alignment: "vertical",
+                            options: [
+                                {
+                                    label: "Show Others",
+                                    value: true
+                                },
+                                {
+                                    label: "Truncate",
+                                    value: false
+                                }
+                            ]
+                        },
+                        {
+                            name: "maximumSlices",
+                            label: "Maximum Slices",
+                            type: "text"
+                        },
+                        {
                             name: "labels",
                             label: "Labels",
                             type: "radio",
@@ -479,6 +515,26 @@ bluewave.charts.PieEditor = function(parent, config) {
         form.findField("padding").setValue(padding);
 
 
+        var maxSliceOptField = form.findField("maxSlicesOption");
+        maxSliceOptField.row.style.height = "80px";
+        var maxSlicesOption = chartConfig.pieMaxSliceOpt;
+        maxSliceOptField.setValue(maxSlicesOption==true ? true : false);
+
+        createSlider("maximumSlices", form, " slices", 0, inputData[0].length, 1);
+        var maximumSlices = chartConfig.maximumSlices;
+        if (maximumSlices==null) maximumSlices = 0;
+        chartConfig.maximumSlices = maximumSlices;
+        form.findField("maximumSlices").setValue(maximumSlices);
+
+        //Set groupbox height to match size of edit style
+        setTimeout(function(){
+                        var arr = body.getElementsByClassName("form-groupbox");
+                        for (var i=0; i<arr.length; i++){
+                            var el = arr[i];
+                            var h = parseFloat(el.style.height);
+                            el.style.height = h+30 + "px";
+                        }
+                    }, 100);
 
       //Process onChange events
         form.onChange = function(){
@@ -488,9 +544,15 @@ bluewave.charts.PieEditor = function(parent, config) {
             var maxPadding = 5;
             chartConfig.piePadding = (settings.padding*maxPadding)/100;
 
+            chartConfig.maximumSlices = settings.maximumSlices;
+
             if (settings.labels==="true") settings.labels = true;
             else if (settings.labels==="false") settings.labels = false;
             chartConfig.pieLabels = settings.labels;
+
+            if (settings.maxSlicesOption==="true") settings.maxSlicesOption = true;
+            else if (settings.maxSlicesOption==="false") settings.maxSlicesOption = false;
+            chartConfig.pieMaxSliceOpt = settings.maxSlicesOption;
             createPreview();
         };
 
