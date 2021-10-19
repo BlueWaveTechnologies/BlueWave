@@ -528,6 +528,7 @@ bluewave.utils = {
             cols[i].innerHTML = "";
         }
         input.row.parentNode.insertBefore(row, input.row.nextSibling);
+        row.style.height = "20px";
 
 
       //Add slider to the last column of the new row
@@ -578,6 +579,8 @@ bluewave.utils = {
                 input.setValue(val);
             }
         });
+
+        return slider;
     },
 
 
