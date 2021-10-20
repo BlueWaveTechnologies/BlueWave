@@ -596,8 +596,8 @@ bluewave.utils = {
         colorPreview.className = colorPreview.className.replace("pulldown-button-icon", "");
         colorPreview.style.boxShadow = "none";
         colorPreview.setColor = function(color){
-            colorPreview.style.backgroundColor =
-            colorPreview.style.borderColor = color;
+            colorPreview.style.backgroundColor = color;
+            //colorPreview.style.borderColor = color;
         };
         colorField.setValue = function(color){
             //color = getHexColor(getColor(color));
@@ -759,11 +759,14 @@ bluewave.utils = {
     createColorPicker: function(parent, config){
         if (!config) config = {};
         if (!config.style) config.style = javaxt.dhtml.style.default;
+        var colors = config.colors;
+        if (!colors) colors = bluewave.utils.getColorPalette(true);
 
         var colorPicker = {
             onChange: function(c){},
             setColor: function(c){},
-            colorWheel: null
+            colorWheel: null,
+            setColors: function(arr){}
         };
 
 
@@ -786,19 +789,32 @@ bluewave.utils = {
         div.className = "color-picker-header";
         div.innerHTML = "Theme Colors";
         td.appendChild(div);
-        bluewave.utils.getColorPalette(true).forEach((c)=>{
-            div = document.createElement("div");
-            div.className = "color-picker-option";
-            div.style.backgroundColor = c;
-            div.onclick = function(){
-                if (checkbox.parentNode === this) return;
-                if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
-                this.appendChild(checkbox);
-                colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
-            };
-            td.appendChild(div);
-        });
 
+        var themeColors = td;
+        var blocks = [];
+        colorPicker.setColors = function(colors){
+
+            blocks.forEach((block)=>{
+                var p = block.parentNode;
+                p.removeChild(block);
+            });
+            blocks = [];
+
+            colors.forEach((c)=>{
+                div = document.createElement("div");
+                div.className = "color-picker-option";
+                div.style.backgroundColor = c;
+                div.onclick = function(){
+                    if (checkbox.parentNode === this) return;
+                    if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                    this.appendChild(checkbox);
+                    colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+                };
+                themeColors.appendChild(div);
+                blocks.push(div);
+            });
+        };
+        colorPicker.setColors(colors);
 
 
         tr = document.createElement("tr");
@@ -945,6 +961,9 @@ bluewave.utils = {
         popup.onChange = function(color){};
         popup.setColor = function(color){
             cp.setColor(color);
+        };
+        popup.setColors = function(colors){
+            cp.setColors(colors);
         };
 
         cp.onChange = function(color){

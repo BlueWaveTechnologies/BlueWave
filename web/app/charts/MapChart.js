@@ -114,6 +114,19 @@ bluewave.charts.MapChart = function(parent, config) {
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
+        //set the color the 'water'
+        var backgroundColor = chartConfig.backgroundColor;
+        if(!backgroundColor){
+            backgroundColor = "white";
+        }
+        svg.style('background-color', backgroundColor);
+
+        //Set the color of the land
+        var landColor = chartConfig.landColor;
+        if(!landColor){
+            landColor = "lightgray";
+        }
+
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
@@ -185,7 +198,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 countyPolygons.each(function() {
                     var path = d3.select(this);
                     path.attr('fill', function(d){
-                        return 'lightgray';
+                        return landColor;
                     });
                 });
 
@@ -289,7 +302,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 .data(countries.features)
                 .enter().append("path")
                 .attr('d', path)
-                .attr('fill', 'lightgray')
+                .attr('fill', landColor)
                 .attr('stroke', 'white');
 
 
@@ -392,7 +405,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 .enter()
                 .append("path")
                 .attr('d', path)
-                .attr('fill', 'lightgray')
+                .attr('fill', landColor)
                 .attr('stroke', 'white');
 
             if (chartConfig.mapType === "Point"){
@@ -441,7 +454,7 @@ bluewave.charts.MapChart = function(parent, config) {
                         if(inData){
                             return colorScale[chartConfig.colorScale](d.properties.mapValue);
                         }else{
-                            return "lightgrey";
+                            return landColor;
                         }
                     });
             }
@@ -757,15 +770,33 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     var renderPoints = function(points, chartConfig, extent){
 
+        var opacity = chartConfig.opacity;
+        if(!opacity){
+            opacity = 1.0;
+        }
+        else {
+            opacity = opacity/100;
+        }
+
+
         var r = parseInt(chartConfig.pointRadius);
         if (isNaN(r)) r = 3;
         if (r<0) r = 1;
 
-        var c = chartConfig.pointColor;
-        if (!c) c = "#ff3c38";
+        var c = chartConfig.pointColor || "#ff3c38"; //red default
+
+        var oc = chartConfig.outlineColor;
+        if (!oc) oc = c;
+
+
+        var outlineWidth = parseFloat(chartConfig.outlineWidth);
+        if (isNaN(outlineWidth) || outlineWidth<0) outlineWidth = 0;
+        if (outlineWidth>r) outlineWidth = r;
+
+
 
         mapArea.append("g")
-        .selectAll("whatever")
+        .selectAll("*")
         .data(points.coords)
         .enter()
         .append("circle")
@@ -787,7 +818,10 @@ bluewave.charts.MapChart = function(parent, config) {
         .attr("transform", function(d) {
             return "translate(" + [d[0],d[1]] + ")";
         })
-        .style("fill", c);
+        .attr("fill-opacity", opacity)
+        .style("fill", c)
+        .style("stroke", oc)
+        .style("stroke-width", outlineWidth + "px");
     };
 
 
