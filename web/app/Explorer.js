@@ -1776,12 +1776,14 @@ bluewave.Explorer = function(parent, config) {
                                 waitmask.show();
                                 var el = editor.getChart();
                                 if (el.show) el.show();
-                                createPreview(el, function(canvas){
-                                    node.preview = canvas.toDataURL("image/png");
-                                    createThumbnail(node, canvas);
-                                    win.close();
-                                    waitmask.hide();
-                                }, this);
+                                setTimeout(function(){
+                                    createPreview(el, function(canvas){
+                                        node.preview = canvas.toDataURL("image/png");
+                                        createThumbnail(node, canvas);
+                                        win.close();
+                                        waitmask.hide();
+                                    }, this);
+                                },800);
                             }
                             else{
                                 updateTitle(node, node.config.chartTitle);
@@ -1808,12 +1810,12 @@ bluewave.Explorer = function(parent, config) {
             };
 
             win.onResize = function(){
-                editor.resize();
+                if (editor.resize) editor.resize();
             };
 
             return editor;
         }
-        else{ //dbView
+        else{ //Special case for dbView
             return win;
         }
     };
