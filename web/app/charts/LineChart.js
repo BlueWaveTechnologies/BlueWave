@@ -14,17 +14,19 @@ bluewave.charts.LineChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         margin: {
-            top: 15,
-            right: 5,
+            top: 25,
+            right: 75,
             bottom: 65,
             left: 82
         }
     };
-    var svg, plotArea;
+    var svg, chart, plotArea;
     var xAxis, yAxis;
     var axisWidth, axisHeight;
     var x, y, xBand, yBand;
     var timeAxis;
+    var dataSets;
+    var scaleOption;
 
 
   //**************************************************************************
@@ -35,23 +37,10 @@ bluewave.charts.LineChart = function(parent, config) {
         config = merge(config, defaultConfig);
 
 
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof SVGElement) {
-            svg = d3.select(parent);
-        }
-        else{
-            svg = d3.select(parent).append("svg");
-            onRender(parent, function(){
-                var width = parent.offsetWidth;
-                var height = parent.offsetHeight;
-                svg.attr("width", width);
-                svg.attr("height", height);
-            });
-        }
-
-        plotArea = svg.append("g");
+        initChart(parent, function(s, g){
+            svg = s;
+            chart = g;
+        });
     };
 
 
@@ -59,7 +48,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (plotArea) plotArea.selectAll("*").remove();
+        if (chart) chart.selectAll("*").remove();
     };
 
 
@@ -71,218 +60,477 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
+            renderChart(chartConfig, data, parent);
+        });
+    };
 
-            var width = parent.offsetWidth;
-            var height = parent.offsetHeight;
-            var margin = config.margin;
-            axisHeight = height - margin.top - margin.bottom;
-            axisWidth = width - margin.left - margin.right;
-            var plotHeight = height - margin.top - margin.bottom;
-            var plotWidth = width - margin.left - margin.right;
-            plotArea
-                .attr("width", plotWidth)
-                .attr("height", plotHeight)
+
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+    var renderChart = function(chartConfig, data, parent){
+        me.clear();
+
+        var width = parent.offsetWidth;
+        var height = parent.offsetHeight;
+        var margin = config.margin;
+        axisHeight = height - margin.top - margin.bottom;
+        axisWidth = width - margin.left - margin.right;
+        var plotHeight = height - margin.top - margin.bottom;
+        var plotWidth = width - margin.left - margin.right;
+        plotArea = chart.append("g");
+        plotArea
+            .attr("width", plotWidth)
+            .attr("height", plotHeight)
+            .attr(
+                "transform",
+                "translate(" + margin.left + "," + (margin.top) + ")"
+            );
+
+
+
+
+      //Check that axis exist and are populated
+        var xKey = chartConfig.xAxis;
+        var yKey = chartConfig.yAxis;
+        if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
+
+
+        let xKey2;
+        let yKey2;
+        if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
+            xKey2 = chartConfig.xAxis2;
+            yKey2 = chartConfig.yAxis2;
+        }
+
+        scaleOption = chartConfig.scaleOption;
+        if (!scaleOption) scaleOption = chartConfig.scaleOption = "linear";
+
+
+        var group = chartConfig.group;
+        var showLabels = chartConfig.endTags;
+        if (showLabels!==false) showLabels = chartConfig.endTags = true;
+
+
+        var data1 = data[0];
+        var data2 = data[1];
+        dataSets = data;
+        data = data1;
+
+        var mergedData = d3.merge(dataSets);
+        // if (data2!==null && data2!==undefined && xKey2 && yKey2){
+        //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
+        // }
+
+        //Get max line
+        var maxData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.max(d, function (g) {
+                    return parseFloat(g[yKey]);
+                });
+            }).entries(mergedData);
+
+        //Get minimum line
+        var minData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.min(d, function (g) {
+                    return parseFloat(g[yKey]);
+                });
+            }).entries(mergedData);
+
+         //Set axes with merged data
+        displayAxis("key", "value", maxData, minData);
+
+        let xType = typeOfAxisValue();
+
+
+      //Reformat data if "group by" is selected
+        if(group !== null && group !== undefined && group !==""){
+
+            let groupData = d3.nest()
+            .key(function(d){return d[group];})
+            .entries(data);
+
+            let tempDataSets = [];
+            groupData.forEach(function(g){
+
+                tempDataSets.push(g.values)
+            })
+
+            dataSets = tempDataSets;
+        }
+
+
+      //Create dataset to render
+        var arr = [];
+        for (let i=0; i<dataSets.length; i++){
+
+            let xAxisN = chartConfig[`xAxis${i+1}`];
+            let yAxisN = chartConfig[`yAxis${i+1}`];
+
+            //If axes not picked, skip pushing/rendering this dataset
+            if ((!xAxisN || !yAxisN) && !group && i>0) continue;
+
+            if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
+
+                xKey = xAxisN;
+                yKey = yAxisN;
+            }
+
+            // if(!xKey || !yKey) continue;
+
+            var sumData = d3.nest()
+                .key(function(d){return d[xKey];})
+                .rollup(function(d){
+                    return d3.sum(d,function(g){
+                        return g[yKey];
+                    });
+            }).entries(dataSets[i]);
+
+            arr.push(sumData);
+        }
+
+
+
+      //Update chartConfig with line colors
+        var colors = bluewave.utils.getColorPalette(true);
+        for (let i=0; i<arr.length; i++){
+            var lineColor = chartConfig["lineColor" + i];
+            if (!lineColor){
+                lineColor = colors[i%colors.length];
+                chartConfig["lineColor" + i] = lineColor;
+            }
+        }
+
+
+        var chartElements = [];
+        for (let i=0; i<arr.length; i++){
+            chartElements.push({
+               area: null,
+               line: null,
+               line2: null,
+               tag: null,
+               point: null
+            });
+        }
+
+
+
+      //Draw areas under lines first!
+        var fillGroup = plotArea.append("g");
+        fillGroup.attr("name", "fill");
+        for (let i=0; i<arr.length; i++){
+            var sumData = arr[i];
+
+            let lineColor = chartConfig["lineColor" + i];
+            let startOpacity = chartConfig["startOpacity" + i];
+            let endOpacity = chartConfig["endOpacity" + i];
+            let keyType = typeOfAxisValue(sumData[0].key);
+
+            var getX = function(d){
+                if(keyType==="date"){
+                    return x(new Date(d.key));
+                }else{
+                    return x(d.key);
+                }
+            };
+
+// Why are we adding 1 here if I forget to ask? to avoid log(0)=-inf?
+            var getY = function(d){
+                var v = parseFloat(d["value"]);
+                return (scaleOption === "logarithmic") ? y(v+1):y(v);
+            };
+
+          //Don't render area if the start and end opacity is 0
+            if (startOpacity===0 && endOpacity===0) continue;
+
+
+          //Add color gradient to area
+            let className = "fill-gradient-" + i;
+            addColorGradient(lineColor, startOpacity, endOpacity, className, fillGroup);
+
+
+          //Define and fill area under line
+            chartElements[i].area = fillGroup
+                .append("path")
+                .datum(sumData)
+                .attr("fill", `url(#${className})`)
                 .attr(
-                    "transform",
-                    "translate(" + margin.left + "," + (margin.top) + ")"
+                    "d", d3.area()
+                    .x(getX)
+                    .y0(plotHeight)
+                    .y1(getY)
                 );
 
-
-
-             // Setup:
-            // Check that axis exist and are populated
-            let xKey;
-            let yKey;
-            let xKey2;
-            let yKey2;
-            let group;
-
-            if(chartConfig.xAxis===null || chartConfig.yAxis===null){
-                return;
-            }else{
-                xKey = chartConfig.xAxis;
-                yKey = chartConfig.yAxis;
-                group = chartConfig.group;
-            }
-
-            if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-                xKey2 = chartConfig.xAxis2;
-                yKey2 = chartConfig.yAxis2;
-            }
-            //set default values if not instantiated
-            if (chartConfig.lineColor==null) chartConfig.lineColor = "#6699CC";
-            if (chartConfig.lineWidth==null) chartConfig.lineWidth = 1.5;
-            if (chartConfig.opacity==null) chartConfig.opacity = 1;
-            if (chartConfig.startOpacity==null) chartConfig.startOpacity = 0;
-            if (chartConfig.endOpacity==null) chartConfig.endOpacity = 0;
-
-
-            var data1 = data[0];
-            var data2 = data[1];
-            data = data1;
-
-            if (data2!==null && data2!==undefined && xKey2 && yKey2){
-                data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-            }
+        }
 
 
 
+      //Draw lines
+        var lineGroup = plotArea.append("g");
+        var circleGroup = plotArea.append("g");
+        circleGroup.attr("name", "circles");
+        lineGroup.attr("name", "lines");
+        for (let i=0; i<arr.length; i++){
+            var sumData = arr[i];
+
+            let lineColor = chartConfig["lineColor" + i];
+            let lineStyle = chartConfig["lineStyle" + i];
+            let lineWidth = chartConfig["lineWidth" + i];
+            let opacity = chartConfig["opacity" + i];
+
+            let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
+            if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
+            let pointColor = chartConfig["pointColor" + i];
+
+            if (lineWidth == null) lineWidth = 1;
+            if (opacity == null) opacity = 1;
+            if (lineStyle == null) lineStyle = "solid";
 
 
-            if (group!==null && group!==undefined){
-
-                let groupData = d3.nest()
-                    .key(function(d){return d[group];})
-                    .entries(data);
-
-                displayAxis(xKey,yKey,data);
+            let keyType = typeOfAxisValue(sumData[0].key);
 
 
-                plotArea
-                    .selectAll(".line")
-                    .data(groupData)
+          //Draw line
+            chartElements[i].line = lineGroup
+                .append("path")
+                .datum(sumData)
+                .attr("fill", "none")
+                .attr("stroke", lineColor)
+                .attr("stroke-width", lineWidth)
+                .attr("opacity", opacity)
+                .attr("stroke-dasharray", function(d){
+                    if(lineStyle==="dashed") return "5, 5";
+                    else if(lineStyle==="dotted") return "0, 5";
+                })
+                .attr("stroke-linecap", function(d){
+                    if(lineStyle==="dotted") return "round";
+                })
+                .attr(
+                    "d",d3.line()
+                    .x(getX)
+                    .y(getY)
+                );
+
+          //Draw thick line for selection purposes
+            chartElements[i].line2 = lineGroup
+                .append("path")
+                .datum(sumData)
+                .attr("dataset", i)
+                .attr("fill", "none")
+                .attr("stroke", "#ff0000")
+                .attr("stroke-width", 10)
+                .attr("opacity", 0)
+                .attr(
+                    "d",d3.line()
+                    .x(getX)
+                    .y(getY)
+                )
+                .on("click", function(d){
+                    var datasetID = parseInt(d3.select(this).attr("dataset"));
+                    raiseLine(chartElements[datasetID]);
+                    me.onClick(this, datasetID, d);
+                });
+
+
+          //Add circles
+            if (pointRadius){
+                chartElements[i].point = circleGroup
+                    .selectAll("points")
+                    .data(sumData)
                     .enter()
-                    .append("path")
-                    .attr("fill", "none")
-                    .attr("stroke", chartConfig.lineColor)
-                    .attr("stroke-width", chartConfig.lineWidth)
-                    .attr("opacity", chartConfig.opacity)
-                    .attr(
-                        "d",function(d){
-                        return d3
-                            .line()
-                            .x(function (d) {
-                                return x(d[xKey]);
-                            })
-                            .y(function (d) {
-                                return y(parseFloat(d[yKey]));
-                            })(d.values);
-                        }
-                    );
-
-            }
-            else{
-                let xType = typeOfAxisValue();
-
-                var sumData = d3.nest()
-                    .key(function(d){return d[xKey];})
-                    .rollup(function(d){
-                        return d3.sum(d,function(g){
-                            return g[yKey];
-                        });
-                }).entries(data);
-
-                displayAxis("key","value",sumData);
-
-                let keyType = typeOfAxisValue(sumData[0].key);
-
-                plotArea
-                    .append("path")
-                    .datum(sumData)
-                    .attr("fill", "none")
-                    .attr("stroke", chartConfig.lineColor)
-                    .attr("stroke-width", chartConfig.lineWidth)
-                    .attr("opacity", chartConfig.opacity)
-                    .attr(
-                        "d",d3.line()
-                        .x(function(d){
-                            if(keyType==="date"){
-                                return x(new Date(d.key));
-                            }else{
-                                return x(d.key);
-                            }
-                        })
-                        .y(function(d){
-                            return y(d["value"]);
-                        })
-                    );
-
-
-              //Define and fill area under line
-                plotArea
-                    .append("path")
-                    .datum(sumData)
-                    .attr("class", "line-area")
-                    .attr(
-                        "d", d3.area()
-                        .x(function(d){
-                             if(keyType==="date"){
-                                return x(new Date(d.key));
-                            }else{
-                                return x(d.key);
-                            }
-                        })
-                        .y0(plotHeight)
-                        .y1(function(d){
-                            return y(d["value"])
-                        })
-                     );
-
-                //Add linear gradient
-                    plotArea
-                        .append("defs")
-                        .append("linearGradient")
-                        .attr("id", "fill-gradient")
-                        .attr("x1", "0%").attr("y1", "0%")
-                        .attr("x2", "0%").attr("y2", "100%")
-                        .selectAll("stop")
-                        .data([
-                            {offset: "0%", color: chartConfig.lineColor, opacity: chartConfig.startOpacity},
-                            // {offset: "20%", color: chartConfig.lineColor,
-                                //  opacity: Math.max(chartConfig.startOpacity/2, chartConfig.endOpacity)},
-                            {offset: "100%", color: chartConfig.lineColor, opacity: chartConfig.endOpacity}
-                            ])
-                        .enter().append("stop")
-                        .attr("offset", (d) => d.offset )
-                        .attr("stop-color", (d) => d.color )
-                        .attr("stop-opacity", (d) => d.opacity );
-
-                
-
+                    .append("circle")
+                    .attr("dataset", i)
+                    .attr("fill", pointColor)
+                    .attr("stroke", "none")
+                    .attr("cx", getX )
+                    .attr("cy", getY )
+                    .attr("r", function(d){
+                        return pointRadius;
+                    })
+                    .on("click", function(d){
+                        var datasetID = parseInt(d3.select(this).attr("dataset"));
+                        raiseLine(chartElements[datasetID]);
+                        me.onClick(this, datasetID, d);
+                    });
             }
 
 
-          //Draw grid lines if option is checked
-            if(chartConfig.xGrid || chartConfig.yGrid){
-               drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+          //Display end tags if checked
+            if (showLabels){
+                var label;
+                if (group){
+                    let d = dataSets[i][0];
+                    label = d[group];
+                    if (!label) label = group + " " + i;
+                }
+                else{
+                    var labelKey = "label" + (i>0 ? i+1 : "");
+                    label = chartConfig[labelKey];
+                    if (!label) label = "Series " + (i+1);
+                }
+                var line = chartElements[i].line2;
+                chartElements[i].tag = createLabel(sumData, lineColor, label, line);
             }
-
-          //Draw labels if checked
-            if(chartConfig.xLabel || chartConfig.yLabel){
-                drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                    axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
-            }
+        };
 
 
-            var lines = plotArea.selectAll("path").data(data);
-            lines.on("click", function(){
-                me.onClick(this);
-            });
 
-            lines.on("dblclick", function(){
-                me.onDblClick(this);
-            });
+      //Draw grid lines if option is checked
+        if (chartConfig.xGrid || chartConfig.yGrid){
+            drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+        }
 
-        });
+      //Draw labels if checked
+        if (chartConfig.xLabel || chartConfig.yLabel){
+            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
+        }
     };
 
 
   //**************************************************************************
   //** onClick
   //**************************************************************************
-    this.onClick = function(line){};
-    this.onDblClick = function(line){};
+    this.onClick = function(line, datasetID, renderedData){};
+
+
+  //**************************************************************************
+  //** createLabelTag
+  //**************************************************************************
+    var createLabel = function(dataSet, color, label, line){
+
+        var lastItem = dataSet[dataSet.length - 1];
+        var lastKey = lastItem.key;
+        var lastVal = lastItem.value;
+        var keyType = typeOfAxisValue(dataSet[0].key);
+
+
+        if(keyType==="date"){
+            var tx = x(new Date(lastKey))
+        }else{
+            var tx = x(lastKey)
+        }
+
+        var ty = (scaleOption==="logarithmic") ? y(lastVal+1) : y(lastVal);
+
+        var temp = plotArea.append("text")
+            .attr("dy", ".35em")
+            .attr("text-anchor", "start")
+            .text(label);
+        var box = temp.node().getBBox();
+        temp.remove();
+
+        var w = Math.max(box.width+8, 60);
+        var h = box.height;
+        var a = h/2;
+        var vertices = [
+          [0, 0], //ul
+          [w, 0], //ur
+          [w, h], //11
+          [0, h], //lr
+          [-a,a] //arrow point
+        ];
+
+
+      //Add tag (rect)
+        var poly = plotArea.append("polygon")
+            .attr("points", vertices.join(" "))
+            .attr("transform", "translate("+ (tx+(a)) +","+ (ty-(a)) +")")
+            .style("fill", color)
+            .on("click", function(d){
+                line.dispatch('click');
+            });
+
+      //Add label
+        var text = plotArea.append("text")
+            .attr("transform", "translate("+ (tx+a+4) +","+ty +")")
+            .attr("dy", ".35em")
+            .attr("text-anchor", "start")
+            .style("fill", "#fff")
+            .text(label)
+            .on("click", function(d){
+                line.dispatch('click');
+            });
+
+        return {
+            poly: poly,
+            text: text
+        };
+
+    };
+
+
+  //**************************************************************************
+  //** addColorGradient
+  //**************************************************************************
+    var addColorGradient = function(lineColor, startOpacity, endOpacity, className, parent){
+        if (startOpacity == null) startOpacity = 0;
+        if (endOpacity == null) endOpacity = 0;
+
+        parent
+        .append("defs")
+        .append("linearGradient")
+        .attr("id", className)
+        .attr("x1", "0%").attr("y1", "0%")
+        .attr("x2", "0%").attr("y2", "100%")
+        .selectAll("stop")
+        .data([
+            { offset: "0%", color: lineColor, opacity: startOpacity },
+            { offset: "100%", color: lineColor, opacity: endOpacity }
+        ])
+        .enter().append("stop")
+        .attr("offset", (d) => d.offset)
+        .attr("stop-color", (d) => d.color)
+        .attr("stop-opacity", (d) => d.opacity);
+
+    };
+
+
+  //**************************************************************************
+  //** raiseLine
+  //**************************************************************************
+    var raiseLine = function(chartElements) {
+        if (!chartElements) return;
+
+      //Raise line
+        chartElements.line.raise();
+        chartElements.line2.raise();
+        if (chartElements.point) chartElements.point.raise();
+
+
+      //Remove and reinsert tag
+        var tag = chartElements.tag;
+        if (tag){
+            var tagParent = tag.poly.node().parentNode;
+            var poly = tag.poly.node().cloneNode(true);
+            var text = tag.text.node().cloneNode(true);
+
+            tag.poly.remove();
+            tag.text.remove();
+
+            tagParent.appendChild(poly);
+            tagParent.appendChild(text);
+
+            chartElements.tag.poly = d3.select(poly);
+            chartElements.tag.text = d3.select(text);
+        }
+
+    };
 
 
   //**************************************************************************
   //** displayAxis
   //**************************************************************************
-    var displayAxis = function(xKey,yKey,chartData){
-        let axisTemp = createAxisScale(xKey,'x',chartData);
+    var displayAxis = function(xKey,yKey,chartData,minData){
+
+        let axisTemp = createAxisScale(xKey,'x',chartData,minData);
         x = axisTemp.scale;
         xBand = axisTemp.band;
 
-        axisTemp = createAxisScale(yKey,'y',chartData);
+        axisTemp = createAxisScale(yKey,'y',chartData, minData, scaleOption);
         y = axisTemp.scale;
         yBand = axisTemp.band;
 
@@ -300,7 +548,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
         yAxis = plotArea
             .append("g")
-            .call(d3.axisLeft(y));
+            .call(scaleOption==="linear" ? d3.axisLeft(y) :
+                    d3.axisLeft(y)
+                    .ticks(10, ",")
+                    .tickFormat(d3.format("d"))
+            );
+
     };
 
 
@@ -337,21 +590,24 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** createAxisScale
   //**************************************************************************
-    var createAxisScale = function(key,axisName,chartData){
+    var createAxisScale = function(key, axisName, chartData, minData, scaleOption){
         let scale;
         let band;
         let type = typeOfAxisValue(chartData[0][key]);
-        let max = 0;
-        let timeRange;
+
+
         let axisRange;
         let axisRangePadded;
-        if(axisName === "x"){
+        if (axisName === "x"){
             axisRange = [0,axisWidth];
             axisRangePadded = [10,axisWidth-10];
-        }else{
+        }
+        else{
             axisRange = [axisHeight,0];
             axisRangePadded = [axisHeight-10,10];
         }
+
+
 
         switch (type) {
             case "string":
@@ -363,11 +619,12 @@ bluewave.charts.LineChart = function(parent, config) {
                     })
                 )
                 .range(axisRange)
-                .padding(0.2);
+                .padding(1);
                 break;
+
             case "date":
 
-                timeRange = [new Date(chartData[0][key]),new Date(chartData[chartData.length-1][key])];
+                var timeRange = [new Date(chartData[0][key]),new Date(chartData[chartData.length-1][key])];
                 chartData.map((val) => {
                     val[key] = new Date(val[key]);
                     return val;
@@ -376,31 +633,53 @@ bluewave.charts.LineChart = function(parent, config) {
                 scale = d3
                     .scaleTime()
                     .domain(timeRange)
-                    .rangeRound(axisRangePadded);
+                    .rangeRound(axisRange);
 
                 band = d3
                     .scaleBand()
                     .domain(d3.timeDay.range(...scale.domain()))
-                    .rangeRound(axisRangePadded)
+                    .rangeRound(axisRange)
                     .padding(0.2);
 
                 timeAxis = axisName;
                 break;
-            default:
 
-                chartData.forEach((val) => {
-                    let curVal = parseFloat(val[key]);
-                    if (curVal > max) {
-                        max = curVal;
-                    }
-                });
+            default: //number
 
-                scale = d3
-                    .scaleLinear()
-                    .domain([0, max])
-                    .range(axisRange);
+                // var extent = d3.extent(chartData, function(d) { return parseFloat(d[key]); });
+                // var minVal = extent[0];
+                // var maxVal = extent[1];
+                //Having objects for both the min and max lines could possibly come in handy
+                var minVal = d3.min(minData, function(d) { return parseFloat(d[key]);} );
+                var maxVal = d3.max(chartData, function(d) { return parseFloat(d[key]);} );
+                if (minVal == maxVal) maxVal = minVal + 1;
+
+                if (scaleOption === "linear"){
+
+                    if (minVal>0) minVal=1;
+
+                    scale = d3.scaleLinear()
+                    .domain([minVal, maxVal]);
+
+                }
+                else if (scaleOption === "logarithmic"){
+
+                    // minVal = Math.pow(10, Math.floor(Math.log10(minVal+1)));
+                    // maxVal = Math.pow(10, Math.ceil(Math.log10(maxVal)));
+                    if(minVal<1) minVal = 1;
+
+                    scale = d3.scaleLog()
+                    .domain([minVal, maxVal+1]);
+
+                }
+
+                scale.range(axisRange);
+
+
                 break;
         }
+
+
         return {
             scale,
             band
@@ -435,7 +714,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
+    var initChart = bluewave.utils.initChart;
     var drawGridlines = bluewave.utils.drawGridlines;
     var drawLabels = bluewave.utils.drawLabels;
 

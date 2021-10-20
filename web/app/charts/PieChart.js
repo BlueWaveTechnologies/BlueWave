@@ -13,12 +13,6 @@ bluewave.charts.PieChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: {
-            top: 15,
-            right: 5,
-            bottom: 65,
-            left: 82
-        }
     };
     var svg, pieArea;
 
@@ -30,24 +24,10 @@ bluewave.charts.PieChart = function(parent, config) {
 
         config = merge(config, defaultConfig);
 
-
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof SVGElement) {
-            svg = d3.select(parent);
-        }
-        else{
-            svg = d3.select(parent).append("svg");
-            onRender(parent, function(){
-                var width = parent.offsetWidth;
-                var height = parent.offsetHeight;
-                svg.attr("width", width);
-                svg.attr("height", height);
-            });
-        }
-
-        pieArea = svg.append("g");
+        initChart(parent, function(s, g){
+            svg = s;
+            pieArea = g;
+        });
     };
 
 
@@ -55,7 +35,11 @@ bluewave.charts.PieChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (pieArea) pieArea.selectAll("*").remove();
+        if (pieArea){
+            pieArea.node().innerHTML = "";
+            //pieArea.selectAll("*").remove();
+            pieArea.attr("transform", null);
+        }
     };
 
 
@@ -77,45 +61,53 @@ bluewave.charts.PieChart = function(parent, config) {
                 return acc;
             },{});
 
+            var padding = 0;
+            if (typeof chartConfig.piePadding !== "undefined") {
+                padding = chartConfig.piePadding * Math.PI / 180;
+
+            }
 
             var pie = d3.pie().value(function (d) {
                 return d.value;
-            });
+            })
+            .sort(null)
+            .padAngle(padding);
+
+
+
             pieData = pie(d3.entries(pieData));
 
-
-            var margin = config.margin;
+          //Get parent width/height
             var width = parent.offsetWidth;
             var height = parent.offsetHeight;
-            var radius =
-                Math.min(width, height) / 2 -
-                margin.left -
-                margin.right;
-            radius = radius*1.2;
 
 
+
+          //Create group to store all the elements of the pie chart
+            var pieChart = pieArea.append("g");
+            pieChart.attr("transform",
+                "translate(" + width/2 + "," + height/2 + ")"
+            );
+
+
+          //Compute inner and outer radius for the pie chart
+            var radius = Math.min(width, height) / 2;
             var cutout = chartConfig.pieCutout;
             if (cutout==null) cutout = 0.65;
             var innerRadius = radius*cutout;
-            var arc = d3.arc()
-                .innerRadius(innerRadius)
-                .outerRadius(radius);
 
-            pieArea
-                .attr("width", width)
-                .attr("height", height)
-                .attr(
-                    "transform",
-                    "translate(" + width/2 + "," + height/2 + ")"
-                );
-            var pieChart = pieArea.append("g");
 
-            pieChart
-                .selectAll("whatever")
+
+          //Render pie chart
+            var pieGroup = pieChart.append("g");
+            pieGroup.attr("name", "pie");
+            pieGroup.selectAll("*")
                 .data(pieData)
                 .enter()
                 .append("path")
-                .attr("d", arc)
+                .attr("d", d3.arc()
+                    .innerRadius(innerRadius)
+                    .outerRadius(radius))
                 .attr("fill", function (d) {
                     return getColor(d.data.key);
                 })
@@ -125,21 +117,28 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
 
-            if (chartConfig.pieLabels==null) chartConfig.pieLabels = true;
+            if (chartConfig.pieLabels===null) chartConfig.pieLabels = true;
             if (chartConfig.pieLabels===true){
 
-              //Another arc that won't be drawn. Just for labels positioning
-                var outerArc = d3
-                  .arc()
-                  .innerRadius(radius * 0.9)
-                  .outerRadius(radius * 0.9);
+
+                var labelStart = radius - ((radius-innerRadius)*0.2);
+                var labelEnd = radius * 1.2;
+
+                var innerArc = d3.arc()
+                  .innerRadius(labelStart)
+                  .outerRadius(labelStart);
+
+                var outerArc = d3.arc()
+                  .innerRadius(labelEnd)
+                  .outerRadius(labelEnd);
+
 
 
               //Add the polylines between chart and labels:
-                let cPositions = [];
-                var lines = pieArea.append("g");
-                lines
-                  .selectAll("allPolylines")
+                let endPoints = [];
+                var lineGroup = pieChart.append("g");
+                lineGroup.attr("name", "lines");
+                lineGroup.selectAll("*")
                   .data(pieData)
                   .enter()
                   .append("polyline")
@@ -147,27 +146,31 @@ bluewave.charts.PieChart = function(parent, config) {
                   .style("fill", "none")
                   .attr("stroke-width", 1)
                   .attr("points", function (d) {
-                    var posA = arc.centroid(d); // line insertion in the slice
-                    var posB = outerArc.centroid(d); // line break: we use the other arc generator that has been built only for that
-                    var posC = outerArc.centroid(d); // Label position = almost the same as posB
-                    cPositions.forEach((val) => {
+                    var posA = innerArc.centroid(d); //line start
+                    var posB = outerArc.centroid(d); //line break (will be adjusted below)
+                    var posC = outerArc.centroid(d); //line end (will be adjusted below)
+
+                    endPoints.forEach((val) => {
                       if (posC[1] < val + 5 && posC[1] > val - 5) {
                         posC[1] -= 14;
                         posB[1] -= 14;
                       }
                     });
-                    cPositions.push(posC[1]);
+
+
+                    endPoints.push(posC[1]);
+
                     var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; // we need the angle to see if the X position will be at the extreme right or extreme left
-                    posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+                    posC[0] = labelEnd * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
                     return [posA, posB, posC];
                   });
 
 
               //Add the polylines between chart and labels:
                 var positions = [];
-                var labels = pieArea.append("g");
-                labels
-                  .selectAll("allLabels")
+                var labelGroup = pieChart.append("g");
+                labelGroup.attr("name", "labels");
+                labelGroup.selectAll("*")
                   .data(pieData)
                   .enter()
                   .append("text")
@@ -184,13 +187,51 @@ bluewave.charts.PieChart = function(parent, config) {
                     positions.push(pos[1]);
 
                     var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                    pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1);
+                    pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
                     return "translate(" + pos + ")";
                   })
                   .style("text-anchor", function (d) {
                     var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
                     return midangle < Math.PI ? "start" : "end";
                   });
+
+
+              //Update pieChart as needed
+                var box = labelGroup.node().getBBox();
+                if (box.width>width || box.height>height){
+                    var scale, x, y;
+                    if (box.width>=box.height){
+                        scale = width/box.width;
+                        if (scale>1){
+                            scale = 1+(1-scale);
+                        }
+                        x = width/2; //needs to be updated...
+                        y = height/2;
+                    }
+                    else{
+                        scale = height/box.height;
+                        x = width/2;
+                        y = (box.height+box.y); //not quite right...
+                    }
+
+
+                  //Apply scaling and position
+                    pieChart
+                      .attr("transform",
+                        "translate(" + x + "," + y + ") " +
+                        "scale(" + scale + ")"
+                    );
+
+
+                  //Update position
+                    var d = javaxt.dhtml.utils.getRect(parent).y - javaxt.dhtml.utils.getRect(pieChart.node()).y;
+                    pieChart
+                      .attr("transform",
+                        "translate(" + x + "," + (y+d) + ") " +
+                        "scale(" + scale + ")"
+                    );
+
+                }
             }
         });
     };
@@ -202,6 +243,7 @@ bluewave.charts.PieChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
+    var initChart = bluewave.utils.initChart;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();

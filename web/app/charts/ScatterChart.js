@@ -20,11 +20,11 @@ bluewave.charts.ScatterChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, scatterArea, line, regression;
-        var xAxis, yAxis;
-        var axisWidth, axisHeight;
-        var x, y, xBand, yBand;
-        var timeAxis;
+    var svg, chart, scatterArea, line, regression;
+    var xAxis, yAxis;
+    var axisWidth, axisHeight;
+    var x, y, xBand, yBand;
+    var timeAxis;
 
 
   //**************************************************************************
@@ -35,17 +35,10 @@ bluewave.charts.ScatterChart = function(parent, config) {
         config = merge(config, defaultConfig);
 
 
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof SVGElement) {
-            svg = d3.select(parent);
-        }
-        else{
-            svg = d3.select(parent).append("svg");
-        }
-
-        scatterArea = svg.append("g");
+        initChart(parent, function(s, g){
+            svg = s;
+            chart = g;
+        });
     };
 
 
@@ -53,7 +46,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (scatterArea) scatterArea.selectAll("*").remove();
+        if (chart) chart.selectAll("*").remove();
     };
 
 
@@ -75,6 +68,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
             axisWidth = width - margin.left - margin.right;
             var plotHeight = height - margin.top - margin.bottom;
             var plotWidth = width - margin.left - margin.right;
+            scatterArea = chart.append("g");
             scatterArea
                 .attr("width", plotWidth)
                 .attr("height", plotHeight)
@@ -407,6 +401,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
+    var initChart = bluewave.utils.initChart;
 
     init();
 

@@ -1,0 +1,154 @@
+on:
+  push:
+    tags:
+    - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Create Release
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: get tag reference id
+            # parse the github reference tag from the direct input (github.ref)
+        run: |
+             githubRef=${{ github.ref }}
+             githubRef="${githubRef/'refs/tags'/''}"
+             githubRef="${githubRef/'/'/''}"
+             echo "tagName=$githubRef" >> $GITHUB_ENV
+
+      - name: Read exported variable - (test to verify the dynamic tagName Variable is global)
+        run: |
+          echo $tagName
+
+
+     # create project directory 
+      - name: create Project Directory
+        run: mkdir compiledProjectDirectory
+
+    ### Minify JS and consolidate into one file 
+
+     # Minify web/app file directory into individually minified files
+      - name: minify web/app directory
+        uses: nizarmah/auto-minify@v2.1
+        with:
+          directory: ./web/app
+          overwrite: true
+
+     # Append all minified files of web/app into a single file (bluewave.js)
+      - name: Stack minified files into one 
+        run: find ./web/app -name '*.js' -exec cat {} \; > ./web/bluewave.js
+
+     # delete web/app directory so it's not included in release
+      - name: Remove Web/app directory from web folder
+        uses: JesseTG/rm@v1.0.2
+        with:
+          path: web/app
+
+    ### Prepare machine to generate jar file
+      
+     # add/instantiate JDK 11 on runner 
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+
+     # install maven 3.6.3 (current default latest version Ubuntu)
+      - name: install maven
+        run: sudo apt install maven
+
+     # show current maven version in Github Actions output (should be 3.6.3) 
+     # Note: errors may occur when using other versions
+      - name: check Maven Version 
+        run: mvn -version
+
+
+    ### build jar file
+
+     # build jar file 
+      - name: build jar 
+        run: mvn --batch-mode install verify -U -X
+
+     # copy jar file to main directory
+      - name: copy jar
+      #env:
+    #tagName: $tagName
+
+        run: |
+          cp target/bluewave-1.0.0.jar bluewave-${{ env.tagName }}.jar
+          cp -r target/lib lib
+
+
+
+          
+    ### Add all compiled project files to new directory
+
+     # copy all Release assets to compiled project Directory
+      - name: copy all files/folders to compiled project Directory
+        run: cp -r web models lib bluewave-${{ env.tagName }}.jar compiledProjectDirectory
+
+
+     # replace main.html file with new reference to minified bluewave file
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8 #install the python needed
+
+
+      # - name: Install Python dependencies
+      #   uses: py-actions/py-dependency-install@v2
+      #   with:
+      #     path: "scripts/githubWorkflowActions/requirements.txt"
+
+
+      - name: execute editHTML script 
+        run: |
+          python scripts/githubWorkflowActions/editMainHtmlFile.py
+
+
+
+
+     # Package new directory into zip file       
+      - name: add minified project to a zip
+        uses: papeloto/action-zip@v1
+        with:
+          files: ./compiledProjectDirectory
+          
+          recursive: true
+          dest: bluewave-${{ env.tagName }}.zip
+
+
+
+     # create the release to serve as a place to export to
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions
+        with:
+          tag_name: ${{ env.tagName }}
+          release_name: Release ${{ env.tagName }}
+          body: |
+            BlueWave Release ${{ env.tagName }}
+          draft: false
+          prerelease: false
+
+
+     # add project to Release
+      - name: Upload Packaged project to Release
+        id: upload-release-asset-minified
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: bluewave-${{ env.tagName }}.zip
+          asset_name: bluewave-${{ env.tagName }}.zip
+          asset_content_type: application/zip

@@ -528,6 +528,7 @@ bluewave.utils = {
             cols[i].innerHTML = "";
         }
         input.row.parentNode.insertBefore(row, input.row.nextSibling);
+        row.style.height = "20px";
 
 
       //Add slider to the last column of the new row
@@ -578,6 +579,8 @@ bluewave.utils = {
                 input.setValue(val);
             }
         });
+
+        return slider;
     },
 
 
@@ -593,8 +596,8 @@ bluewave.utils = {
         colorPreview.className = colorPreview.className.replace("pulldown-button-icon", "");
         colorPreview.style.boxShadow = "none";
         colorPreview.setColor = function(color){
-            colorPreview.style.backgroundColor =
-            colorPreview.style.borderColor = color;
+            colorPreview.style.backgroundColor = color;
+            //colorPreview.style.borderColor = color;
         };
         colorField.setValue = function(color){
             //color = getHexColor(getColor(color));
@@ -756,11 +759,14 @@ bluewave.utils = {
     createColorPicker: function(parent, config){
         if (!config) config = {};
         if (!config.style) config.style = javaxt.dhtml.style.default;
+        var colors = config.colors;
+        if (!colors) colors = bluewave.utils.getColorPalette(true);
 
         var colorPicker = {
             onChange: function(c){},
             setColor: function(c){},
-            colorWheel: null
+            colorWheel: null,
+            setColors: function(arr){}
         };
 
 
@@ -783,19 +789,32 @@ bluewave.utils = {
         div.className = "color-picker-header";
         div.innerHTML = "Theme Colors";
         td.appendChild(div);
-        bluewave.utils.getColorPalette(true).forEach((c)=>{
-            div = document.createElement("div");
-            div.className = "color-picker-option";
-            div.style.backgroundColor = c;
-            div.onclick = function(){
-                if (checkbox.parentNode === this) return;
-                if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
-                this.appendChild(checkbox);
-                colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
-            };
-            td.appendChild(div);
-        });
 
+        var themeColors = td;
+        var blocks = [];
+        colorPicker.setColors = function(colors){
+
+            blocks.forEach((block)=>{
+                var p = block.parentNode;
+                p.removeChild(block);
+            });
+            blocks = [];
+
+            colors.forEach((c)=>{
+                div = document.createElement("div");
+                div.className = "color-picker-option";
+                div.style.backgroundColor = c;
+                div.onclick = function(){
+                    if (checkbox.parentNode === this) return;
+                    if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                    this.appendChild(checkbox);
+                    colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+                };
+                themeColors.appendChild(div);
+                blocks.push(div);
+            });
+        };
+        colorPicker.setColors(colors);
 
 
         tr = document.createElement("tr");
@@ -942,6 +961,9 @@ bluewave.utils = {
         popup.onChange = function(color){};
         popup.setColor = function(color){
             cp.setColor(color);
+        };
+        popup.setColors = function(colors){
+            cp.setColors(colors);
         };
 
         cp.onChange = function(color){
@@ -1235,56 +1257,82 @@ bluewave.utils = {
         return new Blob(byteArrays, {type: mime});
     },
 
+
+  //**************************************************************************
+  //** initChart
+  //**************************************************************************
+    initChart: function(parent, callback, scope){
+        var svg;
+        if (parent instanceof d3.selection){
+            svg = parent;
+        }
+        else if (parent instanceof SVGElement) {
+            svg = d3.select(parent);
+        }
+        else{
+            svg = d3.select(parent).append("svg");
+            javaxt.dhtml.utils.onRender(parent, function(){
+                var width = parent.offsetWidth;
+                var height = parent.offsetHeight;
+                svg.attr("width", width);
+                svg.attr("height", height);
+            });
+        }
+
+        var g = svg.append("g");
+        if (callback) callback.apply(scope,[svg, g]);
+    },
+
+
   //**************************************************************************
   //** drawGridlines
   //**************************************************************************
     drawGridlines: function(svg, xScale, yScale, height, width, xGrid, yGrid){
 
         if(xGrid){
-         svg.append("g")
+            svg.append("g")
             .attr("class", "grid")
             .attr("transform", "translate(0," + height + ")")
             .call(d3.axisBottom(xScale)
             .tickSize(-height)
             .tickFormat("")
-            )
-            
+            );
         }
 
         if(yGrid){
-         svg.append("g")
+            svg.append("g")
             .attr("class", "grid")
             .call(d3.axisLeft(yScale)
             .tickSize(-width)
             .tickFormat("")
-            )
-                  
+            );
         }
     },
+
 
   //**************************************************************************
   //** drawLabels
   //**************************************************************************
     drawLabels: function(svg, xLabel, yLabel, height, width, margin, xLabelName, yLabelName){
-            //Add X-axis label
-            if(xLabel){
-                svg.append("text")
-                .attr("x", width/2)
-                .attr("y", height+margin.bottom - 2)
-                .style("text-anchor", "middle")
-                .text(xLabelName);
-            }
+        //Add X-axis label
+        if(xLabel){
+            svg.append("text")
+            .attr("x", width/2)
+            .attr("y", height+margin.bottom - 2)
+            .style("text-anchor", "middle")
+            .text(xLabelName);
+        }
 
-            //Add Y-axis label
-            if(yLabel){
-                svg.append("text")
-                .attr("transform", "rotate(-90)")
-                .attr("x", 0 - (height/2))
-                .attr("y", 0 - margin.left)    
-                .attr("dy", "1em")
-                .style("text-anchor", "middle")
-                .text(yLabelName);
-            }
+        //Add Y-axis label
+        if(yLabel){
+            svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", 0 - (height/2))
+            .attr("y", 0 - margin.left)
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text(yLabelName);
+        }
 
     }
 

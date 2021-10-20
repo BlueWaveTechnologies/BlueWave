@@ -35,17 +35,11 @@ bluewave.charts.SankeyChart = function(parent, config) {
         config = merge(config, defaultConfig);
 
 
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof SVGElement) {
-            svg = d3.select(parent);
-        }
-        else{
-            svg = d3.select(parent).append("svg");
-        }
+        initChart(parent, function(s, g){
+            svg = s;
+            sankeyArea = g;
+        });
 
-        sankeyArea = svg.append("g");
     };
 
 
@@ -183,7 +177,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
                     });
                 });
             }
-            
+
 
 
           //Add link labels
@@ -223,6 +217,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
+    var initChart = bluewave.utils.initChart;
 
     init();
 };
