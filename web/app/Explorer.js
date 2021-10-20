@@ -291,7 +291,6 @@ bluewave.Explorer = function(parent, config) {
 
         var onReady = function(){
             updateButtons();
-            setZoom(dashboard.info.zoom);
             me.setView(view);
 
             if (me.getView()!=="Dashboard"){
@@ -312,6 +311,7 @@ bluewave.Explorer = function(parent, config) {
                     })(thumbnails[i]);
                 }
             }
+            setZoom(dashboard.info.zoom);
             mask.hide();
             editPanel.focus();
         };
