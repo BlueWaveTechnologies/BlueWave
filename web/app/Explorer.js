@@ -73,6 +73,7 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         };
+        editPanel.tabIndex = -1;
         createEditPanel(editPanel);
         addShowHide(editPanel);
         innerDiv.appendChild(editPanel);
@@ -171,6 +172,10 @@ bluewave.Explorer = function(parent, config) {
 
       //Update buttons
         updateButtons();
+
+
+      //Set mouse focus
+        editPanel.focus();
 
 
       //Return early if the dashboard is missing config info
@@ -308,6 +313,7 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
             mask.hide();
+            editPanel.focus();
         };
 
 
@@ -1429,47 +1435,20 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editChart = function(node){
         if (!chartEditor){
-
-            var win = createNodeEditor({
+            chartEditor = createNodeEditor({
                 title: "Edit Chart",
                 width: 1060,
                 height: 600,
                 resizable: true,
-                beforeClose: function(){
-                    var chartConfig = chartEditor.getConfig();
-                    var node = chartEditor.getNode();
-                    var orgConfig = node.config;
-                    if (!orgConfig) orgConfig = {};
-                    if (isDirty(chartConfig, orgConfig)){
-                        node.config = chartConfig;
-                        waitmask.show();
-                        var el = chartEditor.getChart();
-                        createPreview(el, function(canvas){
-                            node.preview = canvas.toDataURL("image/png");
-                            createThumbnail(node, canvas);
-                            updateTitle(node, node.config.chartTitle);
-                            win.close();
-                            waitmask.hide();
-                        }, this);
-                    }
-                    else{
-                        win.close();
-                    }
-                }
+                editor: bluewave.ChartEditor
             });
-
-            chartEditor = new bluewave.ChartEditor(win.getBody(), config);
-
-            chartEditor.show = function(){
-                win.show();
-            };
-
-            chartEditor.hide = function(){
-                win.hide();
-            };
         }
+        chartEditor.getNode = function(){
+            return node;
+        };
 
 
+      //Get data
         var data = [];
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
@@ -1477,90 +1456,49 @@ bluewave.Explorer = function(parent, config) {
                 data.push(csv);
             }
         }
-        chartEditor.update(node.type, node.config, data, node);
 
+
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+        chartEditor.update(node.type, chartConfig, data, node);
         chartEditor.show();
-    };
-
-
-  //**************************************************************************
-  //** updateTitle
-  //**************************************************************************
-  /** Updates the title of a drawflow node
-   */
-    var updateTitle = function(node, title) {
-        if (title) {
-            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
-        }
     };
 
 
   //**************************************************************************
   //** editMap
   //**************************************************************************
-    var editMap = function(node,hide){
-        if(!mapEditor){
-            var win = createNodeEditor({
+    var editMap = function(node, hide){
+        if (!mapEditor){
+            mapEditor = createNodeEditor({
                 title: "Edit Map",
                 width: 1180,
                 height: 700,
                 resizable: true,
-                beforeClose: function(){
-                    var chartConfig = mapEditor.getConfig();
-                    var node = mapEditor.getNode();
-                    var orgConfig = node.config;
-                    if(!orgConfig) orgConfig = {};
-                    if(isDirty(chartConfig, orgConfig)){
-                        node.config = chartConfig;
-                        updateTitle(node, node.config.chartTitle);
-                        waitmask.show();
-                        var el = mapEditor.getChart();
-                        if(el.show) el.show();
-                        createPreview(el, function(canvas){
-                            node.preview = canvas.toDataURL("image/png");
-                            createThumbnail(node, canvas);
-                            win.close();
-                            waitmask.hide();
-                        }, this);
-                    }
-                    else{
-                        updateTitle(node, node.config.chartTitle);
-                        win.close();
-                    }
-                    button.layout.enable();
-                }
-
+                editor: bluewave.charts.MapEditor
             });
-
-            mapEditor = new bluewave.charts.MapEditor(win.getBody(), config);
-
-            mapEditor.show = function(){
-                win.show();
-            };
-
-            mapEditor.hide = function(){
-                win.hide();
-            };
-
-            win.onResize = function(){
-                mapEditor.resize();
-            };
+        };
+        mapEditor.getNode = function(){
+            return node;
         };
 
-      //Add custom getNode() method to the mapEditor to return current node
-        mapEditor.getNode = function(){
-        return node;
-          };
 
+      //Clone the node config
+        var mapConfig = {};
+        merge(mapConfig, node.config);
 
 
       //Update and render mapEditor
-        mapEditor.update(node.config,mapEditor.getMapData(node));
-        mapConfig = mapEditor.getConfig();
-        if (hide===true) return;
-      // show mapEditor when we are in editor view
-        mapEditor.show();
+        mapEditor.update(mapConfig, mapEditor.getMapData(node));
 
+        if (hide===true) return;
+
+
+      //Show mapEditor when we are in editor view
+        mapEditor.show();
     };
 
 
@@ -1569,59 +1507,30 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editSankey = function(node, hide){
         if (!sankeyEditor){
-            var win = createNodeEditor({
+            sankeyEditor = createNodeEditor({
                 title: "Edit Sankey",
                 width: 1680,
                 height: 920,
                 resizable: true,
-                beforeClose: function(){
-                    var chartConfig = sankeyEditor.getConfig();
-                    var node = sankeyEditor.getNode();
-                    var orgConfig = node.config;
-                    if (!orgConfig) orgConfig = {};
-                    if (isDirty(chartConfig, orgConfig)){
-                        node.config = chartConfig;
-                        updateTitle(node, node.config.chartTitle);
-                        waitmask.show();
-                        var el = sankeyEditor.getChart();
-                        if (el.show) el.show();
-                        createPreview(el, function(canvas){
-                            node.preview = canvas.toDataURL("image/png");
-                            createThumbnail(node, canvas);
-                            win.close();
-                            waitmask.hide();
-                        }, this);
-                    }
-                    else{
-                        updateTitle(node, node.config.chartTitle);
-                        win.close();
-                    }
-                    button.layout.enable();
-                }
+                editor: bluewave.charts.SankeyEditor
             });
-
-
-            sankeyEditor = new bluewave.charts.SankeyEditor(win.getBody(), config);
-
-            sankeyEditor.show = function(){
-                win.show();
-            };
-
-            sankeyEditor.hide = function(){
-                win.hide();
-            };
         }
-
-      //Add custom getNode() method to the sankeyEditor to return current node
         sankeyEditor.getNode = function(){
             return node;
         };
 
 
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
       //Update and render sankeyEditor
-        sankeyEditor.update(node.config, getSupplyChainInputs(node));
+        sankeyEditor.update(chartConfig, getSupplyChainInputs(node));
+
         if (hide===true) return;
-      // show sankeyEditor when we are in the editor view
+
+      //Show sankeyEditor when we are in the editor view
         sankeyEditor.show();
     };
 
@@ -1631,51 +1540,24 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editScatter = function(node){
         if (!scatterEditor){
-            var win = createNodeEditor({
-                 title: "Edit Scatter Chart",
-                 width: 1060,
-                 height: 600,
-                 beforeClose: function(){
-                     var scatterConfig = scatterEditor.getConfig();
-                     var node = scatterEditor.getNode();
-                     var orgConfig = node.config;
-                     if (!orgConfig) orgConfig = {};
-                     if (isDirty(scatterConfig, orgConfig)){
-                         node.config = scatterConfig;
-                         waitmask.show();
-                         var el = scatterEditor.getChart();
-                         createPreview(el, function(canvas){
-                             node.preview = canvas.toDataURL("image/png");
-                             createThumbnail(node, canvas);
-                             updateTitle(node, node.config.chartTitle);
-                             win.close();
-                             waitmask.hide();
-                         }, this);
-                     }
-                     else{
-                         win.close();
-                     }
-                 }
+            scatterEditor = createNodeEditor({
+                title: "Edit Scatter Chart",
+                width: 1060,
+                height: 600,
+                editor: bluewave.charts.ScatterEditor
             });
-
-            scatterEditor = new bluewave.charts.ScatterEditor(win.getBody(), config);
-
-            scatterEditor.show = function(){
-              win.show();
-            };
-
-            scatterEditor.hide = function(){
-              win.hide();
-            };
         }
-
-
-      //Add custom getNode() method to the scatterEditor to return current node
         scatterEditor.getNode = function(){
             return node;
         };
 
 
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+      //Get data
         var data = [];
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
@@ -1684,61 +1566,34 @@ bluewave.Explorer = function(parent, config) {
             }
         }
 
-        scatterEditor.update(node.config, data);
+        scatterEditor.update(chartConfig, data);
         scatterEditor.show();
     };
+
 
   //**************************************************************************
   //** editPie
   //**************************************************************************
     var editPie = function(node){
         if (!pieEditor){
-            var win = createNodeEditor({
-                 title: "Edit Pie Chart",
-                 width: 1060,
-                 height: 600,
-                 beforeClose: function(){
-                     var pieConfig = pieEditor.getConfig();
-                     var node = pieEditor.getNode();
-                     var orgConfig = node.config;
-                     if (!orgConfig) orgConfig = {};
-                     if (isDirty(pieConfig, orgConfig)){
-                         node.config = pieConfig;
-                         waitmask.show();
-                         var el = pieEditor.getChart();
-                         createPreview(el, function(canvas){
-                             node.preview = canvas.toDataURL("image/png");
-                             createThumbnail(node, canvas);
-                             updateTitle(node, node.config.chartTitle);
-                             win.close();
-                             waitmask.hide();
-                         }, this);
-                     }
-                     else{
-                         win.close();
-                     }
-                 }
+            pieEditor = createNodeEditor({
+                title: "Edit Pie Chart",
+                width: 1060,
+                height: 600,
+                editor: bluewave.charts.PieEditor
             });
-
-            pieEditor = new bluewave.charts.PieEditor(win.getBody(), config);
-
-            pieEditor.show = function(){
-              win.show();
-            };
-
-            pieEditor.hide = function(){
-              win.hide();
-            };
         }
-
-
-      //Add custom getNode() method to the pieEditor to return current node
         pieEditor.getNode = function(){
             return node;
         };
 
 
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
 
+
+      //Get data
         var data = [];
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
@@ -1752,25 +1607,8 @@ bluewave.Explorer = function(parent, config) {
             }
         }
 
-        pieEditor.update(node.config, data);
+        pieEditor.update(chartConfig, data);
         pieEditor.show();
-    };
-
-
-  //**************************************************************************
-  //** removeInputs
-  //**************************************************************************
-    var removeInputs = function(nodes, nodeID){
-        for(var key in nodes){
-            if (nodes.hasOwnProperty(key)){
-                var node = nodes[key];
-                for(var inputID in node.inputs){
-                    if(inputID === nodeID){
-                        delete node.inputs[nodeID+""];
-                    }
-                }
-            }
-        }
     };
 
 
@@ -1779,50 +1617,13 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editSupplyChain = function(node){
         if (!supplyChainEditor){
-            var win = createNodeEditor({
+            supplyChainEditor = createNodeEditor({
                 title: "Edit Supply Chain",
                 width: 1680,
                 height: 920,
                 resizable: true,
-                beforeClose: function(){
-                    var chartConfig = supplyChainEditor.getConfig();
-                    var node = supplyChainEditor.getNode();
-                    var orgConfig = node.config;
-                    if (!orgConfig) orgConfig = {};
-                    if (isDirty(chartConfig, orgConfig)){
-                        node.config = chartConfig;
-                        updateTitle(node, node.config.chartTitle);
-                        waitmask.show();
-                        var el = supplyChainEditor.getChart();
-                        if (el.show) el.show();
-
-                        createPreview(el, function(canvas){
-                            node.preview = canvas.toDataURL("image/png");
-                            createThumbnail(node, canvas);
-                            win.close();
-                            waitmask.hide();
-                            me.save();
-                        }, this);
-                    }
-                    else{
-                        updateTitle(node, node.config.chartTitle);
-                        win.close();
-                    }
-                    button.layout.enable();
-                }
+                editor: bluewave.charts.SupplyChainEditor
             });
-
-
-            supplyChainEditor = new bluewave.charts.SupplyChainEditor(win.getBody(), config);
-
-            supplyChainEditor.show = function(){
-                win.show();
-            };
-
-            supplyChainEditor.hide = function(){
-                win.hide();
-            };
-
 
             var save = function(){
                 var chartConfig = supplyChainEditor.getConfig();
@@ -1849,7 +1650,13 @@ bluewave.Explorer = function(parent, config) {
             return node;
         };
 
-        supplyChainEditor.update(node.config);
+
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+        supplyChainEditor.update(chartConfig);
         supplyChainEditor.show();
     };
 
@@ -1862,45 +1669,14 @@ bluewave.Explorer = function(parent, config) {
       //Create layoutEditor as needed
         if (!layoutEditor){
 
-            var win = createNodeEditor({
+            layoutEditor = createNodeEditor({
                 title: "Edit Layout",
                 width: 1425, //Up to 4 dashboard items at 250px width
                 height: 839,
                 resizable: true,
-                beforeClose: function(){
-                    var chartConfig = layoutEditor.getConfig();
-                    var node = layoutEditor.getNode();
-                    var orgConfig = node.config;
-                    if (!orgConfig) orgConfig = {};
-                    if (isDirty(chartConfig, orgConfig)){
-                        node.config = chartConfig;
-                        waitmask.show();
-                        var el = layoutEditor.getChart();
-                        if (el.show) el.show();
-                        createPreview(el, function(canvas){
-                            thumbnail = canvas.toDataURL("image/png");
-                            node.preview = thumbnail;
-                            createThumbnail(node, canvas);
-                            win.close();
-                            waitmask.hide();
-                        }, this);
-                    }
-                    else{
-                        win.close();
-                    }
-                }
+                editor: bluewave.charts.Layout
             });
-
-            layoutEditor = new bluewave.charts.Layout(win.getBody(), config);
             layoutEditor.el.style.borderRadius = "0 0 5px 5px";
-
-            layoutEditor.show = function(){
-                win.show();
-            };
-
-            layoutEditor.hide = function(){
-                win.hide();
-            };
         }
 
 
@@ -1910,7 +1686,7 @@ bluewave.Explorer = function(parent, config) {
         };
 
 
-      //Generate list of inputs for the layoutEditor
+      //Get data
         var inputs = {};
         for (var inputID in node.inputs) {
             if (node.inputs.hasOwnProperty(inputID)){
@@ -1924,8 +1700,13 @@ bluewave.Explorer = function(parent, config) {
         }
 
 
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
       //Update and show layoutEditor
-        layoutEditor.update(inputs, node.config);
+        layoutEditor.update(inputs, chartConfig);
         layoutEditor.show();
     };
 
@@ -1935,6 +1716,8 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var createNodeEditor = function(conf){
 
+        var editor = conf.editor;
+        delete conf.editor;
 
         merge(conf, {
             title: "Edit Chart",
@@ -1962,7 +1745,6 @@ bluewave.Explorer = function(parent, config) {
             title: conf.title,
             width: conf.width,
             height: conf.height,
-            //valign: "top",
             modal: true,
             resizable: conf.resizable,
             shrinkToFit: true,
@@ -1979,15 +1761,90 @@ bluewave.Explorer = function(parent, config) {
                     setStyle(icon, style.closeIcon);
                     btn.appendChild(icon);
                     btn.onclick = function(){
-                        if (conf.beforeClose) conf.beforeClose.apply(me, [win]);
-                        else win.close();
+                        if (conf.beforeClose){
+                            conf.beforeClose.apply(me, [win]);
+                        }
+                        else{
+                            //win.close();
+                            var chartConfig = editor.getConfig();
+                            var node = editor.getNode();
+                            var orgConfig = node.config;
+                            if (!orgConfig) orgConfig = {};
+                            if (isDirty(chartConfig, orgConfig)){
+                                node.config = chartConfig;
+                                updateTitle(node, node.config.chartTitle);
+                                waitmask.show();
+                                var el = editor.getChart();
+                                if (el.show) el.show();
+                                createPreview(el, function(canvas){
+                                    node.preview = canvas.toDataURL("image/png");
+                                    createThumbnail(node, canvas);
+                                    win.close();
+                                    waitmask.hide();
+                                }, this);
+                            }
+                            else{
+                                updateTitle(node, node.config.chartTitle);
+                                win.close();
+                            }
+                            button.layout.enable();
+                        }
                     };
                     buttonDiv.appendChild(btn);
                 }
             }
         });
 
-        return win;
+
+        if (editor){
+            editor = new editor(win.getBody(), config);
+
+            editor.show = function(){
+                win.show();
+            };
+
+            editor.hide = function(){
+                win.hide();
+            };
+
+            win.onResize = function(){
+                editor.resize();
+            };
+
+            return editor;
+        }
+        else{ //dbView
+            return win;
+        }
+    };
+
+
+  //**************************************************************************
+  //** updateTitle
+  //**************************************************************************
+  /** Updates the title of a drawflow node
+   */
+    var updateTitle = function(node, title) {
+        if (title) {
+            node.childNodes[0].getElementsByTagName("span")[0].innerHTML = title;
+        }
+    };
+
+
+  //**************************************************************************
+  //** removeInputs
+  //**************************************************************************
+    var removeInputs = function(nodes, nodeID){
+        for(var key in nodes){
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                for(var inputID in node.inputs){
+                    if(inputID === nodeID){
+                        delete node.inputs[nodeID+""];
+                    }
+                }
+            }
+        }
     };
 
 
@@ -2108,6 +1965,11 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var getCSV = function(query, callback, scope){
 
+        if (!query || query.length===0){
+            callback.apply(scope, []);
+            return;
+        }
+
         var payload = {
             query: query,
             format: "csv",
@@ -2120,6 +1982,7 @@ bluewave.Explorer = function(parent, config) {
             },
             failure: function(response){
                 alert(response);
+                callback.apply(scope, []);
             }
         });
     };
@@ -2753,16 +2616,15 @@ bluewave.Explorer = function(parent, config) {
                             scatterChart.update(chartConfig, data);
                         }
                         else if (node.type==="map"){
-                            //Instantiate mapEditor as needed
+
+                          //Instantiate mapEditor as needed
                             if (!mapEditor) editMap(node, true);
 
-                            //Get map config and data
+                          //Get map config and data
                             mapEditor.update(node.config, mapEditor.getMapData(node));
 
-                            //Render mapChart
-                            // var mapChart = new bluewave.charts.MapChart(dashboardItem.innerDiv,config);
+                          //Render mapChart
                             var mapChart = new bluewave.charts.MapChart(createChartContainer(),config);
-
                             mapChart.update(mapEditor.getConfig(),mapEditor.getMapData(node)[0]);
                         }
                         else{
