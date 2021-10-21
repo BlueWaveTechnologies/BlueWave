@@ -194,16 +194,27 @@ bluewave.NodeSelect = function(parent, config) {
    */
     var addPropertyToDesired = function(){
       propertyToAdd = getSelectedProperty();
+      if (propertyToAdd != "undefined"){
+        var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
+      
+      // if this property isn't already added then add it
+        for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
 
-      var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
-     // button to move a property up (to a higher priority) in desired properties
-      td = document.createElement("tr");
-      td.innerHTML = propertyToAdd.innerHTML;
-      td.addEventListener("click",function(){
-        setSelectedPropertyDesired(this);
-      });
-      propertiesSelectedDiv.appendChild(td);
+          if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
+          // if this value does already exist, return early
+            return
+          };
+        };
 
+      // if this value doesn't exist then add it
+        td = document.createElement("tr");
+        td.innerHTML = propertyToAdd.innerHTML;
+        td.addEventListener("click",function(){
+          setSelectedPropertyDesired(this);
+        });
+        propertiesSelectedDiv.appendChild(td);
+
+      };
     };
 
   
