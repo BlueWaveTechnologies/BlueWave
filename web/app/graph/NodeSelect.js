@@ -106,10 +106,8 @@ bluewave.NodeSelect = function(parent, config) {
           };
 
           nodesDiv.appendChild(td);
-
         };
         
-
         var buttonsDiv = parent.getElementsByTagName("td")[2]
 
         // add 4 buttons
@@ -194,7 +192,8 @@ bluewave.NodeSelect = function(parent, config) {
    */
     var addPropertyToDesired = function(){
       propertyToAdd = getSelectedProperty();
-      if (propertyToAdd != "undefined"){
+
+      if (propertyToAdd !== undefined){
         var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
       
       // if this property isn't already added then add it
@@ -226,18 +225,20 @@ bluewave.NodeSelect = function(parent, config) {
    var removePropertyFromDesired = function(){
     propertyToRemove = getSelectedPropertyDesired();
 
+    if (propertyToRemove !== undefined){
 
-    var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
+      var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
 
 
-   // remove the property where it matches our current selected property
-    for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
+    // remove the property where it matches our current selected property
+      for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
 
-      if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToRemove.innerText ){
+        if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToRemove.innerText ){
 
-        // delete this property from the "desired properties" section;
-        propertiesSelectedDiv.getElementsByTagName("tr")[i].remove()
+          // delete this property from the "desired properties" section;
+          propertiesSelectedDiv.getElementsByTagName("tr")[i].remove()
 
+        };
       };
     };
    };
@@ -274,11 +275,11 @@ bluewave.NodeSelect = function(parent, config) {
   // consolidate this into the setSelectedProperty function later
   var resetSelectedProperty = function(){
     // resets for 2nd row in table
-    currentSelected = "";
+    currentSelected = undefined;
     parent.getElementsByTagName("td")[1].innerHTML = "";
 
     // resets for 4th row in table
-    currentSelectedDesired = "";
+    currentSelectedDesired = undefined;
     parent.getElementsByTagName("td")[3].innerHTML = "";
 
 
