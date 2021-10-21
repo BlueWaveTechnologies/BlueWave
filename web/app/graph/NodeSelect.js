@@ -264,8 +264,13 @@ bluewave.NodeSelect = function(parent, config) {
   var resetSelectedProperty = function(){
     // resets for 2nd row in table
     currentSelected = "";
+    parent.getElementsByTagName("td")[1].innerHTML = "";
+
     // resets for 4th row in table
     currentSelectedDesired = "";
+    parent.getElementsByTagName("td")[3].innerHTML = "";
+
+
   }
 
   
