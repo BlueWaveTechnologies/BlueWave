@@ -125,7 +125,10 @@ bluewave.NodeSelect = function(parent, config) {
         // button to remove a property from desired properties
         td = document.createElement("tr");
         var buttonRemove = document.createElement("button");
-        buttonRemove.innerHTML = "<"
+        buttonRemove.innerHTML = "<";
+        buttonRemove.addEventListener("click", function(){
+          removePropertyToDesired(self);
+        });
         td.appendChild(buttonRemove);
         buttonsDiv.appendChild(td);
 
@@ -196,10 +199,13 @@ bluewave.NodeSelect = function(parent, config) {
       var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
      // button to move a property up (to a higher priority) in desired properties
       td = document.createElement("tr");
+      td.addEventListener("click",function(){
+        setSelectedPropertyDesired(self);
+      })
       td.innerHTML = propertyToAdd.innerHTML;
       propertiesSelectedDiv.appendChild(td);
 
-    }
+    };
 
   
   //**************************************************************************
@@ -208,7 +214,17 @@ bluewave.NodeSelect = function(parent, config) {
   /** code for adding a td value to the selected table area
    */
    var removePropertyFromDesired = function(){
-  }
+    propertyToRemove = getSelectedPropertyDesired();
+    console.log("property to add is ");
+    console.log(propertyToRemove.innerText);
+
+    var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
+   // button to move a property up (to a higher priority) in desired properties
+    td = document.createElement("tr");
+    td.innerHTML = propertyToRemove.innerHTML;
+    propertiesSelectedDiv.appendChild(td);
+
+  };
 
 
 
@@ -239,9 +255,33 @@ bluewave.NodeSelect = function(parent, config) {
    */
   // consolidate this into the setSelectedProperty function later
   var resetSelectedProperty = function(){
-    var currentSelected = "";
+    // resets for 2nd row in table
+    currentSelected = "";
+    // resets for 4th row in table
+    currentSelectedDesired = "";
   }
 
+  
+  //**************************************************************************
+  //** setSelectedPropertyDesired
+  //**************************************************************************
+  /** code for rendering the options after the name property name is selected
+   */
+   var setSelectedPropertyDesired = function(td){
+    // set the td as selected
+    console.log("currently selected property desired is ", td);
+    currentSelectedDesired = td;
+  }
+
+  //**************************************************************************
+  //** getSelectedPropertyDesired
+  //**************************************************************************
+  /** code for rendering the options after the name property name is selected
+   */
+  var getSelectedPropertyDesired = function(){
+    // get the currently selected td
+    return currentSelectedDesired;
+  }
 
   //**************************************************************************
   //** Utilites
