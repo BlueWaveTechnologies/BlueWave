@@ -121,7 +121,7 @@ bluewave.charts.PieChart = function(parent, config) {
             if (chartConfig.pieLabels===true){
 
 
-                var labelStart = radius - ((radius-innerRadius)*0.2);
+                var labelStart = radius - ((radius-innerRadius)*0.1);
                 var labelEnd = radius * 1.2;
 
                 var innerArc = d3.arc()
@@ -137,11 +137,12 @@ bluewave.charts.PieChart = function(parent, config) {
                   .outerRadius(radius);
 
                 var insideArc = d3.arc()
-                  .innerRadius(0)
-                  .outerRadius(radius);
+                  .innerRadius(innerRadius)
+                  .outerRadius(radius/2);
 
 
               //Add the polylines between chart and labels:
+              if (chartConfig.pieLabelOffset == "120") {
                 let endPoints = [];
                 var lineGroup = pieChart.append("g");
                 lineGroup.attr("name", "lines");
@@ -171,9 +172,10 @@ bluewave.charts.PieChart = function(parent, config) {
                     posC[0] = labelEnd * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
                     return [posA, posB, posC];
                   });
+              }
 
 
-              //Add the polylines between chart and labels:
+              //Add the labels:
                 var positions = [];
                 var labelGroup = pieChart.append("g");
                 labelGroup.attr("name", "labels");
@@ -187,25 +189,35 @@ bluewave.charts.PieChart = function(parent, config) {
                   .attr("transform", function (d) {
 
 
-                    var test;
+                    var pos;
 
                     switch(chartConfig.pieLabelOffset) {
                         case "0":
-                            test = insideArc.centroid(d);
-                            return "translate(" + test + ")";
+                            pos = insideArc.centroid(d);
+                            return "translate(" + pos + ")";
                             break;
                         case "50":
-//                            test = centerArc.centroid();
-                            test = centerArc.centroid(d);
-                            return "translate(" + test + ")";
+                            pos = centerArc.centroid(d);
+                            return "translate(" + pos + ")";
                             break;
                         case "100":
-                            test = innerArc.centroid(d);
-                            return "translate(" + test + ")";
+                            pos = innerArc.centroid(d);
+                            return "translate(" + pos + ")";
                             break;
                         case "120":
-                            test = outerArc.centroid(d);
-                            return "translate(" + test + ")";
+                            pos = outerArc.centroid(d);
+                            positions.forEach((val) => {
+                              if (pos[1] < val + 5 && pos[1] > val - 5) {
+                                pos[1] -= 14;
+                              }
+                            });
+                            positions.push(pos[1]);
+
+                            var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                            pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
+                            return "translate(" + pos + ")";
+//                            test = outerArc.centroid(d);
+//                            return "translate(" + test + ")";
                             break;
                         default:
 
@@ -228,8 +240,12 @@ bluewave.charts.PieChart = function(parent, config) {
 //                    return "translate(" + innerArc.centroid(d) + ")";
                   })
                   .style("text-anchor", function (d) {
-                    var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                    return midangle < Math.PI ? "start" : "end";
+                    if (chartConfig.pieLabelOffset == "120") {
+                        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                        return midangle < Math.PI ? "start" : "end";
+                    } else {
+                    return "middle";
+                    }
                   });
 
 
