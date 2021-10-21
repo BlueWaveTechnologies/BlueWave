@@ -194,8 +194,6 @@ bluewave.NodeSelect = function(parent, config) {
    */
     var addPropertyToDesired = function(){
       propertyToAdd = getSelectedProperty();
-      console.log("property to add is ");
-      console.log(propertyToAdd.innerText);
 
       var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
      // button to move a property up (to a higher priority) in desired properties
@@ -216,33 +214,20 @@ bluewave.NodeSelect = function(parent, config) {
    */
    var removePropertyFromDesired = function(){
     propertyToRemove = getSelectedPropertyDesired();
-    // console.log("property to remove is ");
-    // console.log(propertyToRemove.innerText);
+
 
     var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
-    // console.log(propertiesSelectedDiv)
-    // console.log(propertiesSelectedDiv.getElementsByTagName("tr"))
-    // console.log(propertiesSelectedDiv.getElementsByTagName("tr")[0])
-    // console.log(propertiesSelectedDiv.getElementsByTagName("tr")[1])
-    // propertiesSelectedDiv.removeChild[0];
+
 
    // remove the property where it matches our current selected property
     for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
 
-      // console.log("detected another")
-      // console.log(propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText)
-      // console.log(propertiesSelectedDiv.getElementsByTagName("tr").innerHTML)
-
       if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToRemove.innerText ){
-        // console.log("got here")
-        // delete this property from the "desired properties" section
-        // console.log(propertiesSelectedDiv)
-        // propertiesSelectedDiv.removeChild[i];
+
+        // delete this property from the "desired properties" section;
         propertiesSelectedDiv.getElementsByTagName("tr")[i].remove()
 
-
       };
- 
     };
    };
 
@@ -254,7 +239,7 @@ bluewave.NodeSelect = function(parent, config) {
    */
     var setSelectedProperty = function(td){
       // set the td as selected
-      console.log("currently selected property is ", td.innerText);
+      // console.log("currently selected property is ", td.innerText);
       currentSelected = td;
     }
 
@@ -288,7 +273,7 @@ bluewave.NodeSelect = function(parent, config) {
    */
    var setSelectedPropertyDesired = function(td){
     // set the td as selected
-    console.log("currently selected property desired is ", td.innerText);
+    // console.log("currently selected property desired is ", td.innerText);
     currentSelectedDesired = td;
   }
 
