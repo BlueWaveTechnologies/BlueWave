@@ -145,6 +145,35 @@ bluewave.NodeSelect = function(parent, config) {
 
         var buttonsDiv = parent.getElementsByTagName("td")[2]
 
+        // add 4 buttons
+        // button to add a property to desired properties
+        td = document.createElement("tr");
+        var buttonAdd = document.createElement("button");
+        buttonAdd.innerHTML = ">"
+        td.appendChild(buttonAdd)
+        buttonsDiv.appendChild(td)
+
+        // button to remove a property from desired properties
+        td = document.createElement("tr");
+        var buttonRemove = document.createElement("button");
+        buttonRemove.innerHTML = "<"
+        td.appendChild(buttonRemove)
+        buttonsDiv.appendChild(td)
+
+        // button to move a property up (to a higher priority) in desired properties
+        td = document.createElement("tr");
+        var buttonUp = document.createElement("button");
+        buttonUp.innerHTML = "^"
+        td.appendChild(buttonUp)
+        buttonsDiv.appendChild(td)
+
+        // button to move a property down (to a lower priority) in desired properties
+        td = document.createElement("tr");
+        var buttonDown = document.createElement("button");
+        buttonDown.innerHTML = "V"
+        td.appendChild(buttonDown)
+        buttonsDiv.appendChild(td)
+
         var propertiesSelectedDiv = parent.getElementsByTagName("td")[3]
 
         // for each name make it so that when it is selected.. 
