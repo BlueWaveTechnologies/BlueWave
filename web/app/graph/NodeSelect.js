@@ -117,7 +117,7 @@ bluewave.NodeSelect = function(parent, config) {
         var buttonAdd = document.createElement("button");
         buttonAdd.innerHTML = ">";
         buttonAdd.addEventListener("click", function(){
-          addPropertyToDesired(self);
+          addPropertyToDesired();
         });
         td.appendChild(buttonAdd);
         buttonsDiv.appendChild(td);
@@ -127,7 +127,7 @@ bluewave.NodeSelect = function(parent, config) {
         var buttonRemove = document.createElement("button");
         buttonRemove.innerHTML = "<";
         buttonRemove.addEventListener("click", function(){
-          removePropertyToDesired(self);
+          removePropertyToDesired();
         });
         td.appendChild(buttonRemove);
         buttonsDiv.appendChild(td);
@@ -199,10 +199,10 @@ bluewave.NodeSelect = function(parent, config) {
       var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
      // button to move a property up (to a higher priority) in desired properties
       td = document.createElement("tr");
-      td.addEventListener("click",function(){
-        setSelectedPropertyDesired(self);
-      })
       td.innerHTML = propertyToAdd.innerHTML;
+      td.addEventListener("click",function(){
+        setSelectedPropertyDesired(this);
+      });
       propertiesSelectedDiv.appendChild(td);
 
     };
