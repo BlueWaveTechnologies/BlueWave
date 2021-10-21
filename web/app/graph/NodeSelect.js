@@ -11,14 +11,15 @@ if(!bluewave) var bluewave={};
 bluewave.NodeSelect = function(parent, config) {
 
     var me = this;
-    var defaultConfig = {
-      margin: {
-          top: 15,
-          right: 5,
-          bottom: 65,
-          left: 82
-      }
-  };
+  //   var defaultConfig = {
+  //     margin: {
+  //         top: 15,
+  //         right: 5,
+  //         bottom: 65,
+  //         left: 82
+  //     }
+  // };
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -127,7 +128,7 @@ bluewave.NodeSelect = function(parent, config) {
         var buttonRemove = document.createElement("button");
         buttonRemove.innerHTML = "<";
         buttonRemove.addEventListener("click", function(){
-          removePropertyToDesired();
+          removePropertyFromDesired();
         });
         td.appendChild(buttonRemove);
         buttonsDiv.appendChild(td);
@@ -215,17 +216,35 @@ bluewave.NodeSelect = function(parent, config) {
    */
    var removePropertyFromDesired = function(){
     propertyToRemove = getSelectedPropertyDesired();
-    console.log("property to add is ");
-    console.log(propertyToRemove.innerText);
+    // console.log("property to remove is ");
+    // console.log(propertyToRemove.innerText);
 
     var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
-   // button to move a property up (to a higher priority) in desired properties
-    td = document.createElement("tr");
-    td.innerHTML = propertyToRemove.innerHTML;
-    propertiesSelectedDiv.appendChild(td);
+    // console.log(propertiesSelectedDiv)
+    // console.log(propertiesSelectedDiv.getElementsByTagName("tr"))
+    // console.log(propertiesSelectedDiv.getElementsByTagName("tr")[0])
+    // console.log(propertiesSelectedDiv.getElementsByTagName("tr")[1])
+    // propertiesSelectedDiv.removeChild[0];
 
-  };
+   // remove the property where it matches our current selected property
+    for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
 
+      // console.log("detected another")
+      // console.log(propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText)
+      // console.log(propertiesSelectedDiv.getElementsByTagName("tr").innerHTML)
+
+      if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToRemove.innerText ){
+        // console.log("got here")
+        // delete this property from the "desired properties" section
+        // console.log(propertiesSelectedDiv)
+        // propertiesSelectedDiv.removeChild[i];
+        propertiesSelectedDiv.getElementsByTagName("tr")[i].remove()
+
+
+      };
+ 
+    };
+   };
 
 
   //**************************************************************************
@@ -235,7 +254,7 @@ bluewave.NodeSelect = function(parent, config) {
    */
     var setSelectedProperty = function(td){
       // set the td as selected
-      console.log("currently selected property is ", td);
+      console.log("currently selected property is ", td.innerText);
       currentSelected = td;
     }
 
@@ -269,7 +288,7 @@ bluewave.NodeSelect = function(parent, config) {
    */
    var setSelectedPropertyDesired = function(td){
     // set the td as selected
-    console.log("currently selected property desired is ", td);
+    console.log("currently selected property desired is ", td.innerText);
     currentSelectedDesired = td;
   }
 
