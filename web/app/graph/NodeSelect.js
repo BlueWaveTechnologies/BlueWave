@@ -211,18 +211,54 @@ bluewave.NodeSelect = function(parent, config) {
             td = document.createElement("tr");
             // td.innerText = `${nodes[i]["properties"][i]}`;
             td.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
+            
+            // add a "selected" option - show which item was last clicked
+            td.addEventListener("click", function(){
+              setSelectedProperty(this);
+            });
+
+
             propertiesDiv.appendChild(td);
+
           }
           break
         }
 
       }
 
-      // console.log(propertiesToShow);
-      // var propertiesDiv = parent.getElementsByTagName("td")[1]
-
 
     };
+
+  //**************************************************************************
+  //** setSelectedProperty
+  //**************************************************************************
+  /** code for rendering the options after the name property name is selected
+   */
+    var setSelectedProperty = function(td){
+      // set the td as selected
+      console.log("currently selected property is ", td);
+      var currentSelected = td;
+    }
+
+  //**************************************************************************
+  //** getSelectedProperty
+  //**************************************************************************
+  /** code for rendering the options after the name property name is selected
+   */
+   var getSelectedProperty = function(){
+    // get the currently selected td
+    return currentSelected;
+  }
+  //**************************************************************************
+  //** resetSelectedProperty
+  //**************************************************************************
+  /** Use to reset the SelectedProperty when we move between different nodes
+   */
+  // consolidate this into the setSelectedProperty function later
+  var resetSelectedProperty = function(){
+    var currentSelected = "";
+  }
+
 
   //**************************************************************************
   //** Utilites
