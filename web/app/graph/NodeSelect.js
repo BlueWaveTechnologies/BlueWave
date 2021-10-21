@@ -149,32 +149,35 @@ bluewave.NodeSelect = function(parent, config) {
         // button to add a property to desired properties
         td = document.createElement("tr");
         var buttonAdd = document.createElement("button");
-        buttonAdd.innerHTML = ">"
-        td.appendChild(buttonAdd)
-        buttonsDiv.appendChild(td)
+        buttonAdd.innerHTML = ">";
+        buttonAdd.addEventListener("click", function(){
+          addPropertyToDesired(self);
+        });
+        td.appendChild(buttonAdd);
+        buttonsDiv.appendChild(td);
 
         // button to remove a property from desired properties
         td = document.createElement("tr");
         var buttonRemove = document.createElement("button");
         buttonRemove.innerHTML = "<"
-        td.appendChild(buttonRemove)
-        buttonsDiv.appendChild(td)
+        td.appendChild(buttonRemove);
+        buttonsDiv.appendChild(td);
 
         // button to move a property up (to a higher priority) in desired properties
         td = document.createElement("tr");
         var buttonUp = document.createElement("button");
-        buttonUp.innerHTML = "^"
-        td.appendChild(buttonUp)
-        buttonsDiv.appendChild(td)
+        buttonUp.innerHTML = "^";
+        td.appendChild(buttonUp);
+        buttonsDiv.appendChild(td);
 
         // button to move a property down (to a lower priority) in desired properties
         td = document.createElement("tr");
         var buttonDown = document.createElement("button");
-        buttonDown.innerHTML = "V"
-        td.appendChild(buttonDown)
-        buttonsDiv.appendChild(td)
+        buttonDown.innerHTML = "V";
+        td.appendChild(buttonDown);
+        buttonsDiv.appendChild(td);
 
-        var propertiesSelectedDiv = parent.getElementsByTagName("td")[3]
+        var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
 
         // for each name make it so that when it is selected.. 
         // show in the properties window the properties that are available
@@ -230,6 +233,35 @@ bluewave.NodeSelect = function(parent, config) {
     };
 
   //**************************************************************************
+  //** addPropertyToDesired
+  //**************************************************************************
+  /** code for adding a td value to the selected table area
+   */
+    var addPropertyToDesired = function(){
+      propertyToAdd = getSelectedProperty();
+      console.log("property to add is ");
+      console.log(propertyToAdd.innerText);
+
+      var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
+     // button to move a property up (to a higher priority) in desired properties
+      td = document.createElement("tr");
+      td.innerHTML = propertyToAdd.innerHTML;
+      propertiesSelectedDiv.appendChild(td);
+
+    }
+
+  
+  //**************************************************************************
+  //** removePropertyFromDesired
+  //**************************************************************************
+  /** code for adding a td value to the selected table area
+   */
+   var removePropertyFromDesired = function(){
+  }
+
+
+
+  //**************************************************************************
   //** setSelectedProperty
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
@@ -237,7 +269,7 @@ bluewave.NodeSelect = function(parent, config) {
     var setSelectedProperty = function(td){
       // set the td as selected
       console.log("currently selected property is ", td);
-      var currentSelected = td;
+      currentSelected = td;
     }
 
   //**************************************************************************
