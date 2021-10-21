@@ -32,23 +32,16 @@ bluewave.NodeSelect = function(parent, config) {
         var table = createTable();
         table.style = "width:100%;table-layout:fixed;"
         var tbody = table.firstChild;
-        // tbody.style = "width:33%"
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
-        // tr.style = "width:100%; table-layout: fixed;"
         var tr, td;
 
-        /// remove the class names - we don't need them.
-        // everything here references to itself.
-        
 
       //Nodes
         td = document.createElement("td");
         // add this to css file instead
         td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
-        // td.className = "Nodes"
-        // this is placeholder styling
-        // td.style = "max-width:5%"
+
         tr.appendChild(td);
 
 
@@ -56,9 +49,6 @@ bluewave.NodeSelect = function(parent, config) {
         td = document.createElement("td");
         // add this to css file instead
         td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
-        // td.className = "Properties"
-        // this is placeholder styling
-        // td.style = "width:10%"
 
         tr.appendChild(td);
 
@@ -67,9 +57,6 @@ bluewave.NodeSelect = function(parent, config) {
         td = document.createElement("td");
         // add this to css file instead
         td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
-        // td.className = "Buttons"
-        // this is placeholder styling
-        // td.style = "width:10%"
 
         tr.appendChild(td);
 
@@ -78,9 +65,6 @@ bluewave.NodeSelect = function(parent, config) {
         td = document.createElement("td");
         // add this to css file instead
         td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
-        // td.className = "selectedProperties"
-        // this is placeholder styling
-        // td.style = "width:10%"
         tr.appendChild(td);
 
 
@@ -107,32 +91,14 @@ bluewave.NodeSelect = function(parent, config) {
 
         /// theres more to add here
         console.log("nodes passed in are ", nodes);
-
-        // for each name.. show the name in the nodes td
-        // ourDiv = document.getElementsByTagName("td")[2]
-        // console.log(ourDiv)
-        // console.log(parent)
-        // console.log(document.getElementsByTagName("td"))
-        // console.log(parent.getElementsByTagName("td")[0])
-        // console.log("nodes", nodes)
         var nodesDiv = parent.getElementsByTagName("td")[0];
         for (i in nodes){
           td = document.createElement("tr");
-          // td.style = "width:100%"
           tdDiv = document.createElement("div");
-          // tdDiv.className = "asdasdadad";
-          // tdDiv.style = "overflow:hidden;white-space:nowrap";
-          // tdDiv.style = "width:100%; overflow:hidden;";
 
           tdDiv.innerHTML = `<strong>${nodes[i]["name"]}</strong>`;
 
           td.appendChild(tdDiv);
-          // td.style = "overflow: hidden; white-space: nowrap;";
-          // td.innerText = `${nodes[i]["name"]}`;
-          // td.innerHTML = `<strong>${nodes[i]["name"]}</strong>`;
-          // td.style = "font-weight: 'bold'";
-          // td.style = "border"
-          // td.onclick = function(){console.log(`clicked node ${nodes[i]} `)};
           td.onclick = function()
           {
             renderOptions(this,nodes);
@@ -179,14 +145,6 @@ bluewave.NodeSelect = function(parent, config) {
 
         var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
 
-        // for each name make it so that when it is selected.. 
-        // show in the properties window the properties that are available
-        // add an onclick event
-
-
-        // then work on the buttons and currently selected properties
-
-
     };
   //**************************************************************************
   //** renderOptions
@@ -194,25 +152,18 @@ bluewave.NodeSelect = function(parent, config) {
   /** code for rendering the options after the name is clicked
    */
     var renderOptions = function(td,nodes){
-      // console.log(`currently selected div is ${i} `)
-      // console.log("current thing is ", td)
-      // console.log(td.innerText)
       var nodeName = td.innerText;
       var nodesDiv = parent.getElementsByTagName("td")[0];
-      // console.log(nodes)
       for (i in nodes){
         if (nodes[i]["name"] === nodeName ){
-          // console.log("found it")
           console.log(nodes[i]["properties"]);
           var propertiesDiv = parent.getElementsByTagName("td")[1]
-          // var propertiesToShow = nodes[i]["properties"];
 
           // clear the properties div
           propertiesDiv.innerHTML = "";
 
           for (p in nodes[i]["properties"]){
             td = document.createElement("tr");
-            // td.innerText = `${nodes[i]["properties"][i]}`;
             td.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
             
             // add a "selected" option - show which item was last clicked
