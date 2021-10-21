@@ -132,6 +132,13 @@ bluewave.charts.PieChart = function(parent, config) {
                   .innerRadius(labelEnd)
                   .outerRadius(labelEnd);
 
+                var centerArc = d3.arc()
+                  .innerRadius(innerRadius)
+                  .outerRadius(radius);
+
+                var insideArc = d3.arc()
+                  .innerRadius(0)
+                  .outerRadius(radius);
 
 
               //Add the polylines between chart and labels:
@@ -178,17 +185,47 @@ bluewave.charts.PieChart = function(parent, config) {
                       return d.data.key;
                   })
                   .attr("transform", function (d) {
-                    var pos = outerArc.centroid(d);
-                    positions.forEach((val) => {
-                      if (pos[1] < val + 5 && pos[1] > val - 5) {
-                        pos[1] -= 14;
-                      }
-                    });
-                    positions.push(pos[1]);
 
-                    var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                    pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
-                    return "translate(" + pos + ")";
+
+                    var test;
+
+                    switch(chartConfig.pieLabelOffset) {
+                        case "0":
+                            test = insideArc.centroid(d);
+                            return "translate(" + test + ")";
+                            break;
+                        case "50":
+//                            test = centerArc.centroid();
+                            test = centerArc.centroid(d);
+                            return "translate(" + test + ")";
+                            break;
+                        case "100":
+                            test = innerArc.centroid(d);
+                            return "translate(" + test + ")";
+                            break;
+                        case "120":
+                            test = outerArc.centroid(d);
+                            return "translate(" + test + ")";
+                            break;
+                        default:
+
+                    }
+//
+//                    var placeholer;
+//                    placeholder = test;
+//                    return "translate(" + test + ")";
+
+//                    var pos = outerArc.centroid(d);
+//                    positions.forEach((val) => {
+//                      if (pos[1] < val + 5 && pos[1] > val - 5) {
+//                        pos[1] -= 14;
+//                      }
+//                    });
+//                    positions.push(pos[1]);
+//
+//                    var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+//                    pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
+//                    return "translate(" + innerArc.centroid(d) + ")";
                   })
                   .style("text-anchor", function (d) {
                     var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;

@@ -499,6 +499,30 @@ bluewave.charts.PieEditor = function(parent, config) {
                                     value: false
                                 }
                             ]
+                        },
+                        {
+                            name: "labelOffset",
+                            label: "Label Offset",
+                            type: "radio",
+                            alignment: "vertical",
+                            options: [
+                                {
+                                    label: "0%",
+                                    value: 0
+                                },
+                                {
+                                    label: "50%",
+                                    value: 50
+                                },
+                                {
+                                    label: "100%",
+                                    value: 100
+                                },
+                                {
+                                    label: "120%",
+                                    value: 120
+                                }
+                            ]
                         }
                     ]
                 }
@@ -515,6 +539,13 @@ bluewave.charts.PieEditor = function(parent, config) {
         var labelField = form.findField("labels");
         var labels = chartConfig.pieLabels;
         labelField.setValue(labels===true ? true : false);
+
+
+        var labelOffsetField = form.findField("labelOffset");
+        var labelOffset = chartConfig.pieLabelOffset;
+        labelOffsetField.setValue(labelOffset);
+
+
 
 
       //Set initial value for padding and update
@@ -546,6 +577,8 @@ bluewave.charts.PieEditor = function(parent, config) {
             if (settings.labels==="true") settings.labels = true;
             else if (settings.labels==="false") settings.labels = false;
             chartConfig.pieLabels = settings.labels;
+
+            chartConfig.pieLabelOffset = settings.labelOffset;
 
             if (settings.showOther==="true") settings.showOther = true;
             else if (settings.showOther==="false") settings.showOther = false;
