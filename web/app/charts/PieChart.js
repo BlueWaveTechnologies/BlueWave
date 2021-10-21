@@ -118,7 +118,7 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
             if (chartConfig.pieLabels===null) chartConfig.pieLabels = true;
-            if (chartConfig.pieLabels===true){
+            if (chartConfig.pieLabels===true && pieData[0].data.key !== "undefined" && !isNaN(pieData[0].value)){
 
 
                 var labelStart = radius - ((radius-innerRadius)*0.1);
@@ -216,28 +216,11 @@ bluewave.charts.PieChart = function(parent, config) {
                             var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
                             pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
                             return "translate(" + pos + ")";
-//                            test = outerArc.centroid(d);
-//                            return "translate(" + test + ")";
                             break;
                         default:
+                            return "translate(" + centerArc.centroid(d) + ")";
 
                     }
-//
-//                    var placeholer;
-//                    placeholder = test;
-//                    return "translate(" + test + ")";
-
-//                    var pos = outerArc.centroid(d);
-//                    positions.forEach((val) => {
-//                      if (pos[1] < val + 5 && pos[1] > val - 5) {
-//                        pos[1] -= 14;
-//                      }
-//                    });
-//                    positions.push(pos[1]);
-//
-//                    var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-//                    pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
-//                    return "translate(" + innerArc.centroid(d) + ")";
                   })
                   .style("text-anchor", function (d) {
                     if (chartConfig.pieLabelOffset == "120") {
