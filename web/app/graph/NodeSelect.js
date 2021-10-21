@@ -44,6 +44,8 @@ bluewave.NodeSelect = function(parent, config) {
 
       //Nodes
         td = document.createElement("td");
+        // add this to css file instead
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
         // td.className = "Nodes"
         // this is placeholder styling
         // td.style = "max-width:5%"
@@ -52,6 +54,8 @@ bluewave.NodeSelect = function(parent, config) {
 
       //Properties
         td = document.createElement("td");
+        // add this to css file instead
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
         // td.className = "Properties"
         // this is placeholder styling
         // td.style = "width:10%"
@@ -61,6 +65,8 @@ bluewave.NodeSelect = function(parent, config) {
 
       //Buttons
         td = document.createElement("td");
+        // add this to css file instead
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
         // td.className = "Buttons"
         // this is placeholder styling
         // td.style = "width:10%"
@@ -70,6 +76,8 @@ bluewave.NodeSelect = function(parent, config) {
 
       //Selected Properties
         td = document.createElement("td");
+        // add this to css file instead
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
         // td.className = "selectedProperties"
         // this is placeholder styling
         // td.style = "width:10%"
@@ -110,8 +118,18 @@ bluewave.NodeSelect = function(parent, config) {
         var nodesDiv = parent.getElementsByTagName("td")[0];
         for (i in nodes){
           td = document.createElement("tr");
+          // td.style = "width:100%"
+          tdDiv = document.createElement("div");
+          // tdDiv.className = "asdasdadad";
+          // tdDiv.style = "overflow:hidden;white-space:nowrap";
+          // tdDiv.style = "width:100%; overflow:hidden;";
+
+          tdDiv.innerHTML = `<strong>${nodes[i]["name"]}</strong>`;
+
+          td.appendChild(tdDiv);
+          // td.style = "overflow: hidden; white-space: nowrap;";
           // td.innerText = `${nodes[i]["name"]}`;
-          td.innerHTML = `<strong>${nodes[i]["name"]}</strong>`;
+          // td.innerHTML = `<strong>${nodes[i]["name"]}</strong>`;
           // td.style = "font-weight: 'bold'";
           // td.style = "border"
           // td.onclick = function(){console.log(`clicked node ${nodes[i]} `)};
