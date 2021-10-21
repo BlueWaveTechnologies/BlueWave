@@ -91,7 +91,6 @@ bluewave.NodeSelect = function(parent, config) {
 
 
         /// theres more to add here
-        console.log("nodes passed in are ", nodes);
         var nodesDiv = parent.getElementsByTagName("td")[0];
         for (i in nodes){
           td = document.createElement("tr");
@@ -102,6 +101,7 @@ bluewave.NodeSelect = function(parent, config) {
           td.appendChild(tdDiv);
           td.onclick = function()
           {
+            resetSelectedProperty();
             renderOptions(this,nodes);
           };
 
@@ -243,6 +243,7 @@ bluewave.NodeSelect = function(parent, config) {
       currentSelected = td;
     }
 
+
   //**************************************************************************
   //** getSelectedProperty
   //**************************************************************************
@@ -252,6 +253,8 @@ bluewave.NodeSelect = function(parent, config) {
     // get the currently selected td
     return currentSelected;
   }
+
+
   //**************************************************************************
   //** resetSelectedProperty
   //**************************************************************************
@@ -277,6 +280,7 @@ bluewave.NodeSelect = function(parent, config) {
     currentSelectedDesired = td;
   }
 
+
   //**************************************************************************
   //** getSelectedPropertyDesired
   //**************************************************************************
@@ -286,6 +290,7 @@ bluewave.NodeSelect = function(parent, config) {
     // get the currently selected td
     return currentSelectedDesired;
   }
+
 
   //**************************************************************************
   //** Utilites
