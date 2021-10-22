@@ -31,6 +31,8 @@ bluewave.NodeSelect = function(parent, config) {
     var currentPropertySelected = undefined;
     var currentPropertySelectedDesired = undefined;
 
+  // declare public method for calling 
+  // selections made in NodeSelect window
     var selected = {
         node: function(){
           // get the currently selected node
@@ -307,11 +309,11 @@ bluewave.NodeSelect = function(parent, config) {
         tableDivs.nodes().innerHTML = "";
 
       // resets for 2nd row in table
-        currentSelected = undefined;
+        currentPropertySelected = undefined;
         tableDivs.properties().innerHTML = "";
 
       // resets for 4th row in table
-        currentSelectedDesired = undefined;
+        currentPropertySelectedDesired = undefined;
         tableDivs.propertiesDesired().innerHTML = "";
         
     };
