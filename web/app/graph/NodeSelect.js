@@ -29,7 +29,7 @@ bluewave.NodeSelect = function(parent, config) {
 
       //Create table with 5 columns
         var table = createTable();
-        table.style = "width:100%;table-layout:fixed;"
+        table.style = "width:100%;table-layout:fixed;";
         var tbody = table.firstChild;
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
@@ -39,7 +39,7 @@ bluewave.NodeSelect = function(parent, config) {
       //Nodes
         td = document.createElement("td");
         // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
 
         tr.appendChild(td);
 
@@ -47,7 +47,7 @@ bluewave.NodeSelect = function(parent, config) {
       //Properties
         td = document.createElement("td");
         // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
 
         tr.appendChild(td);
 
@@ -55,7 +55,7 @@ bluewave.NodeSelect = function(parent, config) {
       //Buttons
         td = document.createElement("td");
         // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
 
         tr.appendChild(td);
 
@@ -63,7 +63,7 @@ bluewave.NodeSelect = function(parent, config) {
       //Selected Properties
         td = document.createElement("td");
         // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"
+        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
         tr.appendChild(td);
 
 
@@ -106,7 +106,7 @@ bluewave.NodeSelect = function(parent, config) {
           nodesDiv.appendChild(td);
         };
         
-        var buttonsDiv = parent.getElementsByTagName("td")[2]
+        var buttonsDiv = parent.getElementsByTagName("td")[2];
 
         // add 4 buttons
         // button to add a property to desired properties
@@ -147,15 +147,15 @@ bluewave.NodeSelect = function(parent, config) {
 
     };
   //**************************************************************************
-  //** renderOptions
-  //**************************************************************************
+//** renderOptions
+//**************************************************************************
   /** code for rendering the options after the name is clicked
    */
     var renderOptions = function(td,nodes){
-      var nodeName = td.innerText;
-      var nodesDiv = parent.getElementsByTagName("td")[0];
-      for (i in nodes){
-        if (nodes[i]["name"] === nodeName ){
+        var nodeName = td.innerText;
+        var nodesDiv = parent.getElementsByTagName("td")[0];
+        for (i in nodes){
+            if (nodes[i]["name"] === nodeName ){
           console.log(nodes[i]["properties"]);
           var propertiesDiv = parent.getElementsByTagName("td")[1]
 
@@ -176,53 +176,51 @@ bluewave.NodeSelect = function(parent, config) {
 
           }
           break
-        }
+            };
 
-      }
-
-
+        };
     };
 
   //**************************************************************************
   //** addPropertyToDesired
   //**************************************************************************
   /** code for adding a td value to the selected table area
-   */
+  */
     var addPropertyToDesired = function(){
-      propertyToAdd = getSelectedProperty();
+        propertyToAdd = getSelectedProperty();
 
-      if (propertyToAdd !== undefined){
-        var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
+        if (propertyToAdd !== undefined){
+            var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
       
-      // if this property isn't already added then add it
-        for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
+          // if this property isn't already added then add it
+            for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
 
-          if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
-          // if this value does already exist, return early
-            return
-          };
+                if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
+                // if this value does already exist, return early
+                    return
+                };
+            };
+
+          // if this value doesn't exist then add it
+            td = document.createElement("tr");
+            td.innerHTML = propertyToAdd.innerHTML;
+            td.addEventListener("click",function(){
+            setSelectedPropertyDesired(this);
+            });
+            propertiesSelectedDiv.appendChild(td);
+
+
+
+          // remove property from "available properties" (2) row (to show that this option is already selected)
+            var propertiesDiv = parent.getElementsByTagName("td")[1];
+
+            for (let i = 0; i < (propertiesDiv.getElementsByTagName("tr")).length; i++) {
+
+                if (propertiesDiv.getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
+                    propertiesDiv.getElementsByTagName("tr")[i].remove();
+                };
+            };
         };
-
-      // if this value doesn't exist then add it
-        td = document.createElement("tr");
-        td.innerHTML = propertyToAdd.innerHTML;
-        td.addEventListener("click",function(){
-          setSelectedPropertyDesired(this);
-        });
-        propertiesSelectedDiv.appendChild(td);
-
-
-
-        // remove property from "available properties" (2) row (to show that this option is already selected)
-        var propertiesDiv = parent.getElementsByTagName("td")[1];
-
-        for (let i = 0; i < (propertiesDiv.getElementsByTagName("tr")).length; i++) {
-
-          if (propertiesDiv.getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
-            propertiesDiv.getElementsByTagName("tr")[i].remove();
-          };
-        };
-      };
     };
 
   
@@ -230,108 +228,107 @@ bluewave.NodeSelect = function(parent, config) {
   //** removePropertyFromDesired
   //**************************************************************************
   /** code for adding a td value to the selected table area
-   */
-   var removePropertyFromDesired = function(){
-    propertyToRemove = getSelectedPropertyDesired();
-    if (propertyToRemove !== undefined){
+  */
+    var removePropertyFromDesired = function(){
+        propertyToRemove = getSelectedPropertyDesired();
+        if (propertyToRemove !== undefined){
 
-      var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
+            var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
 
 
-    // remove the property where it matches our current selected property
-      for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
+          // remove the property where it matches our current selected property
+            for (let i = 0; i < (propertiesSelectedDiv.getElementsByTagName("tr")).length; i++) {
 
-        if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToRemove.innerText ){
+                if (propertiesSelectedDiv.getElementsByTagName("tr")[i].innerText === propertyToRemove.innerText ){
 
-          // delete this property from the "desired properties" section;
-          propertiesSelectedDiv.getElementsByTagName("tr")[i].remove()
+                // delete this property from the "desired properties" section;
+                propertiesSelectedDiv.getElementsByTagName("tr")[i].remove();
 
-         // add this property back to "available properties" , as an option
-          var propertiesDiv = parent.getElementsByTagName("td")[1];
+                // add this property back to "available properties" , as an option
+                var propertiesDiv = parent.getElementsByTagName("td")[1];
 
-          td = document.createElement("tr");
-          td.innerHTML = propertyToRemove.innerHTML;
-          td.addEventListener("click",function(){
-            setSelectedProperty(this);
-          });
-          propertiesDiv.appendChild(td);
-  
+                td = document.createElement("tr");
+                td.innerHTML = propertyToRemove.innerHTML;
+                td.addEventListener("click",function(){
+                    setSelectedProperty(this);
+                });
+                propertiesDiv.appendChild(td);
+        
+                };
+            };
         };
-      };
     };
-   };
 
 
   //**************************************************************************
   //** setSelectedProperty
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
-   */
+  */
     var setSelectedProperty = function(td){
       // set the td as selected
-      // console.log("currently selected property is ", td.innerText);
-      currentSelected = td;
-    }
+        // console.log("currently selected property is ", td.innerText);
+        currentSelected = td;
+    };
 
 
   //**************************************************************************
   //** getSelectedProperty
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
-   */
-   var getSelectedProperty = function(){
-    // get the currently selected td
-    return currentSelected;
-  }
+  */
+    var getSelectedProperty = function(){
+      // get the currently selected td
+        return currentSelected;
+    };
 
 
   //**************************************************************************
   //** resetSelectedProperty
   //**************************************************************************
   /** Use to reset the SelectedProperty when we move between different nodes
-   */
-  // consolidate this into the setSelectedProperty function later
-  var resetSelectedProperty = function(){
-    // resets for 2nd row in table
-    currentSelected = undefined;
-    parent.getElementsByTagName("td")[1].innerHTML = "";
+  */
+    // consolidate this into the setSelectedProperty function later
+    var resetSelectedProperty = function(){
+      // resets for 2nd row in table
+        currentSelected = undefined;
+        parent.getElementsByTagName("td")[1].innerHTML = "";
 
-    // resets for 4th row in table
-    currentSelectedDesired = undefined;
-    parent.getElementsByTagName("td")[3].innerHTML = "";
+      // resets for 4th row in table
+        currentSelectedDesired = undefined;
+        parent.getElementsByTagName("td")[3].innerHTML = "";
 
-
-  }
+    };
 
   
   //**************************************************************************
   //** setSelectedPropertyDesired
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
-   */
-   var setSelectedPropertyDesired = function(td){
-    // set the td as selected
-    // console.log("currently selected property desired is ", td.innerText);
-    currentSelectedDesired = td;
-  }
+  */
+    var setSelectedPropertyDesired = function(td){
+      // set the td as selected
+        // console.log("currently selected property desired is ", td.innerText);
+        currentSelectedDesired = td;
+    };
 
 
   //**************************************************************************
   //** getSelectedPropertyDesired
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
-   */
-  var getSelectedPropertyDesired = function(){
-    // get the currently selected td
-    return currentSelectedDesired;
-  }
+  */
+    var getSelectedPropertyDesired = function(){
+      // get the currently selected td
+        return currentSelectedDesired;
+    };
 
 
   //**************************************************************************
   //** Utilites
   //**************************************************************************
   /** Common functions found in Utils.js
-   */
+  */
     var createTable = javaxt.dhtml.utils.createTable;
 
 
