@@ -213,6 +213,17 @@ bluewave.NodeSelect = function(parent, config) {
         });
         propertiesSelectedDiv.appendChild(td);
 
+
+
+        // remove property from "available properties" (2) row (to show that this option is already selected)
+        var propertiesDiv = parent.getElementsByTagName("td")[1];
+
+        for (let i = 0; i < (propertiesDiv.getElementsByTagName("tr")).length; i++) {
+
+          if (propertiesDiv.getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
+            propertiesDiv.getElementsByTagName("tr")[i].remove();
+          };
+        };
       };
     };
 
