@@ -27,6 +27,14 @@ bluewave.NodeSelect = function(parent, config) {
         }
     };
 
+  // lists of the current selections and currently visible elements
+    var lists = {
+        desired: function (){
+          // get all of the properties in the desired row
+            return tableDivs.propertiesDesired().getElementsByTagName("tr");
+        }
+    }
+
   // set class-accessible variables
     var currentNodeSelected = undefined;
     var currentPropertySelected = undefined;
@@ -46,7 +54,7 @@ bluewave.NodeSelect = function(parent, config) {
         desired: function(){
           // get the currently selected property in desired row
             return currentPropertySelectedDesired;
-        }
+        },
     };
 
 
@@ -162,6 +170,9 @@ bluewave.NodeSelect = function(parent, config) {
         td = document.createElement("tr");
         var buttonUp = document.createElement("button");
         buttonUp.innerHTML = "^";
+        buttonUp.addEventListener("click", function(){
+            movePropertyHigherPriority();
+        });
         td.appendChild(buttonUp);
         tableDivs.buttons().appendChild(td);
 
@@ -327,7 +338,40 @@ bluewave.NodeSelect = function(parent, config) {
         currentPropertySelectedDesired = td;
     };
 
+  //**************************************************************************
+  //** movePropertyHigherPriority
+  //**************************************************************************
+  /** Move this property to a higher priority on the list... or just move it up on the list.
+  */
+    var movePropertyHigherPriority = function(){
+        if (selected.desired() !== undefined){
+            // console.log("move item higher on the list");
 
+          // get current location
+          // if theres more than one row in the column then proceed
+            if (lists.desired().length> 1){
+                // console.log("it was detected to be more than 1");
+
+            for (let i = 0; i < (lists.desired()).length; i++) {
+                  // if the current item matches the selected item
+                    if (lists.desired()[i].innerText === selected.desired().innerText){
+                        console.log(lists.desired()[i].innerText)
+                        // console.log("item matches");
+
+                    // if theres an item above this item then we move it up one
+                        if (lists.desired()[i-1] !== undefined){
+                            console.log(lists.desired()[i-1]);
+                          // move item up one.. switch positions with the item above it
+                            lists.desired()[i].innerHTML = lists.desired()[i-1].innerHTML;
+                        };
+                    };
+                }
+
+
+            }
+
+        };
+    };
 
   //**************************************************************************
   //** Utilites
