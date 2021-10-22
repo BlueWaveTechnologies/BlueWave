@@ -574,8 +574,14 @@ bluewave.charts.PieEditor = function(parent, config) {
 
             chartConfig.maximumSlices = settings.maximumSlices;
 
-            if (settings.labels==="true") settings.labels = true;
-            else if (settings.labels==="false") settings.labels = false;
+            if (settings.labels==="true") {
+                settings.labels = true;
+                form.enableField("labelOffset");
+            }
+            else if (settings.labels==="false") {
+                settings.labels = false;
+                form.disableField("labelOffset");
+            }
             chartConfig.pieLabels = settings.labels;
 
             chartConfig.pieLabelOffset = settings.labelOffset;
