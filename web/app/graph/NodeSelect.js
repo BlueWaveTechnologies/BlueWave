@@ -249,6 +249,16 @@ bluewave.NodeSelect = function(parent, config) {
           // delete this property from the "desired properties" section;
           propertiesSelectedDiv.getElementsByTagName("tr")[i].remove()
 
+         // add this property back to "available properties" , as an option
+          var propertiesDiv = parent.getElementsByTagName("td")[1];
+
+          td = document.createElement("tr");
+          td.innerHTML = propertyToAdd.innerHTML;
+          td.addEventListener("click",function(){
+            setSelectedPropertyDesired(this);
+          });
+          propertiesDiv.appendChild(td);
+  
         };
       };
     };
