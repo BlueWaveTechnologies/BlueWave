@@ -25,7 +25,8 @@ bluewave.NodeSelect = function(parent, config) {
         propertiesDesired: function(){
             return parent.getElementsByTagName("td")[3];
         }
-    }
+    };
+
   // set class-accessible variables
     var currentNodeSelected = undefined;
     var currentPropertySelected = undefined;
@@ -46,7 +47,7 @@ bluewave.NodeSelect = function(parent, config) {
           // get the currently selected property in desired row
             return currentPropertySelectedDesired;
         }
-    }
+    };
 
 
  
@@ -54,13 +55,11 @@ bluewave.NodeSelect = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-        console.log("variable declared above")
-        console.log(currentNodeSelected)
       //Parse config
         if (!config) config = {};
 
 
-      //Create table with 5 columns
+      //Create table with 4 columns
         var table = createTable();
         table.style = "width:100%;table-layout:fixed;";
         var tbody = table.firstChild;
@@ -113,6 +112,7 @@ bluewave.NodeSelect = function(parent, config) {
     this.clear = function(){
 
     };
+
   //**************************************************************************
   //** update
   //**************************************************************************
@@ -306,7 +306,6 @@ bluewave.NodeSelect = function(parent, config) {
         
       // resets for 1st row in table
         currentNodeSelected = undefined;
-        tableDivs.nodes().innerHTML = "";
 
       // resets for 2nd row in table
         currentPropertySelected = undefined;
@@ -315,7 +314,6 @@ bluewave.NodeSelect = function(parent, config) {
       // resets for 4th row in table
         currentPropertySelectedDesired = undefined;
         tableDivs.propertiesDesired().innerHTML = "";
-        
     };
 
   
