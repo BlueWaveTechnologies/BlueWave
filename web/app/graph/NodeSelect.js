@@ -27,6 +27,22 @@ bluewave.NodeSelect = function(parent, config) {
         }
     }
 
+    var selected = {
+        node: function(){
+          // get the currently selected node
+            return currentNodeSelected;
+        },
+        available: function(){
+          // get the currently selected property
+            return currentPropertySelected;
+        },
+        desired: function(){
+          // get the currently selected td
+            return currentPropertySelectedDesired;
+        }
+    }
+
+
  
   //**************************************************************************
   //** Constructor
@@ -158,28 +174,25 @@ bluewave.NodeSelect = function(parent, config) {
    */
     var renderOptions = function(td,nodes){
         var nodeName = td.innerText;
+        setSelectedNode(nodeName);
         for (i in nodes){
             if (nodes[i]["name"] === nodeName ){
 
-          // clear the properties div
-          tableDivs.properties().innerHTML = "";
+            // clear the properties div
+                tableDivs.properties().innerHTML = "";
+                for (p in nodes[i]["properties"]){
+                    td = document.createElement("tr");
+                    td.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
+                    
+                    // add a "selected" option - show which item was last clicked
+                    td.addEventListener("click", function(){
+                    setSelectedProperty(this);
+                    });
 
-          for (p in nodes[i]["properties"]){
-            td = document.createElement("tr");
-            td.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
-            
-            // add a "selected" option - show which item was last clicked
-            td.addEventListener("click", function(){
-              setSelectedProperty(this);
-            });
-
-
-            tableDivs.properties().appendChild(td);
-
-          }
-          break
+                    tableDivs.properties().appendChild(td);
+                }
+            break
             };
-
         };
     };
 
@@ -189,14 +202,14 @@ bluewave.NodeSelect = function(parent, config) {
   /** code for adding a td value to the selected table area
   */
     var addPropertyToDesired = function(){
-        propertyToAdd = getSelectedProperty();
+        
 
-        if (propertyToAdd !== undefined){
+        if (selected.available() !== undefined){
       
           // if this property isn't already added then add it
             for (let i = 0; i < (tableDivs.propertiesDesired().getElementsByTagName("tr")).length; i++) {
 
-                if (tableDivs.propertiesDesired().getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
+                if (tableDivs.propertiesDesired().getElementsByTagName("tr")[i].innerText === selected.available().innerText){
                 // if this value does already exist, return early
                     return
                 };
@@ -204,7 +217,7 @@ bluewave.NodeSelect = function(parent, config) {
 
           // if this value doesn't exist then add it
             td = document.createElement("tr");
-            td.innerHTML = propertyToAdd.innerHTML;
+            td.innerHTML = selected.available().innerHTML;
             td.addEventListener("click",function(){
             setSelectedPropertyDesired(this);
             });
@@ -216,7 +229,7 @@ bluewave.NodeSelect = function(parent, config) {
 
             for (let i = 0; i < (tableDivs.properties().getElementsByTagName("tr")).length; i++) {
 
-                if (tableDivs.properties().getElementsByTagName("tr")[i].innerText === propertyToAdd.innerText){
+                if (tableDivs.properties().getElementsByTagName("tr")[i].innerText === selected.available().innerText){
                     tableDivs.properties().getElementsByTagName("tr")[i].remove();
                 };
             };
@@ -230,21 +243,20 @@ bluewave.NodeSelect = function(parent, config) {
   /** code for adding a td value to the selected table area
   */
     var removePropertyFromDesired = function(){
-        propertyToRemove = getSelectedPropertyDesired();
-        if (propertyToRemove !== undefined){
+        if (selected.desired() !== undefined){
 
 
           // remove the property where it matches our current selected property
             for (let i = 0; i < (tableDivs.propertiesDesired().getElementsByTagName("tr")).length; i++) {
 
-                if (tableDivs.propertiesDesired().getElementsByTagName("tr")[i].innerText === propertyToRemove.innerText ){
+                if (tableDivs.propertiesDesired().getElementsByTagName("tr")[i].innerText === selected.desired().innerText ){
 
               // delete this property from the "desired properties" section;
                 tableDivs.propertiesDesired().getElementsByTagName("tr")[i].remove();
 
               // add this property back to "available properties" , as an option
                 td = document.createElement("tr");
-                td.innerHTML = propertyToRemove.innerHTML;
+                td.innerHTML = selected.desired().innerHTML;
                 td.addEventListener("click",function(){
                     setSelectedProperty(this);
                 });
@@ -263,19 +275,18 @@ bluewave.NodeSelect = function(parent, config) {
   */
     var setSelectedProperty = function(td){
       // set the td as selected
-        currentSelected = td;
+        currentPropertySelected = td;
     };
 
-
   //**************************************************************************
-  //** getSelectedProperty
+  //** setSelectedNode
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
   */
-    var getSelectedProperty = function(){
-      // get the currently selected td
-        return currentSelected;
-    };
+    var setSelectedNode = function(td){
+      // set the node td as selected
+        currentNodeSelected = td;
+  };
 
 
   //**************************************************************************
@@ -285,6 +296,11 @@ bluewave.NodeSelect = function(parent, config) {
   */
     // consolidate this into the setSelectedProperty function later
     var resetSelectedProperty = function(){
+        
+      // resets for 1st row in table
+        currentNodeSelected = undefined;
+        tableDivs.nodes().innerHTML = "";
+
       // resets for 2nd row in table
         currentSelected = undefined;
         tableDivs.properties().innerHTML = "";
@@ -303,19 +319,9 @@ bluewave.NodeSelect = function(parent, config) {
   */
     var setSelectedPropertyDesired = function(td){
       // set the td as selected
-        currentSelectedDesired = td;
+        currentPropertySelectedDesired = td;
     };
 
-
-  //**************************************************************************
-  //** getSelectedPropertyDesired
-  //**************************************************************************
-  /** code for rendering the options after the name property name is selected
-  */
-    var getSelectedPropertyDesired = function(){
-      // get the currently selected td
-        return currentSelectedDesired;
-    };
 
 
   //**************************************************************************
