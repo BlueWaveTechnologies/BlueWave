@@ -11,15 +11,13 @@ if(!bluewave) var bluewave={};
 bluewave.NodeSelect = function(parent, config) {
 
     var me = this;
-  //   var defaultConfig = {
-  //     margin: {
-  //         top: 15,
-  //         right: 5,
-  //         bottom: 65,
-  //         left: 82
-  //     }
-  // };
-
+  
+  
+  // var propertiesDiv = undefined;
+  // var propertiesSelectedDiv = undefined;
+  // var nodesDiv = undefined;
+  // var buttonsDiv = undefined;
+  
   //**************************************************************************
   //** Constructor
   //**************************************************************************
