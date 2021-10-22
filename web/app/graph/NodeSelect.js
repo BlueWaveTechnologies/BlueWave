@@ -26,6 +26,10 @@ bluewave.NodeSelect = function(parent, config) {
             return parent.getElementsByTagName("td")[3];
         }
     }
+  // set class-accessible variables
+    var currentNodeSelected = undefined;
+    var currentPropertySelected = undefined;
+    var currentPropertySelectedDesired = undefined;
 
     var selected = {
         node: function(){
@@ -37,7 +41,7 @@ bluewave.NodeSelect = function(parent, config) {
             return currentPropertySelected;
         },
         desired: function(){
-          // get the currently selected td
+          // get the currently selected property in desired row
             return currentPropertySelectedDesired;
         }
     }
@@ -48,7 +52,8 @@ bluewave.NodeSelect = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-
+        console.log("variable declared above")
+        console.log(currentNodeSelected)
       //Parse config
         if (!config) config = {};
 
@@ -165,11 +170,11 @@ bluewave.NodeSelect = function(parent, config) {
         td.appendChild(buttonDown);
         tableDivs.buttons().appendChild(td);
 
-
     };
+
   //**************************************************************************
-//** renderOptions
-//**************************************************************************
+  //** renderOptions
+  //**************************************************************************
   /** code for rendering the options after the name is clicked
    */
     var renderOptions = function(td,nodes){
@@ -178,13 +183,13 @@ bluewave.NodeSelect = function(parent, config) {
         for (i in nodes){
             if (nodes[i]["name"] === nodeName ){
 
-            // clear the properties div
+              // clear the properties div
                 tableDivs.properties().innerHTML = "";
                 for (p in nodes[i]["properties"]){
                     td = document.createElement("tr");
                     td.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
                     
-                    // add a "selected" option - show which item was last clicked
+                  // add a "selected" option - show which item was last clicked
                     td.addEventListener("click", function(){
                     setSelectedProperty(this);
                     });
