@@ -233,7 +233,8 @@ bluewave.NodeSelect = function(parent, config) {
    */
    var removePropertyFromDesired = function(){
     propertyToRemove = getSelectedPropertyDesired();
-
+    console.log("property to remove is")
+    console.log(propertyToRemove.innerText)
     if (propertyToRemove !== undefined){
 
       var propertiesSelectedDiv = parent.getElementsByTagName("td")[3];
@@ -251,10 +252,11 @@ bluewave.NodeSelect = function(parent, config) {
           var propertiesDiv = parent.getElementsByTagName("td")[1];
 
           td = document.createElement("tr");
-          td.innerHTML = propertyToAdd.innerHTML;
+          td.innerHTML = propertyToRemove.innerHTML;
           td.addEventListener("click",function(){
             setSelectedPropertyDesired(this);
           });
+          console.log(`adding this property to available.. ${propertyToRemove.innerText}`)
           propertiesDiv.appendChild(td);
   
         };
