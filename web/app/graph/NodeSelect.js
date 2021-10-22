@@ -35,7 +35,7 @@ bluewave.NodeSelect = function(parent, config) {
         }
     }
 
-  // set class-accessible variables
+  // set class-accessible 'selected' variables
     var currentNodeSelected = undefined;
     var currentPropertySelected = undefined;
     var currentPropertySelectedDesired = undefined;
@@ -221,7 +221,6 @@ bluewave.NodeSelect = function(parent, config) {
   */
     var addPropertyToDesired = function(){
         
-
         if (selected.available() !== undefined){
       
           // if this property isn't already added then add it
@@ -345,12 +344,10 @@ bluewave.NodeSelect = function(parent, config) {
   */
     var movePropertyHigherPriority = function(){
         if (selected.desired() !== undefined){
-            // console.log("move item higher on the list");
 
           // get current location
           // if theres more than one row in the column then proceed
-            if (lists.desired().length> 1){
-                // console.log("it was detected to be more than 1");
+            if (lists.desired().length > 1){
 
             for (let i = 0; i < (lists.desired()).length; i++) {
                   // if the current item matches the selected item
