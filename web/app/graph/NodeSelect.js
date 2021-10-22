@@ -252,7 +252,7 @@ bluewave.NodeSelect = function(parent, config) {
           td = document.createElement("tr");
           td.innerHTML = propertyToRemove.innerHTML;
           td.addEventListener("click",function(){
-            setSelectedPropertyDesired(this);
+            setSelectedProperty(this);
           });
           propertiesDiv.appendChild(td);
   
