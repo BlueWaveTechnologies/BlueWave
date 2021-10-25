@@ -312,6 +312,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     "d",d3.line()
                     .x(getX)
                     .y(getY)
+                    .curve(d3.curveMonotoneX)
                 );
 
           //Draw thick line for selection purposes
