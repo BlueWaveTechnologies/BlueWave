@@ -11,27 +11,14 @@ if(!bluewave) var bluewave={};
 bluewave.NodeSelect = function(parent, config) {
 
     var me = this;
- 
-    var tableDivs = {
-        nodes: function(){
-            return parent.getElementsByTagName("td")[0];
-        },
-        properties: function(){
-            return parent.getElementsByTagName("td")[1];
-        },
-        buttons: function(){
-            return parent.getElementsByTagName("td")[2];
-        },
-        propertiesDesired: function(){
-            return parent.getElementsByTagName("td")[3];
-        }
-    };
+    var nodeList, propertyList, selectionList;
+
 
   // lists of the current selections and currently visible elements
     var lists = {
         desired: function (){
           // get all of the properties in the desired row
-            return tableDivs.propertiesDesired().getElementsByTagName("tr");
+            return selectionList;
         }
     }
 
@@ -40,7 +27,7 @@ bluewave.NodeSelect = function(parent, config) {
     var currentPropertySelected = undefined;
     var currentPropertySelectedDesired = undefined;
 
-  // declare public method for calling 
+  // declare public method for calling
   // selections made in NodeSelect window
     var selected = {
         node: function(){
@@ -58,55 +45,73 @@ bluewave.NodeSelect = function(parent, config) {
     };
 
 
- 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
+
       //Parse config
         if (!config) config = {};
 
 
       //Create table with 4 columns
         var table = createTable();
-        table.style = "width:100%;table-layout:fixed;";
         var tbody = table.firstChild;
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
-        var tr, td;
+        var tr, td, div;
 
 
       //Nodes
         td = document.createElement("td");
-        // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
-
+        td.style.width = "33%";
+        td.style.height = "100%";
         tr.appendChild(td);
+        div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.overflow = "hidden";
+        div.style.position = "relative";
+        td.appendChild(div);
+        nodeList = document.createElement("div");
+        nodeList.style.position = "absolute";
+        div.appendChild(nodeList);
+
 
 
       //Properties
         td = document.createElement("td");
-        // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
-
+        td.style.width = "33%";
         tr.appendChild(td);
+        div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.overflow = "hidden";
+        div.style.position = "relative";
+        td.appendChild(div);
+        propertyList = document.createElement("div");
+        propertyList.style.position = "absolute";
+        div.appendChild(propertyList);
+
 
 
       //Buttons
         td = document.createElement("td");
-        // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
-
+        td.style.width = "1%";
         tr.appendChild(td);
+        createButtons(td);
 
 
       //Selected Properties
         td = document.createElement("td");
-        // add this to css file instead
-        td.style = "overflow: hidden;text-overflow: ellipsis;white-space: nowrap;";
-        
+        td.style.width = "33%";
         tr.appendChild(td);
-
+        div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.overflow = "hidden";
+        div.style.position = "relative";
+        td.appendChild(div);
+        selectionList = document.createElement("div");
+        selectionList.style.position = "absolute";
+        div.appendChild(selectionList);
 
 
       //Append table to parent
@@ -114,76 +119,71 @@ bluewave.NodeSelect = function(parent, config) {
         me.el = table;
     };
 
+
   //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
-
+        nodeList.innerHTML = "";
+        propertyList.innerHTML = "";
+        selectionList.innerHTML = "";
     };
+
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    // this.update = function(config,nodes){
     this.update = function(nodes){
 
         me.clear();
 
-        for (i in nodes){
-          td = document.createElement("tr");
-          tdDiv = document.createElement("div");
-
-          tdDiv.innerHTML = `<strong>${nodes[i]["name"]}</strong>`;
-
-          td.appendChild(tdDiv);
-          td.onclick = function()
-          {
-            resetSelectedProperty();
-            renderOptions(this,nodes);
-          };
-
-          tableDivs.nodes().appendChild(td);
+        for (var i in nodes){
+            var div = document.createElement("div");
+            div.innerHTML = nodes[i]["name"];
+            div.onclick = function(){
+                resetSelectedProperty();
+                renderOptions(this,nodes);
+            };
+            nodeList.appendChild(div);
         };
-        
+    };
+
+
+  //**************************************************************************
+  //** createButtons
+  //**************************************************************************
+    var createButtons = function(parent){
         // add 4 buttons
         // button to add a property to desired properties
-        td = document.createElement("tr");
         var buttonAdd = document.createElement("button");
         buttonAdd.innerHTML = ">";
         buttonAdd.addEventListener("click", function(){
           addPropertyToDesired();
         });
-        td.appendChild(buttonAdd);
-        tableDivs.buttons().appendChild(td);
+        parent.appendChild(buttonAdd);
 
         // button to remove a property from desired properties
-        td = document.createElement("tr");
         var buttonRemove = document.createElement("button");
         buttonRemove.innerHTML = "<";
         buttonRemove.addEventListener("click", function(){
           removePropertyFromDesired();
         });
-        td.appendChild(buttonRemove);
-        tableDivs.buttons().appendChild(td);
+        parent.appendChild(buttonRemove);
 
         // button to move a property up (to a higher priority) in desired properties
-        td = document.createElement("tr");
         var buttonUp = document.createElement("button");
         buttonUp.innerHTML = "^";
         buttonUp.addEventListener("click", function(){
             movePropertyHigherPriority();
         });
-        td.appendChild(buttonUp);
-        tableDivs.buttons().appendChild(td);
+        parent.appendChild(buttonUp);
 
         // button to move a property down (to a lower priority) in desired properties
-        td = document.createElement("tr");
         var buttonDown = document.createElement("button");
         buttonDown.innerHTML = "V";
-        td.appendChild(buttonDown);
-        tableDivs.buttons().appendChild(td);
-
+        parent.appendChild(buttonDown);
     };
+
 
   //**************************************************************************
   //** renderOptions
@@ -193,21 +193,21 @@ bluewave.NodeSelect = function(parent, config) {
     var renderOptions = function(td,nodes){
         var nodeName = td.innerText;
         setSelectedNode(nodeName);
-        for (i in nodes){
+        for (var i in nodes){
             if (nodes[i]["name"] === nodeName ){
 
               // clear the properties div
-                tableDivs.properties().innerHTML = "";
-                for (p in nodes[i]["properties"]){
+                propertyList.innerHTML = "";
+                for (var p in nodes[i]["properties"]){
                     td = document.createElement("tr");
                     td.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
-                    
+
                   // add a "selected" option - show which item was last clicked
                     td.addEventListener("click", function(){
                     setSelectedProperty(this);
                     });
 
-                    tableDivs.properties().appendChild(td);
+                    propertyList.appendChild(td);
                 }
             break
             };
@@ -220,15 +220,15 @@ bluewave.NodeSelect = function(parent, config) {
   /** code for adding a td value to the selected table area
   */
     var addPropertyToDesired = function(){
-        
-        if (selected.available() !== undefined){
-      
-          // if this property isn't already added then add it
-            for (let i = 0; i < (tableDivs.propertiesDesired().getElementsByTagName("tr")).length; i++) {
 
-                if (tableDivs.propertiesDesired().getElementsByTagName("tr")[i].innerText === selected.available().innerText){
+        if (selected.available() !== undefined){
+
+          // if this property isn't already added then add it
+            for (let i = 0; i < selectionList.childNodes.length; i++) {
+                var el = selectionList.childNodes[i];
+                if (el.innerText === selected.available().innerText){
                 // if this value does already exist, return early
-                    return
+                    return;
                 };
             };
 
@@ -238,22 +238,22 @@ bluewave.NodeSelect = function(parent, config) {
             td.addEventListener("click",function(){
             setSelectedPropertyDesired(this);
             });
-            tableDivs.propertiesDesired().appendChild(td);
+            selectionList.appendChild(td);
 
 
 
           // remove property from "available properties" (2) row (to show that this option is already selected)
 
-            for (let i = 0; i < (tableDivs.properties().getElementsByTagName("tr")).length; i++) {
-
-                if (tableDivs.properties().getElementsByTagName("tr")[i].innerText === selected.available().innerText){
-                    tableDivs.properties().getElementsByTagName("tr")[i].remove();
+            for (let i = 0; i<propertyList.childNodes.length; i++) {
+                var el = propertyList.childNodes[i];
+                if (el.innerText === selected.available().innerText){
+                    el.remove();
                 };
             };
         };
     };
 
-  
+
   //**************************************************************************
   //** removePropertyFromDesired
   //**************************************************************************
@@ -264,12 +264,12 @@ bluewave.NodeSelect = function(parent, config) {
 
 
           // remove the property where it matches our current selected property
-            for (let i = 0; i < (tableDivs.propertiesDesired().getElementsByTagName("tr")).length; i++) {
-
-                if (tableDivs.propertiesDesired().getElementsByTagName("tr")[i].innerText === selected.desired().innerText ){
+            for (let i = 0; i <selectionList.childNodes.length; i++) {
+                var el = selectionList.childNodes[i];
+                if (el.innerText === selected.desired().innerText ){
 
               // delete this property from the "desired properties" section;
-                tableDivs.propertiesDesired().getElementsByTagName("tr")[i].remove();
+                selectionList.getElementsByTagName("tr")[i].remove();
 
               // add this property back to "available properties" , as an option
                 td = document.createElement("tr");
@@ -277,8 +277,8 @@ bluewave.NodeSelect = function(parent, config) {
                 td.addEventListener("click",function(){
                     setSelectedProperty(this);
                 });
-                tableDivs.properties().appendChild(td);
-        
+                propertyList.appendChild(td);
+
                 };
             };
         };
@@ -313,20 +313,20 @@ bluewave.NodeSelect = function(parent, config) {
   */
     // consolidate this into the setSelectedProperty function later
     var resetSelectedProperty = function(){
-        
+
       // resets for 1st row in table
         currentNodeSelected = undefined;
 
       // resets for 2nd row in table
         currentPropertySelected = undefined;
-        tableDivs.properties().innerHTML = "";
+        propertyList.innerHTML = "";
 
       // resets for 4th row in table
         currentPropertySelectedDesired = undefined;
-        tableDivs.propertiesDesired().innerHTML = "";
+        selectionList.innerHTML = "";
     };
 
-  
+
   //**************************************************************************
   //** setSelectedPropertyDesired
   //**************************************************************************
