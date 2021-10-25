@@ -145,7 +145,8 @@ bluewave.charts.BarChart = function(parent, config) {
             .rangeRound([0, width])
             .paddingInner(0.1);
 
-            x0.domain(groupData.map(function(d) { return d["key"]; }));
+            var subgroups = groupData.map(function(d) { return d["key"]; });
+            x0.domain(subgroups);
             console.log("group", groupData)
         }
 // console.log(dataSets)
@@ -201,18 +202,18 @@ bluewave.charts.BarChart = function(parent, config) {
 // sumData = (d => keys.map(key => ({key, value: d[key]})))
 // console.log(sumData)
 
-            var colors = bluewave.utils.getColorPalette(true);
-            var getBarColor = function(i){
-                var barColor = chartConfig["barColor" + i];
-                if (!barColor) barColor = colors[i%colors.length];
-                return barColor;
-            };
+        var colors = bluewave.utils.getColorPalette(true);
+        var getBarColor = function(i){
+            var barColor = chartConfig["barColor" + i];
+            if (!barColor) barColor = colors[i%colors.length];
+            return barColor;
+        };
 
 
 
-            //Set intitial value for layout to vertical
-            if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
-            var layout = chartConfig.barLayout;
+        //Set intitial value for layout to vertical
+        if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
+        var layout = chartConfig.barLayout;
 console.log("max",maxData)
             //Flip axis if layout is horizontal
 
@@ -240,6 +241,7 @@ console.log("datasets",dataSets)
 console.log("sumdata", sumData)
 
             let keyType = typeOfAxisValue(sumData[0].key);
+            keyType = "string";
 
             var getX = function (d) {
 
@@ -249,6 +251,8 @@ console.log("sumdata", sumData)
                 } else {
                     return x(d.key);
                 }
+
+                return x(d.key);
             };
 
             var getY = function(d){
@@ -257,15 +261,22 @@ console.log("sumdata", sumData)
             };
 
             if (y.bandwidth || x.bandwidth) {
+                if (chartConfig.barLayout === "vertical"){
 
-                if(chartConfig.barLayout === "vertical"){
+                    var getWidth = function(d){
+                        return x.bandwidth ? x.bandwidth()/dataSets.length : getX(d);
+                    };
+
+
                     plotArea
                         .selectAll("mybar")
                         .data(sumData)
                         .enter()
                         .append("rect")
-                        .attr("x", function (d) {
-                            return x.bandwidth ? getX(d) : 0;
+                        .attr("x", function(d) {
+                            var w = getWidth(d);
+                            var left = x.bandwidth ? getX(d) : 0;
+                            return left+(w*i);
                         })
                         .attr("y", getY)
                         .attr("height", function (d) {
@@ -277,12 +288,11 @@ console.log("sumdata", sumData)
                                 : height - getY(d);
                         })
                         .attr("width", function (d) {
-                            return x.bandwidth ? x.bandwidth() : getX(d);
+                            return getWidth(d);
                         })
 
                         .attr("fill", getBarColor(i));
                 }
-                //Horizontal layout
                 else if(chartConfig.barLayout === "horizontal"){
                     plotArea
                         .selectAll("mybar")
@@ -313,10 +323,8 @@ console.log("sumdata", sumData)
                         .attr("fill", getBarColor(i));
                 }
             }
-
             //No bandwith
             else {
-
                 // if(timeAxis === "x")
                 if (chartConfig.barLayout === "vertical") {
 
@@ -584,9 +592,11 @@ console.log("sumdata", sumData)
         let axisRange;
         let axisRangePadded;
         if(axisName === "x"){
+            type = "string";
             axisRange = [0,axisWidth];
             axisRangePadded = [10,axisWidth-10];
-        }else{
+        }
+        else{
             axisRange = [axisHeight,0];
             axisRangePadded = [axisHeight-10,10];
         }
