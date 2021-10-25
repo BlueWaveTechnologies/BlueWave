@@ -233,13 +233,7 @@ bluewave.NodeSelect = function(parent, config) {
 
 
           // remove property from "available properties" (2) row (to show that this option is already selected)
-
-            for (let i = 0; i<propertyList.childNodes.length; i++) {
-                var el = propertyList.childNodes[i];
-                if (el.innerText === selected.available().innerText){
-                    el.remove();
-                };
-            };
+            updateAvailableProperties();
         };
     };
 
@@ -332,16 +326,6 @@ bluewave.NodeSelect = function(parent, config) {
                 selectionList.getElementsByTagName("div")[i].remove();
 
                 updateAvailableProperties();
-            //   // add this property back to "available properties" , as an option
-            //     div = document.createElement("div");
-            //   // remove the node selection reference from the selected element before moving it back to "available properties"
-            //   // ie. "hospital_points - code" will be reduced to "code"
-            //     div.innerHTML = selected.desired().innerText.substring(selected.desired().innerText.indexOf("- ") + 1);
-            //     div.style.fontWeight = "bold";
-            //     div.addEventListener("click",function(){
-            //         setSelectedProperty(this);
-            //     });
-            //     propertyList.appendChild(div);
 
                 };
             };
