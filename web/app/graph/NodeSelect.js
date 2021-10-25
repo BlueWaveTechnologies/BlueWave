@@ -164,7 +164,7 @@ bluewave.NodeSelect = function(parent, config) {
         // add 4 buttons
         // button to add a property to desired properties
         var buttonAdd = document.createElement("button");
-        buttonAdd.innerHTML = ">";
+        buttonAdd.innerHTML = '<i class="fas fa-chevron-right"></i>';
         buttonAdd.addEventListener("click", function(){
           addPropertyToDesired();
         });
@@ -172,7 +172,7 @@ bluewave.NodeSelect = function(parent, config) {
 
         // button to remove a property from desired properties
         var buttonRemove = document.createElement("button");
-        buttonRemove.innerHTML = "<";
+        buttonRemove.innerHTML = '<i class="fas fa-chevron-left"></i>';
         buttonRemove.addEventListener("click", function(){
           removePropertyFromDesired();
         });
@@ -180,7 +180,7 @@ bluewave.NodeSelect = function(parent, config) {
 
         // button to move a property up (to a higher priority) in desired properties
         var buttonUp = document.createElement("button");
-        buttonUp.innerHTML = "^";
+        buttonUp.innerHTML = '<i class="fas fa-chevron-up"></i>';
         buttonUp.addEventListener("click", function(){
             movePropertyHigherPriority();
         });
@@ -188,7 +188,7 @@ bluewave.NodeSelect = function(parent, config) {
 
         // button to move a property down (to a lower priority) in desired properties
         var buttonDown = document.createElement("button");
-        buttonDown.innerHTML = "V";
+        buttonDown.innerHTML = '<i class="fas fa-chevron-down"></i>';
         parent.appendChild(buttonDown);
     };
 
