@@ -215,7 +215,7 @@ bluewave.NodeSelect = function(parent, config) {
           // if this property isn't already added then add it
             for (let i = 0; i < selectionList.childNodes.length; i++) {
                 var el = selectionList.childNodes[i];
-                if (el.innerText === selected.available().innerText){
+                if (el.innerText === selected.node() + " - " + selected.available().innerText){
                 // if this value does already exist, return early
                     return;
                 };
