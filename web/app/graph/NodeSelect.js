@@ -223,18 +223,19 @@ bluewave.NodeSelect = function(parent, config) {
                 propertyList.innerHTML = "";
 
                 if (selectionList.getElementsByTagName('div').length > 0 ){
+                    
                   // get the list of currently selected properties 
                   // remove the node selection reference from the selected element before moving it back to "available properties"
                   // ie. "hospital_points - code" will be reduced to "code"
                     var hiddenProperties = [];
-                    for (let i = 0; i <selectionList.getElementsByTagName('div').length; i++) {
+                    for (let s = 0; s <selectionList.getElementsByTagName('div').length; s++) {
 
-                        var node = selectionList.getElementsByTagName('div')[i].innerText.split(' - ')[0];
+                        var node = selectionList.getElementsByTagName('div')[s].innerText.split(' - ')[0];
 
                       // if the node name matches our currently selected node, add this item to the list of properties to hide (because they are already enabled)
                         if (node === config.nodes[i]["name"]){
-                            var item = selectionList.getElementsByTagName('div')[i].innerText.split(' - ')[1];
-                              hiddenProperties.push(item);
+                            var item = selectionList.getElementsByTagName('div')[s].innerText.split(' - ')[1];
+                            hiddenProperties.push(item);
                         }
                     };
                 };
