@@ -258,7 +258,6 @@ bluewave.NodeSelect = function(parent, config) {
         for (var i in config.nodes){
 
             if (config.nodes[i]["name"] === selected.node()){
-                console.log("got here")
 
               // clear the properties div
                 propertyList.innerHTML = "";
@@ -275,9 +274,7 @@ bluewave.NodeSelect = function(parent, config) {
                       // if the node name matches our currently selected node, add this item to the list of properties to hide (because they are already enabled)
                         if (node === config.nodes[i]["name"]){
                             var item = selectionList.getElementsByTagName('div')[i].innerText.split(' - ')[1];
-                            console.log(item);
                               hiddenProperties.push(item);
-                              console.log(hiddenProperties);
                         }
                     };
                 };
@@ -288,15 +285,12 @@ bluewave.NodeSelect = function(parent, config) {
                     
                   // if hiddenProperties has items then check the current property against the hidden properties list before displaying the property
                     if (hiddenProperties !== undefined){
-                        console.log("hiddenProperties length detected more than 0");
                         if (hiddenProperties.includes(property)){
                             // do nothing - go to next property 
-                            console.log("got here123123123")
                             continue;
                         };
                     };
 
-                    console.log("hiddenProperties didn't contain our property, showing");
                 
                     div = document.createElement("div");
                     div.innerHTML = `<strong>${String(property)}</strong>`;
