@@ -194,18 +194,41 @@ bluewave.ChartEditor = function(parent, config) {
         let dataOptions2 = data2?Object.keys(data2[0]):null;
         switch(chartConfig.chartType){
             case 'barChart':
-
+                plotInputs.group.add("", "");
                 dataOptions.forEach((val)=>{
                     plotInputs.xAxis.add(val,val);
                     plotInputs.yAxis.add(val,val);
+                    plotInputs.group.add(val, val);
                 });
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
-                if(dataOptions2){
-                    dataOptions2.forEach(val=>{
-                        plotInputs.xAxis2.add(val,val);
-                        plotInputs.yAxis2.add(val,val);
+                if (chartConfig.group){
+                    plotInputs.group.setValue(chartConfig.group, false);
+                }
+
+                //Add dropdown values for each data set
+                for (let i=1; i<inputData.length; i++){
+                    let xAxisN = `xAxis${i+1}`;
+                    let yAxisN = `yAxis${i+1}`;
+                    let groupN = `group${i+1}`;
+                    // let labelN = `label${i+1}`;
+
+                    plotInputs[groupN].add("", "");
+
+                    let multiLineDataOptions = Object.keys(inputData[i][0]);
+                    multiLineDataOptions.forEach((val)=>{
+                        plotInputs[xAxisN].add(val, val);
+                        plotInputs[yAxisN].add(val, val);
+                        plotInputs[groupN].add(val, val);
                     });
+
+                    plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
+                    plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+
+                    if (chartConfig[groupN]){
+                        plotInputs[groupN].setValue(chartConfig[groupN], false);
+                    }
+                    
                 }
 
                 createBarPreview();
@@ -299,7 +322,10 @@ bluewave.ChartEditor = function(parent, config) {
                     createDropdown("xAxis", plotInputs),
 
                     createLabel("Y-Axis"),
-                    createDropdown("yAxis", plotInputs)
+                    createDropdown("yAxis", plotInputs),
+
+                    createLabel("Separate By"),
+                    createDropdown("group", plotInputs)
                 ]
             }
         );
@@ -313,7 +339,10 @@ bluewave.ChartEditor = function(parent, config) {
                         createDropdown(`xAxis${i+1}`, plotInputs),
 
                         createLabel("Y-Axis"),
-                        createDropdown(`yAxis${i+1}`, plotInputs)
+                        createDropdown(`yAxis${i+1}`, plotInputs),
+
+                        createLabel("Separate By"),
+                        createDropdown(`group${i+1}`, plotInputs),
                     ]
                 }
             );
@@ -518,9 +547,9 @@ bluewave.ChartEditor = function(parent, config) {
         };
 
         barChart = new bluewave.charts.BarChart(svg, {});
-        barChart.onDblClick = function(bar, bars){
-            chartConfig.barColor = d3.select(bar).attr("fill");
-            editStyle("bar");
+        barChart.onClick = function(bar, barID){
+            // chartConfig.barColor = d3.select(bar).attr("fill");
+            editStyle("bar", barID);
 
         };
     };
@@ -1110,7 +1139,7 @@ bluewave.ChartEditor = function(parent, config) {
                         group: "Fill Style",
                         items: [
                             {
-                                name: "fillColor",
+                                name: "barColor",
                                 label: "Color",
                                 type: new javaxt.dhtml.ComboBox(
                                     document.createElement("div"),
@@ -1130,21 +1159,37 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
 
-            createColorOptions("fillColor", form);
+            createColorOptions("barColor", form);
             createSlider("fillOpacity", form, "%");
 
 
-            form.findField("fillColor").setValue(chartConfig.barColor);
+            // form.findField("barColor").setValue(chartConfig.barColor);
             form.findField("fillOpacity").setValue(0);
 
+            if(datasetID !== null && datasetID !== undefined){
+
+                let n = `${datasetID}`;
+
+                if( !chartConfig["barColor" + n] ) chartConfig["barColor" + n] = "#6699CC";
+
+                form.findField("barColor").setValue(chartConfig["barColor" + n]);
+
+                form.onChange = function(){
+                    let settings = form.getData();
+                    chartConfig["barColor" + n] = settings.barColor;
+                    
+                    createBarPreview();
+                };
+
+            }
           //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
+            // form.onChange = function(){
+            //     var settings = form.getData();
 
-                chartConfig.barColor = settings.fillColor;
+            //     chartConfig.barColor = settings.fillColor;
 
-                createBarPreview();
-            };
+            //     createBarPreview();
+            // };
         }
 
 
@@ -1153,6 +1198,21 @@ bluewave.ChartEditor = function(parent, config) {
         form.resize();
 
 
+
+      //Form resize doesn't seem to be working correctly for the linechart.
+      //It might have something to do with the custom sliders. Probably a
+      //timing issue. The following is a workaround.
+        if (chartType==="line"){
+
+            setTimeout(function(){
+                var arr = body.getElementsByClassName("form-groupbox");
+                for (var i=0; i<arr.length; i++){
+                    var el = arr[i];
+                    var h = parseFloat(el.style.height);
+                    el.style.height = h+30 + "px";
+                }
+            }, 100);
+        }
 
       //Workaround for bar chart legend until editor is split up
         // if(chartType !== "barChart"){
