@@ -207,15 +207,15 @@ bluewave.NodeSelect = function(parent, config) {
               // clear the properties div
                 propertyList.innerHTML = "";
                 for (var p in nodes[i]["properties"]){
-                    td = document.createElement("tr");
-                    td.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
+                    div = document.createElement("div");
+                    div.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
 
                   // add a "selected" option - show which item was last clicked
-                    td.addEventListener("click", function(){
+                    div.addEventListener("click", function(){
                     setSelectedProperty(this);
                     });
 
-                    propertyList.appendChild(td);
+                    propertyList.appendChild(div);
                 }
             break
             };
@@ -241,12 +241,12 @@ bluewave.NodeSelect = function(parent, config) {
             };
 
           // if this value doesn't exist then add it
-            td = document.createElement("tr");
-            td.innerHTML = selected.available().innerHTML;
-            td.addEventListener("click",function(){
+            div = document.createElement("div");
+            div.innerHTML = selected.available().innerHTML;
+            div.addEventListener("click",function(){
             setSelectedPropertyDesired(this);
             });
-            selectionList.appendChild(td);
+            selectionList.appendChild(div);
 
 
 
@@ -277,15 +277,15 @@ bluewave.NodeSelect = function(parent, config) {
                 if (el.innerText === selected.desired().innerText ){
 
               // delete this property from the "desired properties" section;
-                selectionList.getElementsByTagName("tr")[i].remove();
+                selectionList.getElementsByTagName("div")[i].remove();
 
               // add this property back to "available properties" , as an option
-                td = document.createElement("tr");
-                td.innerHTML = selected.desired().innerHTML;
-                td.addEventListener("click",function(){
+                div = document.createElement("div");
+                div.innerHTML = selected.desired().innerHTML;
+                div.addEventListener("click",function(){
                     setSelectedProperty(this);
                 });
-                propertyList.appendChild(td);
+                propertyList.appendChild(div);
 
                 };
             };
@@ -298,9 +298,9 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
   */
-    var setSelectedProperty = function(td){
+    var setSelectedProperty = function(propertyDiv){
       // set the td as selected
-        currentPropertySelected = td;
+        currentPropertySelected = propertyDiv;
     };
 
   //**************************************************************************
@@ -308,9 +308,9 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
   */
-    var setSelectedNode = function(td){
+    var setSelectedNode = function(nodeDiv){
       // set the node td as selected
-        currentNodeSelected = td;
+        currentNodeSelected = nodeDiv;
   };
 
 
@@ -340,9 +340,9 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   /** code for rendering the options after the name property name is selected
   */
-    var setSelectedPropertyDesired = function(td){
+    var setSelectedPropertyDesired = function(propertyDesiredDiv){
       // set the td as selected
-        currentPropertySelectedDesired = td;
+        currentPropertySelectedDesired = propertyDesiredDiv;
     };
 
   //**************************************************************************
