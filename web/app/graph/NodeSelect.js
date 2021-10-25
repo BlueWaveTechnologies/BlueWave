@@ -242,7 +242,8 @@ bluewave.NodeSelect = function(parent, config) {
 
           // if this value doesn't exist then add it
             div = document.createElement("div");
-            div.innerHTML = selected.available().innerHTML;
+            div.innerText = selected.node() + " - " + selected.available().innerText;
+            div.style.fontWeight = "bold";
             div.addEventListener("click",function(){
             setSelectedPropertyDesired(this);
             });
@@ -279,9 +280,13 @@ bluewave.NodeSelect = function(parent, config) {
               // delete this property from the "desired properties" section;
                 selectionList.getElementsByTagName("div")[i].remove();
 
+    
               // add this property back to "available properties" , as an option
                 div = document.createElement("div");
-                div.innerHTML = selected.desired().innerHTML;
+              // remove the node selection reference from the selected element before moving it back to "available properties"
+              // ie. "hospital_points - code" will be reduced to "code"
+                div.innerHTML = selected.desired().innerText.substring(selected.desired().innerText.indexOf("- ") + 1);
+                div.style.fontWeight = "bold";
                 div.addEventListener("click",function(){
                     setSelectedProperty(this);
                 });
