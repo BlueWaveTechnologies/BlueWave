@@ -66,8 +66,10 @@ bluewave.NodeSelect = function(parent, config) {
         td = document.createElement("td");
         td.style.width = "33%";
         td.style.height = "100%";
+        td.style.padding = "5px";
         tr.appendChild(td);
         div = document.createElement("div");
+        div.className = "node-select-list";
         div.style.height = "100%";
         div.style.overflow = "hidden";
         div.style.position = "relative";
@@ -81,8 +83,11 @@ bluewave.NodeSelect = function(parent, config) {
       //Properties
         td = document.createElement("td");
         td.style.width = "33%";
+        td.style.height = "100%";
+        td.style.padding = "5px";
         tr.appendChild(td);
         div = document.createElement("div");
+        div.className = "node-select-list";
         div.style.height = "100%";
         div.style.overflow = "hidden";
         div.style.position = "relative";
@@ -103,8 +108,11 @@ bluewave.NodeSelect = function(parent, config) {
       //Selected Properties
         td = document.createElement("td");
         td.style.width = "33%";
+        td.style.height = "100%";
+        td.style.padding = "5px";
         tr.appendChild(td);
         div = document.createElement("div");
+        div.className = "node-select-list";
         div.style.height = "100%";
         div.style.overflow = "hidden";
         div.style.position = "relative";

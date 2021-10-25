@@ -1040,6 +1040,22 @@ li.tree-node:hover {
     padding: 0 2px;
 }
 
+
+
+.node-select-list {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor:pointer;
+}
+
+.node-select-list > div> div {
+    padding: 0px 7px;
+}
+
+.node-select-list > div > div:hover {
+  background-color: yellow;
+}
+
 /**************************************************************************/
 /** Admin Panel
 /**************************************************************************/
