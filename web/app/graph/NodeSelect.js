@@ -53,8 +53,6 @@ bluewave.NodeSelect = function(parent, config) {
       //Parse config
         if (!config) config = {};
 
-        console.log(config)
-
 
       //Create table with 4 columns
         var table = createTable();
