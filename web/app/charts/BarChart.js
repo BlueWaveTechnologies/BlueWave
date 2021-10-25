@@ -344,8 +344,8 @@ console.log("sumdata", sumData)
 //j is another weird d3 callback param
                             // return getX(d) + barWidth*j;
                             // return getX(d) - width/sumData.length / 2;
-                            // return getX(d) + i*barWidth
-                            return getX(d)
+                            return getX(d) + i*barWidth;
+                            // return getX(d)
                             // let x1 = d3.scaleBand().padding(0.05);
 
                             // return x1(new Date (d["key"]))
