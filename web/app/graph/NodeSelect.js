@@ -336,7 +336,7 @@ bluewave.NodeSelect = function(parent, config) {
 
       // resets for 4th row in table
         currentPropertySelectedDesired = undefined;
-        selectionList.innerHTML = "";
+        // selectionList.innerHTML = "";
     };
 
 
