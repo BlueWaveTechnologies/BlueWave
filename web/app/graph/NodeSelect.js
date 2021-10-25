@@ -53,6 +53,8 @@ bluewave.NodeSelect = function(parent, config) {
       //Parse config
         if (!config) config = {};
 
+        console.log(config)
+
 
       //Create table with 4 columns
         var table = createTable();
@@ -142,6 +144,10 @@ bluewave.NodeSelect = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(nodes){
+      // update config
+        config = {
+            "nodes":nodes
+        }
 
         me.clear();
 
@@ -150,7 +156,9 @@ bluewave.NodeSelect = function(parent, config) {
             div.innerHTML = nodes[i]["name"];
             div.onclick = function(){
                 resetSelectedProperty();
-                renderOptions(this,nodes);
+                setSelectedNode(this.innerText);
+                updateAvailableProperties();
+                // renderOptions(this,nodes);
             };
             nodeList.appendChild(div);
         };
@@ -193,34 +201,7 @@ bluewave.NodeSelect = function(parent, config) {
     };
 
 
-  //**************************************************************************
-  //** renderOptions
-  //**************************************************************************
-  /** code for rendering the options after the name is clicked
-   */
-    var renderOptions = function(td,nodes){
-        var nodeName = td.innerText;
-        setSelectedNode(nodeName);
-        for (var i in nodes){
-            if (nodes[i]["name"] === nodeName ){
 
-              // clear the properties div
-                propertyList.innerHTML = "";
-                for (var p in nodes[i]["properties"]){
-                    div = document.createElement("div");
-                    div.innerHTML = `<strong>${String(nodes[i]["properties"][p])}</strong>`;
-
-                  // add a "selected" option - show which item was last clicked
-                    div.addEventListener("click", function(){
-                    setSelectedProperty(this);
-                    });
-
-                    propertyList.appendChild(div);
-                }
-            break
-            };
-        };
-    };
 
   //**************************************************************************
   //** addPropertyToDesired
@@ -262,6 +243,82 @@ bluewave.NodeSelect = function(parent, config) {
         };
     };
 
+  //**************************************************************************
+  //** updateAvailableProperties
+  //**************************************************************************
+  /** 
+   * @description update available properties - find which properties are within this node and compare with which properties have already been selected
+   * 
+   * 
+   * info: this will update any time a new node selection is made, when a property is removed from the 'desired properties' tab,
+   * and when properties are added from the 'available properties' tab to the 'desired properties' tab.
+   * 
+  */
+    var updateAvailableProperties = function(){
+        for (var i in config.nodes){
+
+            if (config.nodes[i]["name"] === selected.node()){
+                console.log("got here")
+
+              // clear the properties div
+                propertyList.innerHTML = "";
+
+                if (selectionList.getElementsByTagName('div').length > 0 ){
+                  // get the list of currently selected properties 
+                  // remove the node selection reference from the selected element before moving it back to "available properties"
+                  // ie. "hospital_points - code" will be reduced to "code"
+                    var hiddenProperties = [];
+                    for (let i = 0; i <selectionList.getElementsByTagName('div').length; i++) {
+
+                        var node = selectionList.getElementsByTagName('div')[i].innerText.split(' - ')[0];
+
+                      // if the node name matches our currently selected node, add this item to the list of properties to hide (because they are already enabled)
+                        if (node === config.nodes[i]["name"]){
+                            var item = selectionList.getElementsByTagName('div')[i].innerText.split(' - ')[1];
+                            console.log(item);
+                              hiddenProperties.push(item);
+                              console.log(hiddenProperties);
+                        }
+                    };
+                };
+                for (var p in config.nodes[i]["properties"]){
+
+                  // compare this list to our available properties and remove the options that are already selected
+                    var property = config.nodes[i]["properties"][p];
+                    
+                  // if hiddenProperties has items then check the current property against the hidden properties list before displaying the property
+                    if (hiddenProperties !== undefined){
+                        console.log("hiddenProperties length detected more than 0");
+                        if (hiddenProperties.includes(property)){
+                            // do nothing - go to next property 
+                            console.log("got here123123123")
+                            continue;
+                        };
+                    };
+
+                    console.log("hiddenProperties didn't contain our property, showing");
+                
+                    div = document.createElement("div");
+                    div.innerHTML = `<strong>${String(property)}</strong>`;
+
+                  // add a "selected" option - show which item was last clicked
+                    div.addEventListener("click", function(){
+                    setSelectedProperty(this);
+                    });
+
+                    propertyList.appendChild(div);
+                };
+                break
+            };
+        };
+
+
+
+
+    };
+
+
+
 
   //**************************************************************************
   //** removePropertyFromDesired
@@ -280,17 +337,17 @@ bluewave.NodeSelect = function(parent, config) {
               // delete this property from the "desired properties" section;
                 selectionList.getElementsByTagName("div")[i].remove();
 
-    
-              // add this property back to "available properties" , as an option
-                div = document.createElement("div");
-              // remove the node selection reference from the selected element before moving it back to "available properties"
-              // ie. "hospital_points - code" will be reduced to "code"
-                div.innerHTML = selected.desired().innerText.substring(selected.desired().innerText.indexOf("- ") + 1);
-                div.style.fontWeight = "bold";
-                div.addEventListener("click",function(){
-                    setSelectedProperty(this);
-                });
-                propertyList.appendChild(div);
+                updateAvailableProperties();
+            //   // add this property back to "available properties" , as an option
+            //     div = document.createElement("div");
+            //   // remove the node selection reference from the selected element before moving it back to "available properties"
+            //   // ie. "hospital_points - code" will be reduced to "code"
+            //     div.innerHTML = selected.desired().innerText.substring(selected.desired().innerText.indexOf("- ") + 1);
+            //     div.style.fontWeight = "bold";
+            //     div.addEventListener("click",function(){
+            //         setSelectedProperty(this);
+            //     });
+            //     propertyList.appendChild(div);
 
                 };
             };
