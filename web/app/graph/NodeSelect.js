@@ -386,35 +386,33 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   //** movePropertyHigherPriority
   //**************************************************************************
-  /** Move this property to a higher priority on the list... or just move it up on the list.
+  /** 
+   * @description Move selected property to a higher priority on the desired properties list
   */
-    // var movePropertyHigherPriority = function(){
-    //     if (selected.desired() !== undefined){
+    var movePropertyHigherPriority = function(){
+        if (selected.desired() !== undefined){
 
-    //       // get current location
-    //       // if theres more than one row in the column then proceed
-    //         if (lists.desired().length > 1){
+          // get current location
+          // if theres more than one row in the column then proceed
+            if (lists.desired().length > 1){
 
-    //         for (let i = 0; i < (lists.desired()).length; i++) {
-    //               // if the current item matches the selected item
-    //                 if (lists.desired()[i].innerText === selected.desired().innerText){
-    //                     console.log(lists.desired()[i].innerText)
-    //                     // console.log("item matches");
+            for (let i = 0; i < (lists.desired()).length; i++) {
+                  // if the current item matches the selected item
+                    if (lists.desired()[i].innerText === selected.desired().innerText){
+                        console.log(lists.desired()[i].innerText)
+                        console.log("item matches");
 
-    //                 // if theres an item above this item then we move it up one
-    //                     if (lists.desired()[i-1] !== undefined){
-    //                         console.log(lists.desired()[i-1]);
-    //                       // move item up one.. switch positions with the item above it
-    //                         lists.desired()[i].innerHTML = lists.desired()[i-1].innerHTML;
-    //                     };
-    //                 };
-    //             }
-
-
-    //         }
-
-    //     };
-    // };
+                    // if theres an item above this item then we move it up one
+                        if (lists.desired()[i-1] !== undefined){
+                            console.log(lists.desired()[i-1]);
+                          // move item up one.. switch positions with the item above it
+                            lists.desired()[i].innerHTML = lists.desired()[i-1].innerHTML;
+                        };
+                    };
+                };
+            };
+        };
+    };
 
   //**************************************************************************
   //** Utilites
