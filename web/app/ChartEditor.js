@@ -203,7 +203,7 @@ bluewave.ChartEditor = function(parent, config) {
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
                 if (chartConfig.group){
-                    plotInputs.group.setValue(chartConfig.group, false);
+                    plotInputs.group.setValue(chartConfig.group, true);
                 }
 
                 //Add dropdown values for each data set
@@ -226,9 +226,9 @@ bluewave.ChartEditor = function(parent, config) {
                     plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
 
                     if (chartConfig[groupN]){
-                        plotInputs[groupN].setValue(chartConfig[groupN], false);
+                        plotInputs[groupN].setValue(chartConfig[groupN], true);
                     }
-                    
+
                 }
 
                 createBarPreview();
@@ -244,7 +244,7 @@ bluewave.ChartEditor = function(parent, config) {
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
                 if (chartConfig.group){
-                    plotInputs.group.setValue(chartConfig.group, false);
+                    plotInputs.group.setValue(chartConfig.group, false); //<--firing the onChange event is a hack to show/hide labels
                 }
                 else{
                     var label = chartConfig.label;
@@ -272,7 +272,7 @@ bluewave.ChartEditor = function(parent, config) {
                     plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
 
                     if (chartConfig[groupN]){
-                        plotInputs[groupN].setValue(chartConfig[groupN], false);
+                        plotInputs[groupN].setValue(chartConfig[groupN], false); //<--firing the onChange event is a hack to show/hide labels
                     }
                     else{
                         var label = chartConfig[labelN];
@@ -440,7 +440,7 @@ bluewave.ChartEditor = function(parent, config) {
         form.onChange = function(input, value){
             var key = input.name;
 
-          //Special case for "Separate By" option
+          //Special case for "Separate By" option. Show/Hide the label field.
             var idx = key.indexOf("group");
             if (idx>-1){
                 var id = key.substring("group".length);
@@ -1177,7 +1177,7 @@ bluewave.ChartEditor = function(parent, config) {
                 form.onChange = function(){
                     let settings = form.getData();
                     chartConfig["barColor" + n] = settings.barColor;
-                    
+
                     createBarPreview();
                 };
 
