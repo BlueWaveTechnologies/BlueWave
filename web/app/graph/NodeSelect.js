@@ -168,6 +168,11 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   //** createButtons
   //**************************************************************************
+  /** 
+   * @description update available properties - find which properties are within this node and compare with which properties have already been selected
+   * @param {object} parent - main application DOM object assigned for rendering NodeSelect window 
+   * 
+  */
     var createButtons = function(parent){
         // add 4 buttons
         // button to add a property to desired properties
@@ -198,43 +203,6 @@ bluewave.NodeSelect = function(parent, config) {
         var buttonDown = document.createElement("button");
         buttonDown.innerHTML = '<i class="fas fa-chevron-down"></i>';
         parent.appendChild(buttonDown);
-    };
-
-
-
-
-  //**************************************************************************
-  //** addPropertyToDesired
-  //**************************************************************************
-  /** code for adding a td value to the selected table area
-  */
-    var addPropertyToDesired = function(){
-
-        if (selected.available() !== undefined){
-
-          // if this property isn't already added then add it
-            for (let i = 0; i < selectionList.childNodes.length; i++) {
-                var el = selectionList.childNodes[i];
-                if (el.innerText === selected.node() + " - " + selected.available().innerText){
-                // if this value does already exist, return early
-                    return;
-                };
-            };
-
-          // if this value doesn't exist then add it
-            div = document.createElement("div");
-            div.innerText = selected.node() + " - " + selected.available().innerText;
-            div.style.fontWeight = "bold";
-            div.addEventListener("click",function(){
-            setSelectedPropertyDesired(this);
-            });
-            selectionList.appendChild(div);
-
-
-
-          // remove property from "available properties" (2) row (to show that this option is already selected)
-            updateAvailableProperties();
-        };
     };
 
   //**************************************************************************
@@ -285,7 +253,6 @@ bluewave.NodeSelect = function(parent, config) {
                         };
                     };
 
-                
                     div = document.createElement("div");
                     div.innerHTML = `<strong>${String(property)}</strong>`;
 
@@ -293,25 +260,53 @@ bluewave.NodeSelect = function(parent, config) {
                     div.addEventListener("click", function(){
                     setSelectedProperty(this);
                     });
-
                     propertyList.appendChild(div);
                 };
                 break
             };
         };
-
-
-
-
     };
 
+  //**************************************************************************
+  //** addPropertyToDesired
+  //**************************************************************************
+  /**
+   * @description adds currently selected (in available properties tab) property to desired properties tab
+  */
+    var addPropertyToDesired = function(){
+
+        if (selected.available() !== undefined){
+
+        // if this property isn't already added then add it
+            for (let i = 0; i < selectionList.childNodes.length; i++) {
+                var el = selectionList.childNodes[i];
+                if (el.innerText === selected.node() + " - " + selected.available().innerText){
+                // if this value does already exist, return early
+                    return;
+                };
+            };
+
+        // if this value doesn't exist then add it
+            div = document.createElement("div");
+            div.innerText = selected.node() + " - " + selected.available().innerText;
+            div.style.fontWeight = "bold";
+            div.addEventListener("click",function(){
+            setSelectedPropertyDesired(this);
+            });
+            selectionList.appendChild(div);
 
 
+
+        // remove property from "available properties" (2) row (to show that this option is already selected)
+            updateAvailableProperties();
+        };
+    };
 
   //**************************************************************************
   //** removePropertyFromDesired
   //**************************************************************************
-  /** code for adding a td value to the selected table area
+  /** 
+   * @description Removes currently selected property from desired properties tab
   */
     var removePropertyFromDesired = function(){
         if (selected.desired() !== undefined){
@@ -336,7 +331,9 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   //** setSelectedProperty
   //**************************************************************************
-  /** code for rendering the options after the name property name is selected
+  /** 
+   * @description Sets the selectedProperty cursor in the available properties tab
+   * @param {object} propertyDiv - The div DOM object currently selected
   */
     var setSelectedProperty = function(propertyDiv){
       // set the td as selected
@@ -346,7 +343,9 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   //** setSelectedNode
   //**************************************************************************
-  /** code for rendering the options after the name property name is selected
+  /** 
+   * @description Sets the selectedNode cursor in the available nodes tab
+   * @param {object} nodeDiv - The div DOM object currently selected
   */
     var setSelectedNode = function(nodeDiv){
       // set the node td as selected
@@ -357,7 +356,8 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   //** resetSelectedProperty
   //**************************************************************************
-  /** Use to reset the SelectedProperty when we move between different nodes
+  /** 
+   * @description resets all selection cursors
   */
     // consolidate this into the setSelectedProperty function later
     var resetSelectedProperty = function(){
@@ -367,18 +367,18 @@ bluewave.NodeSelect = function(parent, config) {
 
       // resets for 2nd row in table
         currentPropertySelected = undefined;
-        propertyList.innerHTML = "";
 
       // resets for 4th row in table
         currentPropertySelectedDesired = undefined;
-        // selectionList.innerHTML = "";
     };
 
 
   //**************************************************************************
   //** setSelectedPropertyDesired
   //**************************************************************************
-  /** code for rendering the options after the name property name is selected
+  /** 
+   * @description Sets the selectedProperty cursor in the Desired tab
+   * @param {object} propertyDesiredDiv - The div DOM object currently selected
   */
     var setSelectedPropertyDesired = function(propertyDesiredDiv){
       // set the td as selected
