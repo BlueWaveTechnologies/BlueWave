@@ -55,6 +55,7 @@ bluewave.charts.BarChart = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
+        console.log("update!");
         me.clear();
 
         var parent = svg.node().parentNode;
@@ -93,7 +94,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
             var data1 = data[0];
             var data2 = data[1];
-            dataSets = data;
+            var dataSets = data;
             // data = data1;
             var dataLength = data.length;
             var keys = data1.columns.slice(0)
@@ -108,7 +109,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         return parseFloat(g[yKey]);
                     });
                 }).entries(mergedData);
-                
+
 // maxData = d3.max(mergedData, function (g) {
 //     return parseFloat(g[yKey]);
 // });
@@ -123,13 +124,13 @@ bluewave.charts.BarChart = function(parent, config) {
                 let groupData = d3.nest()
                 .key(function(d){return d[group];})
                 .entries(data1);
-    
+
                 let tempDataSets = [];
                 groupData.forEach(function(g){
-    
+
                     tempDataSets.push(g.values)
                 })
-    
+
                 dataSets = tempDataSets;
 
                 var x0 = d3.scaleBand()
@@ -156,7 +157,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
             let xAxisN = chartConfig[`xAxis${i+1}`];
             let yAxisN = chartConfig[`yAxis${i+1}`];
-            
+
             //If axes not picked, skip pushing/rendering this dataset
             if ((!xAxisN || !yAxisN) && !group && i>0) continue;
 
@@ -191,11 +192,14 @@ bluewave.charts.BarChart = function(parent, config) {
             // console.log(sumData)
 // sumData = (d => keys.map(key => ({key, value: d[key]})))
 // console.log(sumData)
-            var getBarColor = function(d){
-                //TODO: check which dataset this belongs to and call getColor()
 
-                return (chartConfig.barColor || "#6699CC");
+            var colors = bluewave.utils.getColorPalette(true);
+            var getBarColor = function(i){
+                var barColor = chartConfig["barColor" + i];
+                if (!barColor) barColor = colors[i%colors.length];
+                return barColor;
             };
+
 
 
             //Set intitial value for layout to vertical
@@ -206,7 +210,7 @@ console.log("max",maxData)
 
 //gonna need to make a new axis for group by
 
-            
+
 
             let leftLabel, bottomLabel;
             if(layout === "vertical"){
@@ -223,14 +227,14 @@ console.log("max",maxData)
             height = plotHeight;
 console.log("datasets",dataSets)
             for(let i=0; i<dataSets.length; i++){
-                
+
                  var sumData = arr[i];
 console.log("sumdata", sumData)
 
                 let keyType = typeOfAxisValue(sumData[0].key);
 
                 var getX = function (d) {
-                    
+
                     // if (layout==="vertical")
                     if (keyType === "date") {
                         return x(new Date(d.key));
@@ -243,9 +247,9 @@ console.log("sumdata", sumData)
                     var v = parseFloat(d["value"]);
                     return y(v);
                 };
-                 
-             if (y.bandwidth || x.bandwidth) {
 
+             if (y.bandwidth || x.bandwidth) {
+console.log("w/bandwidth", chartConfig.barLayout);
                 if(chartConfig.barLayout === "vertical"){
                 plotArea
                     .selectAll("mybar")
@@ -268,7 +272,7 @@ console.log("sumdata", sumData)
                         return x.bandwidth ? x.bandwidth() : getX(d);
                     })
 
-                    .attr("fill", getBarColor);
+                    .attr("fill", getBarColor(i));
                 }
                 //Horizontal layout
                else if(chartConfig.barLayout === "horizontal"){
@@ -297,13 +301,16 @@ console.log("sumdata", sumData)
                     .attr("width", function (d) {
                         return x.bandwidth ? x.bandwidth() : x(d["value"]);
                     })
- 
-                    .attr("fill", getBarColor);
+
+                    .attr("fill", getBarColor(i));
                 }
             }
 
             //No bandwith
             else {
+
+console.log("no bandwidth", chartConfig.barLayout);
+
                 // if(timeAxis === "x")
                 if (chartConfig.barLayout === "vertical") {
 
@@ -326,7 +333,7 @@ console.log("sumdata", sumData)
                             return width/sumData.length-5;
                         })
 
-                        .attr("fill", getBarColor);
+                        .attr("fill", getBarColor(i));
                     }else{
                         //group by option
                         let barWidth = width/dataSets.length/sumData.length;
@@ -360,8 +367,8 @@ console.log("sumdata", sumData)
                             return barWidth;
                         })
 
-                        
-                        .attr("fill", getBarColor);
+
+                        .attr("fill", getBarColor(i));
                     }
 
                 }
@@ -390,8 +397,8 @@ console.log("sumdata", sumData)
                         .attr("width", function (d) {
                             return x(d["value"]);
                         })
- 
-                        .attr("fill", getBarColor);
+
+                        .attr("fill", getBarColor(i));
                 }
             }
 
@@ -400,23 +407,7 @@ console.log("sumdata", sumData)
             //Set default colors and ID
             var bars = plotArea.selectAll("rect");
 
-            bars.each(function(d, i){
-// console.log(i)
-                //i is a d3 internal callback incrementer
-                let bar = d3.select(this);
 
-                bar.attr("barID", i);
-                var colors = bluewave.utils.getColorPalette(true);
-        
-                //TODO: move default color setting to editor
-                var barColor = chartConfig["barColor" + i];
-                if (!barColor){
-                barColor = colors[i%colors.length];
-                chartConfig["barColor" + i] = barColor;
-            }
-                
-                bar.attr("fill", chartConfig["barColor"+ i]);
-            })
 
 
             //Create d3 event listeners for bars
