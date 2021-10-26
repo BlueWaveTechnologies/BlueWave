@@ -15,29 +15,6 @@ bluewave.NodeSelect = function(parent, config) {
     var nodes = [];
 
 
-  // set class-accessible 'selected' variables
-    var currentNodeSelected = undefined;
-    var currentPropertySelected = undefined;
-    var currentPropertySelectedDesired = undefined;
-
-  // declare public method for calling
-  // selections made in NodeSelect window
-    var selected = {
-        node: function(){
-          // get the currently selected node
-            return currentNodeSelected;
-        },
-        available: function(){
-          // get the currently selected property
-            return currentPropertySelected;
-        },
-        desired: function(){
-          // get the currently selected property in desired row
-            return currentPropertySelectedDesired;
-        }
-    };
-
-
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -52,45 +29,25 @@ bluewave.NodeSelect = function(parent, config) {
         var tbody = table.firstChild;
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
-        var tr, td, div;
+        var tr, td;
 
 
       //Nodes
         td = document.createElement("td");
         td.style.width = "33%";
         td.style.height = "100%";
-        td.style.padding = "5px";
+        td.style.padding = "12px 5px 5px";
+        nodeList = createList(td, "Available Nodes");
         tr.appendChild(td);
-        div = document.createElement("div");
-        div.className = "node-select-list";
-        div.style.height = "100%";
-        div.style.overflow = "hidden";
-        div.style.position = "relative";
-        td.appendChild(div);
-        nodeList = document.createElement("div");
-        nodeList.style.position = "absolute";
-        nodeList.style.width = "100%";
-        div.appendChild(nodeList);
-
 
 
       //Properties
         td = document.createElement("td");
         td.style.width = "33%";
         td.style.height = "100%";
-        td.style.padding = "5px";
+        td.style.padding = "12px 5px 5px";
+        propertyList = createList(td, "Available Properties");
         tr.appendChild(td);
-        div = document.createElement("div");
-        div.className = "node-select-list";
-        div.style.height = "100%";
-        div.style.overflow = "hidden";
-        div.style.position = "relative";
-        td.appendChild(div);
-        propertyList = document.createElement("div");
-        propertyList.style.position = "absolute";
-        propertyList.style.width = "100%";
-        div.appendChild(propertyList);
-
 
 
       //Buttons
@@ -104,18 +61,9 @@ bluewave.NodeSelect = function(parent, config) {
         td = document.createElement("td");
         td.style.width = "33%";
         td.style.height = "100%";
-        td.style.padding = "5px";
+        td.style.padding = "12px 5px 5px";
+        selectionList = createList(td, "Selected Properties");
         tr.appendChild(td);
-        div = document.createElement("div");
-        div.className = "node-select-list";
-        div.style.height = "100%";
-        div.style.overflow = "hidden";
-        div.style.position = "relative";
-        td.appendChild(div);
-        selectionList = document.createElement("div");
-        selectionList.style.position = "absolute";
-        selectionList.style.width = "100%";
-        div.appendChild(selectionList);
 
 
       //Append table to parent
@@ -144,12 +92,11 @@ bluewave.NodeSelect = function(parent, config) {
 
         for (var i in nodes){
             var div = document.createElement("div");
+            div.className = "noselect";
             div.innerHTML = nodes[i].name;
-            div.onclick = function(){
-                resetSelectedProperty();
-                setSelectedNode(this.innerText);
+            div.onclick = function(e){
+                updateSelection(this, nodeList, e);
                 updateAvailableProperties();
-                // renderOptions(this,nodes);
             };
             nodeList.appendChild(div);
         };
@@ -165,30 +112,10 @@ bluewave.NodeSelect = function(parent, config) {
    *
   */
     var createButtons = function(parent){
-        // add 4 buttons
-        // button to add a property to desired properties
-        var buttonAdd = document.createElement("button");
-        buttonAdd.innerHTML = '<i class="fas fa-chevron-right"></i>';
-        buttonAdd.onclick = addPropertyToDesired;
-        parent.appendChild(buttonAdd);
-
-        // button to remove a property from desired properties
-        var buttonRemove = document.createElement("button");
-        buttonRemove.innerHTML = '<i class="fas fa-chevron-left"></i>';
-        buttonRemove.onclick = removePropertyFromDesired;
-        parent.appendChild(buttonRemove);
-
-        // button to move a property up (to a higher priority) in desired properties
-        var buttonUp = document.createElement("button");
-        buttonUp.innerHTML = '<i class="fas fa-chevron-up"></i>';
-        buttonUp.onclick = movePropertyHigherPriority;
-        parent.appendChild(buttonUp);
-
-        // button to move a property down (to a lower priority) in desired properties
-        var buttonDown = document.createElement("button");
-        buttonDown.innerHTML = '<i class="fas fa-chevron-down"></i>';
-        buttonDown.onclick = movePropertyLowerPriority;
-        parent.appendChild(buttonDown);
+        createButton(parent, "fas fa-chevron-right", addProperty);
+        createButton(parent, "fas fa-chevron-left", removeProperty);
+        createButton(parent, "fas fa-chevron-up", moveUp);
+        createButton(parent, "fas fa-chevron-down", moveDown);
     };
 
 
@@ -206,7 +133,8 @@ bluewave.NodeSelect = function(parent, config) {
     var updateAvailableProperties = function(){
         for (var i in nodes){
 
-            if (nodes[i].name === selected.node()){
+            var currentNodeSelected = getSelection(nodeList);
+            if (nodes[i].name === currentNodeSelected.innerText){
 
               // clear the properties div
                 propertyList.innerHTML = "";
@@ -243,12 +171,14 @@ bluewave.NodeSelect = function(parent, config) {
                     };
 
                     var div = document.createElement("div");
+                    div.className = "noselect";
                     div.innerHTML = property;
 
                   // add a "selected" option - show which item was last clicked
-                    div.addEventListener("click", function(){
-                        setSelectedProperty(this);
-                    });
+                    div.onclick = function(e){
+                        updateSelection(this, propertyList, e);
+                        clearSelection(selectionList);
+                    };
                     propertyList.appendChild(div);
                 }
                 break;
@@ -258,19 +188,20 @@ bluewave.NodeSelect = function(parent, config) {
 
 
   //**************************************************************************
-  //** addPropertyToDesired
+  //** addProperty
   //**************************************************************************
   /**
    * @description adds currently selected (in available properties tab) property to desired properties tab
   */
-    var addPropertyToDesired = function(){
-
-        if (selected.available() !== undefined){
+    var addProperty = function(){
+        var currentPropertySelected = getSelection(propertyList);
+        if (currentPropertySelected !== undefined){
+            var currentNodeSelected = getSelection(nodeList);
 
         // if this property isn't already added then add it
             for (let i = 0; i < selectionList.childNodes.length; i++) {
                 var el = selectionList.childNodes[i];
-                if (el.innerText === selected.node() + " - " + selected.available().innerText){
+                if (el.innerText === currentNodeSelected.innerText + " - " + currentPropertySelected.innerText){
                 // if this value does already exist, return early
                     return;
                 }
@@ -278,10 +209,12 @@ bluewave.NodeSelect = function(parent, config) {
 
         // if this value doesn't exist then add it
             var div = document.createElement("div");
-            div.innerText = selected.node() + " - " + selected.available().innerText;
-            div.addEventListener("click",function(){
-                setSelectedPropertyDesired(this);
-            });
+            div.className = "noselect";
+            div.innerText = currentNodeSelected.innerText + " - " + currentPropertySelected.innerText;
+            div.onclick = function(e){
+                updateSelection(this, selectionList, e);
+                clearSelection(propertyList);
+            };
             selectionList.appendChild(div);
 
 
@@ -293,19 +226,20 @@ bluewave.NodeSelect = function(parent, config) {
 
 
   //**************************************************************************
-  //** removePropertyFromDesired
+  //** removeProperty
   //**************************************************************************
   /**
    * @description Removes currently selected property from desired properties tab
   */
-    var removePropertyFromDesired = function(){
-        if (selected.desired() !== undefined){
+    var removeProperty = function(){
+        var currentPropertySelectedDesired = getSelection(selectionList);
+        if (currentPropertySelectedDesired){
 
 
           // remove the property where it matches our current selected property
             for (let i = 0; i <selectionList.childNodes.length; i++) {
                 var el = selectionList.childNodes[i];
-                if (el.innerText === selected.desired().innerText ){
+                if (el.innerText === currentPropertySelectedDesired.innerText ){
 
                   //delete this property from the "desired properties" section;
                     el.remove();
@@ -318,80 +252,23 @@ bluewave.NodeSelect = function(parent, config) {
 
 
   //**************************************************************************
-  //** setSelectedProperty
-  //**************************************************************************
-  /**
-   * @description Sets the selectedProperty cursor in the available properties tab
-   * @param {object} propertyDiv - The div DOM object currently selected
-  */
-    var setSelectedProperty = function(propertyDiv){
-      // set the td as selected
-        currentPropertySelected = propertyDiv;
-    };
-
-
-  //**************************************************************************
-  //** setSelectedNode
-  //**************************************************************************
-  /**
-   * @description Sets the selectedNode cursor in the available nodes tab
-   * @param {object} nodeDiv - The div DOM object currently selected
-  */
-    var setSelectedNode = function(nodeDiv){
-      // set the node td as selected
-        currentNodeSelected = nodeDiv;
-    };
-
-
-  //**************************************************************************
-  //** resetSelectedProperty
-  //**************************************************************************
-  /**
-   * @description resets all selection cursors
-  */
-    // consolidate this into the setSelectedProperty function later
-    var resetSelectedProperty = function(){
-
-      // resets for 1st row in table
-        currentNodeSelected = undefined;
-
-      // resets for 2nd row in table
-        currentPropertySelected = undefined;
-
-      // resets for 4th row in table
-        currentPropertySelectedDesired = undefined;
-    };
-
-
-  //**************************************************************************
-  //** setSelectedPropertyDesired
-  //**************************************************************************
-  /**
-   * @description Sets the selectedProperty cursor in the Desired tab
-   * @param {object} propertyDesiredDiv - The div DOM object currently selected
-  */
-    var setSelectedPropertyDesired = function(propertyDesiredDiv){
-      // set the td as selected
-        currentPropertySelectedDesired = propertyDesiredDiv;
-    };
-
-
-  //**************************************************************************
-  //** movePropertyHigherPriority
+  //** moveUp
   //**************************************************************************
   /**
    * @description Move selected property to a higher priority on the desired properties list
    */
-    var movePropertyHigherPriority = function(){
-        if (selected.desired() !== undefined){
+    var moveUp = function(){
+        var currentPropertySelectedDesired = getSelection(selectionList);
+        if (currentPropertySelectedDesired){
 
           // get current location
           // if theres more than one row in the column then proceed
             if (selectionList.childNodes.length > 1){
+                clearSelection(selectionList);
 
-                for (let i = 0; i < (selectionList.childNodes).length; i++) {
+                for (let i = 0; i < selectionList.childNodes.length; i++) {
                     // if the current item matches the selected item
-                    if (selectionList.childNodes[i].innerText === selected.desired().innerText){
+                    if (selectionList.childNodes[i].innerText === currentPropertySelectedDesired.innerText){
 
                         // if theres an item above this item then we move it up one
                         if (selectionList.childNodes[i-1] !== undefined){
@@ -402,6 +279,7 @@ bluewave.NodeSelect = function(parent, config) {
 
                             selectionList.childNodes[i].innerHTML = value2;
                             selectionList.childNodes[i-1].innerHTML = value1;
+                            selectionList.childNodes[i-1].className = "selected";
                         }
 
                         break;
@@ -413,21 +291,23 @@ bluewave.NodeSelect = function(parent, config) {
 
 
   //**************************************************************************
-  //** movePropertyLowerPriority
+  //** moveDown
   //**************************************************************************
   /**
    * @description Move selected property to a lower priority on the desired properties list
   */
-    var movePropertyLowerPriority = function(){
-        if (selected.desired() !== undefined){
+    var moveDown = function(){
+        var currentPropertySelectedDesired = getSelection(selectionList);
+        if (currentPropertySelectedDesired){
 
           // get current location
           // if theres more than one row in the column then proceed
             if (selectionList.childNodes.length > 1){
+                clearSelection(selectionList);
 
-                for (let i = 0; i < (selectionList.childNodes).length; i++) {
+                for (let i = 0; i < selectionList.childNodes.length; i++) {
                     // if the current item matches the selected item
-                    if (selectionList.childNodes[i].innerText === selected.desired().innerText){
+                    if (selectionList.childNodes[i].innerText === currentPropertySelectedDesired.innerText){
 
                     // if theres an item above this item then we move it up one
                         if (selectionList.childNodes[i+1] !== undefined){
@@ -438,11 +318,93 @@ bluewave.NodeSelect = function(parent, config) {
 
                             selectionList.childNodes[i].innerHTML = value2;
                             selectionList.childNodes[i+1].innerHTML = value1;
+                            selectionList.childNodes[i+1].className = "selected";
                         }
                     }
                 }
             }
         }
+    };
+
+
+  //**************************************************************************
+  //** createList
+  //**************************************************************************
+    var createList = function(parent, label){
+
+        var outerDiv = document.createElement("div");
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        parent.appendChild(outerDiv);
+
+        var div = document.createElement("div");
+        div.className = "node-select-list";
+        div.style.height = "100%";
+        div.style.overflow = "hidden";
+        div.style.position = "relative";
+        outerDiv.appendChild(div);
+
+        var list = document.createElement("div");
+        list.style.position = "absolute";
+        list.style.width = "100%";
+        div.appendChild(list);
+
+        var text = document.createElement("div");
+        text.className = "node-select-list-label noselect";
+        text.style.position = "absolute";
+        text.innerText = label;
+        outerDiv.appendChild(text);
+
+        return list;
+    };
+
+
+  //**************************************************************************
+  //** createButton
+  //**************************************************************************
+    var createButton = function(parent, icon, onclick){
+        var button = document.createElement("button");
+        button.className = "form-button";
+        button.style.margin = "3px 0";
+        button.style.width = "40px";
+        button.innerHTML = '<i class="' + icon + '"></i>';
+        button.onclick = onclick;
+        parent.appendChild(button);
+        return button;
+    };
+
+
+  //**************************************************************************
+  //** updateSelection
+  //**************************************************************************
+    var updateSelection = function(div, list, e){
+        for (var i=0; i<list.childNodes.length; i++){
+            var el = list.childNodes[i];
+            el.className = (el===div) ? "selected" : "";
+        }
+    };
+
+    
+  //**************************************************************************
+  //** clearSelection
+  //**************************************************************************
+    var clearSelection = function(list){
+        for (var i=0; i<list.childNodes.length; i++){
+            var el = list.childNodes[i];
+            el.className = "";
+        }
+    };
+
+
+  //**************************************************************************
+  //** getSelection
+  //**************************************************************************
+    var getSelection = function(list){
+        for (var i=0; i<list.childNodes.length; i++){
+            var el = list.childNodes[i];
+            if (el.className === "selected") return el;
+        }
+        return null;
     };
 
 
