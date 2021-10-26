@@ -200,6 +200,9 @@ bluewave.NodeSelect = function(parent, config) {
         // button to move a property down (to a lower priority) in desired properties
         var buttonDown = document.createElement("button");
         buttonDown.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        buttonDown.addEventListener("click", function(){
+            movePropertyLowerPriority();
+        });
         parent.appendChild(buttonDown);
     };
 
@@ -406,8 +409,8 @@ bluewave.NodeSelect = function(parent, config) {
                             if (selectionList.getElementsByTagName("div")[i-1] !== undefined){
                                 console.log(selectionList.getElementsByTagName("div")[i-1]);
                             // move item up one.. switch positions with the item above it
-                                value1 = selectionList.getElementsByTagName("div")[i].innerHTML 
-                                value2 = selectionList.getElementsByTagName("div")[i-1].innerHTML;
+                                var value1 = selectionList.getElementsByTagName("div")[i].innerHTML 
+                                var value2 = selectionList.getElementsByTagName("div")[i-1].innerHTML;
 
                                 selectionList.getElementsByTagName("div")[i].innerHTML = value2;
                                 selectionList.getElementsByTagName("div")[i-1].innerHTML = value1;
@@ -417,6 +420,39 @@ bluewave.NodeSelect = function(parent, config) {
             };
         };
     };
+  //**************************************************************************
+  //** movePropertyLowerPriority
+  //**************************************************************************
+  /** 
+   * @description Move selected property to a lower priority on the desired properties list
+  */
+   var movePropertyLowerPriority = function(){
+    if (selected.desired() !== undefined){
+
+      // get current location
+      // if theres more than one row in the column then proceed
+        if (selectionList.getElementsByTagName("div").length > 1){
+
+            for (let i = 0; i < (selectionList.getElementsByTagName("div")).length; i++) {
+                // if the current item matches the selected item
+                    if (selectionList.getElementsByTagName("div")[i].innerText === selected.desired().innerText){
+                        console.log(selectionList.getElementsByTagName("div")[i].innerText)
+
+                    // if theres an item above this item then we move it up one
+                        if (selectionList.getElementsByTagName("div")[i+1] !== undefined){
+                            console.log(selectionList.getElementsByTagName("div")[i+1]);
+                        // move item down one.. switch positions with the item above it
+                            var value1 = selectionList.getElementsByTagName("div")[i].innerHTML 
+                            var value2 = selectionList.getElementsByTagName("div")[i+1].innerHTML;
+
+                            selectionList.getElementsByTagName("div")[i].innerHTML = value2;
+                            selectionList.getElementsByTagName("div")[i+1].innerHTML = value1;
+                        };
+                    };
+            };
+        };
+    };
+};
 
   //**************************************************************************
   //** Utilites
