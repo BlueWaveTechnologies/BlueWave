@@ -37,7 +37,8 @@ bluewave.charts.MapChart = function(parent, config) {
 
         readOnly = false;
         svg.call(d3.zoom().scaleExtent([1, 1])
-            .on('zoom', recenter));
+            .on('zoom', recenter)
+            .on('end', redraw));
     };
 
 
@@ -47,6 +48,19 @@ bluewave.charts.MapChart = function(parent, config) {
     this.getProjection = function(){
         return projection;
     };
+
+
+  //**************************************************************************
+  //** redraw
+  //**************************************************************************
+    var redraw = function(){
+        me.onRedraw();
+    };
+
+  //**************************************************************************
+  //** onRedraw
+  //**************************************************************************
+    this.onRedraw = function(){};
 
 
   //**************************************************************************
@@ -111,6 +125,8 @@ bluewave.charts.MapChart = function(parent, config) {
   //** update
   //**************************************************************************
     var update = function(parent, chartConfig, data){
+
+        console.log(chartConfig);
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
