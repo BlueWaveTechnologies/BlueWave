@@ -1053,8 +1053,13 @@ li.tree-node:hover {
 }
 
 .node-select-list > div > div:hover {
-  background-color: yellow;
+    background-color: #e2f2ff; /*light blue*/
 }
+
+.node-select-list .selected {
+    background-color: #b2dbff; /*darker blue*/
+}
+
 
 /**************************************************************************/
 /** Admin Panel
