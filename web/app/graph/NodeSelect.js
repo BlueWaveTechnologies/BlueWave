@@ -91,12 +91,14 @@ bluewave.NodeSelect = function(parent, config) {
         nodes = arr;
 
         for (var i in nodes){
+            var node = nodes[i];
             var div = document.createElement("div");
             div.className = "noselect";
-            div.innerHTML = nodes[i].name;
+            div.innerText = node.name;
+            div.node = node;
             div.onclick = function(e){
                 updateSelection(this, nodeList, e);
-                updateAvailableProperties();
+                updateAvailableProperties(this.node);
             };
             nodeList.appendChild(div);
         };
@@ -104,13 +106,24 @@ bluewave.NodeSelect = function(parent, config) {
 
 
   //**************************************************************************
+  //** getSelectedProperties
+  //**************************************************************************
+    this.getSelectedProperties = function(){
+        var arr = [];
+        for (let i = 0; i < selectionList.childNodes.length; i++) {
+            var el = selectionList.childNodes[i];
+            arr.push({
+                node: el.node.name,
+                property: el.property
+            });
+        }
+        return arr;
+    };
+
+
+  //**************************************************************************
   //** createButtons
   //**************************************************************************
-  /**
-   * @description update available properties - find which properties are within this node and compare with which properties have already been selected
-   * @param {object} parent - main application DOM object assigned for rendering NodeSelect window
-   *
-  */
     var createButtons = function(parent){
         createButton(parent, "fas fa-chevron-right", addProperty);
         createButton(parent, "fas fa-chevron-left", removeProperty);
@@ -122,67 +135,44 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   //** updateAvailableProperties
   //**************************************************************************
-  /**
-   * @description update available properties - find which properties are within this node and compare with which properties have already been selected
-   *
-   *
-   * info: this will update any time a new node selection is made, when a property is removed from the 'desired properties' tab,
-   * and when properties are added from the 'available properties' tab to the 'desired properties' tab.
-   *
-  */
-    var updateAvailableProperties = function(){
-        for (var i in nodes){
+  /** Used to update the propertyList. Called whenever a node is clicked or
+   *  when a propert is removed from the selectionList
+   */
+    var updateAvailableProperties = function(node){
 
-            var currentNodeSelected = getSelection(nodeList);
-            if (nodes[i].name === currentNodeSelected.innerText){
 
-              // clear the properties div
-                propertyList.innerHTML = "";
+      //Clear the properties div
+        propertyList.innerHTML = "";
 
-                if (selectionList.childNodes.length > 0 ){
 
-                  // get the list of currently selected properties
-                  // remove the node selection reference from the selected element before moving it back to "available properties"
-                  // ie. "hospital_points - code" will be reduced to "code"
-                    var hiddenProperties = [];
-                    for (let s = 0; s <selectionList.childNodes.length; s++) {
-
-                        var node = selectionList.childNodes[s].innerText.split(' - ')[0];
-
-                      // if the node name matches our currently selected node, add this item to the list of properties to hide (because they are already enabled)
-                        if (node === nodes[i].name){
-                            var item = selectionList.childNodes[s].innerText.split(' - ')[1];
-                            hiddenProperties.push(item);
-                        }
-                    }
-                }
-
-                for (var p in nodes[i].properties){
-
-                  // compare this list to our available properties and remove the options that are already selected
-                    var property = nodes[i].properties[p];
-
-                  // if hiddenProperties has items then check the current property against the hidden properties list before displaying the property
-                    if (hiddenProperties !== undefined){
-                        if (hiddenProperties.includes(property)){
-                            // do nothing - go to next property
-                            continue;
-                        };
-                    };
-
-                    var div = document.createElement("div");
-                    div.className = "noselect";
-                    div.innerHTML = property;
-
-                  // add a "selected" option - show which item was last clicked
-                    div.onclick = function(e){
-                        updateSelection(this, propertyList, e);
-                        clearSelection(selectionList);
-                    };
-                    propertyList.appendChild(div);
-                }
-                break;
+      //Generate a list of selected properties from the selectionList that
+      //correspond to this node
+        var selectedProperties = [];
+        for (let i = 0; i < selectionList.childNodes.length; i++) {
+            var el = selectionList.childNodes[i];
+            if (el.node.name===node.name){
+                selectedProperties.push(el.property);
             }
+        }
+
+
+      //Add properties assiciated with the node that are not in the selectionList
+        for (var p in node.properties){
+            var property = node.properties[p];
+            if (!selectedProperties.includes(property)){
+                var div = document.createElement("div");
+                div.className = "noselect";
+                div.innerText = property;
+                div.node = node;
+                div.onclick = function(e){
+                    updateSelection(this, propertyList, e);
+                    clearSelection(selectionList);
+                };
+                div.ondblclick = function(e){
+                    addProperty();
+                };
+                propertyList.appendChild(div);
+            };
         }
     };
 
@@ -194,33 +184,25 @@ bluewave.NodeSelect = function(parent, config) {
    * @description adds currently selected (in available properties tab) property to desired properties tab
   */
     var addProperty = function(){
-        var currentPropertySelected = getSelection(propertyList);
-        if (currentPropertySelected !== undefined){
-            var currentNodeSelected = getSelection(nodeList);
+        var div = getSelection(propertyList);
+        if (div){
+            var node = div.node;
+            var nodeName = node.name;
+            var property = div.innerText;
 
-        // if this property isn't already added then add it
-            for (let i = 0; i < selectionList.childNodes.length; i++) {
-                var el = selectionList.childNodes[i];
-                if (el.innerText === currentNodeSelected.innerText + " - " + currentPropertySelected.innerText){
-                // if this value does already exist, return early
-                    return;
-                }
-            }
+            div.remove();
 
-        // if this value doesn't exist then add it
-            var div = document.createElement("div");
+
+            div = document.createElement("div");
             div.className = "noselect";
-            div.innerText = currentNodeSelected.innerText + " - " + currentPropertySelected.innerText;
+            div.innerText = nodeName + " - " + property;
+            div.node = node;
+            div.property = property;
             div.onclick = function(e){
                 updateSelection(this, selectionList, e);
                 clearSelection(propertyList);
             };
             selectionList.appendChild(div);
-
-
-
-        // remove property from "available properties" (2) row (to show that this option is already selected)
-            updateAvailableProperties();
         }
     };
 
@@ -232,21 +214,11 @@ bluewave.NodeSelect = function(parent, config) {
    * @description Removes currently selected property from desired properties tab
   */
     var removeProperty = function(){
-        var currentPropertySelectedDesired = getSelection(selectionList);
-        if (currentPropertySelectedDesired){
-
-
-          // remove the property where it matches our current selected property
-            for (let i = 0; i <selectionList.childNodes.length; i++) {
-                var el = selectionList.childNodes[i];
-                if (el.innerText === currentPropertySelectedDesired.innerText ){
-
-                  //delete this property from the "desired properties" section;
-                    el.remove();
-                    updateAvailableProperties();
-                    break;
-                }
-            }
+        var div = getSelection(selectionList);
+        if (div){
+            var node = div.node;
+            div.remove();
+            updateAvailableProperties(node);
         }
     };
 
@@ -258,33 +230,27 @@ bluewave.NodeSelect = function(parent, config) {
    * @description Move selected property to a higher priority on the desired properties list
    */
     var moveUp = function(){
-        var currentPropertySelectedDesired = getSelection(selectionList);
-        if (currentPropertySelectedDesired){
+        var div = getSelection(selectionList);
+        if (div){
 
-          // get current location
-          // if theres more than one row in the column then proceed
-            if (selectionList.childNodes.length > 1){
+            var prev = div.previousSibling;
+            if (prev){
+
                 clearSelection(selectionList);
 
-                for (let i = 0; i < selectionList.childNodes.length; i++) {
-                    // if the current item matches the selected item
-                    if (selectionList.childNodes[i].innerText === currentPropertySelectedDesired.innerText){
+                var prevNode = prev.node;
+                var prevProperty = prev.property;
+                var currNode = div.node;
+                var currProperty = div.property;
 
-                        // if theres an item above this item then we move it up one
-                        if (selectionList.childNodes[i-1] !== undefined){
+                div.innerText = prevNode.name + " - " + prevProperty;
+                div.node = prevNode;
+                div.property = prevProperty;
 
-                            // move item up one.. switch positions with the item above it
-                            var value1 = selectionList.childNodes[i].innerHTML;
-                            var value2 = selectionList.childNodes[i-1].innerHTML;
-
-                            selectionList.childNodes[i].innerHTML = value2;
-                            selectionList.childNodes[i-1].innerHTML = value1;
-                            selectionList.childNodes[i-1].className = "selected";
-                        }
-
-                        break;
-                    }
-                }
+                prev.innerText = currNode.name + " - " + currProperty;
+                prev.node = currNode;
+                prev.property = currProperty;
+                prev.className = "selected";
             }
         }
     };
@@ -297,31 +263,27 @@ bluewave.NodeSelect = function(parent, config) {
    * @description Move selected property to a lower priority on the desired properties list
   */
     var moveDown = function(){
-        var currentPropertySelectedDesired = getSelection(selectionList);
-        if (currentPropertySelectedDesired){
+        var div = getSelection(selectionList);
+        if (div){
 
-          // get current location
-          // if theres more than one row in the column then proceed
-            if (selectionList.childNodes.length > 1){
+            var next = div.nextSibling ;
+            if (next){
+
                 clearSelection(selectionList);
 
-                for (let i = 0; i < selectionList.childNodes.length; i++) {
-                    // if the current item matches the selected item
-                    if (selectionList.childNodes[i].innerText === currentPropertySelectedDesired.innerText){
+                var nextNode = next.node;
+                var nextProperty = next.property;
+                var currNode = div.node;
+                var currProperty = div.property;
 
-                    // if theres an item above this item then we move it up one
-                        if (selectionList.childNodes[i+1] !== undefined){
+                div.innerText = nextNode.name + " - " + nextProperty;
+                div.node = nextNode;
+                div.property = nextProperty;
 
-                            // move item down one.. switch positions with the item above it
-                            var value1 = selectionList.childNodes[i].innerHTML;
-                            var value2 = selectionList.childNodes[i+1].innerHTML;
-
-                            selectionList.childNodes[i].innerHTML = value2;
-                            selectionList.childNodes[i+1].innerHTML = value1;
-                            selectionList.childNodes[i+1].className = "selected";
-                        }
-                    }
-                }
+                next.innerText = currNode.name + " - " + currProperty;
+                next.node = currNode;
+                next.property = currProperty;
+                next.className = "selected";
             }
         }
     };
@@ -384,7 +346,7 @@ bluewave.NodeSelect = function(parent, config) {
         }
     };
 
-    
+
   //**************************************************************************
   //** clearSelection
   //**************************************************************************
