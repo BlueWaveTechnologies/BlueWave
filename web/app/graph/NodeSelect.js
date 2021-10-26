@@ -403,11 +403,10 @@ bluewave.NodeSelect = function(parent, config) {
                 for (let i = 0; i < (selectionList.getElementsByTagName("div")).length; i++) {
                     // if the current item matches the selected item
                         if (selectionList.getElementsByTagName("div")[i].innerText === selected.desired().innerText){
-                            console.log(selectionList.getElementsByTagName("div")[i].innerText)
 
                         // if theres an item above this item then we move it up one
                             if (selectionList.getElementsByTagName("div")[i-1] !== undefined){
-                                console.log(selectionList.getElementsByTagName("div")[i-1]);
+
                             // move item up one.. switch positions with the item above it
                                 var value1 = selectionList.getElementsByTagName("div")[i].innerHTML 
                                 var value2 = selectionList.getElementsByTagName("div")[i-1].innerHTML;
@@ -436,12 +435,11 @@ bluewave.NodeSelect = function(parent, config) {
             for (let i = 0; i < (selectionList.getElementsByTagName("div")).length; i++) {
                 // if the current item matches the selected item
                     if (selectionList.getElementsByTagName("div")[i].innerText === selected.desired().innerText){
-                        console.log(selectionList.getElementsByTagName("div")[i].innerText)
 
                     // if theres an item above this item then we move it up one
                         if (selectionList.getElementsByTagName("div")[i+1] !== undefined){
-                            console.log(selectionList.getElementsByTagName("div")[i+1]);
-                        // move item down one.. switch positions with the item above it
+
+                            // move item down one.. switch positions with the item above it
                             var value1 = selectionList.getElementsByTagName("div")[i].innerHTML 
                             var value2 = selectionList.getElementsByTagName("div")[i+1].innerHTML;
 
