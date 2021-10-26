@@ -1049,7 +1049,13 @@ li.tree-node:hover {
 }
 
 .node-select-list > div> div {
-    padding: 0px 7px;
+    padding: 0px 3px 0px 9px; /*extra padding on left to align with list label */
+    font-size: 12px;
+    color: #505050;
+}
+
+.node-select-list > div> div:first-child{
+    margin-top: 9px; /*extra padding on first item to sit below list label */
 }
 
 .node-select-list > div > div:hover {
@@ -1060,6 +1066,14 @@ li.tree-node:hover {
     background-color: #b2dbff; /*darker blue*/
 }
 
+.node-select-list-label {
+    position: absolute;
+    top: -10px;
+    left: 7px;
+    background-color: #fff;
+    padding: 0 4px;
+    color: #dd6600;
+}
 
 /**************************************************************************/
 /** Admin Panel
