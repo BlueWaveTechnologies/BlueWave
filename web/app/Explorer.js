@@ -403,7 +403,7 @@ bluewave.Explorer = function(parent, config) {
                             button.pieChart.enable();
                         }
                         if (node.type==="supplyChain"){
-                            button.map.enable();
+                            button.mapChart.enable();
                         }
                     }
                 }
@@ -565,8 +565,11 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** save
   //**************************************************************************
-    this.save = function(){
-        if (me.isReadOnly()) return;
+    this.save = function(callback){
+        if (me.isReadOnly()){
+            if (callback) callback();
+            return;
+        }
 
 
         waitmask.show(500);
@@ -581,9 +584,11 @@ bluewave.Explorer = function(parent, config) {
                 success: function(text) {
                     me.onUpdate();
                     id = parseInt(text);
+                    updateButtons();
                     if (thumbnail){
                         saveThumbnail(id, function(request){
                             waitmask.hide();
+                            if (callback) callback();
                             if (request.status===200){
 
                             }
@@ -594,11 +599,13 @@ bluewave.Explorer = function(parent, config) {
                     }
                     else{
                         waitmask.hide();
+                        if (callback) callback();
                     }
                 },
                 failure: function(request){
                     alert(request);
                     waitmask.hide();
+                    if (callback) callback();
                 }
             });
         });
@@ -919,10 +926,12 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("barChart", "fas fa-chart-bar", "Bar Chart", menubar);
         createMenuButton("lineChart", "fas fa-chart-line", "Line Chart", menubar);
         createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
-        createMenuButton("map", "fas fa-map-marked-alt", "Map", menubar);
+        createMenuButton("mapChart", "fas fa-map-marked-alt", "Map", menubar);
+        //createMenuButton("treemapChart", "fas fa-border-all", "Treemap Chart", menubar);
+        //createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
-        createMenuButton("layout", "fas fa-border-all", "Layout", menubar);
+        createMenuButton("layout", "far fa-object-ungroup", "Layout", menubar);
     };
 
 
@@ -1253,7 +1262,7 @@ bluewave.Explorer = function(parent, config) {
                 };
 
                 break;
-            case "map":
+            case "mapChart":
 
                 node.ondblclick = function(){
                     editMap(this);
@@ -1643,7 +1652,9 @@ bluewave.Explorer = function(parent, config) {
 
 
         supplyChainEditor.update(chartConfig);
-        supplyChainEditor.show();
+        me.save(function(){
+            supplyChainEditor.show();
+        });
     };
 
 
@@ -2603,7 +2614,7 @@ bluewave.Explorer = function(parent, config) {
                             var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
                             scatterChart.update(chartConfig, data);
                         }
-                        else if (node.type==="map"){
+                        else if (node.type==="mapChart"){
 
                           //Instantiate mapEditor as needed
                             if (!mapEditor) editMap(node, true);
