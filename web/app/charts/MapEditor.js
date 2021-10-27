@@ -366,7 +366,6 @@ if(!bluewave.charts) bluewave.charts={};
                 }
             };
             mapChart.onRedraw = function(){
-                console.log("test");
                 mapChart.update(chartConfig, data);
             }
         });

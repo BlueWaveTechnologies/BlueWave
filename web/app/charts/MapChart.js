@@ -54,6 +54,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //** redraw
   //**************************************************************************
     var redraw = function(){
+        //me.clear();
         me.onRedraw();
     };
 
@@ -413,6 +414,8 @@ bluewave.charts.MapChart = function(parent, config) {
                 chartConfig.lon = centerLon;
                 chartConfig.lat = centerLat;
             }
+            console.log(centerLon);
+            console.log(centerLat);
             projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
           //Render countries
