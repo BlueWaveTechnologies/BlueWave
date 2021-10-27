@@ -86,9 +86,13 @@ bluewave.NodeSelect = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(arr){
+    this.update = function(arr,selectedProperties){
         me.clear();
         nodes = arr;
+        
+        if (selectedProperties){
+            setSelectedProperties(selectedProperties);
+        }
 
         for (var i in nodes){
             var node = nodes[i];
@@ -118,6 +122,34 @@ bluewave.NodeSelect = function(parent, config) {
             });
         }
         return arr;
+    };
+
+  //**************************************************************************
+  //** setSelectedProperties
+  //**************************************************************************
+  /** set the selected properties from a save point
+   *  
+   */
+    var setSelectedProperties = function(selectedProperties){
+        for (let i = 0; i < selectedProperties.length; i++) {
+            var nodeName = selectedProperties[i].node;
+            var property = selectedProperties[i].property;
+            node = getNode(nodeName);
+            addPropertyFromConfig(node, nodeName, property);
+        }
+    };
+
+  //**************************************************************************
+  //** getNode
+  //**************************************************************************
+  /** get the node that corresponds to the selected property 
+   */
+    var getNode = function(nodeName){
+        for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i].name == nodeName){
+                return nodes[i];
+            }
+        }
     };
 
 
@@ -203,8 +235,31 @@ bluewave.NodeSelect = function(parent, config) {
                 clearSelection(propertyList);
             };
             selectionList.appendChild(div);
+            me.getSelectedProperties();
         }
     };
+  //**************************************************************************
+  //** addPropertyFromConfig
+  //**************************************************************************
+  /**
+   * @description adds a selection to the "Selected Properties" tab from a supplied config
+  */
+   var addPropertyFromConfig = function(node, nodeName, property){
+
+        div = document.createElement("div");
+        div.className = "noselect";
+        div.innerText = nodeName + " - " + property;
+        div.node = node;
+        div.property = property;
+        div.onclick = function(e){
+            updateSelection(this, selectionList, e);
+            clearSelection(propertyList);
+        };
+        selectionList.appendChild(div);
+        me.getSelectedProperties();
+    };
+
+
 
 
   //**************************************************************************
