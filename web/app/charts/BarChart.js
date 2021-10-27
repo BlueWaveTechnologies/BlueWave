@@ -109,11 +109,20 @@ bluewave.charts.BarChart = function(parent, config) {
 
         var mergedData = d3.merge(dataSets);
 
-        //Get max
+        //Get max bar
         var maxData = d3.nest()
             .key(function (d) { return d[xKey]; })
             .rollup(function (d) {
                 return d3.max(d, function (g) {
+                    return parseFloat(g[yKey]);
+                });
+            }).entries(mergedData);
+        //Get sum of tallest bar
+        //TODO: axis being set by first dataset - set with largest data
+            maxData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.sum(d, function (g) {
                     return parseFloat(g[yKey]);
                 });
             }).entries(mergedData);
@@ -147,19 +156,10 @@ bluewave.charts.BarChart = function(parent, config) {
 
             var subgroups = groupData.map(function(d) { return d["key"]; });
             x0.domain(subgroups);
-            console.log("group", groupData)
         }
-// console.log(dataSets)
+
 // let m = d3.max(data, function(d) { return parseFloat(d[yKey]);} );
-// console.log(m)
-// console.log(data)
-            // var sumData = d3.nest()
-            //     .key(function(d){return d[xKey];})
-            //     .rollup(function(d){
-            //         return d3.sum(d,function(g){
-            //             return g[yKey];
-            //         });
-            // }).entries(data);
+
 
         var arr = [];
         for (let i=0; i<dataSets.length; i++){
@@ -189,38 +189,17 @@ bluewave.charts.BarChart = function(parent, config) {
             arr.push(sumData);
         }
 
-        //I should probably put this in the editor
-        // var colors = bluewave.utils.getColorPalette(true);
-        // for (let i=0; i<30; i++){
-        //     var barColor = chartConfig["barColor" + i];
-        //     if (!barColor){
-        //         barColor = colors[i%colors.length];
-        //         chartConfig["barColor" + i] = barColor;
-        //     }
-        // }
-            // console.log(sumData)
-// sumData = (d => keys.map(key => ({key, value: d[key]})))
-// console.log(sumData)
 
-        var colors = bluewave.utils.getColorPalette(true);
-        var getBarColor = function(i){
-            var barColor = chartConfig["barColor" + i];
-            if (!barColor) barColor = colors[i%colors.length];
-            return barColor;
-        };
+  
+// sumData = (d => keys.map(key => ({key, value: d[key]})))
 
 
 
         //Set intitial value for layout to vertical
         if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
         var layout = chartConfig.barLayout;
-console.log("max",maxData)
-            //Flip axis if layout is horizontal
 
-//gonna need to make a new axis for group by
-
-
-
+        //Flip axis if layout is horizontal
         let leftLabel, bottomLabel;
         if(layout === "vertical"){
             displayAxis("key", "value", maxData);
@@ -234,14 +213,14 @@ console.log("max",maxData)
 
         width = plotWidth;
         height = plotHeight;
-console.log("datasets",dataSets)
+
         for (let i=0; i<dataSets.length; i++){
             var sumData = arr[i];
 
-console.log("sumdata", sumData)
+
 
             let keyType = typeOfAxisValue(sumData[0].key);
-            keyType = "string";
+            if(keyType == "date") keyType = "string";
 
             var getX = function (d) {
 
@@ -252,7 +231,6 @@ console.log("sumdata", sumData)
                     return x(d.key);
                 }
 
-                return x(d.key);
             };
 
             var getY = function(d){
@@ -264,8 +242,17 @@ console.log("sumdata", sumData)
                 if (chartConfig.barLayout === "vertical"){
 
                     var getWidth = function(d){
-                        return x.bandwidth ? x.bandwidth()/dataSets.length : getX(d);
+                        if(group){
+                            return x.bandwidth ? x.bandwidth()/dataSets.length : getX(d);
+                        }else{
+                            return x.bandwidth ? x.bandwidth() : getX(d);
+                        }
                     };
+
+                    var getHeight = function(d){
+
+
+                    }
 
 
                     plotArea
@@ -276,12 +263,11 @@ console.log("sumdata", sumData)
                         .attr("x", function(d) {
                             var w = getWidth(d);
                             var left = x.bandwidth ? getX(d) : 0;
-                            return left+(w*i);
+                            return group ? left+(w*i): getX(d);
                         })
                         .attr("y", getY)
                         .attr("height", function (d) {
-                            //console.log(y.bandwidth);
-                            //console.log(height - y(d["value"]));
+
 
                             return y.bandwidth
                                 ? y.bandwidth()
@@ -290,8 +276,12 @@ console.log("sumdata", sumData)
                         .attr("width", function (d) {
                             return getWidth(d);
                         })
+                        .attr("barID", function(d, n, j){
+                            // i is external loop incrementor for multiple data sets and grouping
+                            // n is for single data set where all bars are rendered on enter()
+                            return group ? i : n;
+                        })
 
-                        .attr("fill", getBarColor(i));
                 }
                 else if(chartConfig.barLayout === "horizontal"){
                     plotArea
@@ -303,24 +293,35 @@ console.log("sumdata", sumData)
                             return 0;
                         })
                         .attr("y", function (d) {
-                            if (keyType === "date") {
-                                return y(new Date(d.key));
-                            } else {
-                                return y(d.key);
-                            }
-                            // return y(d["key"]);
+                            // if (keyType === "date") {
+                            //     return y(new Date(d.key));
+                            // } else {
+                            //     return y(d.key);
+                            // }
+                            var w = y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["key"]);
+                            var left = y.bandwidth ? y(d["key"]) : 0;
+                            return group ? left+(w*i): y(d["key"]);
+ 
                         })
                         .attr("height", function (d) {
 
-                            return y.bandwidth
-                                ? y.bandwidth()
-                                : height - y(d["value"]);
+                            if(group){
+                                return y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["value"]);
+                            }else{
+                                return y.bandwidth ? y.bandwidth() : height - y(d["value"]);
+                            }
+                            
                         })
                         .attr("width", function (d) {
                             return x.bandwidth ? x.bandwidth() : x(d["value"]);
                         })
+                        .attr("barID", function(d, n, j){
+                            // i is external loop incrementor for multiple data sets and grouping
+                            // n is for single data set where all bars are rendered on enter()
+                            return group ? i : n;
+                        })
 
-                        .attr("fill", getBarColor(i));
+                        // .attr("fill", getBarColor(i));
                 }
             }
             //No bandwith
@@ -346,44 +347,13 @@ console.log("sumdata", sumData)
                         .attr("width", function (d) {
                             return width/sumData.length-5;
                         })
+                        .attr("barID", function(d, n, j){
+                            // i is external loop incrementor for multiple data sets and grouping
+                            // n is for single data set where all bars are rendered on enter()
+                            return group ? i : n;
+                        })
 
-                        .attr("fill", getBarColor(i));
-                    }
-                    else{
-                        //group by option
-                        let barWidth = width/dataSets.length/sumData.length;
-
-                        // let barWidth = x.rangeBand()
-                        plotArea
-                            .append("g")
-                            // .selectAll("g")
-                            .selectAll("mybar")
-                            .data(sumData)
-                            .enter()
-                            .append("rect")
-                            .attr("x", function (d) {
-// console.log(j)
-//j is another weird d3 callback param
-                            // return getX(d) + barWidth*j;
-                            // return getX(d) - width/sumData.length / 2;
-                                return getX(d) + i*barWidth;
-                            // return getX(d)
-                            // let x1 = d3.scaleBand().padding(0.05);
-
-                            // return x1(new Date (d["key"]))
-    //                        return x(d[xKey]) - width/data.length / 2;
-                            })
-                            .attr("y", getY)
-                            .attr("height", function (d) {
-                                return height - getY(d);
-        //                        return height - y(d[yKey]);
-                            })
-                            .attr("width", function (d) {
-                                return barWidth;
-                            })
-
-
-                        .attr("fill", getBarColor(i));
+                        // .attr("fill", getBarColor(i));
                     }
 
                 }
@@ -412,17 +382,38 @@ console.log("sumdata", sumData)
                         .attr("width", function (d) {
                             return x(d["value"]);
                         })
-
-                        .attr("fill", getBarColor(i));
+                        .attr("barID", function(d, n, j){
+                            // i is external loop incrementor for multiple data sets and grouping
+                            // n is for single data set where all bars are rendered on enter()
+                            return group ? i : n;
+                        })
+                        // .attr("fill", getBarColor(i));
                 }
             }
 
         }
 
-        //Set default colors and ID
+        //Set color defaults
+        var colors = bluewave.utils.getColorPalette(true);
+        var getBarColor = function(i){
+            var barColor = chartConfig["barColor" + i];
+            if (!barColor) {
+                barColor = colors[i%colors.length];
+                chartConfig["barColor" + i] = barColor;
+            }
+            return barColor;
+        };
+
+        //Set bar colors
         var bars = plotArea.selectAll("rect");
 
-
+        bars.each(function (d, i) {
+            
+            //i is a d3 internal callback incrementer
+            let bar = d3.select(this);
+            let barID = parseInt(d3.select(this).attr("barID"));
+            bar.attr("fill", getBarColor(barID));
+        })
 
 
         //Create d3 event listeners for bars
@@ -587,12 +578,13 @@ console.log("sumdata", sumData)
         let scale;
         let band;
         let type = typeOfAxisValue(chartData[0][key]);
+        if (type === "date") type = "string";
         let max = 0;
         let timeRange;
         let axisRange;
         let axisRangePadded;
         if(axisName === "x"){
-            type = "string";
+            // type = "string";
             axisRange = [0,axisWidth];
             axisRangePadded = [10,axisWidth-10];
         }
@@ -642,7 +634,7 @@ console.log("sumdata", sumData)
                         max = curVal;
                     }
                 });
-// console.log(max)
+
                 scale = d3
                     .scaleLinear()
                     .domain([0, max])
