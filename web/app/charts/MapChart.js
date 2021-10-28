@@ -37,8 +37,8 @@ bluewave.charts.MapChart = function(parent, config) {
 
         readOnly = false;
         svg.call(d3.zoom().scaleExtent([1, 1])
-            .on('zoom', recenter)
-            .on('end', redraw));
+            .on('zoom', recenter));
+//            .on('end', redraw));
     };
 
 
@@ -127,7 +127,6 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     var update = function(parent, chartConfig, data){
 
-        console.log(chartConfig);
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
@@ -414,8 +413,6 @@ bluewave.charts.MapChart = function(parent, config) {
                 chartConfig.lon = centerLon;
                 chartConfig.lat = centerLat;
             }
-            console.log(centerLon);
-            console.log(centerLat);
             projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
           //Render countries
@@ -597,10 +594,13 @@ bluewave.charts.MapChart = function(parent, config) {
                 if(countryOne !== 'US' && countryTwo === 'US'){
                     for(var i = 0; i < ports.length; i++){
                         if(countryOne === ports[i].iso2){
+                            console.log(ports[i]);
                             coordOne.push(ports[i].exlatitude);
                             coordOne.push(ports[i].exlongitude);
                             coordTwo.push(ports[i].imlatitude);
                             coordTwo.push(ports[i].imlongitude);
+                            console.log(coordOne);
+                            console.log(coordTwo);
                             connectionPath.push(coordOne);
                             connectionPath.push(coordTwo);
                             connectionPath.push(quantity);
@@ -613,6 +613,8 @@ bluewave.charts.MapChart = function(parent, config) {
                         if (countryOne === countryCenter.properties.code){
                             var lat = countryCenter.properties.latitude;
                             var lon = countryCenter.properties.longitude;
+                            console.log(lat);
+                            console.log(lon);
                             coordOne.push(lat);
                             coordOne.push(lon);
                             connectionPath.push(coordOne);
@@ -624,6 +626,8 @@ bluewave.charts.MapChart = function(parent, config) {
                         if(countryTwo === countryCenter.properties.code){
                             var lat = countryCenter.properties.latitude;
                             var lon = countryCenter.properties.longitude;
+                            console.log(lat);
+                            console.log(lon);
                             coordTwo.push(lat);
                             coordTwo.push(lon);
                             connectionPath.push(coordTwo);
@@ -635,6 +639,24 @@ bluewave.charts.MapChart = function(parent, config) {
                 }
             });
         }
+        var geometryFactory = new jsts.geom.GeometryFactory();
+
+        var points = [];
+        coords.forEach(function(d){
+            points.push(d[0]);
+            points.push(d[1]);
+        });
+
+        var coordinates = [];
+        points.forEach(function (d){
+           var coord = new jsts.geom.Coordinate(d[0], d[1]);
+           var point = geometryFactory.createPoint(coord);
+           coordinates.push(point);
+        });
+
+        var geom = geometryFactory.createMultiPoint(coordinates);
+        var centroid = geom.getCentroid();
+
         var quantities = [];
         coords.forEach(function(d){
             quantities.push(d[2]);
