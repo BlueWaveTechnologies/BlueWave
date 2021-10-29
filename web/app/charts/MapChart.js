@@ -22,6 +22,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var options = []; //aggregation options
     var projection;
     var readOnly;
+    var zoom;
 
   //**************************************************************************
   //** Constructor
@@ -34,11 +35,13 @@ bluewave.charts.MapChart = function(parent, config) {
             mapArea = g;
         });
 
+            zoom = d3.zoom()
+                .scaleExtent([1, 1])
+                .on('zoom', recenter);
+//                .on('end', redraw));
 
         readOnly = false;
-        svg.call(d3.zoom().scaleExtent([1, 1])
-            .on('zoom', recenter));
-//            .on('end', redraw));
+        svg.call(zoom);
     };
 
 
@@ -653,7 +656,11 @@ bluewave.charts.MapChart = function(parent, config) {
         var x = centroid_coords.x;
         var y = centroid_coords.y;
         var projected_center = projection([x,y]);
+        x = projected_center[0];
+        y = projected_center[1];
         console.log(projected_center);
+
+        zoom.translateTo(mapArea, x, y);
 
         var quantities = [];
         coords.forEach(function(d){
