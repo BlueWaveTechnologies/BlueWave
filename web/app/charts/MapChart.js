@@ -594,13 +594,10 @@ bluewave.charts.MapChart = function(parent, config) {
                 if(countryOne !== 'US' && countryTwo === 'US'){
                     for(var i = 0; i < ports.length; i++){
                         if(countryOne === ports[i].iso2){
-                            console.log(ports[i]);
                             coordOne.push(ports[i].exlatitude);
                             coordOne.push(ports[i].exlongitude);
                             coordTwo.push(ports[i].imlatitude);
                             coordTwo.push(ports[i].imlongitude);
-                            console.log(coordOne);
-                            console.log(coordTwo);
                             connectionPath.push(coordOne);
                             connectionPath.push(coordTwo);
                             connectionPath.push(quantity);
@@ -613,8 +610,6 @@ bluewave.charts.MapChart = function(parent, config) {
                         if (countryOne === countryCenter.properties.code){
                             var lat = countryCenter.properties.latitude;
                             var lon = countryCenter.properties.longitude;
-                            console.log(lat);
-                            console.log(lon);
                             coordOne.push(lat);
                             coordOne.push(lon);
                             connectionPath.push(coordOne);
@@ -626,8 +621,6 @@ bluewave.charts.MapChart = function(parent, config) {
                         if(countryTwo === countryCenter.properties.code){
                             var lat = countryCenter.properties.latitude;
                             var lon = countryCenter.properties.longitude;
-                            console.log(lat);
-                            console.log(lon);
                             coordTwo.push(lat);
                             coordTwo.push(lon);
                             connectionPath.push(coordTwo);
@@ -656,6 +649,11 @@ bluewave.charts.MapChart = function(parent, config) {
 
         var geom = geometryFactory.createMultiPoint(coordinates);
         var centroid = geom.getCentroid();
+        var centroid_coords = centroid._coordinates._coordinates[0];
+        var x = centroid_coords.x;
+        var y = centroid_coords.y;
+        var projected_center = projection([x,y]);
+        console.log(projected_center);
 
         var quantities = [];
         coords.forEach(function(d){
