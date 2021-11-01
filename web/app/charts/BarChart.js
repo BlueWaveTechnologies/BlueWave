@@ -279,7 +279,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
-                            return group ? i : n;
+                            return group ? i : 0;
                         })
 
                 }
@@ -318,7 +318,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
-                            return group ? i : n;
+                            return group ? i : 0;
                         })
 
                         // .attr("fill", getBarColor(i));
@@ -350,7 +350,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
-                            return group ? i : n;
+                            return group ? i : 0;
                         })
 
                         // .attr("fill", getBarColor(i));
@@ -385,7 +385,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
-                            return group ? i : n;
+                            return group ? i : 0;
                         })
                         // .attr("fill", getBarColor(i));
                 }
