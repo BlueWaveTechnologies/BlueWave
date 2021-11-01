@@ -113,19 +113,12 @@ bluewave.charts.BarChart = function(parent, config) {
         var maxData = d3.nest()
             .key(function (d) { return d[xKey]; })
             .rollup(function (d) {
-                return d3.max(d, function (g) {
+                return d3.sum(d, function (g) {
                     return parseFloat(g[yKey]);
                 });
             }).entries(mergedData);
         //Get sum of tallest bar
         //TODO: axis being set by first dataset - set with largest data
-            maxData = d3.nest()
-            .key(function (d) { return d[xKey]; })
-            .rollup(function (d) {
-                return d3.sum(d, function (g) {
-                    return parseFloat(g[yKey]);
-                });
-            }).entries(mergedData);
 
 // maxData = d3.max(mergedData, function (g) {
 //     return parseFloat(g[yKey]);
@@ -138,9 +131,17 @@ bluewave.charts.BarChart = function(parent, config) {
         //Reformat data if "group by" is selected
         if(group !== null && group !== undefined && group!==""){
 
-            let groupData = d3.nest()
+            var groupData = d3.nest()
             .key(function(d){return d[group];})
             .entries(data1);
+
+            maxData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.max(d, function (g) {
+                    return parseFloat(g[yKey]);
+                });
+            }).entries(mergedData);
 
             let tempDataSets = [];
             groupData.forEach(function(g){
