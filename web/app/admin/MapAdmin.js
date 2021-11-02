@@ -270,4 +270,6 @@ if(!bluewave) var bluewave={};
       var del = javaxt.dhtml.utils.delete;
       var merge = javaxt.dhtml.utils.merge;
 
+    init();
+
  }
