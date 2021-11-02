@@ -124,7 +124,7 @@ bluewave.charts.PieChart = function(parent, config) {
                 var labelStart = radius - ((radius-innerRadius)*0.1);
                 var labelEnd = radius * 1.2;
 
-                var labelArea = radius/2 + chartConfig.pieLabelOffset*3;
+                var labelArea = radius/2 + chartConfig.labelOffset*3;
 
                 var innerArc = d3.arc()
                   .innerRadius(labelStart)
@@ -148,7 +148,7 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
               //Add the polylines between chart and labels:
-              if (parseInt(chartConfig.pieLabelOffset) > 100) {
+              if (parseInt(chartConfig.labelOffset) > 100) {
                 let endPoints = [];
                 var lineGroup = pieChart.append("g");
                 lineGroup.attr("name", "lines");
@@ -197,7 +197,7 @@ bluewave.charts.PieChart = function(parent, config) {
 
                   })
                   .style("text-anchor", function (d) {
-                    if (parseInt(chartConfig.pieLabelOffset) >= 99) {
+                    if (parseInt(chartConfig.labelOffset) >= 99) {
                         var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
                         return midangle < Math.PI ? "start" : "end";
                     } else {

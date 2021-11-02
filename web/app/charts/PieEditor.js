@@ -15,6 +15,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         pieCutout: 0.65,
         piePadding: 0,
         maximumSlices: 8,
+        labelOffset: 0,
         showOther: true
     };
 
@@ -524,7 +525,7 @@ bluewave.charts.PieEditor = function(parent, config) {
 
         var labelOffsetField = form.findField("labelOffset");
         createSlider("labelOffset", form, "%", 0, 120, 1);
-        var labelOffset = chartConfig.pieLabelOffset;
+        var labelOffset = chartConfig.labelOffset;
         form.findField("labelOffset").setValue(labelOffset);
 
 
@@ -566,7 +567,7 @@ bluewave.charts.PieEditor = function(parent, config) {
             }
             chartConfig.pieLabels = settings.labels;
 
-            chartConfig.pieLabelOffset = settings.labelOffset;
+            chartConfig.labelOffset = settings.labelOffset;
 
             if (settings.showOther==="true") settings.showOther = true;
             else if (settings.showOther==="false") settings.showOther = false;
