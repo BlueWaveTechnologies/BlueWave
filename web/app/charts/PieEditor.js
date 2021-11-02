@@ -503,26 +503,7 @@ bluewave.charts.PieEditor = function(parent, config) {
                         {
                             name: "labelOffset",
                             label: "Label Offset",
-                            type: "radio",
-                            alignment: "vertical",
-                            options: [
-                                {
-                                    label: "0%",
-                                    value: 0
-                                },
-                                {
-                                    label: "50%",
-                                    value: 50
-                                },
-                                {
-                                    label: "100%",
-                                    value: 100
-                                },
-                                {
-                                    label: "120%",
-                                    value: 120
-                                }
-                            ]
+                            type: "text"
                         }
                     ]
                 }
@@ -542,8 +523,9 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
         var labelOffsetField = form.findField("labelOffset");
+        createSlider("labelOffset", form, "%", 0, 120, 1);
         var labelOffset = chartConfig.pieLabelOffset;
-        labelOffsetField.setValue(labelOffset);
+        form.findField("labelOffset").setValue(labelOffset);
 
 
 
