@@ -7,15 +7,6 @@ if(!bluewave) var bluewave={};
  *   Panel used to edit charts/graphs
  *
  ******************************************************************************/
-/**
- *   Data Flow:
- *   init - stubs out chart areas
- *   initializeChartSpace - stubs out chart spaces
- *   Update - chart information and config is passed in.
- *   createForm - initializes chart Type specific dropdowns
- *   createOptions - adds chart input options from updated Data
- *      pie, bar,line, map chart creation.
- ******************************************************************************/
 
 bluewave.ChartEditor = function(parent, config) {
     var me = this;
@@ -109,14 +100,6 @@ bluewave.ChartEditor = function(parent, config) {
         onRender(previewArea, function(){
             initializeChartSpace();
         });
-    };
-
-
-  //**************************************************************************
-  //** getNode
-  //**************************************************************************
-    this.getNode = function() {
-        return currentNode;
     };
 
 
@@ -1182,43 +1165,12 @@ bluewave.ChartEditor = function(parent, config) {
                 };
 
             }
-          //Process onChange events
-            // form.onChange = function(){
-            //     var settings = form.getData();
-
-            //     chartConfig.barColor = settings.fillColor;
-
-            //     createBarPreview();
-            // };
         }
 
 
       //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);
         form.resize();
-
-
-
-      //Form resize doesn't seem to be working correctly for the linechart.
-      //It might have something to do with the custom sliders. Probably a
-      //timing issue. The following is a workaround.
-        if (chartType==="line"){
-
-            setTimeout(function(){
-                var arr = body.getElementsByClassName("form-groupbox");
-                for (var i=0; i<arr.length; i++){
-                    var el = arr[i];
-                    var h = parseFloat(el.style.height);
-                    el.style.height = h+30 + "px";
-                }
-            }, 100);
-        }
-
-      //Workaround for bar chart legend until editor is split up
-        // if(chartType !== "barChart"){
-        //     let legendContainer = document.querySelector(".bar-legend");
-        //     if(legendContainer) legendContainer.remove();
-        // }
     };
 
 
