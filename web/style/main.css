@@ -626,6 +626,12 @@ li.tree-node:hover {
     font-size: 22px;
 }
 
+.drawflow-toolbar-button-icon.far.fa-object-ungroup {
+    width: 34px;
+    margin-left: -2px;
+    margin-top: -4px;
+}
+
 
 .drag-drawflow {
     line-height: 50px;
@@ -758,7 +764,8 @@ li.tree-node:hover {
 }
 
 
-.drawflow-node-title .fas {
+.drawflow-node-title .fas,
+.drawflow-node-title .far {
     margin: 0 5px 0 0;
     font-size: 16px;
 }
@@ -770,7 +777,8 @@ li.tree-node:hover {
     position: relative;
 }
 
-.drawflow-node-body .fas {
+.drawflow-node-body .fas,
+.drawflow-node-body .far {
     color:#eaeaea;
     font-size:75px;
     margin-top:10px;
