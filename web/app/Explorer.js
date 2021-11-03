@@ -16,7 +16,9 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager; //popup dialogs
+    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor,
+    supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager,
+    fileViewer, docComparer; //popup dialogs
     var windows = [];
     var zoom = 0;
 
@@ -807,10 +809,8 @@ bluewave.Explorer = function(parent, config) {
 
         var div = document.createElement("div");
         div.className = "drawflow";
-        div.ondrop = drop;
-        div.ondragover = function(e){
-            e.preventDefault();
-        };
+        div.addEventListener('dragover', onDragOver, false);
+        div.addEventListener('drop', onDrop, false);
         parent.appendChild(div);
 
 
@@ -859,6 +859,14 @@ bluewave.Explorer = function(parent, config) {
             }
             else if (node.type === "sankeyChart"){
                 if (inputNode.type == "supplyChain"){
+                    acceptConnection();
+                }
+                else{
+                   removeConnection();
+                }
+            }
+            else if (node.type === "compareDocs"){
+                if (inputNode.type === "pdf"){
                     acceptConnection();
                 }
                 else{
@@ -944,6 +952,7 @@ bluewave.Explorer = function(parent, config) {
         //createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
+        createMenuButton("compareDocs", "fas fa-not-equal", "Document Analysis", menubar);
         createMenuButton("layout", "far fa-object-ungroup", "Layout", menubar);
     };
 
@@ -1005,10 +1014,28 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** drop
+  //** onDragOver
   //**************************************************************************
-    var drop = function(ev) {
-        if (ev.type === "touchend") {
+  /** Called when the client drags something over the canvas (e.g. file)
+   */
+    var onDragOver = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy
+    };
+
+
+  //**************************************************************************
+  //** onDrop
+  //**************************************************************************
+  /** Called when the client drops something onto the canvas (e.g. file or icon)
+   */
+    var onDrop = function(e) {
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        if (e.type === "touchend") {
             /*
             let parentdrawflow = document
                 .elementFromPoint(
@@ -1027,9 +1054,70 @@ bluewave.Explorer = function(parent, config) {
             */
         }
         else {
-            ev.preventDefault();
-            let nodeType = ev.dataTransfer.getData("node");
-            addNodeToDrawFlow(nodeType, ev.clientX, ev.clientY);
+
+            var x = e.clientX;
+            var y = e.clientY;
+
+            var files = e.dataTransfer.files;
+            if (files.length>0){
+                waitmask.show(500);
+
+              //Generate list of files to upload
+                var arr = [];
+                for (var i=0; i<files.length; i++) {
+                    var file = files[i];
+                    var fileName = file.name.toLowerCase();
+                    var ext = fileName.substring(fileName.lastIndexOf(".")+1);
+                    if (ext==="csv" || ext==="pdf"){
+                        arr.push(file);
+                    }
+                }
+
+
+              //Upload files to the server
+                var uploads = 0;
+                var failures = [];
+                var upload = function(){
+
+                    if (arr.length===0){
+                        waitmask.hide();
+                        if (failures.length>0){
+                            alert("Failed to upload " + failures);
+                        }
+                        return;
+                    }
+
+                    var file = arr.shift();
+                    var formData = new FormData();
+                    formData.append(file.name, file);
+                    post("document", formData, {
+                        success: function(text){
+
+                            if (uploads>0){
+                                x+=35;
+                                y+=85;
+                            }
+                            uploads++;
+
+                            addNodeToDrawFlow(ext, x, y, file);
+
+
+                            upload();
+                        },
+                        failure: function(request){
+                            failures.push(file.name);
+                            upload();
+                        }
+                    });
+                };
+                upload();
+
+
+            }
+            else{
+                let nodeType = e.dataTransfer.getData("node");
+                addNodeToDrawFlow(nodeType, x, y);
+            }
         }
     };
 
@@ -1037,7 +1125,8 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** addNodeToDrawFlow
   //**************************************************************************
-    var addNodeToDrawFlow = function (nodeType, pos_x, pos_y) {
+    var addNodeToDrawFlow = function (nodeType, pos_x, pos_y, file) {
+
       //Don't add node if the view is "fixed"
         if (drawflow.editor_mode === "fixed")  return false;
 
@@ -1059,21 +1148,37 @@ bluewave.Explorer = function(parent, config) {
                     (drawflow.precanvas.clientHeight * drawflow.zoom));
 
 
-     //Get toolbar button associated with the nodeType
+
+      //Set icon and title for the node
+        var icon, title;
         var btn = button[nodeType];
-        if (!btn){
-            console.log("Unsupported Node Type: " + nodeType);
-            return;
+        if (btn){
+            icon = btn.el.dataset["icon"];
+            title = btn.el.dataset["title"];
+        }
+        else{
+            if (nodeType==="csv"){
+                title = "CSV Data";
+                icon = "fas fa-file-csv";
+            }
+            else if (nodeType==="pdf"){
+                title = "PDF Document";
+                icon = "fas fa-file-pdf";
+            }
+            else{
+                console.log("Unsupported Node Type: " + nodeType);
+                return;
+            }
         }
 
 
-      //Get button icon and title to decorate the node
-        var icon = btn.el.dataset["icon"];
-        var title = btn.el.dataset["title"];
+
+      //Create icon
         var i = document.createElement("i");
         i.className = icon;
 
 
+      //Update buttons
         button["save"].enable();
         if (id){
             button["edit"].enable();
@@ -1083,36 +1188,23 @@ bluewave.Explorer = function(parent, config) {
 
       //Create node
         switch (nodeType) {
+
+          //Nodes with output only
             case "addData":
+            case "csv":
+            case "pdf":
 
-                var node = createNode({
-                    name: "Input Data",
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 0,
-                    outputs: 1
-                });
-
-                addEventListeners(node);
-                node.ondblclick();
-
-                break;
-            case "transformData":
-
-                var node = createNode({
-                    name: "Transform Data",
-                    type: nodeType,
-                    icon: "fas fa-table",
-                    content: "Db Click here",
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 1
-                });
-
-                break;
-            case "supplyChain":
+                if (file){
+                    var content = document.createElement("div");
+                    content.style.position = "relative";
+                    content.style.overflow = "hidden";
+                    var label = document.createElement("div");
+                    label.className = "filename noselect";
+                    label.innerText = file.name;
+                    content.appendChild(label);
+                    content.appendChild(i);
+                    i = content;
+                }
 
                 var node = createNode({
                     name: title,
@@ -1126,8 +1218,18 @@ bluewave.Explorer = function(parent, config) {
 
                 addEventListeners(node);
 
+                if (nodeType==="pdf"){
+                    button["compareDocs"].enable();
+                }
+                else{
+                    node.ondblclick();
+                }
+
                 break;
+
+          //Nodes with input only
             case "layout":
+            case "compareDocs":
 
                 var node = createNode({
                     name: title,
@@ -1143,6 +1245,7 @@ bluewave.Explorer = function(parent, config) {
 
                 break;
 
+          //Nodes with both inputs and outputs
             default:
 
                 var node = createNode({
@@ -1238,10 +1341,7 @@ bluewave.Explorer = function(parent, config) {
 
 
                 break;
-            case "transformData":
 
-
-                break;
             case "sankeyChart":
 
                 node.ondblclick = function(){
@@ -1282,6 +1382,35 @@ bluewave.Explorer = function(parent, config) {
                 };
 
                 break;
+
+            case "pdf":
+
+                node.ondblclick = function(){
+                    renderFile(this);
+                };
+
+                break;
+
+
+            case "compareDocs":
+
+                node.ondblclick = function(){
+
+                    var numInputs = 0;
+                    var inputs = this.inputs;
+                    for (var key in inputs) {
+                        if (inputs.hasOwnProperty(key)){
+                            numInputs++;
+                        }
+                    }
+
+                    if (numInputs>1){
+                        compareDocs(this);
+                    }
+                };
+
+                break;
+
             default:
 
                 node.ondblclick = function(){
@@ -1737,6 +1866,38 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
+  //** compareDocs
+  //**************************************************************************
+    var compareDocs = function(node){
+
+        if (!docComparer){
+            docComparer = createNodeEditor({
+                title: "Document Analysis",
+                width: 1060,
+                height: 600,
+                editor: bluewave.analytics.DocumentComparison
+            });
+        }
+        docComparer.getNode = function(){
+            return node;
+        };
+
+
+        var inputs = {};
+
+
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+      //Update and show docComparer
+        docComparer.update(inputs, chartConfig);
+        docComparer.show();
+    };
+
+
+  //**************************************************************************
   //** createNodeEditor
   //**************************************************************************
     var createNodeEditor = function(conf){
@@ -1872,6 +2033,25 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         }
+    };
+
+
+  //**************************************************************************
+  //** renderFile
+  //**************************************************************************
+    var renderFile = function(node){
+        if (!fileViewer){
+            fileViewer = createWindow({
+                title: "File Preview",
+                width: 800,
+                height: 600,
+                resizable: false,
+                beforeClose: null,
+                modal: true,
+                style: config.style.window
+            });
+        }
+        fileViewer.show();
     };
 
 
