@@ -192,6 +192,7 @@ bluewave.MapAdmin = function(parent, config) {
                 return obj.rows;
             },
             columns: [
+                {header: 'ID', hidden:true, field:'id'},
                 {header: 'Name', width:'100%', field:'name'},
                 {header: 'URL', width:'150', field:'url'},
                 {header: 'Key', width:'240', field:'key'},

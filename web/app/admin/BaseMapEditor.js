@@ -26,6 +26,29 @@ if(!bluewave) var bluewave={};
         form = new javaxt.dhtml.Form(div, {
             style: config.style.form,
             items: [
+                {
+                    group: "Basemap",
+                    items: [
+                        {
+                            name: "name",
+                            label: "Name",
+                            type: "text",
+                            required: true
+                        },
+                        {
+                            name: "url",
+                            label: "URL",
+                            type: "text",
+                            required: true
+                        },
+                        {
+                            name: "key",
+                            label: "Key",
+                            type: "text",
+                            required: true
+                        }
+                    ]
+                }
             ],
             buttons: [
                 {
@@ -41,26 +64,31 @@ if(!bluewave) var bluewave={};
                     onclick: function(){
 
                         var values = form.getData();
-//                        var username = values.username;
-//                        if (username) username = username.trim();
-//                        if (username==null || username==="") {
-//                            warn("Username is required", form.findField("username"));
-//                            return;
-//                        }
-//
-//                        var password = values.password;
-//                        if (password) password = password.trim();
-//                        if (password==null || password==="") {
-//                            warn("Password is required", form.findField("password"));
-//                            return;
-//                        }
-//                        //TODO: Check password complexity?
-//
-//
-//                        user.username = username;
-//                        user.password = password;
-//                        user.accessLevel = parseInt(values.accessLevel);
-//                        user.active = values.active==="true";
+
+                        var name = values.name;
+                        if(name) name = name.trim();
+                        if(name==null || name="") {
+                            warn("Name is required", form.findField("name"));
+                            return;
+                        }
+
+                        var url = values.url;
+                        if(url) url = url.trim();
+                        if(url==null || url="") {
+                            warn("URL is required", form.findField("url"));
+                            return;
+                        }
+
+                        var key = values.key;
+                        if(key) key = key.trim();
+                        if(key==null || key="") {
+                            warn("Key is required", form.findField("key"));
+                            return;
+                        }
+
+                        baseMap.name = name;
+                        baseMap.url = url;
+                        baseMap.key = key;
 
                         me.onSubmit();
                     }
@@ -98,8 +126,6 @@ if(!bluewave) var bluewave={};
         form.onChange = function(formInput, value){
             me.onChange(formInput.name, value);
         };
-
-
     };
 
 
@@ -141,7 +167,7 @@ if(!bluewave) var bluewave={};
   //** clear
   //**************************************************************************
     this.clear = function(){
-        user = {};
+        baseMap = {};
         form.clear();
     };
 
@@ -186,5 +212,6 @@ if(!bluewave) var bluewave={};
     this.onCancel = function(){};
     this.onSubmit = function(){};
     this.onChange = function(name, value){};
+
     init();
  }
