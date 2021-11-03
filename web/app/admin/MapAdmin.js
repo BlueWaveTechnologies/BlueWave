@@ -16,7 +16,7 @@ bluewave.MapAdmin = function(parent, config) {
     };
     var waitmask;
     var basemaps = [];
-    var editor;
+    var grid, editor;
     var addButton, editButton, deleteButton, moveUpButton, moveDownButton;
 
 
@@ -232,6 +232,72 @@ bluewave.MapAdmin = function(parent, config) {
             grid.load();
         };
 
+    };
+
+
+  //**************************************************************************
+  //** editBaseMap
+  //**************************************************************************
+    var editBaseMap = function(basemap){
+
+        //instantitate the editor if need be
+        if (!editor){
+            editor = new bluewave.BaseMapEditor(document.body, {
+                style: config.style
+            });
+            editor.onSubmit = function(){
+                var basemap = editor.getValues();
+                save("admin/settings/basemap", JSON.stringify(basemap), {
+                    success: function(){
+                        editor.close();
+                        grid.update();
+                    },
+                    failure: function(request){
+                        alert(request);
+                    }
+                });
+            };
+        }
+
+
+      //Clear/reset the form
+        editor.clear();
+
+
+      //Updated values
+        if (basemap){
+            userEditor.setTitle("Edit Base Map");
+
+            get("admin/settings/basemap?id="+basemap.id, {
+                success: function(basemap){
+                    editor.update(user);
+                    editor.show();
+                },
+                failure: function(request){
+                    alert(request);
+                }
+            });
+
+        }
+        else{
+            editor.setTitle("New Basemap");
+            editor.show();
+        }
+    };
+
+
+  //**************************************************************************
+  //** deleteBaseMap
+  //**************************************************************************
+    var deleteBaseMap = function(basemap){
+        del("admin/settings/basemap?id=" + basemap.id, {
+            success: function(){
+                grid.update();
+            },
+            failure: function(request){
+                alert(request);
+            }
+        });
     };
 
 
