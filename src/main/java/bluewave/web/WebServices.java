@@ -31,6 +31,7 @@ public class WebServices extends WebService {
     private QueryService queryService;
     private GraphService graphService;
     private ImportService importService;
+    private DocumentService documentService;
     private SupplyChainService supplyChainService;
 
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
@@ -52,8 +53,8 @@ public class WebServices extends WebService {
 
       //Sync bluewave user accounts with the graph database
         bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
-        
-        
+
+
       //Get database
         database = Config.getDatabase();
 
@@ -67,6 +68,7 @@ public class WebServices extends WebService {
         queryService = new QueryService(webConfig);
         graphService = new GraphService();
         importService = new ImportService();
+        documentService = new DocumentService();
         supplyChainService = new SupplyChainService();
 
 
@@ -217,6 +219,9 @@ public class WebServices extends WebService {
         }
         else if (service.equals("import")){
             ws = importService;
+        }
+        else if (service.equals("document")){
+            ws = documentService;
         }
         else if (service.equals("supplychain")){
             ws = supplyChainService;
