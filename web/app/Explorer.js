@@ -292,28 +292,32 @@ bluewave.Explorer = function(parent, config) {
         var onReady = function(){
             updateButtons();
             me.setView(view);
+            setTimeout(function(){
+                if (me.getView()!=="Dashboard"){
 
-            if (me.getView()!=="Dashboard"){
+                  //Update connections
+                    for (var i=0; i<connectionNodes.length; i++){
+                        var inputID = connectionNodes[i];
+                        drawflow.updateConnectionNodes("node-"+inputID);
+                    }
 
-              //Update connections
-                for (var i=0; i<connectionNodes.length; i++){
-                    var inputID = connectionNodes[i];
-                    drawflow.updateConnectionNodes("node-"+inputID);
+                  //Update thumbnails
+                    for (var i=0; i<thumbnails.length; i++){
+                        (function (t) {
+                            var el = t.node.childNodes[1];
+                            onRender(el, function(){
+                                createThumbnail(t.node, t.thumbnail);
+                            });
+                        })(thumbnails[i]);
+                    }
+
+                    setZoom(dashboard.info.zoom);
                 }
 
-              //Update thumbnails
-                for (var i=0; i<thumbnails.length; i++){
-                    (function (t) {
-                        var el = t.node.childNodes[1];
-                        onRender(el, function(){
-                            createThumbnail(t.node, t.thumbnail);
-                        });
-                    })(thumbnails[i]);
-                }
-            }
-            setZoom(dashboard.info.zoom);
-            mask.hide();
-            editPanel.focus();
+                mask.hide();
+                editPanel.focus();
+
+            },500); //slight delay for drawflow
         };
 
 
@@ -327,7 +331,7 @@ bluewave.Explorer = function(parent, config) {
                     if (csvRequests.length===0){
                         showMask = false;
                         waitmask.hide();
-                        onReady.apply(me, []);
+                        onReady();
                     }
                     else{
                         updateNodes();
@@ -351,7 +355,7 @@ bluewave.Explorer = function(parent, config) {
             timer = setTimeout(checkMask, 100);
         }
         else{
-            onReady.apply(me, []);
+            onReady();
         }
     };
 
@@ -2699,6 +2703,7 @@ bluewave.Explorer = function(parent, config) {
                 if (val==="Edit"){
                     dashboardPanel.hide();
                     editPanel.show();
+                    editPanel.focus();
                 }
                 else{
                     editPanel.hide();
