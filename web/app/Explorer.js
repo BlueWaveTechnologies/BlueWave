@@ -478,7 +478,7 @@ bluewave.Explorer = function(parent, config) {
             toggleButton.show();
 
 
-            if (getLayout()){
+            if (getLayoutNode()){
                 toggleButton.hide();
                 toggleButton.setValue("Preview");
             }
@@ -635,11 +635,11 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** getLayout
+  //** getLayoutNode
   //**************************************************************************
   /** Returns the first layout node
    */
-    var getLayout = function(){
+    var getLayoutNode = function(){
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
@@ -649,6 +649,25 @@ bluewave.Explorer = function(parent, config) {
             }
         }
         return null;
+    };
+
+
+  //**************************************************************************
+  //** getFileNodes
+  //**************************************************************************
+  /** Returns an array of nodes associated with a file
+   */
+    var getFileNodes = function(){
+        var fileNodes = [];
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                if (node.type==="pdf" || node.type==="csv"){
+                    fileNodes.push(node);
+                }
+            }
+        }
+        return fileNodes;
     };
 
 
@@ -892,7 +911,7 @@ bluewave.Explorer = function(parent, config) {
             removeInputs(nodes, nodeID);
             var nodeType = nodes[nodeID+""].type;
             delete nodes[nodeID+""];
-            if (nodeType==="layout" && !getLayout()) toggleButton.hide();
+            if (nodeType==="layout" && !getLayoutNode()) toggleButton.hide();
         });
         drawflow.on('connectionRemoved', function(info) {
             var outputID = info.output_id+"";
@@ -1062,6 +1081,17 @@ bluewave.Explorer = function(parent, config) {
             if (files.length>0){
                 waitmask.show(500);
 
+
+              //Generate list of exsiting files in the canvas
+                var existingFiles = {};
+                var fileNodes = getFileNodes();
+                for (var i=0; i<fileNodes.length; i++){
+                    var fileNode = fileNodes[i];
+                    var fileName = fileNode.config.fileName;
+                    existingFiles[fileName.toLowerCase()] = fileNode;
+                }
+
+
               //Generate list of files to upload
                 var arr = [];
                 for (var i=0; i<files.length; i++) {
@@ -1069,7 +1099,12 @@ bluewave.Explorer = function(parent, config) {
                     var fileName = file.name.toLowerCase();
                     var ext = fileName.substring(fileName.lastIndexOf(".")+1);
                     if (ext==="csv" || ext==="pdf"){
-                        arr.push(file);
+                        if (existingFiles[fileName]){
+                            //notify user?
+                        }
+                        else{
+                            arr.push(file);
+                        }
                     }
                 }
 
@@ -1092,15 +1127,20 @@ bluewave.Explorer = function(parent, config) {
                     formData.append(file.name, file);
                     post("document", formData, {
                         success: function(text){
-
-                            if (uploads>0){
-                                x+=35;
-                                y+=85;
+                            var results = JSON.parse(text);
+                            if (results[0].result==="error"){
+                                failures.push(file.name);
                             }
-                            uploads++;
+                            else{
 
-                            addNodeToDrawFlow(ext, x, y, file);
+                                if (uploads>0){
+                                    x+=35;
+                                    y+=85;
+                                }
+                                uploads++;
 
+                                addNodeToDrawFlow(ext, x, y, file);
+                            }
 
                             upload();
                         },
@@ -1215,6 +1255,10 @@ bluewave.Explorer = function(parent, config) {
                     inputs: 0,
                     outputs: 1
                 });
+
+                if (file){
+                    node.config.fileName = file.name;
+                }
 
                 addEventListeners(node);
 
@@ -2051,6 +2095,9 @@ bluewave.Explorer = function(parent, config) {
                 style: config.style.window
             });
         }
+
+        console.log(node.config);
+
         fileViewer.show();
     };
 
@@ -2656,7 +2703,7 @@ bluewave.Explorer = function(parent, config) {
     var updateDashboard = function(){
 
       //Find layout node
-        var layoutNode = getLayout();
+        var layoutNode = getLayoutNode();
         if (!layoutNode) return;
 
 
@@ -2895,7 +2942,7 @@ bluewave.Explorer = function(parent, config) {
         addShowHide(toggleButton);
         toggleButton._show = toggleButton.show;
         toggleButton.show = function(){
-            if (getLayout()) this._show();
+            if (getLayoutNode()) this._show();
             else this.hide();
         };
     };
