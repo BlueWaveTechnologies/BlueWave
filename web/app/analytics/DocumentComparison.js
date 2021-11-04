@@ -42,7 +42,22 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(inputs, chartConfig){
+        me.clear();
 
+        var files = "";
+        for (var i=0; i<inputs.length; i++){
+            if (i>0) files+=",";
+            files+= inputs[i];
+        }
+
+        get("document/similarity?files="+files,{
+            success: function(json){
+                console.log(json);
+            },
+            failure: function(request){
+                alert(request);
+            }
+        });
     };
 
 
@@ -68,6 +83,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
+    var get = bluewave.utils.get;
 
 
     init();
