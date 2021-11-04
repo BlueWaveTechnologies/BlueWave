@@ -280,23 +280,98 @@ bluewave.charts.LineChart = function(parent, config) {
             let lineStyle = chartConfig["lineStyle" + i];
             let lineWidth = chartConfig["lineWidth" + i];
             let opacity = chartConfig["opacity" + i];
-
+            
             let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
             if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
             let pointColor = chartConfig["pointColor" + i];
+
+            let isKDE = chartConfig["kde" + i];
+            let spline = chartConfig["spline" + i];
+            let isMovingAverage = chartConfig["movingAverage" + i];
+            let bandwidth = chartConfig["bandwith" + i];
+            let numSamples = chartConfig["numSamples" + i];
 
             if (lineWidth == null) lineWidth = 1;
             if (opacity == null) opacity = 1;
             if (lineStyle == null) lineStyle = "solid";
 
 
+
             let keyType = typeOfAxisValue(sumData[0].key);
 
+            function kernelDensityEstimator(kernel, x) {
+                return function(sample) {
+                  return x.map(function(x) {
+                    return [x, d3.mean(sample, function(v) { return kernel(x - v); })];
+                  });
+                };
+              }
+              
+            function epanechnikovKernel(bandwidth) {
+                return function (u) {
+                    return Math.abs(u /= bandwidth) <= 1 ? .75 * (1 - u * u) / bandwidth : 0;
+                };
+            }
 
-          //Draw line
+            function movingAverage(vals, n){
+                let arr=[];
+                for (let i=0; i<n; i++){
+                    arr.push(vals[i]);
+                }
+
+                for (let i=n; i<vals.length; i++){
+
+                    let mean = d3.mean(vals.slice(i - n/2, i + n/2))
+                        arr.push(mean)
+                    }
+
+                return arr;
+            }
+
+            //Get all values from sumData
+            var sumValues = sumData.map(d => d.value)
+            var kdeSum = d3.sum(sumValues);
+
+            var maxVal = d3.max(sumValues);
+            var numVals = sumValues.length;
+            
+
+            var xthing = d3.scaleLinear()
+                .domain([0, numVals])
+                .range([0, width]);
+
+            var ything = d3.scaleLinear()
+                .domain([0, maxVal])
+                .range([height, 0]);
+
+            var kde = kernelDensityEstimator(epanechnikovKernel(bandwidth), xthing.ticks(sumData.length))
+
+
+            var kdeLine = d3.line()
+                .x(function (d) { return xthing(d[0]); })
+                .y(function (d) { return ything(d[1] * kdeSum) });
+// console.log(kde(sumValues))
+// console.log(sumValues, kdeSum)
+          
+            var dataRoute = function () {
+                if (isKDE === true) return kde(sumValues);
+                else return sumData;
+            }
+
+            if(isMovingAverage===true){
+                let average = movingAverage(sumValues, numSamples)
+
+                sumData.forEach(function(d, i){
+                    d.value = average[i];
+                });
+            };
+
+console.log(sumData)
+            //Draw line
             chartElements[i].line = lineGroup
                 .append("path")
-                .datum(sumData)
+                .datum(dataRoute())
+                // .datum(sumData)
                 .attr("fill", "none")
                 .attr("stroke", lineColor)
                 .attr("stroke-width", lineWidth)
@@ -309,10 +384,19 @@ bluewave.charts.LineChart = function(parent, config) {
                     if(lineStyle==="dotted") return "round";
                 })
                 .attr(
-                    "d",d3.line()
+                    "d", 
+                    
+                    // kdeLine
+                    
+                        
+                      d3.line()
                     .x(getX)
                     .y(getY)
-                    .curve(d3.curveMonotoneX)
+                    // .x( x(d[0])  )
+                    // .y( y(d[1])  )
+                    .curve(spline ? d3.curveMonotoneX : d3.curveLinear)
+                    
+                    
                 );
 
           //Draw thick line for selection purposes
@@ -348,9 +432,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     .attr("stroke", "none")
                     .attr("cx", getX )
                     .attr("cy", getY )
-                    .attr("r", function(d){
-                        return pointRadius;
-                    })
+                    .attr("r", pointRadius)
                     .on("click", function(d){
                         var datasetID = parseInt(d3.select(this).attr("dataset"));
                         raiseLine(chartElements[datasetID]);

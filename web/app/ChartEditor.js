@@ -727,8 +727,6 @@ bluewave.ChartEditor = function(parent, config) {
                 if (settings.endTags==="true") settings.endTags = true;
                 else settings.endTags = false;
 
-                // if(settings.scaleOptions==="logarithmic") settings.scaleOptions="logarithmic";
-                // else settings.scaleOptions = "linear";
 
                 chartConfig.scaleOption = settings.scaleOptions;
                 chartConfig.xGrid = settings.xGrid;
@@ -830,7 +828,61 @@ bluewave.ChartEditor = function(parent, config) {
                                 type: "text"
                             }
                         ]
-                    }
+                    },
+                    {
+                        group: "Smoothing Options",
+                        items: [
+
+                            {
+                                name: "spline",
+                                label: "Spline",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "kde",
+                                label: "Kernel Density Estimation",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "bandwith",
+                                label: "Bandwith",
+                                type: "text"
+                            },
+                            {
+                                name: "movingAverage",
+                                label: "Moving Average",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "numberOfSamples",
+                                label: "Number of Samples",
+                                type: "text"
+                            }
+
+
+                        ]
+                    },
                 ]
             });
 
@@ -877,6 +929,33 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.pointRadius = pointRadius;
             form.findField("pointRadius").setValue(pointRadius);
 
+            // var splineField = form.findField("spline");
+            // var spline = chartConfig.spline;
+            // splineField.setValue(spline===true ? true : false);
+
+            // var kdeField = form.findField("kde");
+            // var kde = chartConfig.kde;
+            // kdeField.setValue(kde===true ? true : false);
+
+            // var movingAverageField = form.findField("movingAverage");
+            // var movingAverage = chartConfig.movingAverage;
+            // movingAverageField.setValue(movingAverage===true ? true : false);
+
+            //Slider for bandwith
+            createSlider("bandwith", form, "", 1, 10, 1);
+            var bandwith = chartConfig.bandwidth;
+            if (isNaN(bandwith)) bandwith = 1;
+            chartConfig.bandwith = bandwith;
+            form.findField("bandwith").setValue(bandwith);
+
+            //Slider for moving average samples
+            createSlider("numberOfSamples", form, "", 1, 14, 1);
+            var numSamples = chartConfig.numSamples;
+            if (isNaN(numSamples)) numSamples = 1;
+            chartConfig.numSamples = numSamples;
+            form.findField("numberOfSamples").setValue(numSamples);
+
+
 
             //Single line edit case
             if(datasetID !== null && datasetID !== undefined){
@@ -891,6 +970,11 @@ bluewave.ChartEditor = function(parent, config) {
                 if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
                 if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
                 if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 0;
+                if( isNaN(chartConfig["bandwith" + n]) ) chartConfig["bandwith" + n] = 1;
+                if( isNaN(chartConfig["numSamples" + n]) ) chartConfig["numSamples" + n] = 1;
+                if(chartConfig["spline" + n] == null) chartConfig["spline" + n] = false;
+                if(chartConfig["kde" + n] == null) chartConfig["kde" + n] = false;
+                if(chartConfig["movingAverage" + n] == null) chartConfig["movingAverage" + n] = false;
 
                 form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
                 form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
@@ -900,9 +984,25 @@ bluewave.ChartEditor = function(parent, config) {
                 form.findField("startOpacity").setValue(chartConfig["startOpacity" + n]*100);
                 form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
                 form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
+                form.findField("bandwith").setValue(chartConfig["bandwith" + n]);
+                form.findField("numberOfSamples").setValue(chartConfig["numSamples" + n]);
+
+                form.findField("spline").setValue(  (chartConfig["spline" + n]==="true") ? true : false);
+                form.findField("kde").setValue(  (chartConfig["kde" + n]==="true") ? true : false);
+                form.findField("movingAverage").setValue(  (chartConfig["movingAverage" + n]==="true") ? true : false);
 
                 form.onChange = function(){
                     let settings = form.getData();
+
+                    if (settings.spline === "true") settings.spline = true;
+                    else settings.spline = false;
+
+                    if (settings.kde === "true") settings.kde = true;
+                    else settings.kde = false;
+
+                    if (settings.movingAverage === "true") settings.movingAverage = true;
+                    else settings.movingAverage = false;
+
                     chartConfig["lineColor" + n] = settings.lineColor;
                     chartConfig["lineStyle" + n] = settings.lineStyle;
                     chartConfig["lineWidth" + n] = settings.lineThickness;
@@ -911,6 +1011,11 @@ bluewave.ChartEditor = function(parent, config) {
                     chartConfig["endOpacity" + n] = settings.endOpacity/100;
                     chartConfig["pointColor" + n] = settings.pointColor;
                     chartConfig["pointRadius" + n] = settings.pointRadius;
+                    chartConfig["bandwith" + n] = settings.bandwith;
+                    chartConfig["numSamples" + n] = settings.numberOfSamples;
+                    chartConfig["spline" + n] = settings.spline;
+                    chartConfig["kde" + n] = settings.kde;
+                    chartConfig["movingAverage" + n] = settings.movingAverage;
                     createLinePreview();
                 };
 
