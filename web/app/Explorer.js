@@ -1927,7 +1927,14 @@ bluewave.Explorer = function(parent, config) {
         };
 
 
-        var inputs = {};
+      //Get input files
+        var inputs = [];
+        for (var inputID in node.inputs) {
+            if (node.inputs.hasOwnProperty(inputID)){
+                var inputNode = node.inputs[inputID];
+                inputs.push(inputNode.config.fileName);
+            }
+        }
 
 
       //Get config
@@ -2089,15 +2096,25 @@ bluewave.Explorer = function(parent, config) {
                 title: "File Preview",
                 width: 800,
                 height: 600,
-                resizable: false,
+                resizable: true,
                 beforeClose: null,
                 modal: true,
                 style: config.style.window
             });
         }
 
-        console.log(node.config);
+        var fileName = node.config.fileName;
 
+        var body = fileViewer.getBody();
+        body.innerHTML = "";
+        var iframe = document.createElement("iframe");
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        iframe.style.border = "0 none";
+        iframe.src = "document?fileName=" + fileName;
+        body.appendChild(iframe);
+
+        fileViewer.setTitle(fileName);
         fileViewer.show();
     };
 
