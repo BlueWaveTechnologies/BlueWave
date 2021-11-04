@@ -132,6 +132,7 @@ bluewave.MapAdmin = function(parent, config) {
             });
             moveUpButton.onClick = function(){
                 var records = grid.getSelectedRecords();
+                if(records.length>0) moveBaseMap(records[0], 'up');
                 //TODO Move this record up one spot.
             };
 
@@ -143,6 +144,7 @@ bluewave.MapAdmin = function(parent, config) {
             });
             moveDownButton.onClick = function(){
                 var records = grid.getSelectedRecords();
+                if(records.length>0) moveBaseMap(records[0], 'down');
                 //TODO Move this record down one spot.
             };
 
@@ -238,9 +240,8 @@ bluewave.MapAdmin = function(parent, config) {
                 if(!checkBaseMaps.length){
                     basemaps.push(basemap);
                 }else{
-                    //TODO Update existing array location.
+                    basemaps = basemaps.map(map => map.name !== basemap.name ? map : basemap);
                 }
-                //TODO UPdate Basemaps with the basemap from Editor
                 save("admin/settings/basemap", JSON.stringify(basemaps), {
                     success: function(){
                         editor.close();
@@ -274,9 +275,10 @@ bluewave.MapAdmin = function(parent, config) {
   //** deleteBaseMap
   //**************************************************************************
     var deleteBaseMap = function(basemap){
-        del("admin/settings/basemap?id=" + basemap.id, {
+        del("admin/settings/basemap?name=" + basemap.name, {
             success: function(){
-                grid.update();
+                grid.clear();
+                grid.load(basemap);
             },
             failure: function(request){
                 alert(request);
@@ -285,6 +287,31 @@ bluewave.MapAdmin = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** editBaseMap
+  //**************************************************************************
+    var moveBaseMap = function(basemap, movement){
+        var originalIndex = basemaps.map(e => e.name).indexOf(basemap.name);
+        var newIndex;
+        if(movement === 'up'){
+            newIndex = originalIndex - 1;
+        }else if(movement === 'down'){
+            newIndex = originalIndex + 1;
+        }
+        arrayMove(basemaps, originalIndex, newIndex);
+        grid.clear();
+        grid.load(basemaps);
+    }
+
+
+  //**************************************************************************
+  //** arrayMove
+  //**************************************************************************
+    var arraymove = function(arr, fromIndex, toIndex) {
+          var element = arr[fromIndex];
+          arr.splice(fromIndex, 1);
+          arr.splice(toIndex, 0, element);
+      }
   //**************************************************************************
   //** updateConfig
   //**************************************************************************
