@@ -12,6 +12,12 @@ if(!bluewave.analytics) bluewave.analytics={};
 bluewave.analytics.DocumentComparison = function(parent, config) {
 
     var me = this;
+    var carousel;
+    var backButton, nextButton;
+    var summaryPanel;
+    var waitmask;
+    var results = {};
+    var currPair = -1;
 
 
 
@@ -20,13 +26,34 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        if (!config) config = {};
+        if (!config.fx) config.fx = new javaxt.dhtml.Effects();
+        if (!config.style) config.style = javaxt.dhtml.style.default;
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;
+
+
         var table = createTable();
         var tbody = table.firstChild;
-        var tr = document.createElement("tr");
-        tbody.appendChild(tr);
+
         parent.appendChild(table);
         me.el = table;
-        var td;
+        var tr, td;
+
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        tr.appendChild(td);
+        createBody(td);
+
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+        createFooter(td);
     };
 
 
@@ -34,7 +61,17 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+        results = {};
+        currPair = -1;
+        backButton.disabled = true;
+        nextButton.disabled = true;
 
+        var panels = carousel.getPanels();
+        for (var i=0; i<panels.length; i++){
+            var panel = panels[i];
+            var el = panel.div.firstChild;
+            if (el) panel.div.removeChild(el);
+        }
     };
 
 
@@ -52,12 +89,267 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         get("document/similarity?files="+files,{
             success: function(json){
-                console.log(json);
+                results = json;
+                update(results);
             },
             failure: function(request){
                 alert(request);
             }
         });
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    var update = function(){
+        var suspiciousPairs = results.suspicious_pairs;
+        if (suspiciousPairs.length>0){
+            nextButton.disabled = false;
+        }
+
+        var panels = carousel.getPanels();
+        if (!summaryPanel) summaryPanel = createSummaryPanel();
+        summaryPanel.update();
+        panels[0].div.appendChild(summaryPanel.el);
+
+    };
+
+
+  //**************************************************************************
+  //** createSummaryPanel
+  //**************************************************************************
+    var createSummaryPanel = function(){
+
+        var table, tbody, tr, td;
+
+      //Create main table
+        table = createTable();
+        tbody = table.firstChild;
+        var el = table;
+
+      //Create title
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.className = "doc-compare-title";
+        tr.appendChild(td);
+        var icon = document.createElement("i");
+        td.appendChild(icon);
+        var title = document.createElement("span");
+        td.appendChild(title);
+
+
+      //Create body
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.verticalAlign = "top";
+        td.style.padding = "20px 5px 0";
+        tr.appendChild(td);
+
+
+        var div = document.createElement("div");
+        div.className = "doc-compare-background";
+        div.innerHTML = '<i class="fas fa-not-equal"></i>';
+        td.appendChild(div);
+
+
+      //Create details
+        table = createTable();
+        table.style.height = "";
+        table.style.width = "";
+        tbody = table.firstChild;
+        td.appendChild(table);
+
+        var addRow = function(key, value){
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+
+            td = document.createElement("td");
+            td.className = "doc-compare-key";
+            td.innerText = key + ":";
+            tr.appendChild(td);
+
+            td = document.createElement("td");
+            td.className = "doc-compare-value";
+            td.innerText = value;
+            tr.appendChild(td);
+        };
+
+        console.log(results);
+
+        return {
+            el: el,
+            update: function(){
+
+              //Update title
+                var suspiciousPairs = results.suspicious_pairs;
+                if (suspiciousPairs.length>0){
+                    icon.className = "fas fa-exclamation-triangle";
+                    title.innerText = "Similarities Found!";
+                }
+                else{
+                    icon.className = "far fa-check-circle";
+                    title.innerText = "Unique Documents";
+                }
+
+
+              //Update body
+                tbody.innerHTML = "";
+                addRow("Files Analyzed", results.files.length);
+                addRow("Elapsed Time", results.elapsed_time_sec);
+                addRow("Pages Per Second", results.pages_per_second);
+            }
+        };
+    };
+
+
+  //**************************************************************************
+  //** createComparison
+  //**************************************************************************
+    var createComparison = function(parent, suspiciousPair){
+        var left = suspiciousPair[0];
+        var right = suspiciousPair[1];
+    };
+
+
+  //**************************************************************************
+  //** createBody
+  //**************************************************************************
+    var createBody = function(parent){
+
+
+      //Create carousel
+        carousel = new javaxt.dhtml.Carousel(parent, {
+            drag: false,
+            loop: true,
+            animate: true,
+            animationSteps: 600,
+            transitionEffect: "easeInOutCubic",
+            fx: config.fx
+        });
+
+
+      //Create 2 panels for the carousel
+        for (var i=0; i<2; i++){
+            var panel = document.createElement("div");
+            panel.style.height = "100%";
+            carousel.add(panel);
+        }
+
+
+      //Add event handlers
+        carousel.beforeChange = function(){
+//            me.setTitle("");
+//            backButton.hide();
+//            nextButton.hide();
+        };
+
+
+        carousel.onChange = function(currPanel){
+//            if (currApp){
+//
+//              //Check if the currPanel is a clone created by the carousel.
+//              //If so, replace content with the currApp
+//                if (currApp.el.parentNode!==currPanel){
+//                    currPanel.innerHTML = "";
+//                    currApp.el.parentNode.removeChild(currApp.el);
+//                    currPanel.appendChild(currApp.el);
+//                }
+//
+//
+//
+//              //Update buttons
+//                if (apps.length>1){
+//                    backButton.show();
+//                    nextButton.show();
+//                }
+//
+//
+//            }
+        };
+
+    };
+
+
+  //**************************************************************************
+  //** createFooter
+  //**************************************************************************
+    var createFooter = function(parent){
+        var div = document.createElement("div");
+        div.className = "noselect";
+        div.style.float = "right";
+        div.style.textAlign = "center";
+        div.style.padding = "10px 5px 5px 0";
+        parent.appendChild(div);
+
+        var createButton = function(label){
+            var input = document.createElement('input');
+            input.className = "form-button";
+            input.type = "button";
+            input.name = label;
+            input.value = label;
+            div.appendChild(input);
+            return input;
+        };
+
+        backButton = createButton("Back");
+        nextButton = createButton("Next");
+
+        var obj;
+
+        backButton.onclick = function(){
+            raisePanel(obj, true);
+        };
+
+        nextButton.onclick = function(){
+            raisePanel(obj, false);
+        };
+    };
+
+
+  //**************************************************************************
+  //** raisePanel
+  //**************************************************************************
+    var raisePanel = function(obj, slideBack){
+
+
+      //Find panels in the carousel
+        var currPage, nextPage;
+        var panels = carousel.getPanels();
+        for (var i=0; i<panels.length; i++){
+            var panel = panels[i];
+            var el = panel.div;
+            if (panel.isVisible){
+                currPage = el;
+            }
+            else{
+                nextPage = el;
+            }
+        }
+        if (!currPage) currPage = panels[0].div; //strange!
+
+
+      //Select panel to use
+        var div;
+        if (currPage.childNodes.length===0){
+            div = currPage;
+        }
+        else{
+            div = nextPage;
+            var el = nextPage.childNodes[0];
+            if (el) nextPage.removeChild(el);
+        }
+
+
+        if (!isNew) div.appendChild(app.el);
+        if (div===nextPage){
+            if (slideBack===true) carousel.back();
+            else carousel.next();
+        }
+
     };
 
 
@@ -83,6 +375,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var onRender = javaxt.dhtml.utils.onRender;
     var get = bluewave.utils.get;
 
 
