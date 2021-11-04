@@ -65,7 +65,7 @@ public class Config {
         updateDir("webDir", webConfig, configFile, false);
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
-        updateDir("scriptDir", webConfig, configFile, true);
+        updateDir("scriptDir", webConfig, configFile, false);
         updateFile("keystore", webConfig, configFile);
 
 
@@ -254,7 +254,21 @@ public class Config {
                 else{
 
                     javaxt.io.Directory dir = new javaxt.io.Directory(path);
-                    if (!dir.exists()) dir = new javaxt.io.Directory(configFile.MapPath(path));
+                    if (dir.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.Directory d = new javaxt.io.Directory(f.getCanonicalFile());
+                            if (!dir.toString().equals(d.toString())){
+                                dir = d;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        dir = new javaxt.io.Directory(new java.io.File(configFile.MapPath(path)));
+                    }
+
 
                     if (!dir.exists() && create) dir.create();
 
@@ -291,7 +305,20 @@ public class Config {
                 else{
 
                     javaxt.io.File file = new javaxt.io.File(path);
-                    if (!file.exists()) file = new javaxt.io.File(configFile.MapPath(path));
+                    if (file.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.File _file = new javaxt.io.File(f.getCanonicalFile());
+                            if (!file.toString().equals(_file.toString())){
+                                file = _file;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        file = new javaxt.io.File(configFile.MapPath(path));
+                    }
 
                     config.set(key, file.toString());
 //                    if (file.exists()){
