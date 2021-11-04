@@ -10,20 +10,58 @@ import javaxt.http.servlet.FormValue;
 import javaxt.express.*;
 import javaxt.sql.*;
 import javaxt.json.*;
+import java.util.*;
 
+//******************************************************************************
+//**  DocumentService
+//******************************************************************************
+/**
+ *   Used to upload, download, and analyze documents
+ *
+ ******************************************************************************/
 
 public class DocumentService extends WebService {
 
   //**************************************************************************
   //** getServiceResponse
   //**************************************************************************
-    public ServiceResponse getServiceResponse(ServiceRequest request, Database database) throws ServletException {
-        bluewave.app.User user = (bluewave.app.User) request.getUser();
-        if (request.getRequest().getMethod().equals("POST")){
-            return uploadFile(request, user);
+    public ServiceResponse getServiceResponse(ServiceRequest request, Database database)
+        throws ServletException {
+
+        String method = request.getMethod();
+        if (method.isBlank()){
+            method = request.getRequest().getMethod();
+            bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+            if (method.equals("GET")){
+                return getFile(request, user);
+            }
+            else if (method.equals("POST")){
+                return uploadFile(request, user);
+            }
+            else{
+                return new ServiceResponse(501, "Not implemented");
+            }
         }
         else{
-            return new ServiceResponse(501, "Not implemented");
+            return super.getServiceResponse(request, database);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getFile
+  //**************************************************************************
+    private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
+        throws ServletException {
+
+        String fileName = request.getParameter("fileName").toString();
+        javaxt.io.File file = getFile(fileName, user);
+        if (file.exists()){
+            return new ServiceResponse(file);
+        }
+        else{
+            return new ServiceResponse(404);
         }
     }
 
@@ -94,6 +132,85 @@ public class DocumentService extends WebService {
 
 
   //**************************************************************************
+  //** getThumbnail
+  //**************************************************************************
+    public ServiceResponse getThumbnail(ServiceRequest request, Database database)
+        throws ServletException {
+
+      //Get user
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+      //Get file
+        String fileName = request.getParameter("fileName").toString();
+        javaxt.io.File file = getFile(fileName, user);
+        if (!file.exists()) return new ServiceResponse(404);
+
+      //Get pages
+        String pages = request.getParameter("pages").toString();
+        if (pages.isBlank()) pages = request.getParameter("page").toString();
+        if (pages.isBlank()) return new ServiceResponse(400, "page or pages are required");
+
+
+      //Get script
+        javaxt.io.File[] scripts = getScriptDir().getFiles("pdf_to_img.py", true);
+        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+
+
+      //Compile command line options
+        String pyCmd = "python3 " + scripts[0] + " -f " + file + " -p " + pages;
+        //+ " -out " + tempDir
+
+
+      //Execute script
+        try{
+            executeScript(pyCmd);
+            return new ServiceResponse(200);
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getSimilarity
+  //**************************************************************************
+    public ServiceResponse getSimilarity(ServiceRequest request, Database database)
+        throws ServletException {
+
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+      //Get files
+        ArrayList<javaxt.io.File> files = new ArrayList<>();
+        for (String fileName : request.getParameter("files").toString().split(",")){
+            javaxt.io.File file = getFile(fileName, user);
+            if (file.exists()) files.add(file);
+        }
+        if (files.size()<2) return new ServiceResponse(400,
+            "At least 2 documents are required");
+
+
+      //Get script
+        javaxt.io.File[] scripts = getScriptDir().getFiles("compare_number_distrib.py", true);
+        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+
+
+      //Compile command line options
+        String pyCmd = "python3 " + scripts[0] + " -f";
+        for (javaxt.io.File file : files) pyCmd+= " " + file;
+
+
+      //Execute script
+        try{
+            return new ServiceResponse(executeScript(pyCmd));
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
   //** getFile
   //**************************************************************************
     private static javaxt.io.File getFile(String name, bluewave.app.User user){
@@ -121,4 +238,67 @@ public class DocumentService extends WebService {
         return jobDir;
     }
 
+
+  //**************************************************************************
+  //** getScriptDir
+  //**************************************************************************
+    private static javaxt.io.Directory getScriptDir(){
+        JSONObject config = Config.get("webserver").toJSONObject();
+        javaxt.io.Directory scriptDir = null;
+        if (config.has("scriptDir")){
+            String dir = config.get("scriptDir").toString().trim();
+            if (dir.length()>0){
+                scriptDir = new javaxt.io.Directory(dir);
+            }
+        }
+        else{ //look for a scripts folder next to the web folder
+            String dir = config.get("webDir").toString().trim();
+            javaxt.io.Directory webDir = new javaxt.io.Directory(dir);
+            scriptDir = new javaxt.io.Directory(webDir.getParentDirectory() + "scripts");
+        }
+        if (scriptDir==null || !scriptDir.exists()){
+            throw new IllegalArgumentException("Invalid \"scriptDir\" defined in the \"webserver\" section of the config file");
+        }
+        return scriptDir;
+    }
+
+
+  //**************************************************************************
+  //** executeScript
+  //**************************************************************************
+    private JSONObject executeScript(String pyCmd) throws Exception {
+        javaxt.io.Shell cmd = new javaxt.io.Shell(pyCmd);
+        cmd.run();
+        List<String> output = cmd.getOutput();
+        List<String> errors = cmd.getErrors();
+
+        if (errors.size()>0){
+            StringBuilder err = new StringBuilder();
+            Iterator<String> i2 = errors.iterator();
+            while (i2.hasNext()){
+                String error = i2.next();
+                if (error!=null) err.append(error + "\r\n");
+            }
+            if (err.length()>0){
+                throw new Exception(err.toString());
+            }
+        }
+
+
+        try{
+            return new JSONObject(output.get(0));
+        }
+        catch(Exception e){
+            StringBuilder err = new StringBuilder();
+            err.append("Error parsing script output");
+            StringBuffer result = new StringBuffer();
+            Iterator<String> i2 = output.iterator();
+            while (i2.hasNext()){
+                String out = i2.next();
+                if (out!=null) result.append(out + "\r\n");
+            }
+            err.append(":\r\n" + result);
+            throw new Exception(err.toString());
+        }
+    }
 }
