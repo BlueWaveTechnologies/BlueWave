@@ -157,7 +157,15 @@ public class WebServices extends WebService {
                             response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
                         }
                     }
-                    response.write(file.toFile(), file.getContentType(), true);
+
+
+                  //Set fileName and contentType. Note that when a fileName is
+                  //provided, the server responds with an attachment. Example:
+                  //Content-Disposition: attachment;filename=...
+                    String contentType = file.getContentType();
+                    String fileName = null;
+
+                    response.write(file.toFile(), fileName, contentType, true);
                 }
                 else if (obj instanceof java.io.InputStream){
                   //Set Content-Length response header
