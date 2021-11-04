@@ -314,9 +314,11 @@ bluewave.charts.LineChart = function(parent, config) {
             }
 
             function movingAverage(vals, n){
-                let arr=[];
-                for (let i=0; i<n; i++){
-                    arr.push(vals[i]);
+                let arr=[vals[0]];
+                let sum=0;
+                for (let i=1; i<n; i++){
+                    sum += vals[i];
+                    arr.push(sum/i);
                 }
 
                 for (let i=n; i<vals.length; i++){
@@ -350,6 +352,17 @@ bluewave.charts.LineChart = function(parent, config) {
             var kdeLine = d3.line()
                 .x(function (d) { return xthing(d[0]); })
                 .y(function (d) { return ything(d[1] * kdeSum) });
+
+            var getLine = function(d){
+                console.log(d)
+
+                    let line = 
+                    d3.line()
+                    .x(getX(d))
+                    .y(getY(d))
+                    .curve(spline ? d3.curveMonotoneX : d3.curveLinear);
+                    return line;
+                }
 // console.log(kde(sumValues))
 // console.log(sumValues, kdeSum)
           
@@ -385,15 +398,14 @@ console.log(sumData)
                 })
                 .attr(
                     "d", 
-                    
-                    // kdeLine
+                    // getLine
                     
                         
                       d3.line()
                     .x(getX)
                     .y(getY)
-                    // .x( x(d[0])  )
-                    // .y( y(d[1])  )
+                    // // .x( x(d[0])  )
+                    // // .y( y(d[1])  )
                     .curve(spline ? d3.curveMonotoneX : d3.curveLinear)
                     
                     
