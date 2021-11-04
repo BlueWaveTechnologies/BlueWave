@@ -11,9 +11,7 @@ if(!bluewave) var bluewave={};
 bluewave.MapAdmin = function(parent, config) {
 
     var me = this;
-    var defaultConfig = {
-
-    };
+    var defaultConfig = {};
     var waitmask;
     var basemaps = [];
     var grid, editor;
@@ -64,7 +62,7 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         basemaps = [];
-        grid.update();
+        grid.clear();
     };
 
 
@@ -78,7 +76,7 @@ bluewave.MapAdmin = function(parent, config) {
         get("admin/settings/basemap", {
             success: function(arr){
                basemaps = arr;
-               grid.update
+               grid.load(basemaps);
                waitmask.hide();
             },
             failure: function(request){
@@ -158,7 +156,8 @@ bluewave.MapAdmin = function(parent, config) {
                 hidden: false
             });
             refreshButton.onClick = function(){
-                grid.update();
+                grid.clear();
+                grid.load(basemaps);
             };
 
             parent.appendChild(toolbar);
@@ -173,46 +172,31 @@ bluewave.MapAdmin = function(parent, config) {
         grid = new javaxt.dhtml.DataGrid(parent, {
             style: config.style.table,
             url: "admin/settings/basemap",
-            filter: filter,
-            getResponse: function(url, payload, callback){
-                get(url, {
-                    payload: payload,
-                    success: function(json){
-                        callback.apply(grid, [{
-                           status: 200,
-                           rows: json
-                        }]);
-                    },
-                    failure: function(request){
-                        callback.apply(grid, [request]);
-                    }
-                });
-            },
-            parseResponse: function(obj){
-                return obj.rows;
-            },
             columns: [
-                {header: 'ID', hidden:true, field:'id'},
-                {header: 'Name', width:'100%', field:'name'},
-                {header: 'URL', width:'150', field:'url'},
-                {header: 'Key', width:'240', field:'key'},
-                {header: 'Thumbnail', width:'240', field:'thumbnail'}
+                {header: 'Name', width:'250', field:'name'},
+                {header: 'URL', width:'100%', field:'url'},
+                {header: 'Key', width:'400', field:'key'},
+                {header: 'Thumbnail', width:'300', field:'thumbnail'}
             ],
             update: function(row, basemap){
-                var baseURL = basemap.url;
-                var layer = new ol.layer.Tile({
-                    source: new ol.source.XYZ({
-                        url: baseURL
-                    })
-                });
-
-                var img = document.createElement("img");
-                img.src = preview;
+            //TODO Get this to work
+//                var baseURL = basemap.url;
+//                var layer = new ol.layer.Tile({
+//                    source: new ol.source.XYZ({
+//                        url: baseURL
+//                    })
+//                });
+//
+//                var img = document.createElement("img");
+//
+//                getTilePreview(layer, [3,2,3], function(preview){
+//                    img.src = preview;
+//                });
 
                 row.set('Name', basemap.name);
                 row.set('URL', basemap.url);
                 row.set('Key', basemap.key);
-                row.set('Thumbnail', img);
+                //row.set('Thumbnail', img);
             }
         });
 
@@ -230,7 +214,7 @@ bluewave.MapAdmin = function(parent, config) {
 
         grid.update = function(){
             grid.clear();
-            grid.load();
+            grid.load(basemaps);
         };
 
     };
@@ -248,10 +232,20 @@ bluewave.MapAdmin = function(parent, config) {
             });
             editor.onSubmit = function(){
                 var basemap = editor.getValues();
-                save("admin/settings/basemap", JSON.stringify(basemap), {
+                console.log(basemap);
+                var checkBaseMaps = basemaps.filter(obj => (obj.name === basemap.name));
+                console.log(checkBaseMaps);
+                if(!checkBaseMaps.length){
+                    basemaps.push(basemap);
+                }else{
+                    //TODO Update existing array location.
+                }
+                //TODO UPdate Basemaps with the basemap from Editor
+                save("admin/settings/basemap", JSON.stringify(basemaps), {
                     success: function(){
                         editor.close();
-                        grid.update();
+                        grid.clear();
+                        grid.load(basemaps);
                     },
                     failure: function(request){
                         alert(request);
@@ -260,25 +254,14 @@ bluewave.MapAdmin = function(parent, config) {
             };
         }
 
-
       //Clear/reset the form
         editor.clear();
 
-
       //Updated values
         if (basemap){
-            userEditor.setTitle("Edit Base Map");
-
-            get("admin/settings/basemap?id="+basemap.id, {
-                success: function(basemap){
-                    editor.update(user);
-                    editor.show();
-                },
-                failure: function(request){
-                    alert(request);
-                }
-            });
-
+            editor.setTitle("Edit Base Map");
+            editor.update(basemap);
+            editor.show();
         }
         else{
             editor.setTitle("New Basemap");
@@ -309,12 +292,65 @@ bluewave.MapAdmin = function(parent, config) {
         save("admin/settings/basemap", JSON.stringify(basemaps), {
             success: function(){
                 editor.close();
-                grid.update();
+                grid.clear();
+                grid.load(basemaps);
             },
             failure: function(request){
                 alert(request);
             }
         });
+    };
+
+
+  //**************************************************************************
+  //** createButton
+  //**************************************************************************
+    var createButton = function(parent, btn){
+        var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
+        if (btn.style) btn.style = merge(btn.style, defaultStyle);
+        else btn.style = defaultStyle;
+        return bluewave.utils.createButton(parent, btn);
+    };
+
+
+  //**************************************************************************
+  //** createTilePreview
+  //**************************************************************************
+    //TODO Make sure this works well.
+    var createTilePreview = function(layer, coord, callback){
+        if (!callback) return;
+
+        var proj = ol.proj.get('EPSG:3857');
+        var getPreview = function(){
+            var tileUrlFunction = layer.getSource().getTileUrlFunction();
+            var tileCoord = [3,2,3]; //Southeast coast of US, Carribean, and part of South America
+            var preview = tileUrlFunction(tileCoord, 1, proj);
+            if (preview){
+                if (preview.indexOf("-4")>-1){
+                    preview = preview.replace("-4", "3"); //add hack to replace wierd -4 y coordinate
+                }
+            }
+            return preview;
+        };
+
+        var preview = getPreview();
+        if (preview){
+            callback.apply(me, [preview]);
+        }
+        else{
+            var timer;
+            var checkPreview = function(){
+                var preview = getPreview();
+                if (preview){
+                    clearTimeout(timer);
+                    callback.apply(me, [preview]);
+                }
+                else{
+                    timer = setTimeout(checkPreview, 1000);
+                }
+            };
+            timer = setTimeout(checkPreview, 1000);
+        }
     };
 
 
@@ -327,6 +363,7 @@ bluewave.MapAdmin = function(parent, config) {
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var get = bluewave.utils.get;
     var save = javaxt.dhtml.utils.post;
+    var del = javaxt.dhtml.utils.delete;
 
     init();
 };

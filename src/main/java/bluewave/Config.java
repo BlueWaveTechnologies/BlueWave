@@ -160,7 +160,7 @@ public class Config {
         
         
         System.out.println(json.toString(4));
-        //configFile.write(config.toJson().toString(4));
+        configFile.write(config.toJson().toString(4));
     }
     
 

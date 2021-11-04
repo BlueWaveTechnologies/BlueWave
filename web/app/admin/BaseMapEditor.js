@@ -67,21 +67,21 @@ if(!bluewave) var bluewave={};
 
                         var name = values.name;
                         if(name) name = name.trim();
-                        if(name==null || name="") {
+                        if(name==null || name=="") {
                             warn("Name is required", form.findField("name"));
                             return;
                         }
 
                         var url = values.url;
                         if(url) url = url.trim();
-                        if(url==null || url="") {
+                        if(url==null || url=="") {
                             warn("URL is required", form.findField("url"));
                             return;
                         }
 
                         var key = values.key;
                         if(key) key = key.trim();
-                        if(key==null || key="") {
+                        if(key==null || key=="") {
                             warn("Key is required", form.findField("key"));
                             return;
                         }
@@ -94,7 +94,7 @@ if(!bluewave) var bluewave={};
                     }
                 }
             ]
-        }
+        });
 
         //Create window
         if (parent===document.body){
