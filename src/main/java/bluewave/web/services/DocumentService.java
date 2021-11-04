@@ -150,6 +150,8 @@ public class DocumentService extends WebService {
         if (pages.isBlank()) pages = request.getParameter("page").toString();
         if (pages.isBlank()) return new ServiceResponse(400, "page or pages are required");
 
+      //Get output directory
+        javaxt.io.Directory tempDir = null;
 
       //Get script
         javaxt.io.File[] scripts = getScriptDir().getFiles("pdf_to_img.py", true);
@@ -157,13 +159,18 @@ public class DocumentService extends WebService {
 
 
       //Compile command line options
-        String pyCmd = "python3 " + scripts[0] + " -f " + file + " -p " + pages;
-        //+ " -out " + tempDir
-
+        ArrayList<String> params = new ArrayList<>();
+        params.add("-f");
+        params.add(file.toString());
+        params.add("-p");
+        params.add(pages);
+        params.add("-out");
+        params.add(tempDir.toString());
+        
 
       //Execute script
         try{
-            executeScript(pyCmd);
+            executeScript(scripts[0], params);
             return new ServiceResponse(200);
         }
         catch(Exception e){
@@ -196,13 +203,16 @@ public class DocumentService extends WebService {
 
 
       //Compile command line options
-        String pyCmd = "python3 " + scripts[0] + " -f";
-        for (javaxt.io.File file : files) pyCmd+= " " + file;
+        ArrayList<String> params = new ArrayList<>();
+        params.add("-f");
+        for (javaxt.io.File file : files){
+            params.add(file.toString());
+        }
 
-
+        
       //Execute script
         try{
-            return new ServiceResponse(executeScript(pyCmd));
+            return new ServiceResponse(executeScript(scripts[0], params));
         }
         catch(Exception e){
             return new ServiceResponse(e);
@@ -266,8 +276,18 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** executeScript
   //**************************************************************************
-    private JSONObject executeScript(String pyCmd) throws Exception {
-        javaxt.io.Shell cmd = new javaxt.io.Shell(pyCmd);
+    private JSONObject executeScript(javaxt.io.File script, ArrayList<String> params) throws Exception {
+        
+        String[] cmdarray = new String[params.size()+2];
+        cmdarray[0] = "python3";
+        cmdarray[1] = script.toString();
+        int i = 2;
+        for (String param : params){
+            cmdarray[i] = param;
+            i++;
+        }
+
+        javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
         cmd.run();
         List<String> output = cmd.getOutput();
         List<String> errors = cmd.getErrors();
