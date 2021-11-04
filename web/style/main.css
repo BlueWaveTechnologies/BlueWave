@@ -930,6 +930,41 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
+/** Document Comparison Panel
+/**************************************************************************/
+
+.doc-compare-title {
+    font-size: 40px;
+}
+
+.doc-compare-title .fas,
+.doc-compare-title .far {
+    margin: 0 10px;
+}
+
+.doc-compare-title .fa-exclamation-triangle {
+    color: red;
+}
+
+.doc-compare-title .fa-check-circle {
+    color:green;
+}
+
+.doc-compare-key {
+    padding: 0 5px;
+    font-weight: bold;
+}
+
+.doc-compare-background {
+    position: absolute;
+    opacity: 0.5;
+    font-size: 300px;
+    right: 92px;
+    color: #eaeaea;
+}
+
+
+/**************************************************************************/
 /** Admin Panel
 /**************************************************************************/
 
