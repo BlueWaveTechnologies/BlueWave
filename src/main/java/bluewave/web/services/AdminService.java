@@ -94,10 +94,10 @@ public class AdminService extends WebService {
                     return new ServiceResponse((JSONObject) val);
                 }
                 else{
-                    
-                    if (key.equalsIgnoreCase("graph") && 
+
+                    if (key.equalsIgnoreCase("graph") &&
                         val instanceof java.util.concurrent.ConcurrentHashMap){
-                        bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J) 
+                        bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J)
                         ((java.util.concurrent.ConcurrentHashMap) val).get("neo4j");
                         return new ServiceResponse(graph.toJson());
                     }
@@ -220,7 +220,6 @@ public class AdminService extends WebService {
         if (jobDir==null || !jobDir.exists()){
             throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
         }
-        console.log("jobDir: " + jobDir);
         return jobDir;
     }
 
