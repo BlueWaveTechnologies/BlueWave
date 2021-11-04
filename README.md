@@ -60,15 +60,11 @@ file should include connection information to the neo4j database
         "localLog" : "temp/graph/logs"
     },
 
-    "ldap" : {
-        "host" : "localhost:389",
-        "domain" : "my.domain.com"
-    },
-
     "webserver" : {
         "webDir" : "web",
         "logDir" : "",
         "jobDir" : "temp",
+        "scriptDir" : "scripts",
         "keystore" : "",
         "keypass" : "",
         "port": 8080

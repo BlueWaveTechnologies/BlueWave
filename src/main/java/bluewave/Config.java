@@ -65,6 +65,7 @@ public class Config {
         updateDir("webDir", webConfig, configFile, false);
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
+        updateDir("scriptDir", webConfig, configFile, true);
         updateFile("keystore", webConfig, configFile);
 
 
@@ -143,14 +144,14 @@ public class Config {
         String key = "graph";
         JSONValue val = get(key);
         if (val==null) return null;
-        
-        
+
+
         String[] credentials;
         if (user!=null) credentials = user.getGraphCredentials();
         else credentials = new String[]{"neo4j"};
         String username = credentials[0];
-        
-        
+
+
         if (val.toObject() instanceof ConcurrentHashMap){
             ConcurrentHashMap map = (ConcurrentHashMap) val.toObject();
 
@@ -164,13 +165,13 @@ public class Config {
                     map.notify();
                 }
                 return neo4j;
-            } 
+            }
             else{
                 return (bluewave.graph.Neo4J) obj;
             }
         }
         else{
-            
+
             JSONObject json = get(key).toJSONObject();
             bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             neo4j.setHost(json.get("host").toString());
@@ -179,18 +180,18 @@ public class Config {
             Properties properties = neo4j.getProperties();
             properties.put("localLog", json.get("localLog"));
             properties.put("localCache", json.get("localCache"));
-            
+
             ConcurrentHashMap<String, bluewave.graph.Neo4J> map = new ConcurrentHashMap<>();
             map.put("neo4j", neo4j);
             config.set(key, map);
-            
+
             if (user!=null){
                 neo4j = neo4j.clone();
                 neo4j.setUsername(username);
                 neo4j.setPassword(credentials[1]);
                 map.put(username, neo4j);
             }
-            
+
             return neo4j;
         }
     }
