@@ -305,10 +305,6 @@ bluewave.MapAdmin = function(parent, config) {
   //** updateConfig
   //**************************************************************************
     var updateConfig = function(){
-
-        console.log(basemaps);
-        console.log(JSON.stringify(basemaps));
-
         save("admin/settings/basemap", JSON.stringify(basemaps), {
             success: function(){
                 if (editor) editor.close();
@@ -415,10 +411,8 @@ bluewave.MapAdmin = function(parent, config) {
                             key: key
                         };
 
-                        var id = values.id;
 
-
-
+                        var id = parseInt(values.id);
                         if (isNaN(id)){
                             basemaps.push(basemap);
                         }
@@ -438,7 +432,8 @@ bluewave.MapAdmin = function(parent, config) {
         editor.update = function(baseMap, id){
             form.clear();
             if (baseMap){
-                form.setValue("id", id);
+
+                form.setValue("id", id+"");
                 for (var key in baseMap) {
                     if (baseMap.hasOwnProperty(key)){
                         var value = baseMap[key];
