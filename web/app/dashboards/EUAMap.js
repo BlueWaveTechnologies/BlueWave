@@ -222,9 +222,19 @@ bluewave.dashboards.EUAMap = function(parent, config) {
         //map.setCenter(39, -77, 11); //dc
         map.setCenter(30, 1, 3); //atlantic ocean
 
+        var baseURL;
+        get("admin/settings/basemap", {
+            success: function(arr){
+               baseURL = arr[0].url;
+            },
+            failure: function(request){
+                baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+            }
+        });
 
-
-        var baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+        if(!baseURL){
+            baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+        }
         layer.basemap = new ol.layer.Tile({
             source: new ol.source.XYZ({
                 url: baseURL
@@ -422,7 +432,7 @@ bluewave.dashboards.EUAMap = function(parent, config) {
     var updateExtents = bluewave.utils.updateExtents;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
-
+    var get = bluewave.utils.get;
 
     init();
 };

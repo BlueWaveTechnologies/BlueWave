@@ -153,8 +153,20 @@ bluewave.dashboards.ICUMap = function(parent, config) {
         map.setCenter(39, -77, 11); //dc
 
 
+        var baseURL;
+        get("admin/settings/basemap", {
+            success: function(arr){
+               baseURL = arr[0].url;
+            },
+            failure: function(request){
+                baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+            }
+        });
 
-        var baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+        if(!baseURL){
+            baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+        }
+
         layer.basemap = new ol.layer.Tile({
             source: new ol.source.XYZ({
                 url: baseURL
