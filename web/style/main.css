@@ -990,6 +990,19 @@ li.tree-node:hover {
     margin-right: 10px;
 }
 
+.admin-map-table-col {
+    font-family: helvetica,arial,verdana,sans-serif;
+    font-size: 14px;
+    white-space: nowrap;
+    color: #272727;
+
+    height: 200px;
+    line-height: 35px;
+
+    padding: 0 5px;
+    color: #272727;
+}
+
 
 /**************************************************************************/
 /** Color Picker
