@@ -292,28 +292,32 @@ bluewave.Explorer = function(parent, config) {
         var onReady = function(){
             updateButtons();
             me.setView(view);
+            setTimeout(function(){
+                if (me.getView()!=="Dashboard"){
 
-            if (me.getView()!=="Dashboard"){
+                  //Update connections
+                    for (var i=0; i<connectionNodes.length; i++){
+                        var inputID = connectionNodes[i];
+                        drawflow.updateConnectionNodes("node-"+inputID);
+                    }
 
-              //Update connections
-                for (var i=0; i<connectionNodes.length; i++){
-                    var inputID = connectionNodes[i];
-                    drawflow.updateConnectionNodes("node-"+inputID);
+                  //Update thumbnails
+                    for (var i=0; i<thumbnails.length; i++){
+                        (function (t) {
+                            var el = t.node.childNodes[1];
+                            onRender(el, function(){
+                                createThumbnail(t.node, t.thumbnail);
+                            });
+                        })(thumbnails[i]);
+                    }
+
+                    setZoom(dashboard.info.zoom);
                 }
 
-              //Update thumbnails
-                for (var i=0; i<thumbnails.length; i++){
-                    (function (t) {
-                        var el = t.node.childNodes[1];
-                        onRender(el, function(){
-                            createThumbnail(t.node, t.thumbnail);
-                        });
-                    })(thumbnails[i]);
-                }
-            }
-            setZoom(dashboard.info.zoom);
-            mask.hide();
-            editPanel.focus();
+                mask.hide();
+                editPanel.focus();
+
+            },500); //slight delay for drawflow
         };
 
 
@@ -327,7 +331,7 @@ bluewave.Explorer = function(parent, config) {
                     if (csvRequests.length===0){
                         showMask = false;
                         waitmask.hide();
-                        onReady.apply(me, []);
+                        onReady();
                     }
                     else{
                         updateNodes();
@@ -351,7 +355,7 @@ bluewave.Explorer = function(parent, config) {
             timer = setTimeout(checkMask, 100);
         }
         else{
-            onReady.apply(me, []);
+            onReady();
         }
     };
 
@@ -472,18 +476,7 @@ bluewave.Explorer = function(parent, config) {
             toggleButton.show();
 
 
-            var hasLayout = false;
-            for (var key in nodes) {
-                if (nodes.hasOwnProperty(key)){
-                    var node = nodes[key];
-                    if (node.type==="layout"){
-                        hasLayout = true;
-                        break;
-                    }
-                }
-            }
-
-            if (hasLayout){
+            if (getLayout()){
                 toggleButton.hide();
                 toggleButton.setValue("Preview");
             }
@@ -527,38 +520,6 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     this.isReadOnly = function(){
         return (drawflow.editor_mode==="view");
-    };
-
-
-  //**************************************************************************
-  //** getDashboard
-  //**************************************************************************
-    var getDashboard = function(name){
-        var dashboard = {
-            id: id,
-            name: name,
-            className: name,
-            //thumbnail: thumbnail,
-            info: {
-                layout: drawflow.export().drawflow.Home.data,
-                nodes: {},
-                zoom: zoom
-            }
-        };
-
-
-        for (var key in nodes) {
-            if (nodes.hasOwnProperty(key)){
-                var node = nodes[key];
-                dashboard.info.nodes[key] = {
-                    name: node.name,
-                    type: node.type,
-                    config: node.config,
-                    preview: node.preview
-                };
-            }
-        };
-        return dashboard;
     };
 
 
@@ -636,6 +597,56 @@ bluewave.Explorer = function(parent, config) {
             }
         };
         request.send(formData);
+    };
+
+
+  //**************************************************************************
+  //** getDashboard
+  //**************************************************************************
+    var getDashboard = function(name){
+        var dashboard = {
+            id: id,
+            name: name,
+            className: name,
+            //thumbnail: thumbnail,
+            info: {
+                layout: drawflow.export().drawflow.Home.data,
+                nodes: {},
+                zoom: zoom
+            }
+        };
+
+
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                dashboard.info.nodes[key] = {
+                    name: node.name,
+                    type: node.type,
+                    config: node.config,
+                    preview: node.preview
+                };
+            }
+        };
+        return dashboard;
+    };
+
+
+  //**************************************************************************
+  //** getLayout
+  //**************************************************************************
+  /** Returns the first layout node
+   */
+    var getLayout = function(){
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                if (node.type==="layout"){
+                    return node;
+                }
+            }
+        }
+        return null;
     };
 
 
@@ -871,7 +882,9 @@ bluewave.Explorer = function(parent, config) {
         });
         drawflow.on('nodeRemoved', function(nodeID) {
             removeInputs(nodes, nodeID);
+            var nodeType = nodes[nodeID+""].type;
             delete nodes[nodeID+""];
+            if (nodeType==="layout" && !getLayout()) toggleButton.hide();
         });
         drawflow.on('connectionRemoved', function(info) {
             var outputID = info.output_id+"";
@@ -1705,6 +1718,7 @@ bluewave.Explorer = function(parent, config) {
       //Update and show layoutEditor
         layoutEditor.update(inputs, chartConfig);
         layoutEditor.show();
+        toggleButton.show();
     };
 
 
@@ -2448,16 +2462,7 @@ bluewave.Explorer = function(parent, config) {
     var updateDashboard = function(){
 
       //Find layout node
-        var layoutNode;
-        for (var key in nodes) {
-            if (nodes.hasOwnProperty(key)){
-                var node = nodes[key];
-                if (node.type==="layout"){
-                    layoutNode = node;
-                    break;
-                }
-            }
-        };
+        var layoutNode = getLayout();
         if (!layoutNode) return;
 
 
@@ -2684,6 +2689,7 @@ bluewave.Explorer = function(parent, config) {
                 if (val==="Edit"){
                     dashboardPanel.hide();
                     editPanel.show();
+                    editPanel.focus();
                 }
                 else{
                     editPanel.hide();
@@ -2693,6 +2699,11 @@ bluewave.Explorer = function(parent, config) {
             }
         });
         addShowHide(toggleButton);
+        toggleButton._show = toggleButton.show;
+        toggleButton.show = function(){
+            if (getLayout()) this._show();
+            else this.hide();
+        };
     };
 
 

@@ -7,15 +7,6 @@ if(!bluewave) var bluewave={};
  *   Panel used to edit charts/graphs
  *
  ******************************************************************************/
-/**
- *   Data Flow:
- *   init - stubs out chart areas
- *   initializeChartSpace - stubs out chart spaces
- *   Update - chart information and config is passed in.
- *   createForm - initializes chart Type specific dropdowns
- *   createOptions - adds chart input options from updated Data
- *      pie, bar,line, map chart creation.
- ******************************************************************************/
 
 bluewave.ChartEditor = function(parent, config) {
     var me = this;
@@ -113,14 +104,6 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** getNode
-  //**************************************************************************
-    this.getNode = function() {
-        return currentNode;
-    };
-
-
-  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(nodeType, config, inputs, node){
@@ -194,18 +177,41 @@ bluewave.ChartEditor = function(parent, config) {
         let dataOptions2 = data2?Object.keys(data2[0]):null;
         switch(chartConfig.chartType){
             case 'barChart':
-
+                plotInputs.group.add("", "");
                 dataOptions.forEach((val)=>{
                     plotInputs.xAxis.add(val,val);
                     plotInputs.yAxis.add(val,val);
+                    plotInputs.group.add(val, val);
                 });
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
-                if(dataOptions2){
-                    dataOptions2.forEach(val=>{
-                        plotInputs.xAxis2.add(val,val);
-                        plotInputs.yAxis2.add(val,val);
+                if (chartConfig.group){
+                    plotInputs.group.setValue(chartConfig.group, true);
+                }
+
+                //Add dropdown values for each data set
+                for (let i=1; i<inputData.length; i++){
+                    let xAxisN = `xAxis${i+1}`;
+                    let yAxisN = `yAxis${i+1}`;
+                    let groupN = `group${i+1}`;
+                    // let labelN = `label${i+1}`;
+
+                    plotInputs[groupN].add("", "");
+
+                    let multiLineDataOptions = Object.keys(inputData[i][0]);
+                    multiLineDataOptions.forEach((val)=>{
+                        plotInputs[xAxisN].add(val, val);
+                        plotInputs[yAxisN].add(val, val);
+                        plotInputs[groupN].add(val, val);
                     });
+
+                    plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
+                    plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+
+                    if (chartConfig[groupN]){
+                        plotInputs[groupN].setValue(chartConfig[groupN], true);
+                    }
+
                 }
 
                 createBarPreview();
@@ -221,7 +227,7 @@ bluewave.ChartEditor = function(parent, config) {
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
                 if (chartConfig.group){
-                    plotInputs.group.setValue(chartConfig.group, false);
+                    plotInputs.group.setValue(chartConfig.group, false); //<--firing the onChange event is a hack to show/hide labels
                 }
                 else{
                     var label = chartConfig.label;
@@ -249,7 +255,7 @@ bluewave.ChartEditor = function(parent, config) {
                     plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
 
                     if (chartConfig[groupN]){
-                        plotInputs[groupN].setValue(chartConfig[groupN], false);
+                        plotInputs[groupN].setValue(chartConfig[groupN], false); //<--firing the onChange event is a hack to show/hide labels
                     }
                     else{
                         var label = chartConfig[labelN];
@@ -299,7 +305,10 @@ bluewave.ChartEditor = function(parent, config) {
                     createDropdown("xAxis", plotInputs),
 
                     createLabel("Y-Axis"),
-                    createDropdown("yAxis", plotInputs)
+                    createDropdown("yAxis", plotInputs),
+
+                    createLabel("Separate By"),
+                    createDropdown("group", plotInputs)
                 ]
             }
         );
@@ -313,7 +322,10 @@ bluewave.ChartEditor = function(parent, config) {
                         createDropdown(`xAxis${i+1}`, plotInputs),
 
                         createLabel("Y-Axis"),
-                        createDropdown(`yAxis${i+1}`, plotInputs)
+                        createDropdown(`yAxis${i+1}`, plotInputs),
+
+                        createLabel("Separate By"),
+                        createDropdown(`group${i+1}`, plotInputs),
                     ]
                 }
             );
@@ -411,7 +423,7 @@ bluewave.ChartEditor = function(parent, config) {
         form.onChange = function(input, value){
             var key = input.name;
 
-          //Special case for "Separate By" option
+          //Special case for "Separate By" option. Show/Hide the label field.
             var idx = key.indexOf("group");
             if (idx>-1){
                 var id = key.substring("group".length);
@@ -518,9 +530,9 @@ bluewave.ChartEditor = function(parent, config) {
         };
 
         barChart = new bluewave.charts.BarChart(svg, {});
-        barChart.onDblClick = function(bar, bars){
-            chartConfig.barColor = d3.select(bar).attr("fill");
-            editStyle("bar");
+        barChart.onClick = function(bar, barID){
+            // chartConfig.barColor = d3.select(bar).attr("fill");
+            editStyle("bar", barID);
 
         };
     };
@@ -1110,7 +1122,7 @@ bluewave.ChartEditor = function(parent, config) {
                         group: "Fill Style",
                         items: [
                             {
-                                name: "fillColor",
+                                name: "barColor",
                                 label: "Color",
                                 type: new javaxt.dhtml.ComboBox(
                                     document.createElement("div"),
@@ -1130,35 +1142,35 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
 
-            createColorOptions("fillColor", form);
+            createColorOptions("barColor", form);
             createSlider("fillOpacity", form, "%");
 
 
-            form.findField("fillColor").setValue(chartConfig.barColor);
+            // form.findField("barColor").setValue(chartConfig.barColor);
             form.findField("fillOpacity").setValue(0);
 
-          //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
+            if(datasetID !== null && datasetID !== undefined){
 
-                chartConfig.barColor = settings.fillColor;
+                let n = `${datasetID}`;
 
-                createBarPreview();
-            };
+                if( !chartConfig["barColor" + n] ) chartConfig["barColor" + n] = "#6699CC";
+
+                form.findField("barColor").setValue(chartConfig["barColor" + n]);
+
+                form.onChange = function(){
+                    let settings = form.getData();
+                    chartConfig["barColor" + n] = settings.barColor;
+
+                    createBarPreview();
+                };
+
+            }
         }
 
 
       //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);
         form.resize();
-
-
-
-      //Workaround for bar chart legend until editor is split up
-        // if(chartType !== "barChart"){
-        //     let legendContainer = document.querySelector(".bar-legend");
-        //     if(legendContainer) legendContainer.remove();
-        // }
     };
 
 
