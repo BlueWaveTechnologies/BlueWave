@@ -71,7 +71,6 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         me.clear();
-
         waitmask.show(500);
         get("admin/settings/basemap", {
             success: function(arr){
@@ -192,7 +191,7 @@ bluewave.MapAdmin = function(parent, config) {
             style: style,
             columns: [
                 {header: 'Thumbnail', width:'300', field:'thumbnail'},
-                {header: 'URL', width:'100%', field:'url'}
+                {header: 'Basemap Information', width:'100%', field:'url'}
             ],
             update: function(row, basemap){
                 var baseURL = basemap.url;
@@ -215,6 +214,7 @@ bluewave.MapAdmin = function(parent, config) {
 
                 var name = document.createElement("div");
                 name.innerHTML = basemap.name;
+                name.style.fontWeight = "bold";
                 div.appendChild(name);
 
 
@@ -222,7 +222,7 @@ bluewave.MapAdmin = function(parent, config) {
                 url.innerHTML = basemap.url;
                 div.appendChild(url);
 
-                row.set('URL', div);
+                row.set('Basemap Information', div);
             }
         });
 
@@ -404,7 +404,6 @@ bluewave.MapAdmin = function(parent, config) {
                         var key = values.key;
                         if (key) key = key.trim();
 
-
                         var basemap = {
                             name: name,
                             url: url,
@@ -419,8 +418,6 @@ bluewave.MapAdmin = function(parent, config) {
                         else{
                             basemaps[id] = basemap;
                         }
-
-
                         updateConfig();
                     }
                 }
