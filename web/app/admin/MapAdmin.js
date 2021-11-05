@@ -75,6 +75,7 @@ bluewave.MapAdmin = function(parent, config) {
         waitmask.show(500);
         get("admin/settings/basemap", {
             success: function(arr){
+               console.log("Test");
                basemaps = arr;
                grid.load(basemaps);
                waitmask.hide();
@@ -174,14 +175,11 @@ bluewave.MapAdmin = function(parent, config) {
             column: "admin-map-table-col"
         }, config.style.table);
 
-
-        console.log(style);
-
         grid = new javaxt.dhtml.DataGrid(parent, {
             style: style,
             columns: [
                 {header: 'Thumbnail', width:'300', field:'thumbnail'},
-                {header: 'URL', width:'100%', field:'url'}
+                {header: 'Basemap Information', width:'100%', field:'url'}
             ],
             update: function(row, basemap){
                 var baseURL = basemap.url;
@@ -211,7 +209,7 @@ bluewave.MapAdmin = function(parent, config) {
                 url.innerHTML = basemap.url;
                 div.appendChild(url);
 
-                row.set('URL', div);
+                row.set('Basemap Information', div);
             }
         });
 
@@ -401,13 +399,11 @@ bluewave.MapAdmin = function(parent, config) {
                         var key = values.key;
                         if (key) key = key.trim();
 
-
                         var basemap = {
                             name: name,
                             url: url,
                             key: key
                         };
-
 
                         var checkBaseMaps = basemaps.filter(obj => (obj.url === basemap.url));
                         if(!checkBaseMaps.length){
