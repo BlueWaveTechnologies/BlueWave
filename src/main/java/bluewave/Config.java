@@ -31,7 +31,7 @@ public class Config {
    */
     public static void load(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
         Config.configFile = configFile;
-        
+
 
       //Parse config file
         JSONObject json = new JSONObject(configFile.getText());
@@ -128,8 +128,8 @@ public class Config {
     public static JSONValue get(String key){
         return config.get(key);
     }
-    
-    
+
+
   //**************************************************************************
   //** set
   //**************************************************************************
@@ -137,7 +137,7 @@ public class Config {
         config.set(key, value);
     }
 
-    
+
   //**************************************************************************
   //** save
   //**************************************************************************
@@ -146,7 +146,7 @@ public class Config {
         json.set("schema", null);
         json.set("jar", null);
 
-            
+
         bluewave.graph.Neo4J graph = getGraph(null);
         JSONObject db = new JSONObject();
         db.set("host", graph.getHost() + ":" + graph.getPort());
@@ -156,13 +156,13 @@ public class Config {
         db.set("localCache", properties.get("localLog"));
         db.set("localLog", properties.get("localCache"));
         json.set("graph", db);
-        
-        
-        
-        System.out.println(json.toString(4));
-        configFile.write(config.toJson().toString(4));
+
+
+
+        //System.out.println(json.toString(4));
+        configFile.write(json.toString(4));
     }
-    
+
 
   //**************************************************************************
   //** getDatabase
@@ -179,14 +179,14 @@ public class Config {
         String key = "graph";
         JSONValue val = get(key);
         if (val==null) return null;
-        
-        
+
+
         String[] credentials;
         if (user!=null) credentials = user.getGraphCredentials();
         else credentials = new String[]{"neo4j"};
         String username = credentials[0];
-        
-        
+
+
         if (val.toObject() instanceof ConcurrentHashMap){
             ConcurrentHashMap map = (ConcurrentHashMap) val.toObject();
 
@@ -200,13 +200,13 @@ public class Config {
                     map.notify();
                 }
                 return neo4j;
-            } 
+            }
             else{
                 return (bluewave.graph.Neo4J) obj;
             }
         }
         else{
-            
+
             JSONObject json = get(key).toJSONObject();
             bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             neo4j.setHost(json.get("host").toString());
@@ -215,18 +215,18 @@ public class Config {
             Properties properties = neo4j.getProperties();
             properties.put("localLog", json.get("localLog"));
             properties.put("localCache", json.get("localCache"));
-            
+
             ConcurrentHashMap<String, bluewave.graph.Neo4J> map = new ConcurrentHashMap<>();
             map.put("neo4j", neo4j);
             config.set(key, map);
-            
+
             if (user!=null){
                 neo4j = neo4j.clone();
                 neo4j.setUsername(username);
                 neo4j.setPassword(credentials[1]);
                 map.put(username, neo4j);
             }
-            
+
             return neo4j;
         }
     }
@@ -276,6 +276,7 @@ public class Config {
    *  both canonical and relative paths (relative to the configFile).
    */
     public static void updateDir(String key, JSONObject config, javaxt.io.File configFile, boolean create){
+        if (config==null) return;
         if (config.has(key)){
             String path = config.get(key).toString();
             if (path==null){
