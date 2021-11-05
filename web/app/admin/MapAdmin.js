@@ -71,7 +71,6 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         me.clear();
-
         waitmask.show(500);
         get("admin/settings/basemap", {
             success: function(arr){
@@ -215,6 +214,7 @@ bluewave.MapAdmin = function(parent, config) {
 
                 var name = document.createElement("div");
                 name.innerHTML = basemap.name;
+                name.style.fontWeight = "bold";
                 div.appendChild(name);
 
 
@@ -305,10 +305,6 @@ bluewave.MapAdmin = function(parent, config) {
   //** updateConfig
   //**************************************************************************
     var updateConfig = function(){
-
-        console.log(basemaps);
-        console.log(JSON.stringify(basemaps));
-
         save("admin/settings/basemap", JSON.stringify(basemaps), {
             success: function(){
                 if (editor) editor.close();
@@ -416,16 +412,12 @@ bluewave.MapAdmin = function(parent, config) {
 
                         var id = values.id;
 
-
-
                         if (isNaN(id)){
                             basemaps.push(basemap);
                         }
                         else{
                             basemaps[id] = basemap;
                         }
-
-
                         updateConfig();
                     }
                 }
