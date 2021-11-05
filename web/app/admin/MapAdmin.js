@@ -175,30 +175,30 @@ bluewave.MapAdmin = function(parent, config) {
             style: config.style.table,
             url: "admin/settings/basemap",
             columns: [
-                {header: 'Name', width:'250', field:'name'},
+                {header: 'Name', width:'200', field:'name'},
                 {header: 'URL', width:'100%', field:'url'},
-                {header: 'Key', width:'400', field:'key'},
+                {header: 'Key', width:'300', field:'key'},
                 {header: 'Thumbnail', width:'300', field:'thumbnail'}
             ],
             update: function(row, basemap){
             //TODO Get this to work
-//                var baseURL = basemap.url;
-//                var layer = new ol.layer.Tile({
-//                    source: new ol.source.XYZ({
-//                        url: baseURL
-//                    })
-//                });
-//
-//                var img = document.createElement("img");
-//
-//                getTilePreview(layer, [3,2,3], function(preview){
-//                    img.src = preview;
-//                });
+                var baseURL = basemap.url;
+                var layer = new ol.layer.Tile({
+                    source: new ol.source.XYZ({
+                        url: baseURL
+                    })
+                });
+
+                var img = document.createElement("img");
+
+                getTilePreview(layer, [3,2,3], function(preview){
+                    img.src = preview;
+                });
 
                 row.set('Name', basemap.name);
                 row.set('URL', basemap.url);
                 row.set('Key', basemap.key);
-                //row.set('Thumbnail', img);
+                row.set('Thumbnail', img);
             }
         });
 
@@ -207,10 +207,14 @@ bluewave.MapAdmin = function(parent, config) {
              if (records.length>0){
                  editButton.enable();
                  deleteButton.enable();
+                 moveUpButton.enable();
+                 moveDownButton.enable();
              }
              else{
                  editButton.disable();
                  deleteButton.disable();
+                 moveUpButton.disable();
+                 moveDownButton.disable();
              }
         };
 
@@ -234,13 +238,11 @@ bluewave.MapAdmin = function(parent, config) {
             });
             editor.onSubmit = function(){
                 var basemap = editor.getValues();
-                console.log(basemap);
-                var checkBaseMaps = basemaps.filter(obj => (obj.name === basemap.name));
-                console.log(checkBaseMaps);
+                var checkBaseMaps = basemaps.filter(obj => (obj.url === basemap.url));
                 if(!checkBaseMaps.length){
                     basemaps.push(basemap);
                 }else{
-                    basemaps = basemaps.map(map => map.name !== basemap.name ? map : basemap);
+                    basemaps = basemaps.map(map => map.url !== basemap.url ? map : basemap);
                 }
                 save("admin/settings/basemap", JSON.stringify(basemaps), {
                     success: function(){
@@ -275,7 +277,7 @@ bluewave.MapAdmin = function(parent, config) {
   //** deleteBaseMap
   //**************************************************************************
     var deleteBaseMap = function(basemap){
-        del("admin/settings/basemap?name=" + basemap.name, {
+        del("admin/settings/basemap?url=" + basemap.url, {
             success: function(){
                 grid.clear();
                 grid.load(basemap);
@@ -288,7 +290,7 @@ bluewave.MapAdmin = function(parent, config) {
 
 
   //**************************************************************************
-  //** editBaseMap
+  //** moveBaseMap
   //**************************************************************************
     var moveBaseMap = function(basemap, movement){
         var originalIndex = basemaps.map(e => e.name).indexOf(basemap.name);
@@ -307,11 +309,13 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
   //** arrayMove
   //**************************************************************************
-    var arraymove = function(arr, fromIndex, toIndex) {
-          var element = arr[fromIndex];
-          arr.splice(fromIndex, 1);
-          arr.splice(toIndex, 0, element);
-      }
+    var arrayMove = function(arr, fromIndex, toIndex) {
+        var element = arr[fromIndex];
+        arr.splice(fromIndex, 1);
+        arr.splice(toIndex, 0, element);
+    }
+
+
   //**************************************************************************
   //** updateConfig
   //**************************************************************************
@@ -341,10 +345,9 @@ bluewave.MapAdmin = function(parent, config) {
 
 
   //**************************************************************************
-  //** createTilePreview
+  //** getTilePreview
   //**************************************************************************
-    //TODO Make sure this works well.
-    var createTilePreview = function(layer, coord, callback){
+    var getTilePreview = function(layer, coord, callback){
         if (!callback) return;
 
         var proj = ol.proj.get('EPSG:3857');
