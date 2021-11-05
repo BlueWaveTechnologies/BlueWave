@@ -124,6 +124,8 @@ bluewave.MapAdmin = function(parent, config) {
                 if (records.length>0) deleteBaseMap(records[0]);
             };
 
+            createSpacer(toolbar);
+
           //MoveUp button
             moveUpButton = createButton(toolbar, {
                 label: "Move Up",
@@ -156,8 +158,7 @@ bluewave.MapAdmin = function(parent, config) {
                 hidden: false
             });
             refreshButton.onClick = function(){
-                grid.clear();
-                grid.load(basemaps);
+                me.update();
             };
 
             parent.appendChild(toolbar);
@@ -169,16 +170,18 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
     var createBody = function(parent){
 
+        var style = merge({
+            column: "admin-map-table-col"
+        }, config.style.table);
 
+
+        console.log(style);
 
         grid = new javaxt.dhtml.DataGrid(parent, {
-            style: config.style.table,
-            url: "admin/settings/basemap",
+            style: style,
             columns: [
-                {header: 'Name', width:'200', field:'name'},
-                {header: 'URL', width:'100%', field:'url'},
-                {header: 'Key', width:'300', field:'key'},
-                {header: 'Thumbnail', width:'300', field:'thumbnail'}
+                {header: 'Thumbnail', width:'300', field:'thumbnail'},
+                {header: 'URL', width:'100%', field:'url'}
             ],
             update: function(row, basemap){
                 var baseURL = basemap.url;
@@ -188,16 +191,27 @@ bluewave.MapAdmin = function(parent, config) {
                     })
                 });
 
-                var img = document.createElement("img");
 
+                var img = document.createElement("img");
                 getTilePreview(layer, [3,2,3], function(preview){
                     img.src = preview;
                 });
+                img.onload = function(){
+                    row.set('Thumbnail', img);
+                };
 
-                row.set('Name', basemap.name);
-                row.set('URL', basemap.url);
-                row.set('Key', basemap.key);
-                row.set('Thumbnail', img);
+                var div = document.createElement("div");
+
+                var name = document.createElement("div");
+                name.innerHTML = basemap.name;
+                div.appendChild(name);
+
+
+                var url = document.createElement("div");
+                url.innerHTML = basemap.url;
+                div.appendChild(url);
+
+                row.set('URL', div);
             }
         });
 
