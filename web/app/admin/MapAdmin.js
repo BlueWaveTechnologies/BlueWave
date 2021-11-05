@@ -276,15 +276,11 @@ bluewave.MapAdmin = function(parent, config) {
   //** deleteBaseMap
   //**************************************************************************
     var deleteBaseMap = function(basemap){
-        del("admin/settings/basemap?url=" + basemap.url, {
-            success: function(){
-                grid.clear();
-                grid.load(basemap);
-            },
-            failure: function(request){
-                alert(request);
-            }
+        var filteredBaseMaps = basemaps.filter(function(map){
+            return map.url !== basemap.url;
         });
+        basemaps = filteredBaseMaps;
+        updateConfig();
     };
 
 
@@ -300,8 +296,7 @@ bluewave.MapAdmin = function(parent, config) {
             newIndex = originalIndex + 1;
         }
         arrayMove(basemaps, originalIndex, newIndex);
-        grid.clear();
-        grid.load(basemaps);
+        updateConfig();
     }
 
 
