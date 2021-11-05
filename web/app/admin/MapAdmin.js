@@ -187,11 +187,12 @@ bluewave.MapAdmin = function(parent, config) {
         }, config.style.table);
 
 
+      //Create grid control
         grid = new javaxt.dhtml.DataGrid(parent, {
             style: style,
             columns: [
-                {header: 'Thumbnail', width:'300', field:'thumbnail'},
-                {header: 'Basemap Information', width:'100%', field:'url'}
+                {header: 'Thumbnail', width:'130', align:'center'},
+                {header: 'Text', width:'100%'}
             ],
             update: function(row, basemap){
                 var baseURL = basemap.url;
@@ -213,19 +214,27 @@ bluewave.MapAdmin = function(parent, config) {
                 var div = document.createElement("div");
 
                 var name = document.createElement("div");
+                name.className = "admin-map-name";
                 name.innerHTML = basemap.name;
-                name.style.fontWeight = "bold";
                 div.appendChild(name);
 
-
                 var url = document.createElement("div");
+                url.className = "admin-map-url";
                 url.innerHTML = basemap.url;
                 div.appendChild(url);
 
-                row.set('Basemap Information', div);
+                row.set('Text', div);
             }
         });
 
+
+      //Hide header
+        var headerRow = grid.el.getElementsByClassName("table-header")[0];
+        addShowHide(headerRow);
+        headerRow.hide();
+
+
+      //Watch for selection change events
         grid.onSelectionChange = function(){
              var records = grid.getSelectedRecords();
              if (records.length>0){
@@ -242,6 +251,8 @@ bluewave.MapAdmin = function(parent, config) {
              }
         };
 
+
+      //Add custom update method
         grid.update = function(){
             grid.clear();
             grid.load(basemaps);
@@ -264,7 +275,7 @@ bluewave.MapAdmin = function(parent, config) {
 
       //Updated values
         if (basemap){
-            editor.setTitle("Edit Base Map");
+            editor.setTitle("Edit Basemap");
             editor.update(basemap, index);
             editor.show();
         }
@@ -333,7 +344,7 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
     var createEditor = function(){
         var win = new javaxt.dhtml.Window(document.body, {
-            width: 450,
+            width: 600,
             valign: "top",
             modal: true,
             resizable: false,
@@ -344,32 +355,27 @@ bluewave.MapAdmin = function(parent, config) {
             style: config.style.form,
             items: [
                 {
-                    group: "Basemap",
-                    items: [
-                        {
-                            name: "name",
-                            label: "Name",
-                            type: "text",
-                            required: true
-                        },
-                        {
-                            name: "url",
-                            label: "URL",
-                            type: "text",
-                            required: true
-                        },
-                        {
-                            name: "key",
-                            label: "Key",
-                            type: "text",
-                            required: true
-                        },
-                        {
-                            name: "id",
-                            label: "id",
-                            type: "hidden"
-                        }
-                    ]
+                    name: "name",
+                    label: "Name",
+                    type: "text",
+                    required: true
+                },
+                {
+                    name: "url",
+                    label: "URL",
+                    type: "text",
+                    required: true
+                },
+                {
+                    name: "key",
+                    label: "Key",
+                    type: "text",
+                    required: true
+                },
+                {
+                    name: "id",
+                    label: "id",
+                    type: "hidden"
                 }
             ],
             buttons: [
