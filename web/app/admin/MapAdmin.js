@@ -133,7 +133,6 @@ bluewave.MapAdmin = function(parent, config) {
             moveUpButton.onClick = function(){
                 var records = grid.getSelectedRecords();
                 if(records.length>0) moveBaseMap(records[0], 'up');
-                //TODO Move this record up one spot.
             };
 
           //MoveDown button
@@ -145,7 +144,6 @@ bluewave.MapAdmin = function(parent, config) {
             moveDownButton.onClick = function(){
                 var records = grid.getSelectedRecords();
                 if(records.length>0) moveBaseMap(records[0], 'down');
-                //TODO Move this record down one spot.
             };
 
             createSpacer(toolbar);
@@ -171,6 +169,8 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
     var createBody = function(parent){
 
+
+
         grid = new javaxt.dhtml.DataGrid(parent, {
             style: config.style.table,
             url: "admin/settings/basemap",
@@ -181,7 +181,6 @@ bluewave.MapAdmin = function(parent, config) {
                 {header: 'Thumbnail', width:'300', field:'thumbnail'}
             ],
             update: function(row, basemap){
-            //TODO Get this to work
                 var baseURL = basemap.url;
                 var layer = new ol.layer.Tile({
                     source: new ol.source.XYZ({
