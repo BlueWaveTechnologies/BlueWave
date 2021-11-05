@@ -189,6 +189,14 @@ bluewave.charts.LineChart = function(parent, config) {
                     });
             }).entries(dataSets[i]);
 
+
+          //Smooth the data as needed
+            var smoothingType = chartConfig["smoothingType" + i];
+            if (smoothingType){
+                var smoothingValue = chartConfig["smoothingValue" + i];
+                applySmoothing(smoothingType, smoothingValue, sumData);
+            }
+
             arr.push(sumData);
         }
 
@@ -280,111 +288,31 @@ bluewave.charts.LineChart = function(parent, config) {
             let lineStyle = chartConfig["lineStyle" + i];
             let lineWidth = chartConfig["lineWidth" + i];
             let opacity = chartConfig["opacity" + i];
-            
+
             let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
             if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
             let pointColor = chartConfig["pointColor" + i];
-
-            let isKDE = chartConfig["kde" + i];
-            let spline = chartConfig["spline" + i];
-            let isMovingAverage = chartConfig["movingAverage" + i];
-            let bandwidth = chartConfig["bandwith" + i];
-            let numSamples = chartConfig["numSamples" + i];
 
             if (lineWidth == null) lineWidth = 1;
             if (opacity == null) opacity = 1;
             if (lineStyle == null) lineStyle = "solid";
 
 
+            var smoothingType = chartConfig["smoothingType" + i];
 
-            let keyType = typeOfAxisValue(sumData[0].key);
-
-            function kernelDensityEstimator(kernel, x) {
-                return function(sample) {
-                  return x.map(function(x) {
-                    return [x, d3.mean(sample, function(v) { return kernel(x - v); })];
-                  });
-                };
-              }
-              
-            function epanechnikovKernel(bandwidth) {
-                return function (u) {
-                    return Math.abs(u /= bandwidth) <= 1 ? .75 * (1 - u * u) / bandwidth : 0;
-                };
-            }
-
-            function movingAverage(vals, n){
-                let arr=[vals[0]];
-                let sum=0;
-                for (let i=1; i<n; i++){
-                    sum += vals[i];
-                    arr.push(sum/i);
+            var getLine = function(){
+                if (smoothingType && smoothingType==="spline"){
+                    return d3.line().x(getX).y(getY).curve(d3.curveMonotoneX);
                 }
-
-                for (let i=n; i<vals.length; i++){
-
-                    let mean = d3.mean(vals.slice(i - n/2, i + n/2))
-                        arr.push(mean)
-                    }
-
-                return arr;
-            }
-
-            //Get all values from sumData
-            var sumValues = sumData.map(d => d.value)
-            var kdeSum = d3.sum(sumValues);
-
-            var maxVal = d3.max(sumValues);
-            var numVals = sumValues.length;
-            
-
-            var xthing = d3.scaleLinear()
-                .domain([0, numVals])
-                .range([0, width]);
-
-            var ything = d3.scaleLinear()
-                .domain([0, maxVal])
-                .range([height, 0]);
-
-            var kde = kernelDensityEstimator(epanechnikovKernel(bandwidth), xthing.ticks(sumData.length))
-
-
-            var kdeLine = d3.line()
-                .x(function (d) { return xthing(d[0]); })
-                .y(function (d) { return ything(d[1] * kdeSum) });
-
-            var getLine = function(d){
-                console.log(d)
-
-                    let line = 
-                    d3.line()
-                    .x(getX(d))
-                    .y(getY(d))
-                    .curve(spline ? d3.curveMonotoneX : d3.curveLinear);
-                    return line;
-                }
-// console.log(kde(sumValues))
-// console.log(sumValues, kdeSum)
-          
-            var dataRoute = function () {
-                if (isKDE === true) return kde(sumValues);
-                else return sumData;
-            }
-
-            if(isMovingAverage===true){
-                let average = movingAverage(sumValues, numSamples)
-
-                sumData.forEach(function(d, i){
-                    d.value = average[i];
-                });
+                return d3.line().x(getX).y(getY);
             };
 
-console.log(sumData)
-            //Draw line
+
+
+          //Draw line
             chartElements[i].line = lineGroup
                 .append("path")
-                .datum(dataRoute())
-                // .datum(sumData)
+                .datum(sumData)
                 .attr("fill", "none")
                 .attr("stroke", lineColor)
                 .attr("stroke-width", lineWidth)
@@ -396,20 +324,8 @@ console.log(sumData)
                 .attr("stroke-linecap", function(d){
                     if(lineStyle==="dotted") return "round";
                 })
-                .attr(
-                    "d", 
-                    // getLine
-                    
-                        
-                      d3.line()
-                    .x(getX)
-                    .y(getY)
-                    // // .x( x(d[0])  )
-                    // // .y( y(d[1])  )
-                    .curve(spline ? d3.curveMonotoneX : d3.curveLinear)
-                    
-                    
-                );
+                .attr("d", getLine());
+
 
           //Draw thick line for selection purposes
             chartElements[i].line2 = lineGroup
@@ -420,11 +336,7 @@ console.log(sumData)
                 .attr("stroke", "#ff0000")
                 .attr("stroke-width", 10)
                 .attr("opacity", 0)
-                .attr(
-                    "d",d3.line()
-                    .x(getX)
-                    .y(getY)
-                )
+                .attr("d", getLine())
                 .on("click", function(d){
                     var datasetID = parseInt(d3.select(this).attr("dataset"));
                     raiseLine(chartElements[datasetID]);
@@ -779,6 +691,83 @@ console.log(sumData)
             scale,
             band
         };
+    };
+
+
+  //**************************************************************************
+  //** applySmoothing
+  //**************************************************************************
+    var applySmoothing = function(smoothingType, smoothingValue, data){
+        if (smoothingType==="movingAverage"){
+            if (!isNaN(smoothingValue) && smoothingValue>0){
+
+                var values = data.map(d => d.value);
+
+                function movingAverage(vals, n){
+                    let arr=[vals[0]];
+                    let sum=0;
+                    for (let i=1; i<n; i++){
+                        sum += vals[i];
+                        arr.push(sum/i);
+                    }
+
+                    for (let i=n; i<vals.length; i++){
+                        let mean = d3.mean(vals.slice(i - n/2, i + n/2));
+                        arr.push(mean);
+                    }
+
+                    return arr;
+                }
+
+                let average = movingAverage(values, smoothingValue);
+
+                data.forEach(function(d, i){
+                    d.value = average[i];
+                });
+            }
+        }
+        else if (smoothingType==="kde"){
+
+
+          //Extract values from data and compute basic stats
+            var values = data.map(d => d.value);
+            var extent = d3.extent(values);
+            var mean = d3.mean(values);
+            var minVal = extent[0];
+            var maxVal = extent[1];
+
+
+
+          //Apply kernel density estimation to the data
+            var kernel = epanechnikov(smoothingValue);
+            data.forEach(function(d, i){
+                var val = d3.mean(values, v => kernel(i-v));
+                d.value = val;
+            });
+
+
+
+          //Scale values
+            var densityValues = data.map(d => d.value);
+            extent = d3.extent(densityValues);
+            var minDensity = extent[0];
+            var maxDensity = extent[1];
+            var meanDensity = d3.mean(densityValues);
+            data.forEach(function(d, i){
+                var val = d.value;
+                d.value = (mean*val)/meanDensity;
+                console.log(i, val, d.value);
+            });
+
+        }
+    };
+
+
+  //**************************************************************************
+  //** epanechnikov
+  //**************************************************************************
+    var epanechnikov = function(bandwidth) {
+        return x => Math.abs(x /= bandwidth) <= 1 ? 0.75 * (1 - x * x) / bandwidth : 0;
     };
 
 
