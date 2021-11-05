@@ -93,13 +93,19 @@ public class AdminService extends WebService {
                 if (val instanceof JSONObject){
                     return new ServiceResponse((JSONObject) val);
                 }
+                else if (val instanceof JSONArray){
+                    return new ServiceResponse((JSONArray) val);
+                }
                 else{
-                    
-                    if (key.equalsIgnoreCase("graph") && 
+
+                    if (key.equalsIgnoreCase("graph") &&
                         val instanceof java.util.concurrent.ConcurrentHashMap){
-                        bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J) 
+                        bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J)
                         ((java.util.concurrent.ConcurrentHashMap) val).get("neo4j");
                         return new ServiceResponse(graph.toJson());
+                    }
+                    else{
+                        return new ServiceResponse(new javaxt.utils.Value(val).toString());
                     }
 
                 }
@@ -119,8 +125,8 @@ public class AdminService extends WebService {
       //Get key
         String key = request.getPath(1).toString();
         if (key==null) return new ServiceResponse(400, "Missing key");
-        
-        
+
+
       //Parse value
         Object val = null;
         String str = new String(request.getPayload());
@@ -137,8 +143,8 @@ public class AdminService extends WebService {
             }
         }
 
-        
-        
+
+
       //Update config
         Object orgVal = Config.get(key).toObject();
         if (orgVal==null){
@@ -182,14 +188,14 @@ public class AdminService extends WebService {
                 }
             }
             else if (orgVal instanceof javaxt.sql.Database){
-                
+
             }
             else{
                 Config.set(key, val);
                 Config.save();
             }
         }
-        
+
 
         return new ServiceResponse(200);
     }
