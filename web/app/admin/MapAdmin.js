@@ -230,31 +230,9 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
     var editBaseMap = function(basemap){
 
-        //instantitate the editor if need be
-        if (!editor){
-            editor = new bluewave.BaseMapEditor(document.body, {
-                style: config.style
-            });
-            editor.onSubmit = function(){
-                var basemap = editor.getValues();
-                var checkBaseMaps = basemaps.filter(obj => (obj.url === basemap.url));
-                if(!checkBaseMaps.length){
-                    basemaps.push(basemap);
-                }else{
-                    basemaps = basemaps.map(map => map.url !== basemap.url ? map : basemap);
-                }
-                save("admin/settings/basemap", JSON.stringify(basemaps), {
-                    success: function(){
-                        editor.close();
-                        grid.clear();
-                        grid.load(basemaps);
-                    },
-                    failure: function(request){
-                        alert(request);
-                    }
-                });
-            };
-        }
+      //instantitate the editor if need be
+        if (!editor) createEditor();
+
 
       //Clear/reset the form
         editor.clear();
@@ -297,7 +275,7 @@ bluewave.MapAdmin = function(parent, config) {
         }
         arrayMove(basemaps, originalIndex, newIndex);
         updateConfig();
-    }
+    };
 
 
   //**************************************************************************
@@ -335,6 +313,113 @@ bluewave.MapAdmin = function(parent, config) {
         if (btn.style) btn.style = merge(btn.style, defaultStyle);
         else btn.style = defaultStyle;
         return bluewave.utils.createButton(parent, btn);
+    };
+
+
+  //**************************************************************************
+  //** createEditor
+  //**************************************************************************
+    var createEditor = function(){
+        var win = new javaxt.dhtml.Window(document.body, {
+            width: 450,
+            valign: "top",
+            modal: true,
+            resizable: false,
+            style: config.style.window
+        });
+
+        var form = new javaxt.dhtml.Form(win.getBody(), {
+            style: config.style.form,
+            items: [
+                {
+                    group: "Basemap",
+                    items: [
+                        {
+                            name: "name",
+                            label: "Name",
+                            type: "text",
+                            required: true
+                        },
+                        {
+                            name: "url",
+                            label: "URL",
+                            type: "text",
+                            required: true
+                        },
+                        {
+                            name: "key",
+                            label: "Key",
+                            type: "text",
+                            required: true
+                        }
+                    ]
+                }
+            ],
+            buttons: [
+                {
+                    name: "Cancel",
+                    onclick: function(){
+                        form.clear();
+                        win.close();
+                        me.onCancel();
+                    }
+                },
+                {
+                    name: "Submit",
+                    onclick: function(){
+
+                        var values = form.getData();
+
+                        var name = values.name;
+                        if(name) name = name.trim();
+                        if(name==null || name=="") {
+                            warn("Name is required", form.findField("name"));
+                            return;
+                        }
+
+                        var url = values.url;
+                        if(url) url = url.trim();
+                        if(url==null || url=="") {
+                            warn("URL is required", form.findField("url"));
+                            return;
+                        }
+
+                        var key = values.key;
+                        if (key) key = key.trim();
+
+
+                        var basemap = {
+                            name: name,
+                            url: url,
+                            key: key
+                        };
+
+
+                        var checkBaseMaps = basemaps.filter(obj => (obj.url === basemap.url));
+                        if(!checkBaseMaps.length){
+                            basemaps.push(basemap);
+                        }else{
+                            basemaps = basemaps.map(map => map.url !== basemap.url ? map : basemap);
+                        }
+                        updateConfig();
+                    }
+                }
+            ]
+        });
+
+        editor = win;
+        editor.clear = form.clear;
+        editor.update = function(baseMap){
+            form.clear();
+            if (baseMap){
+                for (var key in baseMap) {
+                    if (baseMap.hasOwnProperty(key)){
+                        var value = baseMap[key];
+                        form.setValue(key, value);
+                    }
+                }
+            }
+        };
     };
 
 
@@ -387,7 +472,7 @@ bluewave.MapAdmin = function(parent, config) {
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var get = bluewave.utils.get;
     var save = javaxt.dhtml.utils.post;
-    var del = javaxt.dhtml.utils.delete;
+    var warn = bluewave.utils.warn;
 
     init();
 };
