@@ -80,7 +80,7 @@ bluewave.MapAdmin = function(parent, config) {
                waitmask.hide();
             },
             failure: function(request){
-                alert(request);
+                if (request.status!==404) alert(request);
                 waitmask.hide();
             }
         });
