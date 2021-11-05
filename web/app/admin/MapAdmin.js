@@ -93,75 +93,88 @@ bluewave.MapAdmin = function(parent, config) {
     var createToolbar = function(parent){
         var toolbar = document.createElement('div');
 
-          //Add button
-            addButton = createButton(toolbar, {
-                label: "Add",
-                icon: "fas fa-plus-circle"
+      //Add button
+        addButton = createButton(toolbar, {
+            label: "Add",
+            icon: "fas fa-plus-circle"
+        });
+        addButton.onClick = function(){
+            editBaseMap();
+        };
+
+      //Edit button
+        editButton = createButton(toolbar, {
+            label: "Edit",
+            icon: "fas fa-edit",
+            disabled: true
+        });
+        editButton.onClick = function(){
+            var index = 0;
+            grid.forEachRow(function (row) {
+                if (row.selected){
+                    editBaseMap(row.record, index);
+                    return true;
+                }
+                index++;
             });
-            addButton.onClick = function(){
-                editBaseMap();
-            };
+        };
 
-          //Edit button
-            editButton = createButton(toolbar, {
-                label: "Edit",
-                icon: "fas fa-edit",
-                disabled: true
+      //Delete button
+        deleteButton = createButton(toolbar, {
+            label: "Delete",
+            icon: "fas fa-trash",
+            disabled: true
+        });
+        deleteButton.onClick = function(){
+            var index = 0;
+            grid.forEachRow(function (row) {
+                if (row.selected){
+                    basemaps.splice(index, 1);
+                    updateConfig();
+                    return true;
+                }
+                index++;
             });
-            editButton.onClick = function(){
-                var records = grid.getSelectedRecords();
-                if (records.length>0) editBaseMap(records[0]);
-            };
+        };
 
-          //Delete button
-            deleteButton = createButton(toolbar, {
-                label: "Delete",
-                icon: "fas fa-trash",
-                disabled: true
-            });
-            deleteButton.onClick = function(){
-                var records = grid.getSelectedRecords();
-                if (records.length>0) deleteBaseMap(records[0]);
-            };
+        createSpacer(toolbar);
 
-            createSpacer(toolbar);
+      //MoveUp button
+        moveUpButton = createButton(toolbar, {
+            label: "Move Up",
+            icon: "fas fa-chevron-up",
+            disabled: true
+        });
+        moveUpButton.onClick = function(){
+            var records = grid.getSelectedRecords();
+            if(records.length>0) moveBaseMap(records[0], 'up');
+        };
 
-          //MoveUp button
-            moveUpButton = createButton(toolbar, {
-                label: "Move Up",
-                icon: "fas fa-chevron-up",
-                disabled: true
-            });
-            moveUpButton.onClick = function(){
-                var records = grid.getSelectedRecords();
-                if(records.length>0) moveBaseMap(records[0], 'up');
-            };
+      //MoveDown button
+        moveDownButton = createButton(toolbar, {
+            label: "Move Down",
+            icon: "fas fa-chevron-down",
+            disabled: true
+        });
+        moveDownButton.onClick = function(){
+            var records = grid.getSelectedRecords();
+            if(records.length>0) moveBaseMap(records[0], 'down');
+        };
 
-          //MoveDown button
-            moveDownButton = createButton(toolbar, {
-                label: "Move Down",
-                icon: "fas fa-chevron-down",
-                disabled: true
-            });
-            moveDownButton.onClick = function(){
-                var records = grid.getSelectedRecords();
-                if(records.length>0) moveBaseMap(records[0], 'down');
-            };
+        createSpacer(toolbar);
 
-            createSpacer(toolbar);
+      //Refresh button
+        var refreshButton = createButton(toolbar, {
+            label: "Refresh",
+            icon: "fas fa-sync-alt",
+            disabled: false,
+            hidden: false
+        });
+        refreshButton.onClick = function(){
+            me.update();
+        };
 
-          //Refresh button
-            var refreshButton = createButton(toolbar, {
-                label: "Refresh",
-                icon: "fas fa-sync-alt",
-                disabled: false,
-                hidden: false
-            });
-            refreshButton.onClick = function(){
-                me.update();
-            };
-
-            parent.appendChild(toolbar);
+        parent.appendChild(toolbar);
     };
 
 
@@ -174,8 +187,6 @@ bluewave.MapAdmin = function(parent, config) {
             column: "admin-map-table-col"
         }, config.style.table);
 
-
-        console.log(style);
 
         grid = new javaxt.dhtml.DataGrid(parent, {
             style: style,
@@ -242,7 +253,7 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
   //** editBaseMap
   //**************************************************************************
-    var editBaseMap = function(basemap){
+    var editBaseMap = function(basemap, index){
 
       //instantitate the editor if need be
         if (!editor) createEditor();
@@ -254,25 +265,13 @@ bluewave.MapAdmin = function(parent, config) {
       //Updated values
         if (basemap){
             editor.setTitle("Edit Base Map");
-            editor.update(basemap);
+            editor.update(basemap, index);
             editor.show();
         }
         else{
             editor.setTitle("New Basemap");
             editor.show();
         }
-    };
-
-
-  //**************************************************************************
-  //** deleteBaseMap
-  //**************************************************************************
-    var deleteBaseMap = function(basemap){
-        var filteredBaseMaps = basemaps.filter(function(map){
-            return map.url !== basemap.url;
-        });
-        basemaps = filteredBaseMaps;
-        updateConfig();
     };
 
 
@@ -299,18 +298,21 @@ bluewave.MapAdmin = function(parent, config) {
         var element = arr[fromIndex];
         arr.splice(fromIndex, 1);
         arr.splice(toIndex, 0, element);
-    }
+    };
 
 
   //**************************************************************************
   //** updateConfig
   //**************************************************************************
     var updateConfig = function(){
+
+        console.log(basemaps);
+        console.log(JSON.stringify(basemaps));
+
         save("admin/settings/basemap", JSON.stringify(basemaps), {
             success: function(){
-                editor.close();
-                grid.clear();
-                grid.load(basemaps);
+                if (editor) editor.close();
+                me.update();
             },
             failure: function(request){
                 alert(request);
@@ -365,6 +367,11 @@ bluewave.MapAdmin = function(parent, config) {
                             label: "Key",
                             type: "text",
                             required: true
+                        },
+                        {
+                            name: "id",
+                            label: "id",
+                            type: "hidden"
                         }
                     ]
                 }
@@ -408,13 +415,18 @@ bluewave.MapAdmin = function(parent, config) {
                             key: key
                         };
 
+                        var id = values.id;
 
-                        var checkBaseMaps = basemaps.filter(obj => (obj.url === basemap.url));
-                        if(!checkBaseMaps.length){
+
+
+                        if (isNaN(id)){
                             basemaps.push(basemap);
-                        }else{
-                            basemaps = basemaps.map(map => map.url !== basemap.url ? map : basemap);
                         }
+                        else{
+                            basemaps[id] = basemap;
+                        }
+
+
                         updateConfig();
                     }
                 }
@@ -423,9 +435,10 @@ bluewave.MapAdmin = function(parent, config) {
 
         editor = win;
         editor.clear = form.clear;
-        editor.update = function(baseMap){
+        editor.update = function(baseMap, id){
             form.clear();
             if (baseMap){
+                form.setValue("id", id);
                 for (var key in baseMap) {
                     if (baseMap.hasOwnProperty(key)){
                         var value = baseMap[key];
