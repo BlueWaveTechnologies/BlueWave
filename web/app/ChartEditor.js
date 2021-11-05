@@ -946,16 +946,29 @@ bluewave.ChartEditor = function(parent, config) {
         }
         else if(chartType==="barChart"){
 
-          //Create color dropdown
+          //Create layout dropdown
             var chartLayout = new javaxt.dhtml.ComboBox(
                 document.createElement("div"),
                 {
-                    style: config.style.combobox
+                    style: config.style.combobox,
+                    readOnly: true
                 }
             );
             chartLayout.add("Vertical", "vertical");
             chartLayout.add("Horizontal", "horizontal");
             chartLayout.setValue("vertical");
+
+            //Create chart type dropdown
+            var barChartType = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox,
+                    readOnly: true
+                }
+            );
+            barChartType.add("Bar Chart", "barchart");
+            barChartType.add("Histogram", "histogram");
+            barChartType.setValue("barchart");
 
 
 
@@ -966,6 +979,11 @@ bluewave.ChartEditor = function(parent, config) {
                         group: "General",
                         items: [
 
+                            {
+                                name: "barcharttype",
+                                label: "Chart Type",
+                                type: barChartType
+                            },
                             {
                                 name: "layout",
                                 label: "Chart Layout",
@@ -1050,8 +1068,11 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
 
+            var barTypeField = form.findField("barcharttype");
+            var barType = chartConfig.barType;
+            barTypeField.setValue(barType==="histogram" ? "histogram" : "barchart");
+
             //Set form value for bar layout
-            // form.findField("layout").setValue(chartConfig.layout);
             var layoutField = form.findField("layout");
             var layout = chartConfig.barLayout;
             layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
@@ -1103,6 +1124,7 @@ bluewave.ChartEditor = function(parent, config) {
                 else settings.yLabel = false;
 
 
+                chartConfig.barType = settings.barcharttype;
                 chartConfig.barLayout = settings.layout;
                 chartConfig.barLegend = settings.legend;
                 chartConfig.xGrid = settings.xGrid;

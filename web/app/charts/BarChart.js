@@ -191,10 +191,6 @@ bluewave.charts.BarChart = function(parent, config) {
         }
 
 
-  
-// sumData = (d => keys.map(key => ({key, value: d[key]})))
-
-
 
         //Set intitial value for layout to vertical
         if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
@@ -214,18 +210,31 @@ bluewave.charts.BarChart = function(parent, config) {
 
         width = plotWidth;
         height = plotHeight;
-
+// console.log(chartConfig.barType)
         for (let i=0; i<dataSets.length; i++){
             var sumData = arr[i];
 
+            if(chartConfig.barType === "histogram"){
 
+                var histX = d3.scaleLinear()
+                    .domain(d3.max(data, function(d) { return +d.value }))
+                    .range([0, width]);
+
+                var histogram = d3.histogram()
+                .value(function(d) { return d.value; })
+                .domain(histX.domain())
+                .thresholds(histX.ticks(100));
+    
+                 var bins = histogram(sumData);
+                 sumData = bins;
+            }
+    
 
             let keyType = typeOfAxisValue(sumData[0].key);
             if(keyType == "date") keyType = "string";
 
             var getX = function (d) {
 
-                // if (layout==="vertical")
                 if (keyType === "date") {
                     return x(new Date(d.key));
                 } else {
@@ -239,6 +248,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 return y(v);
             };
 
+            
             if (y.bandwidth || x.bandwidth) {
                 if (chartConfig.barLayout === "vertical"){
 
@@ -250,11 +260,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         }
                     };
 
-                    var getHeight = function(d){
-
-
-                    }
-
+console.log(bins)
 
                     plotArea
                         .selectAll("mybar")
@@ -613,7 +619,7 @@ bluewave.charts.BarChart = function(parent, config) {
                     val[key] = new Date(val[key]);
                     return val;
                 });
-// console.log("chartdata", timeRange, chartData)
+
                 scale = d3
                     .scaleTime()
                     .domain(timeRange)
