@@ -13,7 +13,7 @@ bluewave.dashboards.ICUMap = function(parent, config) {
 
     var me = this;
     var title = "ICU Utilization and Capacity";
-    var map;
+    var map, mapDiv;
     var layer = {};
     var hospitals = {};
     var table;
@@ -48,13 +48,12 @@ bluewave.dashboards.ICUMap = function(parent, config) {
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        var div = document.createElement("div");
-        div.className = "icu-map-panel";
-        div.style.height = "100%";
-        div.style.position = "relative";
-        td.appendChild(div);
-        createMap(div);
-        createLegend(div);
+        mapDiv = document.createElement("div");
+        mapDiv.className = "icu-map-panel";
+        mapDiv.style.height = "100%";
+        mapDiv.style.position = "relative";
+        td.appendChild(mapDiv);
+
 
         parent.appendChild(table);
         me.el = table;
@@ -75,7 +74,19 @@ bluewave.dashboards.ICUMap = function(parent, config) {
     this.update = function(){
         hospitals = {};
 
+        if (!map){
+            getBasemap(function(basemap){
+                createMap(mapDiv, basemap);
+                createLegend(mapDiv);
+                update();
+            });
+        }
+        else{
+            update();
+        }
+    };
 
+    var update = function(){
         getData("Distinct_Weeks_In_Hospital_Capacity", function(data){
             var rows = data.split("\n");
             var week = rows[1];
@@ -92,7 +103,7 @@ bluewave.dashboards.ICUMap = function(parent, config) {
                     hospitals[hospital.hospital_pk] = hospital;
                 }
 
-                if (map) map.resize();
+                me.resize();
             });
 
         });
@@ -123,6 +134,14 @@ bluewave.dashboards.ICUMap = function(parent, config) {
 
 
   //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+        if (map) map.resize();
+    };
+
+
+  //**************************************************************************
   //** createList
   //**************************************************************************
     var createList = function(parent){
@@ -142,7 +161,7 @@ bluewave.dashboards.ICUMap = function(parent, config) {
   //**************************************************************************
   //** createMap
   //**************************************************************************
-    var createMap = function(parent){
+    var createMap = function(parent, basemap){
         map = new com.kartographia.Map(parent,{
             basemap: null,
             maxZoom: 10,
@@ -153,30 +172,17 @@ bluewave.dashboards.ICUMap = function(parent, config) {
         map.setCenter(39, -77, 11); //dc
 
 
-        var baseURL;
-        get("admin/settings/basemap", {
-            success: function(arr){
-               baseURL = arr[0].url;
-            },
-            failure: function(request){
-                baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-            }
-        });
-
-        if(!baseURL){
-            baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-        }
 
         layer.basemap = new ol.layer.Tile({
             source: new ol.source.XYZ({
-                url: baseURL
+                url: basemap
             })
         });
         map.addLayer(layer.basemap);
 
         layer.localCache = new ol.layer.Tile({
             source: new ol.source.XYZ({
-                url: 'map/tile?url=' + baseURL
+                url: 'map/tile?url=' + basemap
             }),
             visible: false
         });
@@ -385,6 +391,7 @@ bluewave.dashboards.ICUMap = function(parent, config) {
     var get = javaxt.dhtml.utils.get;
 
 
+    var getBasemap = bluewave.utils.getBasemap;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
     var updateExtents = bluewave.utils.updateExtents;

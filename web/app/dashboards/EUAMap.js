@@ -39,11 +39,13 @@ bluewave.dashboards.EUAMap = function(parent, config) {
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        var div = document.createElement("div");
-        div.style.height = "100%";
-        div.style.position = "relative";
-        td.appendChild(div);
-        createMap(div);
+        var mapDiv = document.createElement("div");
+        mapDiv.style.height = "100%";
+        mapDiv.style.position = "relative";
+        td.appendChild(mapDiv);
+        getBasemap(function(basemap){
+            createMap(mapDiv, basemap);
+        });
 
 
       //Create grid
@@ -192,6 +194,14 @@ bluewave.dashboards.EUAMap = function(parent, config) {
 
 
   //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+        if (map) map.resize();
+    };
+
+
+  //**************************************************************************
   //** createList
   //**************************************************************************
     var createList = function(parent){
@@ -209,7 +219,7 @@ bluewave.dashboards.EUAMap = function(parent, config) {
   //**************************************************************************
   //** createMap
   //**************************************************************************
-    var createMap = function(parent){
+    var createMap = function(parent, basemap){
 
 
       //Create map
@@ -222,29 +232,17 @@ bluewave.dashboards.EUAMap = function(parent, config) {
         //map.setCenter(39, -77, 11); //dc
         map.setCenter(30, 1, 3); //atlantic ocean
 
-        var baseURL;
-        get("admin/settings/basemap", {
-            success: function(arr){
-               baseURL = arr[0].url;
-            },
-            failure: function(request){
-                baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-            }
-        });
 
-        if(!baseURL){
-            baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-        }
         layer.basemap = new ol.layer.Tile({
             source: new ol.source.XYZ({
-                url: baseURL
+                url: basemap
             })
         });
         map.addLayer(layer.basemap);
 
         layer.localCache = new ol.layer.Tile({
             source: new ol.source.XYZ({
-                url: 'map/tile?url=' + baseURL
+                url: 'map/tile?url=' + basemap
             }),
             visible: false
         });
@@ -429,10 +427,10 @@ bluewave.dashboards.EUAMap = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
 
+    var getBasemap = bluewave.utils.getBasemap;
     var updateExtents = bluewave.utils.updateExtents;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
-    var get = bluewave.utils.get;
 
     init();
 };
