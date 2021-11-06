@@ -14,7 +14,7 @@ bluewave.MapAdmin = function(parent, config) {
     var defaultConfig = {};
     var waitmask;
     var basemaps = [];
-    var grid, editor;
+    var grid, editor, mapUtils;
     var addButton, editButton, deleteButton, moveUpButton, moveDownButton;
 
 
@@ -72,7 +72,7 @@ bluewave.MapAdmin = function(parent, config) {
     this.update = function(){
         me.clear();
         waitmask.show(500);
-        get("admin/settings/basemap", {
+        get("admin/settings/basemaps", {
             success: function(arr){
                basemaps = arr;
                grid.load(basemaps);
@@ -204,7 +204,7 @@ bluewave.MapAdmin = function(parent, config) {
 
 
                 var img = document.createElement("img");
-                getTilePreview(layer, [3,2,3], function(preview){
+                getTilePreview(layer, function(preview){
                     img.src = preview;
                 });
                 img.onload = function(){
@@ -316,7 +316,7 @@ bluewave.MapAdmin = function(parent, config) {
   //** updateConfig
   //**************************************************************************
     var updateConfig = function(){
-        save("admin/settings/basemap", JSON.stringify(basemaps), {
+        save("admin/settings/basemaps", JSON.stringify(basemaps), {
             success: function(){
                 if (editor) editor.close();
                 me.update();
@@ -451,40 +451,9 @@ bluewave.MapAdmin = function(parent, config) {
   //**************************************************************************
   //** getTilePreview
   //**************************************************************************
-    var getTilePreview = function(layer, coord, callback){
-        if (!callback) return;
-
-        var proj = ol.proj.get('EPSG:3857');
-        var getPreview = function(){
-            var tileUrlFunction = layer.getSource().getTileUrlFunction();
-            var tileCoord = [3,2,3]; //Southeast coast of US, Carribean, and part of South America
-            var preview = tileUrlFunction(tileCoord, 1, proj);
-            if (preview){
-                if (preview.indexOf("-4")>-1){
-                    preview = preview.replace("-4", "3"); //add hack to replace wierd -4 y coordinate
-                }
-            }
-            return preview;
-        };
-
-        var preview = getPreview();
-        if (preview){
-            callback.apply(me, [preview]);
-        }
-        else{
-            var timer;
-            var checkPreview = function(){
-                var preview = getPreview();
-                if (preview){
-                    clearTimeout(timer);
-                    callback.apply(me, [preview]);
-                }
-                else{
-                    timer = setTimeout(checkPreview, 1000);
-                }
-            };
-            timer = setTimeout(checkPreview, 1000);
-        }
+    var getTilePreview = function(layer, callback){
+        if (!mapUtils) mapUtils = new com.kartographia.Map(document.createElement("div"),{});
+        mapUtils.getTilePreview(layer, null, callback);
     };
 
 
