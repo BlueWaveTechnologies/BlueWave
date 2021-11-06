@@ -244,6 +244,9 @@ public class AdminService extends WebService {
     }
 
 
+  //**************************************************************************
+  //** getJobDir
+  //**************************************************************************
     private static javaxt.io.Directory getJobDir(JSONObject config){
         javaxt.io.Directory jobDir = null;
         if (config.has("jobDir")){
@@ -257,11 +260,13 @@ public class AdminService extends WebService {
         if (jobDir==null || !jobDir.exists()){
             throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
         }
-        console.log("jobDir: " + jobDir);
         return jobDir;
     }
 
-
+    
+  //**************************************************************************
+  //** getLogDir
+  //**************************************************************************
     private static javaxt.io.Directory getLogDir(JSONObject config){
         javaxt.io.Directory logDir = null;
         if (config.has("logDir")){
