@@ -51,11 +51,10 @@ public class Config {
 
 
       //Get schema
-        String schema = null;
         if (dbConfig.has("schema")){
             updateFile("schema", dbConfig, configFile);
             javaxt.io.File schemaFile = new javaxt.io.File(dbConfig.get("schema").toString());
-            dbConfig.remove("schema");
+            //dbConfig.remove("schema");
             if (schemaFile.exists()){
                 json.set("schema", schemaFile.getText());
             }
@@ -142,25 +141,64 @@ public class Config {
   //** save
   //**************************************************************************
     public static void save(){
+        configFile.write(toJson().toString(4));
+    }
+
+
+  //**************************************************************************
+  //** toJson
+  //**************************************************************************
+    public static JSONObject toJson(){
+
+      //Get config file path
+        String configPath = configFile.getDirectory().toString().replace("\\", "/");
+        int len = configPath.length();
+
+
+      //Get json formatted config data
         JSONObject json = config.toJson();
-        json.set("schema", null);
-        json.set("jar", null);
 
 
+      //Remove keys that should not be saved
+        json.remove("schema");
+        json.remove("jar");
+
+
+      //Update json for the database config
+        JSONObject database = json.get("database").toJSONObject();
+        String host = database.get("host").toString().replace("\\", "/");
+        if (host.startsWith(configPath)) host = host.substring(len);
+        database.set("host", host);
+
+
+      //Update json for the graph config
         bluewave.graph.Neo4J graph = getGraph(null);
         JSONObject db = new JSONObject();
         db.set("host", graph.getHost() + ":" + graph.getPort());
         db.set("username", graph.getUsername());
         db.set("password", graph.getPassword());
         Properties properties = graph.getProperties();
-        db.set("localCache", properties.get("localLog"));
-        db.set("localLog", properties.get("localCache"));
+        for (String key : new String[]{"localLog", "localCache"}){
+            String path = properties.get(key).toString().replace("\\", "/");
+            if (path.startsWith(configPath)) path = path.substring(len);
+            db.set(key, path);
+        }
         json.set("graph", db);
 
 
+      //Update json for the web config
+        JSONObject webConfig = json.get("webserver").toJSONObject();
+        for (String key : new String[]{"webDir", "logDir", "jobDir", "keystore"}){
+            String path = webConfig.get(key).toString();
+            if (path!=null){
+                path = path.replace("\\", "/");
+                if (path.startsWith(configPath)) path = path.substring(len);
+                webConfig.set(key, path);
+            }
+        }
 
-        //System.out.println(json.toString(4));
-        configFile.write(json.toString(4));
+
+        return json;
     }
 
 
@@ -276,7 +314,6 @@ public class Config {
    *  both canonical and relative paths (relative to the configFile).
    */
     public static void updateDir(String key, JSONObject config, javaxt.io.File configFile, boolean create){
-        if (config==null) return;
         if (config.has(key)){
             String path = config.get(key).toString();
             if (path==null){
@@ -290,7 +327,21 @@ public class Config {
                 else{
 
                     javaxt.io.Directory dir = new javaxt.io.Directory(path);
-                    if (!dir.exists()) dir = new javaxt.io.Directory(configFile.MapPath(path));
+                    if (dir.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.Directory d = new javaxt.io.Directory(f.getCanonicalFile());
+                            if (!dir.toString().equals(d.toString())){
+                                dir = d;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        dir = new javaxt.io.Directory(new java.io.File(configFile.MapPath(path)));
+                    }
+
 
                     if (!dir.exists() && create) dir.create();
 
@@ -327,7 +378,20 @@ public class Config {
                 else{
 
                     javaxt.io.File file = new javaxt.io.File(path);
-                    if (!file.exists()) file = new javaxt.io.File(configFile.MapPath(path));
+                    if (file.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.File _file = new javaxt.io.File(f.getCanonicalFile());
+                            if (!file.toString().equals(_file.toString())){
+                                file = _file;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        file = new javaxt.io.File(configFile.MapPath(path));
+                    }
 
                     config.set(key, file.toString());
 //                    if (file.exists()){
