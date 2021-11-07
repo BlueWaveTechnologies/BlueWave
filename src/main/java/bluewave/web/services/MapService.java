@@ -61,6 +61,15 @@ public class MapService extends WebService {
 
 
   //**************************************************************************
+  //** getBasemaps
+  //**************************************************************************
+    public ServiceResponse getBasemaps(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+        return new ServiceResponse(Config.get("basemaps").toJSONArray());
+    }
+
+
+  //**************************************************************************
   //** getHospitals
   //**************************************************************************
     public ServiceResponse getHospitals(ServiceRequest request, Database database)

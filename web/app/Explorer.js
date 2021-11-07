@@ -220,6 +220,10 @@ bluewave.Explorer = function(parent, config) {
                 }
 
 
+              //Special case for older maps
+                if (node.type==="map") node.type = "mapChart";
+
+
               //Update title
                 if (props.config.chartTitle) updateTitle(node, props.config.chartTitle);
 
@@ -860,7 +864,7 @@ bluewave.Explorer = function(parent, config) {
             };
 
 
-            if (node.type === "map"){
+            if (node.type === "mapChart"){
                 if (inputNode.type == "addData" || inputNode.type == "supplyChain"){
                     acceptConnection();
                 }

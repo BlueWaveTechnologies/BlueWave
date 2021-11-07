@@ -93,6 +93,9 @@ public class AdminService extends WebService {
                 if (val instanceof JSONObject){
                     return new ServiceResponse((JSONObject) val);
                 }
+                else if (val instanceof JSONArray){
+                    return new ServiceResponse((JSONArray) val);
+                }
                 else{
 
                     if (key.equalsIgnoreCase("graph") &&
@@ -100,6 +103,9 @@ public class AdminService extends WebService {
                         bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J)
                         ((java.util.concurrent.ConcurrentHashMap) val).get("neo4j");
                         return new ServiceResponse(graph.toJson());
+                    }
+                    else{
+                        return new ServiceResponse(new javaxt.utils.Value(val).toString());
                     }
 
                 }
@@ -116,51 +122,82 @@ public class AdminService extends WebService {
     public ServiceResponse saveSettings(ServiceRequest request, Database database)
         throws ServletException, IOException {
 
+      //Get key
         String key = request.getPath(1).toString();
-        if (key!=null){
-            Object val = Config.get(key).toObject();
-            if (val!=null){
-                if (val instanceof bluewave.graph.Neo4J){
-                    bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J) val;
-                    String host = graph.getHost();
-                    int port = graph.getPort();
+        if (key==null) return new ServiceResponse(400, "Missing key");
 
-                    bluewave.graph.Neo4J clone = graph.clone();
 
-                    JSONObject json = request.getJson();
-                    clone.setHost(json.get("host").toString());
-                    clone.setUsername(json.get("username").toString());
-                    clone.setPassword(json.get("password").toString());
-
-                    Session session = null;
-                    try {
-                        session = clone.getSession();
-                        session.close();
-                    }
-                    catch(Exception e){
-                        if (session!=null) session.close();
-                        return new ServiceResponse(400, "Failed to connect to server");
-                    }
-
-                    graph.setHost(clone.getHost());
-                    graph.setPort(clone.getPort());
-                    graph.setUsername(clone.getUsername());
-                    graph.setPassword(clone.getPassword());
-
-                    if (!graph.getHost().equalsIgnoreCase(host)){
-                        NotificationService.notify("neo4j", "newserver");
-                    }
-
-                    return new ServiceResponse(200);
-                }
-                else{
-                    return new ServiceResponse(501, "Not implemented");
-                }
+      //Parse value
+        Object val = null;
+        String str = new String(request.getPayload());
+        if (str.startsWith("{") && str.endsWith("}")){
+            val = new JSONObject(str);
+        }
+        else if (str.startsWith("[") && str.endsWith("]")){
+            val = new JSONArray(str);
+        }
+        else{
+            javaxt.utils.Value v = new javaxt.utils.Value(str);
+            if (!v.isNull()){
+                val = str;
             }
         }
 
-        return new ServiceResponse(404);
 
+
+      //Update config
+        Object orgVal = Config.get(key).toObject();
+        if (orgVal==null){
+            if (val!=null){
+                Config.set(key, val);
+                Config.save();
+            }
+        }
+        else {
+            if (orgVal instanceof bluewave.graph.Neo4J){
+                bluewave.graph.Neo4J graph = (bluewave.graph.Neo4J) orgVal;
+                String host = graph.getHost();
+                int port = graph.getPort();
+
+                bluewave.graph.Neo4J clone = graph.clone();
+
+                JSONObject json = request.getJson();
+                clone.setHost(json.get("host").toString());
+                clone.setUsername(json.get("username").toString());
+                clone.setPassword(json.get("password").toString());
+
+                Session session = null;
+                try {
+                    session = clone.getSession();
+                    session.close();
+                }
+                catch(Exception e){
+                    if (session!=null) session.close();
+                    return new ServiceResponse(400, "Failed to connect to server");
+                }
+
+                graph.setHost(clone.getHost());
+                graph.setPort(clone.getPort());
+                graph.setUsername(clone.getUsername());
+                graph.setPassword(clone.getPassword());
+
+                Config.save();
+
+                if (!graph.getHost().equalsIgnoreCase(host)){
+                    NotificationService.notify("neo4j", "newserver");
+                }
+            }
+            else if (orgVal instanceof javaxt.sql.Database){
+
+            }
+            else{
+                Config.set(key, val);
+                Config.save();
+            }
+        }
+
+
+        return new ServiceResponse(200);
     }
 
 
@@ -207,6 +244,9 @@ public class AdminService extends WebService {
     }
 
 
+  //**************************************************************************
+  //** getJobDir
+  //**************************************************************************
     private static javaxt.io.Directory getJobDir(JSONObject config){
         javaxt.io.Directory jobDir = null;
         if (config.has("jobDir")){
@@ -223,7 +263,10 @@ public class AdminService extends WebService {
         return jobDir;
     }
 
-
+    
+  //**************************************************************************
+  //** getLogDir
+  //**************************************************************************
     private static javaxt.io.Directory getLogDir(JSONObject config){
         javaxt.io.Directory logDir = null;
         if (config.has("logDir")){
