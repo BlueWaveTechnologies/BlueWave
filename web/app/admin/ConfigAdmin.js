@@ -15,6 +15,7 @@ bluewave.ConfigAdmin = function(parent, config) {
 
     };
     var waitmask;
+    var mapAdmin;
 
   //**************************************************************************
   //** Constructor
@@ -36,6 +37,11 @@ bluewave.ConfigAdmin = function(parent, config) {
         var td;
 
 
+        td = document.createElement("td");
+        tr.appendChild(td);
+        mapAdmin = new bluewave.MapAdmin(td, config);
+
+
 
         parent.appendChild(table);
         me.el = table;
@@ -47,7 +53,7 @@ bluewave.ConfigAdmin = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-
+        mapAdmin.clear();
     };
 
 
@@ -55,8 +61,7 @@ bluewave.ConfigAdmin = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
-
-
+        mapAdmin.update();
     };
 
 

@@ -94,6 +94,7 @@ bluewave.AdminPanel = function(parent, config) {
         });
         createPanel("Graph", "fas fa-share-alt", bluewave.GraphAdmin, config);
         createPanel("Config", "fas fa-sliders-h", bluewave.ConfigAdmin, config);
+        //createPanel("Base Map", "fas fa-baseMap", bluewave.MapAdmin, config);
 
         me.el = table;
         addShowHide(me);
