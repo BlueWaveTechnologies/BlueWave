@@ -177,7 +177,7 @@ public class MapService extends WebService {
             int xOffset = cint(cx-(width/2.0));
             int yOffset = cint(cy+(height/2.0));
 
-
+            g2d.setColor(Color.WHITE);
             g2d.drawString(icon, xOffset, yOffset);
         }
 
