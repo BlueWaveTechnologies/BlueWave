@@ -19,6 +19,12 @@ import org.locationtech.jts.geom.*;
 import org.locationtech.jts.io.WKTReader;
 
 
+//drawing imports
+import java.awt.Graphics2D;
+import java.awt.Color;
+import java.awt.RenderingHints;
+
+
 public class MapService extends WebService {
 
     private HashMap<Long, String> hospitalIDs = new HashMap<>();
@@ -67,6 +73,35 @@ public class MapService extends WebService {
         throws ServletException, IOException {
         return new ServiceResponse(Config.get("basemaps").toJSONArray());
     }
+
+
+  //**************************************************************************
+  //** getMarker
+  //**************************************************************************
+    public ServiceResponse getMarker(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+        Integer size = request.getParameter("size").toInteger();
+        if (size==null) size = 36;
+
+        String color = request.getParameter("color").toString();
+        if (color==null) color = "#ef5646";
+        Color rgb = hex2Rgb(color);
+
+        javaxt.io.Image img = new javaxt.io.Image(size, size);
+        Graphics2D g2d = img.getBufferedImage().createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+
+        double r = size/2d;
+
+
+        g2d.setColor(rgb);
+        g2d.fillOval(0, 0, size, size);
+        g2d.setColor(Color.WHITE);
+
+        return new ServiceResponse(img.getByteArray("png"));
+    }
+
 
 
   //**************************************************************************
@@ -161,4 +196,25 @@ public class MapService extends WebService {
         response.setContentLength(bytes.length);
         return response;
     }
+
+
+  //**************************************************************************
+  //** hex2Rgb
+  //**************************************************************************
+    private static Color hex2Rgb(String colorStr) {
+        return new Color(
+            Integer.valueOf( colorStr.substring( 1, 3 ), 16 ),
+            Integer.valueOf( colorStr.substring( 3, 5 ), 16 ),
+            Integer.valueOf( colorStr.substring( 5, 7 ), 16 ) );
+    }
+
+  //**************************************************************************
+  //** cint
+  //**************************************************************************
+  /** Converts a double to an integer. Rounds the double to the nearest int.
+   */
+    private int cint(Double d){
+        return (int)Math.round(d);
+    }
+
 }
