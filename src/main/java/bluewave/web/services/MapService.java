@@ -135,38 +135,59 @@ public class MapService extends WebService {
         if (color==null) color = "#ef5646";
         Color rgb = hex2Rgb(color);
 
-        int extraSpace =  size/2;
-        int variableSpace = extraSpace/5;
 
         String icon = request.getParameter("icon").toString();
         String text = request.getParameter("text").toString();
 
 
       //Create image and get graphics
-        javaxt.io.Image img = new javaxt.io.Image(size, size+extraSpace);
+        double width = size;
+        double height = width*1.37;
+        javaxt.io.Image img = new javaxt.io.Image(cint(width), cint(height));
         Graphics2D g2d = img.getBufferedImage().createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        int x = img.getWidth()/2;
-        int y = img.getHeight()/2;
-        int radius = img.getWidth()/7;
-        int centerX = x - radius;
-        int centerY = y + (extraSpace - variableSpace*2);
-        int smallerCircle = radius*2;
-
-        double r = size/2d;
-        int cx = cint(r);
-        int cy = cint(r);
-
-        int[] xPoints = {0,x-radius, x+radius, size};
-        int[] yPoints = {size/2, y+extraSpace, y+extraSpace, size/2};
-
-      //Create map pin
         g2d.setColor(rgb);
-        g2d.fillOval(0, 0, size, size);;
-        g2d.fillOval(centerX, centerY, smallerCircle, smallerCircle);
+
+
+      //Big circle
+        double r = size/2d;
+        double cx = r;
+        double cy = r;
+        double yIntercept = cy+(r/2.0);
+        double[] points = getPointsIntersectingCircle(r, cx, cy, 0, yIntercept);
+        double ul = points[0];
+        double ur = points[1];
+        if (ul>ur){
+            double temp = ul;
+            ul = ur;
+            ur = temp;
+        }
+        g2d.fillOval(0, 0, cint(r*2), cint(r*2));
+
+
+      //Small circle
+        double r2 = r*0.15;
+        double c2y = height-r2;
+        double yIntercept2 = c2y;//-(r2/2.0);
+        points = getPointsIntersectingCircle(r2, cx, c2y, 0, yIntercept2);
+        double ll = points[0];
+        double lr = points[1];
+        if (ll>lr){
+            double temp = ll;
+            ll = lr;
+            lr = temp;
+        }
+        g2d.fillOval(cint(cx-r2), cint(c2y-r2), cint(r2*2), cint(r2*2));
+
+
+      //Trapazoid
+        int top = cint(yIntercept);
+        int bottom =  cint(Math.ceil(yIntercept2));
+        int[] xPoints = {cint(ul), cint(ll), cint(lr), cint(ur)};
+        int[] yPoints = {top, bottom, bottom, top};
         g2d.fillPolygon(xPoints, yPoints, 4);
-        g2d.setBackground(new Color(0,0,0, 200));
+
+
 
 
       //Add icon as needed
@@ -220,13 +241,13 @@ public class MapService extends WebService {
                 else{
                     fm = g2d.getFontMetrics();
                 }
-                int width = fm.stringWidth(icon);
-                int height = fm.getHeight();
+                int textWidth = fm.stringWidth(icon);
+                int textHeight = fm.getHeight();
                 int descent = fm.getDescent();
-                height = height-descent;
+                textHeight = textHeight-descent;
 
-                int xOffset = cint(cx-(width/2.0));
-                int yOffset = cint(cy+(height/2.0));
+                int xOffset = cint(cx-(textWidth/2.0));
+                int yOffset = cint(cy+(textHeight/2.0));
 
                 g2d.setColor(Color.WHITE);
                 g2d.drawString(icon, xOffset, yOffset);
@@ -367,6 +388,45 @@ public class MapService extends WebService {
    */
     private static int cint(Double d){
         return (int)Math.round(d);
+    }
+
+
+  //**************************************************************************
+  //** getPointsIntersectingCircle
+  //**************************************************************************
+    private static double[] getPointsIntersectingCircle(double r, double cx, double cy, double m, double n) {
+        // circle: (x - cx)^2 + (y - cy)^2 = r^2
+        // line: y = m * x + n
+        // r: circle radius
+        // cx: x value of circle centre
+        // cy: y value of circle centre
+        // m: slope
+        // n: y-intercept
+
+        double a = 1 + sq(m);
+        double b = -cx * 2 + (m * (n - cy)) * 2;
+        double c = sq(cx) + sq(n - cy) - sq(r);
+
+        // get discriminant
+        double d = sq(b) - 4 * a * c;
+        if (d >= 0) {
+            // insert into quadratic formula
+            double[] intersections = new double[]{
+                (-b + Math.sqrt(sq(b) - 4 * a * c)) / (2 * a),
+                (-b - Math.sqrt(sq(b) - 4 * a * c)) / (2 * a)
+            };
+            if (d == 0) {
+                // only 1 intersection
+                return new double[]{intersections[0]};
+            }
+            return intersections;
+        }
+        // no intersection
+        return new double[0];
+    }
+
+    private static double sq(double x){
+        return x*x;
     }
 
 }
