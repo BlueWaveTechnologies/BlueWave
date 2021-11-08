@@ -115,7 +115,7 @@ public class MapService extends WebService {
 
 
       //Create image and get graphics
-        javaxt.io.Image img = new javaxt.io.Image(size, size*2);
+        javaxt.io.Image img = new javaxt.io.Image(size, size+extraSpace);
         Graphics2D g2d = img.getBufferedImage().createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
@@ -130,7 +130,7 @@ public class MapService extends WebService {
         int cx = cint(r);
         int cy = cint(r);
 
-        int[] xPoints = {0,x-variableSpace, x+variableSpace, size};
+        int[] xPoints = {0,x-radius, x+radius, size};
         int[] yPoints = {size/2, y+extraSpace, y+extraSpace, size/2};
 
       //Create map pin
