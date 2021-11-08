@@ -20,7 +20,18 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.WKTReader;
 
+//scripting includes
+import javax.script.*;
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
 
+
+//******************************************************************************
+//**  MapService
+//******************************************************************************
+/**
+ *   Web service used to create map data
+ *
+ ******************************************************************************/
 
 public class MapService extends WebService {
 
@@ -28,6 +39,8 @@ public class MapService extends WebService {
     private HashMap<Long, Point> hospitalPoints = new HashMap<>();
     private SpatialIndex hospitalIndex = new SpatialIndex();
     private ArrayList<String> faFonts = new ArrayList<>();
+    private HashMap<String, String> faIcons = new HashMap<>();
+    private ScriptObjectMirror faLookup = null;
 
 
   //**************************************************************************
@@ -36,12 +49,12 @@ public class MapService extends WebService {
     public MapService(){
 
 
-      //Try loading fontawesome fonts from the web directory
-        String fontawesome = Config.get("webserver").get("webDir") + "lib/fontawesome/webfonts";
+      //Load FontAwesome fonts from the web directory
+        String fontawesome = Config.get("webserver").get("webDir") + "lib/fontawesome";
         javaxt.io.Directory fontDir = new javaxt.io.Directory(fontawesome);
         try{
             GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-            for (javaxt.io.File file : fontDir.getFiles("*.ttf")){
+            for (javaxt.io.File file : fontDir.getFiles("*.ttf", true)){
                 Font font = Font.createFont(Font.TRUETYPE_FONT, file.toFile());
                 ge.registerFont(font);
             }
@@ -51,6 +64,21 @@ public class MapService extends WebService {
             }
         }
         catch (Exception e){
+        }
+
+
+      //Evaluate fa.js script
+        try{
+            javaxt.io.File faScript = new javaxt.io.File(fontawesome, "fa.js");
+            ScriptEngineManager factory = new ScriptEngineManager();
+            ScriptEngine engine = factory.getEngineByName("nashorn");
+            Compilable compilable = (Compilable) engine;
+            CompiledScript script = compilable.compile(faScript.getText());
+            Bindings bindings = engine.createBindings();
+            script.eval(bindings);
+            faLookup = (ScriptObjectMirror) bindings.get("fa");
+        }
+        catch(Exception e){
         }
 
 
@@ -143,42 +171,66 @@ public class MapService extends WebService {
 
       //Add icon as needed
         if (icon!=null){
+            icon = icon.toLowerCase();
 
             //<i class="fas fa-star"></i> same as fa-star-solid; and unicode of f005
 
             Font font = null;
-            if (icon.startsWith("fa-")){
-                String[] arr = icon.split("-");
+            try{
+                if (icon.startsWith("fa-")){
 
-                for (String fontFamily : faFonts){
-                    if (icon.endsWith("-solid")){
-                        if (fontFamily.contains("Solid")){
-                            font = new Font(fontFamily, Font.TRUETYPE_FONT, cint(r));
-                            icon = "\uf005";
-                            break;
+                    String style = "solid";
+                    String[] arr = icon.substring(3).split("-");
+                    icon = "";
+                    for (int i=0; i<arr.length; i++){
+                        String str = arr[i];
+                        if (i==arr.length-1){
+                            if (str.equals("solid")){
+                                style = str;
+                                break;
+                            }
+                        }
+                        if (i>0) icon += "-";
+                        icon+=str;
+                    }
+
+
+                    for (String fontFamily : faFonts){
+                        if (style.equals("solid")){
+                            if (fontFamily.contains("Solid")){
+                                font = new Font(fontFamily, Font.TRUETYPE_FONT, cint(r));
+                                icon = fa(icon);
+                                break;
+                            }
                         }
                     }
                 }
             }
-
-            FontMetrics fm;
-            if (font!=null){
-                g2d.setFont(font);
-                fm = g2d.getFontMetrics(font);
+            catch(Exception e){
+                //e.printStackTrace();
             }
-            else{
-                fm = g2d.getFontMetrics();
+
+
+            if (icon!=null){
+                FontMetrics fm;
+                if (font!=null){
+                    g2d.setFont(font);
+                    fm = g2d.getFontMetrics(font);
+                }
+                else{
+                    fm = g2d.getFontMetrics();
+                }
+                int width = fm.stringWidth(icon);
+                int height = fm.getHeight();
+                int descent = fm.getDescent();
+                height = height-descent;
+
+                int xOffset = cint(cx-(width/2.0));
+                int yOffset = cint(cy+(height/2.0));
+
+
+                g2d.drawString(icon, xOffset, yOffset);
             }
-            int width = fm.stringWidth(icon);
-            int height = fm.getHeight();
-            int descent = fm.getDescent();
-            height = height-descent;
-
-            int xOffset = cint(cx-(width/2.0));
-            int yOffset = cint(cy+(height/2.0));
-
-            g2d.setColor(Color.WHITE);
-            g2d.drawString(icon, xOffset, yOffset);
         }
 
 
@@ -280,6 +332,21 @@ public class MapService extends WebService {
         response.setContentType("image/"+format);
         response.setContentLength(bytes.length);
         return response;
+    }
+
+    
+  //**************************************************************************
+  //** fa
+  //**************************************************************************
+    private String fa(String icon) throws Exception{
+        if (faIcons.containsKey(icon)){
+            return faIcons.get(icon);
+        }
+        else{
+            String i = (String) faLookup.call(null, icon);
+            faIcons.put(icon, i);
+            return i;
+        }
     }
 
 
