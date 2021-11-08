@@ -108,37 +108,36 @@ public class MapService extends WebService {
         Color rgb = hex2Rgb(color);
 
         int extraSpace =  size/2;
-        int removedSpace = extraSpace/5;
+        int variableSpace = extraSpace/5;
 
         String icon = request.getParameter("icon").toString();
         String text = request.getParameter("text").toString();
 
 
       //Create image and get graphics
-        javaxt.io.Image img = new javaxt.io.Image(size, size);
+        javaxt.io.Image img = new javaxt.io.Image(size, size*2);
         Graphics2D g2d = img.getBufferedImage().createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         int x = img.getWidth()/2;
         int y = img.getHeight()/2;
-        int r = img.getWidth()/7;
-        int centerX = x - r;
-        int centerY = y + (extraSpace - removedSpace*2);
-        int smallerCircle = r*2;
+        int radius = img.getWidth()/7;
+        int centerX = x - radius;
+        int centerY = y + (extraSpace - variableSpace*2);
+        int smallerCircle = radius*2;
 
         double r = size/2d;
         int cx = cint(r);
         int cy = cint(r);
 
+        int[] xPoints = {0,x-variableSpace, x+variableSpace, size};
+        int[] yPoints = {size/2, y+extraSpace, y+extraSpace, size/2};
 
       //Create map pin
         g2d.setColor(rgb);
         g2d.fillOval(0, 0, size, size);;
         g2d.fillOval(centerX, centerY, smallerCircle, smallerCircle);
-//        g2d.drawLine(0, size/2, x-5, y+extraSpace);
-//        g2d.drawLine(size, size/2, x+5, y+extraSpace);
-        g2d.fillPolygon(new int[] {0,x-removedSpace, size, x+removedSpace, 0},
-                new int[]{size/2, y+extraSpace, size/2, y+extraSpace, size/2}, 5);
+        g2d.fillPolygon(xPoints, yPoints, 4);
         g2d.setBackground(new Color(0,0,0, 200));
 
 
