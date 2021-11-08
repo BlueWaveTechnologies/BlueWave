@@ -4,6 +4,7 @@ import bluewave.utils.SpatialIndex;
 
 import java.io.IOException;
 import java.util.*;
+import java.awt.*;
 
 import javaxt.express.ServiceRequest;
 import javaxt.express.ServiceResponse;
@@ -15,14 +16,10 @@ import javaxt.sql.*;
 import javaxt.express.utils.CSV;
 
 //jts includes
-import org.locationtech.jts.geom.*;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.WKTReader;
 
-
-//drawing imports
-import java.awt.Graphics2D;
-import java.awt.Color;
-import java.awt.RenderingHints;
 
 
 public class MapService extends WebService {
@@ -30,12 +27,33 @@ public class MapService extends WebService {
     private HashMap<Long, String> hospitalIDs = new HashMap<>();
     private HashMap<Long, Point> hospitalPoints = new HashMap<>();
     private SpatialIndex hospitalIndex = new SpatialIndex();
+    private ArrayList<String> faFonts = new ArrayList<>();
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     public MapService(){
+
+
+      //Try loading fontawesome fonts from the web directory
+        String fontawesome = Config.get("webserver").get("webDir") + "lib/fontawesome/webfonts";
+        javaxt.io.Directory fontDir = new javaxt.io.Directory(fontawesome);
+        try{
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            for (javaxt.io.File file : fontDir.getFiles("*.ttf")){
+                Font font = Font.createFont(Font.TRUETYPE_FONT, file.toFile());
+                ge.registerFont(font);
+            }
+
+            for (String fontFamily : GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames()){
+                if (fontFamily.startsWith("Font Awesome")) faFonts.add(fontFamily);
+            }
+        }
+        catch (Exception e){
+        }
+
+
 
       //Create spatial index of hospital points
         try{
@@ -80,6 +98,8 @@ public class MapService extends WebService {
   //**************************************************************************
     public ServiceResponse getMarker(ServiceRequest request, Database database)
         throws ServletException, IOException {
+
+      //Parse args
         Integer size = request.getParameter("size").toInteger();
         if (size==null) size = 36;
 
@@ -87,17 +107,69 @@ public class MapService extends WebService {
         if (color==null) color = "#ef5646";
         Color rgb = hex2Rgb(color);
 
+        String icon = request.getParameter("icon").toString();
+        String text = request.getParameter("text").toString();
+
+
+      //Create image and get graphics
         javaxt.io.Image img = new javaxt.io.Image(size, size);
         Graphics2D g2d = img.getBufferedImage().createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
 
         double r = size/2d;
+        int cx = cint(r);
+        int cy = cint(r);
 
 
+      //Create map pin
         g2d.setColor(rgb);
         g2d.fillOval(0, 0, size, size);
         g2d.setColor(Color.WHITE);
+
+
+      //Add icon as needed
+        if (icon!=null){
+
+            //<i class="fas fa-star"></i> same as fa-star-solid; and unicode of f005
+
+            Font font = null;
+            if (icon.startsWith("fa-")){
+                String[] arr = icon.split("-");
+
+                for (String fontFamily : faFonts){
+                    if (icon.endsWith("-solid")){
+                        if (fontFamily.contains("Solid")){
+                            font = new Font(fontFamily, Font.TRUETYPE_FONT, cint(r));
+                            icon = "\uf005";
+                            break;
+                        }
+                    }
+                }
+            }
+
+            FontMetrics fm;
+            if (font!=null){
+                g2d.setFont(font);
+                fm = g2d.getFontMetrics(font);
+            }
+            else{
+                fm = g2d.getFontMetrics();
+            }
+            int width = fm.stringWidth(icon);
+            int height = fm.getHeight();
+            int descent = fm.getDescent();
+            height = height-descent;
+
+            int xOffset = cint(cx-(width/2.0));
+            int yOffset = cint(cy+(height/2.0));
+
+
+            g2d.drawString(icon, xOffset, yOffset);
+        }
+
+
+
 
         return new ServiceResponse(img.getByteArray("png"));
     }
@@ -213,7 +285,7 @@ public class MapService extends WebService {
   //**************************************************************************
   /** Converts a double to an integer. Rounds the double to the nearest int.
    */
-    private int cint(Double d){
+    private static int cint(Double d){
         return (int)Math.round(d);
     }
 
