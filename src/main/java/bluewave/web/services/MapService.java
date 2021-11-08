@@ -87,17 +87,30 @@ public class MapService extends WebService {
         if (color==null) color = "#ef5646";
         Color rgb = hex2Rgb(color);
 
-        javaxt.io.Image img = new javaxt.io.Image(size, size);
+        int extraSpace =  size/2;
+        int removedSpace = extraSpace/5;
+
+        javaxt.io.Image img = new javaxt.io.Image(size, size+extraSpace);
+        int x = img.getWidth()/2;
+        int y = img.getHeight()/2;
+        int r = img.getWidth()/7;
+        int centerX = x - r;
+        int centerY = y + (extraSpace - removedSpace*2);
+        int smallerCircle = r*2;
+//        System.out.println(x);
+//        System.out.println(y);
+//        System.out.println(centerY);
         Graphics2D g2d = img.getBufferedImage().createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-
-        double r = size/2d;
-
-
         g2d.setColor(rgb);
-        g2d.fillOval(0, 0, size, size);
-        g2d.setColor(Color.WHITE);
+        g2d.fillOval(0, 0, size, size);;
+        g2d.fillOval(centerX, centerY, smallerCircle, smallerCircle);
+//        g2d.drawLine(0, size/2, x-5, y+extraSpace);
+//        g2d.drawLine(size, size/2, x+5, y+extraSpace);
+        g2d.fillPolygon(new int[] {0,x-removedSpace, size, x+removedSpace, 0},
+                new int[]{size/2, y+extraSpace, size/2, y+extraSpace, size/2}, 5);
+        g2d.setBackground(new Color(0,0,0, 200));
 
         return new ServiceResponse(img.getByteArray("png"));
     }
