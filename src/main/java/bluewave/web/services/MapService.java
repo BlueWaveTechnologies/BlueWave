@@ -143,16 +143,17 @@ public class MapService extends WebService {
       //Create image and get graphics
         double width = size;
         double height = width*1.37;
-        javaxt.io.Image img = new javaxt.io.Image(cint(width), cint(height));
+        double buffer = 6;
+        javaxt.io.Image img = new javaxt.io.Image(cint(height+(buffer*2)), cint(height+(buffer*2)));
         Graphics2D g2d = img.getBufferedImage().createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setColor(rgb);
 
 
       //Big circle
-        double r = size/2d;
-        double cx = r;
-        double cy = r;
+        double r = size/2.0;
+        double cx = img.getWidth()/2.0;
+        double cy = r+buffer;
         double yIntercept = cy+(r/2.0);
         double[] points = getPointsIntersectingCircle(r, cx, cy, 0, yIntercept);
         double ul = points[0];
@@ -162,12 +163,12 @@ public class MapService extends WebService {
             ul = ur;
             ur = temp;
         }
-        g2d.fillOval(0, 0, cint(r*2), cint(r*2));
+        g2d.fillOval(cint(cx-r), cint(cy-r), cint(r*2), cint(r*2));
 
 
       //Small circle
         double r2 = r*0.15;
-        double c2y = height-r2;
+        double c2y = img.getHeight()-buffer-r2;
         double yIntercept2 = c2y;//-(r2/2.0);
         points = getPointsIntersectingCircle(r2, cx, c2y, 0, yIntercept2);
         double ll = points[0];
@@ -183,7 +184,7 @@ public class MapService extends WebService {
       //Trapazoid
         int top = cint(yIntercept);
         int bottom =  cint(Math.ceil(yIntercept2));
-        int[] xPoints = {cint(ul), cint(ll), cint(lr), cint(ur)};
+        int[] xPoints = {cint(ul), cint(ll), cint(Math.ceil(lr)), cint(Math.ceil(ur))};
         int[] yPoints = {top, bottom, bottom, top};
         g2d.fillPolygon(xPoints, yPoints, 4);
 
@@ -255,6 +256,7 @@ public class MapService extends WebService {
         }
 
 
+        img.setWidth(size);
 
 
         return new ServiceResponse(img.getByteArray("png"));
