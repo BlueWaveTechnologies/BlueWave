@@ -135,6 +135,8 @@ public class MapService extends WebService {
         Color color = getColor(request);
         String icon = request.getParameter("icon").toString();
         String text = request.getParameter("text").toString();
+        Integer hOffSet = request.getParameter("hoffset").toInteger();
+        Integer vOffSet = request.getParameter("voffset").toInteger();
 
 
       //Create image and get graphics
@@ -244,7 +246,12 @@ public class MapService extends WebService {
 
             int xOffset = cint(cx-(textWidth/2.0));
             int yOffset = cint(cy+(textHeight/2.0));
-
+            if(hOffSet != null){
+                xOffset = xOffset + hOffSet;
+            }
+            if(vOffSet != null){
+                yOffset = yOffset + vOffSet;
+            }
             g2d.setColor(Color.WHITE);
             g2d.drawString(text, xOffset, yOffset);
         }
@@ -303,8 +310,7 @@ public class MapService extends WebService {
         double cx = img.getWidth()/2.0;
         double cy = img.getHeight()/2.0;
         int xOffset = cint(cx-(textWidth/2.0));
-        int yOffset = cint(cy+(textHeight/2.0));
-
+        int yOffset = cint(cy+(textHeight/2.5));
         g2d.drawString(icon, xOffset, yOffset);
 
 
