@@ -58,6 +58,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
   //**************************************************************************
+  //** getSummaryPanel
+  //**************************************************************************
+    this.getSummaryPanel = function(){
+        return summaryPanel.el;
+    };
+
+
+  //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
@@ -253,7 +261,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Left column
         td = document.createElement("td");
         td.style.height = "100%";
-        td.style.padding = "10px";
+        td.style.padding = "10px 10px 5px 10px";
         td.style.textAlign = "center";
         tr.appendChild(td);
         var leftPanel = document.createElement("div");
@@ -267,6 +275,19 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var rightPanel = document.createElement("div");
         rightPanel.className = "doc-compare-panel";
         td.appendChild(rightPanel);
+
+
+      //Create footer row
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.className = "doc-compare-panel-footer";
+        tr.appendChild(td);
+        var leftFooter = td;
+        td = td.cloneNode();
+        tr.appendChild(td);
+        var rightFooter = td;
+
 
 
         var createPreview = function(fileName, page, parent){
@@ -307,6 +328,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var right = pages[1];
                 createPreview(left.filename, left.page, leftPanel);
                 createPreview(right.filename, right.page, rightPanel);
+
+                leftFooter.innerText = "Page " + left.page + " of " + left.filename;
+                rightFooter.innerText = "Page " + right.page + " of " + right.filename;
             }
         };
     };
@@ -445,22 +469,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
-  //**************************************************************************
-  //** getConfig
-  //**************************************************************************
-    this.getConfig = function(){
-        return {
-            chartTitle: "Document Analysis"
-        };
-    };
 
-
-  //**************************************************************************
-  //** getChart
-  //**************************************************************************
-    this.getChart = function(){
-        return me.el;
-    };
 
 
   //**************************************************************************
