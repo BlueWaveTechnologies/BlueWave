@@ -152,7 +152,7 @@ def get_digits(text):
 
 def compare_texts(full_text_a, full_text_b, min_len):
     combined_text = (full_text_a + '&&' + full_text_b)
-    lcs_result = sorted(lcs.longest_common_substring(combined_text).items())
+    lcs_result = sorted(longest_common_substring(combined_text).items())
     my_lcs = []
     for s, posns in lcs_result:
         if len(s) < min_len:
@@ -223,7 +223,7 @@ def find_page_of_sus_substr(pages, sus_substr):
 
             substr_a, substr_b = sus_substr.split('|')[:2]
             if substr_a in page_text_a and substr_b in page_text_b:
-                return page_num_a            
+                return page_num_a
     else:
         for page_num, page_text in pages:
             if sus_substr in page_text:
@@ -250,7 +250,7 @@ def get_file_info(file_data, suspicious_pairs):
     for filename, data in file_data.items():
         file_sus_pages = list(filename_sus_pages.get(filename, []))
         fi = {
-            'filename': filename, 
+            'filename': filename,
             'n_pages': len(data['page_texts']),
             'n_suspicious_pages': len(file_sus_pages),
             'suspicious_pages': file_sus_pages,
@@ -275,8 +275,8 @@ def main(filenames, pretty_print, verbose=False):
         # Compare numbers
         if verbose: print('Comparing numbers...')
         com_num_substrs = compare_texts(
-            full_text_a=a['full_digits'], 
-            full_text_b=b['full_digits'], 
+            full_text_a=a['full_digits'],
+            full_text_b=b['full_digits'],
             min_len=15
         )
         numbers_are_sus = len(com_num_substrs) > 0
@@ -343,7 +343,7 @@ def main(filenames, pretty_print, verbose=False):
 
     file_info = get_file_info(file_data, suspicious_pairs)
     total_pages = sum(f['n_pages'] for f in file_info)
-    
+
     dt = time.time() - t0
 
     result = {
@@ -365,8 +365,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-f',
-        '--filenames', 
-        help='PDF filenames to compare', 
+        '--filenames',
+        help='PDF filenames to compare',
         required=True,
         nargs='+',
     )
@@ -383,9 +383,9 @@ if __name__ == '__main__':
         action='store_true'
     )
     args = parser.parse_args()
-    
+
     main(
-        filenames=args.filenames, 
+        filenames=args.filenames,
         pretty_print=args.pretty_print,
         verbose=args.verbose,
         )
