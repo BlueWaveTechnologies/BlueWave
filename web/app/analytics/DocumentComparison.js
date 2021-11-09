@@ -338,33 +338,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
       //Add event handlers
-        carousel.beforeChange = function(){
-
-        };
-
-
-        carousel.onChange = function(currPanel){
+        carousel.onChange = function(){
             var suspiciousPairs = results.suspicious_pairs;
             if (currPair>=0) backButton.disabled = false;
             if (currPair<suspiciousPairs.length-1) nextButton.disabled = false;
-
-
-
-            if (!nextButton.disabled){
-                if (!comparisonPanel2) comparisonPanel2 = createComparisonPanel();
-                comparisonPanel2.update(currPair+1);
-            }
-
-
-
-//          //Check if the currPanel is a clone created by the carousel.
-//          //If so, replace content with the currApp
-//            if (currApp.el.parentNode!==currPanel){
-//                currPanel.innerHTML = "";
-//                currApp.el.parentNode.removeChild(currApp.el);
-//                currPanel.appendChild(currApp.el);
-//            }
-
         };
 
     };
@@ -394,18 +371,17 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         backButton = createButton("Back");
         nextButton = createButton("Next");
 
-        var obj;
 
         backButton.onclick = function(){
             currPair--;
             this.disabled = true;
-            raisePanel(obj, true);
+            raisePanel(true);
         };
 
         nextButton.onclick = function(){
             currPair++;
             this.disabled = true;
-            raisePanel(obj, false);
+            raisePanel(false);
         };
     };
 
@@ -413,7 +389,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
   //** raisePanel
   //**************************************************************************
-    var raisePanel = function(obj, slideBack){
+    var raisePanel = function(slideBack){
 
 
       //Find panels in the carousel
@@ -430,28 +406,42 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             }
         }
         if (!currPage) currPage = panels[0].div; //strange!
-//console.log(currPage);
 
-      //Select panel to use
-        var div;
-//        if (currPage.childNodes.length===0){
-//            div = currPage;
-//        }
-//        else{
-            div = nextPage;
-//            var el = nextPage.childNodes[0];
-//            if (el) nextPage.removeChild(el);
-//        }
 
-//console.log(div);
-//console.log(nextPage);
 
-        //if (!isNew) div.appendChild(app.el);
-        if (div===nextPage){
-            if (slideBack===true) carousel.back();
-            else carousel.next();
+      //Update nextPage
+        var el = nextPage.firstChild;
+        if (currPair<0){
+            if (el){
+                if (el!==summaryPanel.el){
+                    nextPage.removeChild(el);
+                    nextPage.appendChild(summaryPanel.el);
+                }
+            }
+            else{
+                nextPage.appendChild(summaryPanel.el);
+            }
+        }
+        else{
+            if (el) nextPage.removeChild(el);
+
+            var nextComparison;
+            if (comparisonPanel.el.parentNode===nextPage){
+                nextComparison = comparisonPanel;
+            }
+            else{
+                if (!comparisonPanel2) comparisonPanel2 = createComparisonPanel();
+                nextComparison = comparisonPanel2;
+            }
+
+            nextPage.appendChild(nextComparison.el);
+            nextComparison.update(currPair);
         }
 
+
+      //Slide carousel
+        if (slideBack===true) carousel.back();
+        else carousel.next();
     };
 
 
