@@ -122,20 +122,17 @@ public class MapService extends WebService {
 
 
   //**************************************************************************
-  //** getMarker
+  //** getPin
   //**************************************************************************
-    public ServiceResponse getMarker(ServiceRequest request, Database database)
+  /** Used to generate a map pin with optional text or icon
+   */
+    public ServiceResponse getPin(ServiceRequest request, Database database)
         throws ServletException, IOException {
 
       //Parse args
         Integer size = request.getParameter("size").toInteger();
         if (size==null) size = 36;
-
-        String color = request.getParameter("color").toString();
-        if (color==null) color = "#ef5646";
-        Color rgb = hex2Rgb(color);
-
-
+        Color color = getColor(request);
         String icon = request.getParameter("icon").toString();
         String text = request.getParameter("text").toString();
 
@@ -147,7 +144,7 @@ public class MapService extends WebService {
         javaxt.io.Image img = new javaxt.io.Image(cint(height+(buffer*2)), cint(height+(buffer*2)));
         Graphics2D g2d = img.getBufferedImage().createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setColor(rgb);
+        g2d.setColor(color);
 
 
       //Big circle
@@ -169,15 +166,9 @@ public class MapService extends WebService {
       //Small circle
         double r2 = r*0.15;
         double c2y = img.getHeight()-buffer-r2;
-        double yIntercept2 = c2y;//-(r2/2.0);
-        points = getPointsIntersectingCircle(r2, cx, c2y, 0, yIntercept2);
-        double ll = points[0];
-        double lr = points[1];
-        if (ll>lr){
-            double temp = ll;
-            ll = lr;
-            lr = temp;
-        }
+        double yIntercept2 = c2y;
+        double ll = cx-r2;
+        double lr = cx+r2;
         g2d.fillOval(cint(cx-r2), cint(c2y-r2), cint(r2*2), cint(r2*2));
 
 
@@ -191,74 +182,136 @@ public class MapService extends WebService {
 
 
 
-      //Add icon as needed
+      //Find unicode text and font associated with the icon as needed
+        Font font = null;
         if (icon!=null){
             icon = icon.toLowerCase();
-
-            //<i class="fas fa-star"></i> same as fa-star-solid; and unicode of f005
-
-            Font font = null;
-            try{
-                if (icon.startsWith("fa-")){
-
-                    String style = "solid";
-                    String[] arr = icon.substring(3).split("-");
-                    icon = "";
-                    for (int i=0; i<arr.length; i++){
-                        String str = arr[i];
-                        if (i==arr.length-1){
-                            if (str.equals("solid")){
-                                style = str;
-                                break;
-                            }
-                        }
-                        if (i>0) icon += "-";
-                        icon+=str;
-                    }
+            text = getIcon(icon);
 
 
-                    for (String fontFamily : faFonts){
-                        if (style.equals("solid")){
-                            if (fontFamily.contains("Solid")){
-                                font = new Font(fontFamily, Font.TRUETYPE_FONT, cint(r));
-                                icon = fa(icon);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            catch(Exception e){
-                //e.printStackTrace();
+            String style = "solid";
+            String[] arr = icon.substring(3).split("-");
+            if (arr.length>0){
+                String s = arr[arr.length-1];
+                if (s.equals("regular")) style = s;
             }
 
 
-            if (icon!=null){
-                FontMetrics fm;
-                if (font!=null){
-                    g2d.setFont(font);
-                    fm = g2d.getFontMetrics(font);
+            for (String fontFamily : faFonts){
+                if (style.equals("solid")){
+                    if (fontFamily.contains("Solid")){
+                        font = new Font(fontFamily, Font.TRUETYPE_FONT, cint(r));
+                        break;
+                    }
                 }
-                else{
-                    fm = g2d.getFontMetrics();
-                }
-                int textWidth = fm.stringWidth(icon);
-                int textHeight = fm.getHeight();
-                int descent = fm.getDescent();
-                textHeight = textHeight-descent;
-
-                int xOffset = cint(cx-(textWidth/2.0));
-                int yOffset = cint(cy+(textHeight/2.0));
-
-                g2d.setColor(Color.WHITE);
-                g2d.drawString(icon, xOffset, yOffset);
             }
         }
 
 
+        if (text!=null){
+
+            if (font==null){
+                String[] preferredFonts = new String[]{
+                    "Montserrat",
+                    "Open Sans",
+                    "Noto Sans",
+                    "Arial"
+                };
+                for (String str : GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames()){
+                    for (String preferredFont: preferredFonts){
+                        if (str.equalsIgnoreCase(preferredFont)){
+                            font = new Font(str, Font.TRUETYPE_FONT, cint(r));
+                            break;
+                        }
+                    }
+                    if (font!=null) break;
+                }
+            }
+
+
+            FontMetrics fm;
+            if (font!=null){
+                g2d.setFont(font);
+                fm = g2d.getFontMetrics(font);
+            }
+            else{
+                fm = g2d.getFontMetrics();
+            }
+            int textWidth = fm.stringWidth(text);
+            int textHeight = fm.getHeight();
+            int descent = fm.getDescent();
+            textHeight = textHeight-descent;
+
+            int xOffset = cint(cx-(textWidth/2.0));
+            int yOffset = cint(cy+(textHeight/2.0));
+
+            g2d.setColor(Color.WHITE);
+            g2d.drawString(text, xOffset, yOffset);
+        }
+
+
+      //Resize image to match requested size
         img.setWidth(size);
 
+      //Return png image
+        return new ServiceResponse(img.getByteArray("png"));
+    }
 
+
+  //**************************************************************************
+  //** getIcon
+  //**************************************************************************
+  /** Used to generate a map icon
+   */
+    public ServiceResponse getIcon(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Parse args
+        Integer size = request.getParameter("size").toInteger();
+        if (size==null) size = 36;
+        String icon = getIcon(request);
+        Color color = getColor(request);
+
+
+      //Create image and get graphics
+        double width = size;
+        double height = width;
+        double buffer = 6;
+        javaxt.io.Image img = new javaxt.io.Image(cint(width+(buffer*2)), cint(height+(buffer*2)));
+        Graphics2D g2d = img.getBufferedImage().createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setColor(color);
+
+
+      //Find font
+        Font font = null;
+        for (String fontFamily : faFonts){
+            if (fontFamily.contains("Solid")){
+                font = new Font(fontFamily, Font.TRUETYPE_FONT, cint(width));
+                break;
+            }
+        }
+
+        g2d.setFont(font);
+        FontMetrics fm = g2d.getFontMetrics(font);
+
+        int textWidth = fm.stringWidth(icon);
+        int textHeight = fm.getHeight();
+        int descent = fm.getDescent();
+        textHeight = textHeight-descent;
+
+        double cx = img.getWidth()/2.0;
+        double cy = img.getHeight()/2.0;
+        int xOffset = cint(cx-(textWidth/2.0));
+        int yOffset = cint(cy+(textHeight/2.0));
+
+        g2d.drawString(icon, xOffset, yOffset);
+
+
+      //Resize image to match requested size
+        img.setWidth(size);
+
+      //Return png image
         return new ServiceResponse(img.getByteArray("png"));
     }
 
@@ -374,6 +427,53 @@ public class MapService extends WebService {
 
 
   //**************************************************************************
+  //** getIcon
+  //**************************************************************************
+    private String getIcon(ServiceRequest request){
+        return getIcon(request.getParameter("icon").toString());
+    }
+
+    private String getIcon(String icon){
+        //<i class="fas fa-star"></i> same as fa-star-solid; and unicode of f005
+        try{
+            icon = icon.toLowerCase();
+            if (icon.startsWith("fa-")){
+                String[] arr = icon.substring(3).split("-");
+                icon = "";
+                for (int i=0; i<arr.length; i++){
+                    String str = arr[i];
+                    if (i==arr.length-1){
+                        if (str.equals("solid")){
+                            break;
+                        }
+                    }
+                    if (i>0) icon += "-";
+                    icon+=str;
+                }
+
+                return fa(icon);
+
+            }
+        }
+        catch(Exception e){
+            //e.printStackTrace();
+        }
+        return null;
+    }
+
+
+  //**************************************************************************
+  //** getColor
+  //**************************************************************************
+    private Color getColor(ServiceRequest request){
+        String color = request.getParameter("color").toString();
+        if (color==null) color = "#ef5646";
+        if (!color.startsWith("#")) color = "#"+color;
+        return hex2Rgb(color);
+    }
+
+
+  //**************************************************************************
   //** hex2Rgb
   //**************************************************************************
     private static Color hex2Rgb(String colorStr) {
@@ -396,6 +496,14 @@ public class MapService extends WebService {
   //**************************************************************************
   //** getPointsIntersectingCircle
   //**************************************************************************
+  /** Returns points of a line that intersect a circle. Credit:
+   *  https://cscheng.info/2016/06/09/calculate-circle-line-intersection-with-javascript-and-p5js.html
+   *  @param r circle radius
+   *  @param cx x value of circle center
+   *  @param cy y value of circle center
+   *  @param m slope
+   *  @param n y-intercept
+   */
     private static double[] getPointsIntersectingCircle(double r, double cx, double cy, double m, double n) {
         // circle: (x - cx)^2 + (y - cy)^2 = r^2
         // line: y = m * x + n
