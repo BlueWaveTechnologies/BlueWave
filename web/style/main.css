@@ -963,6 +963,28 @@ li.tree-node:hover {
     color: #eaeaea;
 }
 
+.doc-compare-panel {
+    height: 100%;
+    border: 1px solid #dcdcdc;
+    border-radius: 5px;
+}
+
+.doc-compare-panel .fas {
+    color: #eaeaea;
+    font-size: 200px;
+    margin-top:50px;
+}
+
+.doc-compare-panel-title {
+    font-size: 20px;
+    padding: 5px 0 0 10px;
+}
+
+.doc-compare-panel-subtitle {
+    padding: 0 10px;
+    color: #777;
+}
+
 
 /**************************************************************************/
 /** Admin Panel
