@@ -997,6 +997,12 @@ li.tree-node:hover {
     color: #777;
 }
 
+.doc-compare-panel-footer {
+    color: #777;
+    font-size: 11px;
+    padding: 0 0 0 12px;
+}
+
 
 /**************************************************************************/
 /** Admin Panel
