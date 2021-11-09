@@ -151,7 +151,8 @@ public class DocumentService extends WebService {
         if (pages.isBlank()) return new ServiceResponse(400, "page or pages are required");
 
       //Get output directory
-        javaxt.io.Directory tempDir = null;
+        javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
+        if (!outputDir.exists()) outputDir.create();
 
       //Get script
         javaxt.io.File[] scripts = getScriptDir().getFiles("pdf_to_img.py", true);
@@ -165,8 +166,8 @@ public class DocumentService extends WebService {
         params.add("-p");
         params.add(pages);
         params.add("-out");
-        params.add(tempDir.toString());
-        
+        params.add(outputDir.toString());
+
 
       //Execute script
         try{
@@ -198,7 +199,7 @@ public class DocumentService extends WebService {
 
 
       //Get script
-        javaxt.io.File[] scripts = getScriptDir().getFiles("compare_number_distrib.py", true);
+        javaxt.io.File[] scripts = getScriptDir().getFiles("compare_pdfs.py", true);
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
 
 
@@ -209,7 +210,7 @@ public class DocumentService extends WebService {
             params.add(file.toString());
         }
 
-        
+
       //Execute script
         try{
             return new ServiceResponse(executeScript(scripts[0], params));
@@ -277,7 +278,7 @@ public class DocumentService extends WebService {
   //** executeScript
   //**************************************************************************
     private JSONObject executeScript(javaxt.io.File script, ArrayList<String> params) throws Exception {
-        
+
         String[] cmdarray = new String[params.size()+2];
         cmdarray[0] = "python3";
         cmdarray[1] = script.toString();
