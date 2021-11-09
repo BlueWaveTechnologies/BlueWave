@@ -13,6 +13,7 @@ from itertools import combinations
 from operator import itemgetter
 from random import randint
 import fitz  # this is pymupdf
+fitz.TOOLS.mupdf_display_errors(False)
 
 
 #-------------------------------------------------------------------------------
@@ -299,7 +300,7 @@ def main(filenames, pretty_print, verbose=False):
         # Compare texts
         if verbose: print('Comparing texts...')
         com_txt_substrs = compare_texts(
-            a['full_text'], b['full_text'], min_len=300)
+            a['full_text'], b['full_text'], min_len=280)
         text_is_sus = len(com_txt_substrs) > 0
         if text_is_sus:
             for sus_substr in com_txt_substrs:
