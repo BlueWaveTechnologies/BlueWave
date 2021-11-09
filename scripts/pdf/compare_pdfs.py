@@ -24,7 +24,7 @@ def list_of_unique_dicts(L):
     return list({json.dumps(v, sort_keys=True): v for v in L}.values())
 
 
-def longest_common_substring(text):
+def longest_common_substring(len_a, text):
     """Get the longest common substrings and their positions.
     >>> longest_common_substring('banana')
     {'ana': [1, 3]}
@@ -35,17 +35,40 @@ def longest_common_substring(text):
     longest non overlapping repeated substrings.
     """
     sa, rsa, lcp = suffix_array(text)
-    maxlen = max(lcp)
-    result = {}
+    cross_doc_substrings = []
     for i in range(1, len(text)):
-        if lcp[i] == maxlen:
+        if lcp[i] > 200:
             j1, j2, h = sa[i - 1], sa[i], lcp[i]
-            assert text[j1:j1 + h] == text[j2:j2 + h]
-            substring = text[j1:j1 + h]
-            if substring not in result:
-                result[substring] = [j1]
-            result[substring].append(j2)
-    return dict((k, sorted(v)) for k, v in result.items())
+            is_cross_doc = min(j1, j2) < len_a and max(j1, j2) > len_a
+            if is_cross_doc:
+                assert text[j1:j1 + h] == text[j2:j2 + h]
+                substring = text[j1:j1 + h]
+                cross_doc_substrings.append((substring, sorted([j1, j2])))
+    # Get non overlapping
+    # Sort by length
+    cross_doc_substrings = sorted(cross_doc_substrings, key=lambda tup: -len(tup[0]))
+    non_overlapping = []
+    def is_subset_of_any_existing(new, existing):
+        # This is made easier bc it's sorted by length
+        # so a subsequent element can never be a superset of an existing.
+        new_str, new_idxs = new
+        n1_start, n2_start = new_idxs
+        n1_end = n1_start + len(new_str)
+
+        for str_existing, idxs_existing in existing:
+            e1_start, e2_start = idxs_existing # "e" for "existing"
+            e1_end = e1_start + len(str_existing)
+            # Look only at the zeroth occurrence of both strings
+            new_is_subset_exi = e1_start <= n1_start and n1_end <= e1_end
+            if new_is_subset_exi:
+                return True
+        return False
+
+    for new in cross_doc_substrings:
+        if not is_subset_of_any_existing(new=new, existing=non_overlapping):
+            non_overlapping.append(new)
+
+    return non_overlapping
 
 
 def suffix_array(text, _step=16):
@@ -153,13 +176,15 @@ def get_digits(text):
 
 def compare_texts(full_text_a, full_text_b, min_len):
     combined_text = (full_text_a + '&&' + full_text_b)
-    lcs_result = sorted(longest_common_substring(combined_text).items())
+    l = len(full_text_a)
+
+    lcs_result = sorted(longest_common_substring(l, combined_text))
+
     my_lcs = []
     for s, posns in lcs_result:
         if len(s) < min_len:
             continue
         # Make sure occurrence is between different texts
-        l = len(full_text_a)
         if not (min(posns) < l and max(posns) > l):
             continue
         my_lcs.append(s.strip('|'))
