@@ -1921,7 +1921,7 @@ bluewave.Explorer = function(parent, config) {
         if (!docComparer){
             docComparer = createNodeEditor({
                 title: "Document Analysis",
-                width: 1060,
+                width: 965,
                 height: 600,
                 editor: bluewave.analytics.DocumentComparison
             });
