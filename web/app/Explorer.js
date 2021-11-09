@@ -1919,12 +1919,21 @@ bluewave.Explorer = function(parent, config) {
     var compareDocs = function(node){
 
         if (!docComparer){
+            var title = "Document Analysis";
             docComparer = createNodeEditor({
-                title: "Document Analysis",
+                title: title,
                 width: 965,
                 height: 600,
                 editor: bluewave.analytics.DocumentComparison
             });
+            docComparer.getConfig = function(){
+                return {
+                    chartTitle: title
+                };
+            };
+            docComparer.getChart = function(){
+                return docComparer.getSummaryPanel();
+            };
         }
         docComparer.getNode = function(){
             return node;
