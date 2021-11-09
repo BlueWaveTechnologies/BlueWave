@@ -14,7 +14,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var me = this;
     var carousel;
     var backButton, nextButton;
-    var summaryPanel;
+    var summaryPanel, comparisonPanel, comparisonPanel2;
     var waitmask;
     var results = {};
     var currPair = -1;
@@ -102,6 +102,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
+  /** Used to populate the panels in the carousel control. Assumes that the
+   *  carousel is cleared (see clear method)
+   */
     var update = function(){
         var suspiciousPairs = results.suspicious_pairs;
         if (suspiciousPairs.length>0){
@@ -113,6 +116,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         summaryPanel.update();
         panels[0].div.appendChild(summaryPanel.el);
 
+        if (suspiciousPairs.length===0) return;
+
+        if (!comparisonPanel) comparisonPanel = createComparisonPanel();
+        comparisonPanel.update(0);
+        panels[1].div.appendChild(comparisonPanel.el);
     };
 
 
@@ -178,7 +186,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             tr.appendChild(td);
         };
 
-        console.log(results);
 
         return {
             el: el,
@@ -207,11 +214,101 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
   //**************************************************************************
-  //** createComparison
+  //** createComparisonPanel
   //**************************************************************************
-    var createComparison = function(parent, suspiciousPair){
-        var left = suspiciousPair[0];
-        var right = suspiciousPair[1];
+    var createComparisonPanel = function(){
+
+      //Create table
+        var table = createTable();
+        var tbody = table.firstChild;
+        var el = table;
+        var tr, td;
+
+
+      //Create title row
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.className = "doc-compare-panel-title";
+        td.colSpan = 2;
+        tr.appendChild(td);
+        var title = td;
+
+
+      //Create subtitle row
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.className = "doc-compare-panel-subtitle";
+        td.colSpan = 2;
+        tr.appendChild(td);
+        var subtitle = td;
+
+
+      //Create body row
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+
+
+      //Left column
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.padding = "10px";
+        td.style.textAlign = "center";
+        tr.appendChild(td);
+        var leftPanel = document.createElement("div");
+        leftPanel.className = "doc-compare-panel";
+        td.appendChild(leftPanel);
+
+
+      //Right column
+        td = td.cloneNode();
+        tr.appendChild(td);
+        var rightPanel = document.createElement("div");
+        rightPanel.className = "doc-compare-panel";
+        td.appendChild(rightPanel);
+
+
+        var createPreview = function(fileName, page, parent){
+            parent.innerHTML = "";
+            var i = document.createElement("i");
+            i.className = "fas fa-file";
+            parent.appendChild(i);
+            var img = document.createElement("img");
+            img.onload = function(){
+                parent.innerHTML = "";
+                parent.appendChild(img);
+            };
+            var idx = fileName.lastIndexOf("/");
+            if (idx>-1) fileName = fileName.substring(idx+1);
+            img.src = "document/thumbnail?file="+fileName+"&page="+page;
+        };
+
+
+        return {
+            el: el,
+            update: function(index){
+                var suspiciousPairs = results.suspicious_pairs;
+                var suspiciousPair = suspiciousPairs[index];
+
+                title.innerText = "Pair " + (index+1) + " of " + suspiciousPairs.length;
+                var type = suspiciousPair.type;
+                if (type==="Common digit string"){
+                    subtitle.innerText = "Found pairs of files that have long digit sequences in common. " +
+                    "This is extremely unlikely to be random and indicates copied data or numbers."
+                }
+                else{
+                    subtitle.innerText = type;
+                }
+
+
+                var pages = suspiciousPair.pages;
+                var left = pages[0];
+                var right = pages[1];
+                createPreview(left.filename, left.page, leftPanel);
+                createPreview(right.filename, right.page, rightPanel);
+            }
+        };
     };
 
 
@@ -242,33 +339,32 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
       //Add event handlers
         carousel.beforeChange = function(){
-//            me.setTitle("");
-//            backButton.hide();
-//            nextButton.hide();
+
         };
 
 
         carousel.onChange = function(currPanel){
-//            if (currApp){
-//
-//              //Check if the currPanel is a clone created by the carousel.
-//              //If so, replace content with the currApp
-//                if (currApp.el.parentNode!==currPanel){
-//                    currPanel.innerHTML = "";
-//                    currApp.el.parentNode.removeChild(currApp.el);
-//                    currPanel.appendChild(currApp.el);
-//                }
-//
-//
-//
-//              //Update buttons
-//                if (apps.length>1){
-//                    backButton.show();
-//                    nextButton.show();
-//                }
-//
-//
+            var suspiciousPairs = results.suspicious_pairs;
+            if (currPair>=0) backButton.disabled = false;
+            if (currPair<suspiciousPairs.length-1) nextButton.disabled = false;
+
+
+
+            if (!nextButton.disabled){
+                if (!comparisonPanel2) comparisonPanel2 = createComparisonPanel();
+                comparisonPanel2.update(currPair+1);
+            }
+
+
+
+//          //Check if the currPanel is a clone created by the carousel.
+//          //If so, replace content with the currApp
+//            if (currApp.el.parentNode!==currPanel){
+//                currPanel.innerHTML = "";
+//                currApp.el.parentNode.removeChild(currApp.el);
+//                currPanel.appendChild(currApp.el);
 //            }
+
         };
 
     };
@@ -282,7 +378,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         div.className = "noselect";
         div.style.float = "right";
         div.style.textAlign = "center";
-        div.style.padding = "10px 5px 5px 0";
+        div.style.padding = "10px 10px 10px 0";
         parent.appendChild(div);
 
         var createButton = function(label){
@@ -301,10 +397,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var obj;
 
         backButton.onclick = function(){
+            currPair--;
+            this.disabled = true;
             raisePanel(obj, true);
         };
 
         nextButton.onclick = function(){
+            currPair++;
+            this.disabled = true;
             raisePanel(obj, false);
         };
     };
@@ -330,21 +430,23 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             }
         }
         if (!currPage) currPage = panels[0].div; //strange!
-
+//console.log(currPage);
 
       //Select panel to use
         var div;
-        if (currPage.childNodes.length===0){
-            div = currPage;
-        }
-        else{
+//        if (currPage.childNodes.length===0){
+//            div = currPage;
+//        }
+//        else{
             div = nextPage;
-            var el = nextPage.childNodes[0];
-            if (el) nextPage.removeChild(el);
-        }
+//            var el = nextPage.childNodes[0];
+//            if (el) nextPage.removeChild(el);
+//        }
 
+//console.log(div);
+//console.log(nextPage);
 
-        if (!isNew) div.appendChild(app.el);
+        //if (!isNew) div.appendChild(app.el);
         if (div===nextPage){
             if (slideBack===true) carousel.back();
             else carousel.next();
