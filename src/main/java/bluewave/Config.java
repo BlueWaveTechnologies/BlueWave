@@ -60,6 +60,7 @@ public class Config {
         updateDir("webDir", webConfig, configFile, false);
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
+        updateDir("scriptDir", webConfig, configFile, false);
         updateFile("keystore", webConfig, configFile);
 
 

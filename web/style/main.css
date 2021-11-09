@@ -784,6 +784,17 @@ li.tree-node:hover {
     margin-top:10px;
 }
 
+.drawflow-node-body .filename {
+    position: absolute;
+    word-wrap: break-word;
+    width: 90%;
+    font-size: 11px;
+    background-color: rgba(255,255,255,0.5);
+    color: #777;
+    padding: 5px 0 5px 10px;
+    text-align: left;
+}
+
 .drawflow-node-title svg {
     position: initial;
 }
@@ -915,6 +926,81 @@ li.tree-node:hover {
 .chart-editor-options .form-label {
     height: 12px;
     padding: 0;
+}
+
+
+/**************************************************************************/
+/** Document Comparison Panel
+/**************************************************************************/
+
+.doc-compare-title {
+    font-size: 40px;
+}
+
+.doc-compare-title .fas,
+.doc-compare-title .far {
+    margin: 0 10px;
+}
+
+.doc-compare-title .fa-exclamation-triangle {
+    color: red;
+}
+
+.doc-compare-title .fa-check-circle {
+    color:green;
+}
+
+.doc-compare-key {
+    padding: 0 5px;
+    font-weight: bold;
+}
+
+.doc-compare-background {
+    position: absolute;
+    opacity: 0.5;
+    font-size: 300px;
+    right: 92px;
+    color: #eaeaea;
+}
+
+.doc-compare-panel {
+    height: 100%;
+    border: 1px solid #dcdcdc;
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+    overflow-y:auto;
+}
+
+.doc-compare-panel img{
+    position:absolute;
+    left: 0;
+    top: 0;
+    border-radius:8px;
+    width:100%
+
+}
+
+.doc-compare-panel .fas {
+    color: #eaeaea;
+    font-size: 200px;
+    margin-top:50px;
+}
+
+.doc-compare-panel-title {
+    font-size: 20px;
+    padding: 5px 0 0 10px;
+}
+
+.doc-compare-panel-subtitle {
+    padding: 0 10px;
+    color: #777;
+}
+
+.doc-compare-panel-footer {
+    color: #777;
+    font-size: 11px;
+    padding: 0 0 0 12px;
 }
 
 
