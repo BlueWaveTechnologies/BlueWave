@@ -142,13 +142,15 @@ public class DocumentService extends WebService {
 
       //Get file
         String fileName = request.getParameter("fileName").toString();
+        if (fileName==null || fileName.isBlank()) fileName = request.getParameter("file").toString();
+        if (fileName==null || fileName.isBlank()) return new ServiceResponse(400, "file or fileName is required");
         javaxt.io.File file = getFile(fileName, user);
         if (!file.exists()) return new ServiceResponse(404);
 
       //Get pages
         String pages = request.getParameter("pages").toString();
-        if (pages.isBlank()) pages = request.getParameter("page").toString();
-        if (pages.isBlank()) return new ServiceResponse(400, "page or pages are required");
+        if (pages==null || pages.isBlank()) pages = request.getParameter("page").toString();
+        if (pages==null || pages.isBlank()) return new ServiceResponse(400, "page or pages are required");
 
       //Get output directory
         javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
@@ -165,14 +167,16 @@ public class DocumentService extends WebService {
         params.add(file.toString());
         params.add("-p");
         params.add(pages);
-        params.add("-out");
+        params.add("-o");
         params.add(outputDir.toString());
 
 
       //Execute script
         try{
             executeScript(scripts[0], params);
-            return new ServiceResponse(200);
+            String[] arr = pages.split(",");
+            javaxt.io.File f = new javaxt.io.File(outputDir, arr[0]+".png");
+            return new ServiceResponse(f);
         }
         catch(Exception e){
             return new ServiceResponse(e);
