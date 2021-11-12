@@ -365,6 +365,9 @@ if(!bluewave.charts) bluewave.charts={};
                     changeMapLevel = false;
                 }
             };
+            mapChart.onRedraw = function(){
+                mapChart.update(chartConfig, data);
+            }
         });
     };
 

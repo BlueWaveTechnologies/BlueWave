@@ -37,7 +37,8 @@ bluewave.charts.MapChart = function(parent, config) {
 
         readOnly = false;
         svg.call(d3.zoom().scaleExtent([1, 1])
-            .on('zoom', recenter));
+            .on('zoom', recenter)
+            .on('end', redraw));
     };
 
 
@@ -56,6 +57,13 @@ bluewave.charts.MapChart = function(parent, config) {
    */
     this.onRecenter = function(lat, lon){};
 
+
+  //**************************************************************************
+  //** onRedraw
+  //**************************************************************************
+  /** Called whenever the zoom event ends
+   */
+    this.onRedraw = function(){};
 
   //**************************************************************************
   //** onUpdate
@@ -389,15 +397,21 @@ bluewave.charts.MapChart = function(parent, config) {
         else if(mapLevel === "world"){
             var centerLon, centerLat;
             if(chartConfig.lat && chartConfig.lon){
+                console.log(chartConfig);
                 centerLon = parseFloat(chartConfig.lon);
                 centerLat = parseFloat(chartConfig.lat);
             }else{
-                centerLon = -98.5;
-                centerLat = 39.5;
+                if(chartConfig.mapType === "Links"){
+                    centerLon = -180;
+                    centerLat = 39.5;
+                }else{
+                    centerLon = -98.5;
+                    centerLat = 39.5;
+                }
                 chartConfig.lon = centerLon;
                 chartConfig.lat = centerLat;
             }
-            projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
+            projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).rotate([0,0]).translate([width / 2, height / 2]);
             var path = d3.geoPath(projection);
           //Render countries
             mapArea.selectAll("path")
@@ -470,6 +484,17 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
 
+  //**************************************************************************
+  //** redraw
+  //**************************************************************************
+  /** Used to redraw the map using d3 mouse events
+   */
+    var redraw = function(){
+        if (!readOnly){
+            me.onRedraw();
+        }
+    }
+
 
   //**************************************************************************
   //** recenter
@@ -478,6 +503,7 @@ bluewave.charts.MapChart = function(parent, config) {
    */
     var recenter = function(){
         if (!readOnly){
+
             mapArea.attr('transform', d3.event.transform);
             var projection = me.getProjection();
             if (projection){
@@ -488,6 +514,7 @@ bluewave.charts.MapChart = function(parent, config) {
                 var x = (w/2)-t.x;
                 var y = (h/2)-t.y;
                 var p = projection.invert([x,y]);
+                console.log(p);
                 me.onRecenter(p[1],p[0]);
             }
         }
@@ -1014,7 +1041,6 @@ bluewave.charts.MapChart = function(parent, config) {
             bluewave.utils.getData(name, callback);
         }
     };
-
 
   //**************************************************************************
   //** Utils
