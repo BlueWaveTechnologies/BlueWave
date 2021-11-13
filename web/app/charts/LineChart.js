@@ -189,6 +189,14 @@ bluewave.charts.LineChart = function(parent, config) {
                     });
             }).entries(dataSets[i]);
 
+
+          //Smooth the data as needed
+            var smoothingType = chartConfig["smoothingType" + i];
+            if (smoothingType){
+                var smoothingValue = chartConfig["smoothingValue" + i];
+                applySmoothing(smoothingType, smoothingValue, sumData);
+            }
+
             arr.push(sumData);
         }
 
@@ -290,7 +298,15 @@ bluewave.charts.LineChart = function(parent, config) {
             if (lineStyle == null) lineStyle = "solid";
 
 
-            let keyType = typeOfAxisValue(sumData[0].key);
+            var smoothingType = chartConfig["smoothingType" + i];
+
+            var getLine = function(){
+                if (smoothingType && smoothingType==="spline"){
+                    return d3.line().x(getX).y(getY).curve(d3.curveMonotoneX);
+                }
+                return d3.line().x(getX).y(getY);
+            };
+
 
 
           //Draw line
@@ -308,11 +324,8 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr("stroke-linecap", function(d){
                     if(lineStyle==="dotted") return "round";
                 })
-                .attr(
-                    "d",d3.line()
-                    .x(getX)
-                    .y(getY)
-                );
+                .attr("d", getLine());
+
 
           //Draw thick line for selection purposes
             chartElements[i].line2 = lineGroup
@@ -323,11 +336,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr("stroke", "#ff0000")
                 .attr("stroke-width", 10)
                 .attr("opacity", 0)
-                .attr(
-                    "d",d3.line()
-                    .x(getX)
-                    .y(getY)
-                )
+                .attr("d", getLine())
                 .on("click", function(d){
                     var datasetID = parseInt(d3.select(this).attr("dataset"));
                     raiseLine(chartElements[datasetID]);
@@ -347,9 +356,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     .attr("stroke", "none")
                     .attr("cx", getX )
                     .attr("cy", getY )
-                    .attr("r", function(d){
-                        return pointRadius;
-                    })
+                    .attr("r", pointRadius)
                     .on("click", function(d){
                         var datasetID = parseInt(d3.select(this).attr("dataset"));
                         raiseLine(chartElements[datasetID]);
@@ -684,6 +691,91 @@ bluewave.charts.LineChart = function(parent, config) {
             scale,
             band
         };
+    };
+
+
+  //**************************************************************************
+  //** applySmoothing
+  //**************************************************************************
+    var applySmoothing = function(smoothingType, smoothingValue, data){
+        if (smoothingType==="movingAverage"){
+            if (!isNaN(smoothingValue) && smoothingValue>0){
+
+                var values = data.map(d => d.value);
+
+                function movingAverage(vals, n){
+                    let arr=[vals[0]];
+                    let sum=0;
+                    for (let i=1; i<n; i++){
+                        sum += vals[i];
+                        arr.push(sum/i);
+                    }
+
+                    for (let i=n; i<vals.length; i++){
+                        let mean = d3.mean(vals.slice(i - n/2, i + n/2));
+                        arr.push(mean);
+                    }
+
+                    return arr;
+                }
+
+                let average = movingAverage(values, smoothingValue);
+
+                data.forEach(function(d, i){
+                    d.value = average[i];
+                });
+            }
+        }
+        else if (smoothingType==="kde"){
+
+
+          //Extract values from data and compute basic stats
+            var values = data.map(d => d.value);
+            var numValues = values.length;
+            var extent = d3.extent(values);
+            var minVal = extent[0];
+            var maxVal = extent[1];
+            var sumData = values.reduce((a, b) => a + b, 0); //sum of all the values in the array
+
+
+
+          //Generate simulated data for the KDE curve
+            var spacing = (maxVal-minVal)/numValues;
+            spacing = Math.round(spacing);
+            var sampleData = [];
+            for (var i=0; i<values.length; i++) {
+                for (var j=0; j<values[i]; j++) {
+                    sampleData.push(i+0.5);
+                    j+=spacing;
+                }
+            }
+
+
+          //Compute density values using epanechnikov kernel
+            var density = [];
+            var kernel = epanechnikov(smoothingValue);
+            for (var i=0; i<values.length; i++) {
+                var val = d3.mean(sampleData, function(v) {
+                    return kernel(i - v);
+                });
+                density.push([i, val]);
+            }
+
+
+          //Update data values
+            data.forEach(function(d, i){
+                d.value = density[i][1]*sumData;
+            });
+
+        }
+    };
+
+
+  //**************************************************************************
+  //** epanechnikov
+  //**************************************************************************
+    var epanechnikov = function(bandwidth) {
+        return x => Math.abs(x /= bandwidth) <= 1 ? 0.75 * (1 - x * x) / bandwidth : 0;
     };
 
 
