@@ -31,6 +31,7 @@ public class WebServices extends WebService {
     private QueryService queryService;
     private GraphService graphService;
     private ImportService importService;
+    private DocumentService documentService;
     private SupplyChainService supplyChainService;
 
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
@@ -52,8 +53,8 @@ public class WebServices extends WebService {
 
       //Sync bluewave user accounts with the graph database
         bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
-        
-        
+
+
       //Get database
         database = Config.getDatabase();
 
@@ -67,6 +68,7 @@ public class WebServices extends WebService {
         queryService = new QueryService(webConfig);
         graphService = new GraphService();
         importService = new ImportService();
+        documentService = new DocumentService();
         supplyChainService = new SupplyChainService();
 
 
@@ -155,7 +157,15 @@ public class WebServices extends WebService {
                             response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
                         }
                     }
-                    response.write(file.toFile(), file.getContentType(), true);
+
+
+                  //Set fileName and contentType. Note that when a fileName is
+                  //provided, the server responds with an attachment. Example:
+                  //Content-Disposition: attachment;filename=...
+                    String contentType = file.getContentType();
+                    String fileName = null;
+
+                    response.write(file.toFile(), fileName, contentType, true);
                 }
                 else if (obj instanceof java.io.InputStream){
                   //Set Content-Length response header
@@ -217,6 +227,9 @@ public class WebServices extends WebService {
         }
         else if (service.equals("import")){
             ws = importService;
+        }
+        else if (service.equals("document")){
+            ws = documentService;
         }
         else if (service.equals("supplychain")){
             ws = supplyChainService;

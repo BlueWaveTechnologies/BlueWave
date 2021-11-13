@@ -19,7 +19,6 @@ import javaxt.sql.*;
 public class Config {
 
     private static javaxt.express.Config config = new javaxt.express.Config();
-
     private Config(){}
 
 
@@ -29,7 +28,6 @@ public class Config {
   /** Used to load a config file (JSON) and update config settings
    */
     public static void load(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
-
 
       //Parse config file
         JSONObject json = new JSONObject(configFile.getText());
@@ -49,14 +47,11 @@ public class Config {
 
 
       //Get schema
-        String schema = null;
+        javaxt.io.File schemaFile = null;
         if (dbConfig.has("schema")){
             updateFile("schema", dbConfig, configFile);
-            javaxt.io.File schemaFile = new javaxt.io.File(dbConfig.get("schema").toString());
+            schemaFile = new javaxt.io.File(dbConfig.get("schema").toString());
             dbConfig.remove("schema");
-            if (schemaFile.exists()){
-                json.set("schema", schemaFile.getText());
-            }
         }
 
 
@@ -65,6 +60,7 @@ public class Config {
         updateDir("webDir", webConfig, configFile, false);
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
+        updateDir("scriptDir", webConfig, configFile, false);
         updateFile("keystore", webConfig, configFile);
 
 
@@ -78,7 +74,15 @@ public class Config {
         config.init(json);
 
 
+      //Add additional properties to the config
         config.set("jar", jar);
+        config.set("configFile", configFile);
+        Properties props = config.getDatabase().getProperties();
+        if (props==null){
+            props = new Properties();
+            config.getDatabase().setProperties(props);
+        }
+        props.put("schema", schemaFile);
     }
 
 
@@ -90,7 +94,16 @@ public class Config {
     public static void initDatabase() throws Exception {
         Database database = config.getDatabase();
 
-        String schema = config.get("schema").toString();
+
+      //Get database schema
+        String schema = null;
+        Object obj = config.getDatabase().getProperties().get("schema");
+        if (obj!=null){
+            javaxt.io.File schemaFile = (javaxt.io.File) obj;
+            if (schemaFile.exists()){
+                schema = schemaFile.getText();
+            }
+        }
         if (schema==null) throw new Exception("Schema not found");
 
 
@@ -129,6 +142,91 @@ public class Config {
 
 
   //**************************************************************************
+  //** set
+  //**************************************************************************
+    public static void set(String key, Object value){
+        config.set(key, value);
+    }
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    public static void save(){
+        javaxt.io.File configFile = (javaxt.io.File) config.get("configFile").toObject();
+        configFile.write(toJson().toString(4));
+    }
+
+
+  //**************************************************************************
+  //** toJson
+  //**************************************************************************
+    public static JSONObject toJson(){
+
+      //Get config file path
+        javaxt.io.File configFile = (javaxt.io.File) config.get("configFile").toObject();
+        String configPath = configFile.getDirectory().toString().replace("\\", "/");
+        int len = configPath.length();
+
+
+      //Get json formatted config data
+        JSONObject json = config.toJson();
+
+
+      //Remove keys that should not be saved
+        json.remove("schema");
+        json.remove("jar");
+
+
+      //Update json for the database config
+        JSONObject database = json.get("database").toJSONObject();
+        if (database.get("driver").toString().equalsIgnoreCase("H2")){
+            String host = database.get("host").toString().replace("\\", "/");
+            if (host.startsWith(configPath)) host = host.substring(len);
+            database.set("path", host);
+            database.remove("host");
+            Object obj = config.getDatabase().getProperties().get("schema");
+            if (obj!=null){
+                javaxt.io.File schemaFile = (javaxt.io.File) obj;
+                String schema = schemaFile.toString().replace("\\", "/");
+                if (schema.startsWith(configPath)) schema = schema.substring(len);
+                database.set("schema", schema);
+            }
+        }
+
+
+      //Update json for the graph config
+        bluewave.graph.Neo4J graph = getGraph(null);
+        JSONObject db = new JSONObject();
+        db.set("host", graph.getHost() + ":" + graph.getPort());
+        db.set("username", graph.getUsername());
+        db.set("password", graph.getPassword());
+        Properties properties = graph.getProperties();
+        for (String key : new String[]{"localLog", "localCache"}){
+            String path = properties.get(key).toString().replace("\\", "/");
+            if (path.startsWith(configPath)) path = path.substring(len);
+            db.set(key, path);
+        }
+        json.set("graph", db);
+
+
+      //Update json for the web config
+        JSONObject webConfig = json.get("webserver").toJSONObject();
+        for (String key : new String[]{"webDir", "logDir", "jobDir", "keystore"}){
+            String path = webConfig.get(key).toString();
+            if (path!=null){
+                path = path.replace("\\", "/");
+                if (path.startsWith(configPath)) path = path.substring(len);
+                webConfig.set(key, path);
+            }
+        }
+
+
+        return json;
+    }
+
+
+  //**************************************************************************
   //** getDatabase
   //**************************************************************************
     public static javaxt.sql.Database getDatabase(){
@@ -143,14 +241,14 @@ public class Config {
         String key = "graph";
         JSONValue val = get(key);
         if (val==null) return null;
-        
-        
+
+
         String[] credentials;
         if (user!=null) credentials = user.getGraphCredentials();
         else credentials = new String[]{"neo4j"};
         String username = credentials[0];
-        
-        
+
+
         if (val.toObject() instanceof ConcurrentHashMap){
             ConcurrentHashMap map = (ConcurrentHashMap) val.toObject();
 
@@ -164,13 +262,13 @@ public class Config {
                     map.notify();
                 }
                 return neo4j;
-            } 
+            }
             else{
                 return (bluewave.graph.Neo4J) obj;
             }
         }
         else{
-            
+
             JSONObject json = get(key).toJSONObject();
             bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             neo4j.setHost(json.get("host").toString());
@@ -179,18 +277,18 @@ public class Config {
             Properties properties = neo4j.getProperties();
             properties.put("localLog", json.get("localLog"));
             properties.put("localCache", json.get("localCache"));
-            
+
             ConcurrentHashMap<String, bluewave.graph.Neo4J> map = new ConcurrentHashMap<>();
             map.put("neo4j", neo4j);
             config.set(key, map);
-            
+
             if (user!=null){
                 neo4j = neo4j.clone();
                 neo4j.setUsername(username);
                 neo4j.setPassword(credentials[1]);
                 map.put(username, neo4j);
             }
-            
+
             return neo4j;
         }
     }
@@ -253,7 +351,21 @@ public class Config {
                 else{
 
                     javaxt.io.Directory dir = new javaxt.io.Directory(path);
-                    if (!dir.exists()) dir = new javaxt.io.Directory(configFile.MapPath(path));
+                    if (dir.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.Directory d = new javaxt.io.Directory(f.getCanonicalFile());
+                            if (!dir.toString().equals(d.toString())){
+                                dir = d;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        dir = new javaxt.io.Directory(new java.io.File(configFile.MapPath(path)));
+                    }
+
 
                     if (!dir.exists() && create) dir.create();
 
@@ -290,7 +402,20 @@ public class Config {
                 else{
 
                     javaxt.io.File file = new javaxt.io.File(path);
-                    if (!file.exists()) file = new javaxt.io.File(configFile.MapPath(path));
+                    if (file.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.File _file = new javaxt.io.File(f.getCanonicalFile());
+                            if (!file.toString().equals(_file.toString())){
+                                file = _file;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        file = new javaxt.io.File(configFile.MapPath(path));
+                    }
 
                     config.set(key, file.toString());
 //                    if (file.exists()){
