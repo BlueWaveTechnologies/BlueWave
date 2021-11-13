@@ -731,32 +731,40 @@ bluewave.charts.LineChart = function(parent, config) {
 
           //Extract values from data and compute basic stats
             var values = data.map(d => d.value);
+            var numValues = values.length;
             var extent = d3.extent(values);
-            var mean = d3.mean(values);
             var minVal = extent[0];
             var maxVal = extent[1];
+            var sumData = values.reduce((a, b) => a + b, 0); //sum of all the values in the array
 
 
 
-          //Apply kernel density estimation to the data
+          //Generate simulated data for the KDE curve
+            var spacing = (maxVal-minVal)/numValues;
+            spacing = Math.round(spacing);
+            var sampleData = [];
+            for (var i=0; i<values.length; i++) {
+                for (var j=0; j<values[i]; j++) {
+                    sampleData.push(i+0.5);
+                    j+=spacing;
+                }
+            }
+
+
+          //Compute density values using epanechnikov kernel
+            var density = [];
             var kernel = epanechnikov(smoothingValue);
+            for (var i=0; i<values.length; i++) {
+                var val = d3.mean(sampleData, function(v) {
+                    return kernel(i - v);
+                });
+                density.push([i, val]);
+            }
+
+
+          //Update data values
             data.forEach(function(d, i){
-                var val = d3.mean(values, v => kernel(i-v));
-                d.value = val;
-            });
-
-
-
-          //Scale values
-            var densityValues = data.map(d => d.value);
-            extent = d3.extent(densityValues);
-            var minDensity = extent[0];
-            var maxDensity = extent[1];
-            var meanDensity = d3.mean(densityValues);
-            data.forEach(function(d, i){
-                var val = d.value;
-                d.value = (mean*val)/meanDensity;
-                console.log(i, val, d.value);
+                d.value = density[i][1]*sumData;
             });
 
         }
