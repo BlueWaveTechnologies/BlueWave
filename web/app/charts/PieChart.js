@@ -123,9 +123,7 @@ bluewave.charts.PieChart = function(parent, config) {
                 var labelStart = radius - ((radius-innerRadius)*0.1);
                 var labelEnd = radius * 1.2;
 
-                var labelArea = radius;
-
-                labelArea = innerRadius + (radius - innerRadius) * chartConfig.labelOffset/50;
+                var labelArea = innerRadius + (radius - innerRadius) * chartConfig.labelOffset/50;
 
                 var innerArc = d3.arc()
                   .innerRadius(labelStart)
@@ -162,7 +160,8 @@ bluewave.charts.PieChart = function(parent, config) {
                   .attr("points", function (d) {
 
                     var firstArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * 90/50);
-                    var endArc = d3.arc().innerRadius(innerRadius).outerRadius(labelArea)
+                    var endArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * (chartConfig.labelOffset-1)/50);
+
 
 
                     var posA = firstArc.centroid(d);
