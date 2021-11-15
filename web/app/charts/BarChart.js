@@ -92,6 +92,16 @@ bluewave.charts.BarChart = function(parent, config) {
         let xKey2;
         let yKey2;
 
+        //Set intitial value for layout to vertical and barType to barchart
+        if (!chartConfig.barLayout) chartConfig.barLayout = "vertical";
+        var layout = chartConfig.barLayout;
+        var barType = chartConfig.barType;
+        if (!barType) barType = "barchart";
+
+        //Ignore y-axis for histogram
+        if (barType === "histogram") yKey = xKey;
+
+
         if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
         if (chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
@@ -99,13 +109,11 @@ bluewave.charts.BarChart = function(parent, config) {
             yKey2 = chartConfig.yAxis2;
         }
 
-
         var data1 = data[0];
         var data2 = data[1];
         var dataSets = data;
         // data = data1;
-        var dataLength = data.length;
-        var keys = data1.columns.slice(0)
+
 
         var mergedData = d3.merge(dataSets);
 
@@ -120,9 +128,6 @@ bluewave.charts.BarChart = function(parent, config) {
         //Get sum of tallest bar
         //TODO: axis being set by first dataset - set with largest data
 
-// maxData = d3.max(mergedData, function (g) {
-//     return parseFloat(g[yKey]);
-// });
 
             // if(data2!==null && data2!==undefined && xKey2 && yKey2){
             //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
@@ -159,9 +164,8 @@ bluewave.charts.BarChart = function(parent, config) {
             x0.domain(subgroups);
         }
 
-// let m = d3.max(data, function(d) { return parseFloat(d[yKey]);} );
 
-
+        //Get x and y values for each data set and format object for rendering
         var arr = [];
         for (let i=0; i<dataSets.length; i++){
 
@@ -191,44 +195,102 @@ bluewave.charts.BarChart = function(parent, config) {
         }
 
 
+        //Flip axes if layout is horizontal
+        var leftLabel, bottomLabel;
 
-        //Set intitial value for layout to vertical
-        if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
-        var layout = chartConfig.barLayout;
+        if (barType === "barchart") {
 
-        //Flip axis if layout is horizontal
-        let leftLabel, bottomLabel;
-        if(layout === "vertical"){
-            displayAxis("key", "value", maxData);
-            leftLabel = chartConfig.yAxis;
-            bottomLabel = chartConfig.xAxis;
-        }else if(layout === "horizontal"){
-            displayAxis("value", "key", maxData);
-            leftLabel = chartConfig.xAxis;
-            bottomLabel = chartConfig.yAxis;
+            if (layout === "vertical") {
+                displayAxis("key", "value", maxData);
+                leftLabel = chartConfig.yAxis;
+                bottomLabel = chartConfig.xAxis;
+            } else if (layout === "horizontal") {
+                displayAxis("value", "key", maxData);
+                leftLabel = chartConfig.xAxis;
+                bottomLabel = chartConfig.yAxis;
+            }
+
+        //Y-axis is ignored for histogram
+        } else if (barType === "histogram") {
+            if (layout === "vertical") {
+                displayAxis("key", "key", maxData);
+                leftLabel = "Frequency";
+                bottomLabel = chartConfig.xAxis;
+            } else if (layout === "horizontal") {
+                displayAxis("key", "key", maxData);
+                leftLabel = chartConfig.xAxis;
+                bottomLabel = "Frequency";
+            }
+
         }
+
+
 
         width = plotWidth;
         height = plotHeight;
-// console.log(chartConfig.barType)
+
         for (let i=0; i<dataSets.length; i++){
             var sumData = arr[i];
 
-            if(chartConfig.barType === "histogram"){
+            //Render histogram separately
+            if(barType === "histogram"){
 
-                var histX = d3.scaleLinear()
-                    .domain(d3.max(data, function(d) { return +d.value }))
-                    .range([0, width]);
+                let histKeys = sumData.map(d=>parseFloat(d.key))
 
                 var histogram = d3.histogram()
-                .value(function(d) { return d.value; })
-                .domain(histX.domain())
-                .thresholds(histX.ticks(100));
-    
+                    .value(function(d) { return d.key; })
+                    .domain(x.domain())
+                    .thresholds(x.ticks(100))
+                    //TODO: find general solution for time and ordinal scale
+                    // .thresholds(x.domain()) //Not sure why this doesn't work for dates/strings
+
                  var bins = histogram(sumData);
-                 sumData = bins;
+
+                 var frequencyMax = d3.max(bins, d => d.length)
+                 
+                 var frequencyAxis = d3.scaleLinear()
+                    .range(layout === "vertical" ? [height, 0] : [0, width]);
+                    frequencyAxis.domain([0, frequencyMax]);
+
+                if (layout === "vertical") displayHistogramAxis(x, frequencyAxis);
+                else if(layout === "horizontal") displayHistogramAxis(frequencyAxis, y);
+
+
+                plotArea.selectAll("rect")
+                    .data(bins)
+                    .enter()
+                    .append("rect")
+                    
+                    .attr("x", function (d) { 
+                        return (layout === "vertical") ? x(d.x0) : 0;
+                    })
+                    .attr("y", function (d) { 
+                        return (layout === "vertical") ? frequencyAxis(d.length) : height - x(d.x0)/(width/height) //This is a dumb way of doing this probably
+                        // y(d.key) - height/sumData.length / 2;
+                    })
+                    .attr("width", function (d) { 
+                        return (layout === "vertical") ? (x(d.x1) - x(d.x0) - 1) : frequencyAxis(d.length); 
+                    })
+                    .attr("height", function (d) { 
+                        return (layout === "vertical") ? height - frequencyAxis(d.length) : (x(d.x1) - x(d.x0))/(width/height) - 1; 
+                    })
+                    .attr("barID", i);
+
+                    let temp = [];
+                    bins.forEach(function(d){
+                        temp.push({
+
+                            key : d,
+                            value: d.length        
+                        });
+
+                    });
+                    console.log("temp", temp)
+
             }
-    
+            //Bar Chart rendering
+            else{
+
 
             let keyType = typeOfAxisValue(sumData[0].key);
             if(keyType == "date") keyType = "string";
@@ -260,7 +322,6 @@ bluewave.charts.BarChart = function(parent, config) {
                         }
                     };
 
-console.log(bins)
 
                     plotArea
                         .selectAll("mybar")
@@ -300,11 +361,7 @@ console.log(bins)
                             return 0;
                         })
                         .attr("y", function (d) {
-                            // if (keyType === "date") {
-                            //     return y(new Date(d.key));
-                            // } else {
-                            //     return y(d.key);
-                            // }
+                            
                             var w = y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["key"]);
                             var left = y.bandwidth ? y(d["key"]) : 0;
                             return group ? left+(w*i): y(d["key"]);
@@ -397,7 +454,7 @@ console.log(bins)
                         // .attr("fill", getBarColor(i));
                 }
             }
-
+        }
         }
 
         //Set color defaults
@@ -537,7 +594,32 @@ console.log(bins)
         xAxis = plotArea
             .append("g")
             .attr("transform", "translate(0," + axisHeight + ")")
-            .call(d3.axisBottom(x))
+            .call(d3.axisBottom(x));
+
+            xAxis
+            .selectAll("text")
+            .attr("transform", "translate(-10,0)rotate(-45)")
+            .style("text-anchor", "end");
+
+        yAxis = plotArea
+            .append("g")
+            .call(d3.axisLeft(y));
+    };
+
+  //**************************************************************************
+  //** displayHistogramAxis
+  //**************************************************************************
+    var displayHistogramAxis = function (x, y) {
+ 
+        if (xAxis) xAxis.selectAll("*").remove();
+        if (yAxis) yAxis.selectAll("*").remove();
+
+        xAxis = plotArea
+            .append("g")
+            .attr("transform", "translate(0," + axisHeight + ")")
+            .call(d3.axisBottom(x));
+
+            xAxis
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
