@@ -265,14 +265,14 @@ bluewave.charts.BarChart = function(parent, config) {
                         return (layout === "vertical") ? x(d.x0) : 0;
                     })
                     .attr("y", function (d) { 
-                        return (layout === "vertical") ? frequencyAxis(d.length) : height - x(d.x0)/(width/height) //This is a dumb way of doing this probably
+                        return (layout === "vertical") ? frequencyAxis(d.length) : height - x(d.x1)/(width/height) //This is a dumb way of doing this probably
                         // y(d.key) - height/sumData.length / 2;
                     })
                     .attr("width", function (d) { 
-                        return (layout === "vertical") ? (x(d.x1) - x(d.x0) - 1) : frequencyAxis(d.length); 
+                        return (layout === "vertical") ? (x(d.x1) - x(d.x0) - 0.5) : frequencyAxis(d.length); 
                     })
                     .attr("height", function (d) { 
-                        return (layout === "vertical") ? height - frequencyAxis(d.length) : (x(d.x1) - x(d.x0))/(width/height) - 1; 
+                        return (layout === "vertical") ? height - frequencyAxis(d.length) : (x(d.x1) - x(d.x0))/(width/height) - 0.5; 
                     })
                     .attr("barID", i);
 
