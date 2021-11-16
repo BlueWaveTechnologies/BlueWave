@@ -42,7 +42,7 @@
         <dependency>
           <groupId>javaxt</groupId>
           <artifactId>javaxt-server</artifactId>
-          <version>4.1.0</version>
+          <version>4.1.1</version>
         </dependency>
         <dependency>
           <groupId>javaxt</groupId>
@@ -114,6 +114,19 @@
             <groupId>com.jcraft</groupId>
             <artifactId>jsch</artifactId>
             <version>0.1.55</version>
+        </dependency>
+
+
+        <!-- Apache POI (excel utils) -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>5.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.1.0</version>
         </dependency>
 
     </dependencies>
