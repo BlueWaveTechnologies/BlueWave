@@ -337,6 +337,10 @@ bluewave.Application = function(parent, config) {
                     backButton.hide();
                 }
 
+
+              //Trigger resize event for the app to ensure components render properly
+                if (currApp.resize) currApp.resize();
+
             }
         };
 
@@ -833,7 +837,7 @@ bluewave.Application = function(parent, config) {
                                     explorerPanel.update(d, readOnly, "Dashboard");
                                     explorerPanel.show();
                                     me.setTitle(explorerPanel.getTitle());
-                                    
+
                                 }, 800);
 
                             },

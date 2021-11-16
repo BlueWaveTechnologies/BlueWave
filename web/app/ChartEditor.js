@@ -7,15 +7,6 @@ if(!bluewave) var bluewave={};
  *   Panel used to edit charts/graphs
  *
  ******************************************************************************/
-/**
- *   Data Flow:
- *   init - stubs out chart areas
- *   initializeChartSpace - stubs out chart spaces
- *   Update - chart information and config is passed in.
- *   createForm - initializes chart Type specific dropdowns
- *   createOptions - adds chart input options from updated Data
- *      pie, bar,line, map chart creation.
- ******************************************************************************/
 
 bluewave.ChartEditor = function(parent, config) {
     var me = this;
@@ -113,14 +104,6 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** getNode
-  //**************************************************************************
-    this.getNode = function() {
-        return currentNode;
-    };
-
-
-  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(nodeType, config, inputs, node){
@@ -194,18 +177,41 @@ bluewave.ChartEditor = function(parent, config) {
         let dataOptions2 = data2?Object.keys(data2[0]):null;
         switch(chartConfig.chartType){
             case 'barChart':
-
+                plotInputs.group.add("", "");
                 dataOptions.forEach((val)=>{
                     plotInputs.xAxis.add(val,val);
                     plotInputs.yAxis.add(val,val);
+                    plotInputs.group.add(val, val);
                 });
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
-                if(dataOptions2){
-                    dataOptions2.forEach(val=>{
-                        plotInputs.xAxis2.add(val,val);
-                        plotInputs.yAxis2.add(val,val);
+                if (chartConfig.group){
+                    plotInputs.group.setValue(chartConfig.group, true);
+                }
+
+                //Add dropdown values for each data set
+                for (let i=1; i<inputData.length; i++){
+                    let xAxisN = `xAxis${i+1}`;
+                    let yAxisN = `yAxis${i+1}`;
+                    let groupN = `group${i+1}`;
+                    // let labelN = `label${i+1}`;
+
+                    plotInputs[groupN].add("", "");
+
+                    let multiLineDataOptions = Object.keys(inputData[i][0]);
+                    multiLineDataOptions.forEach((val)=>{
+                        plotInputs[xAxisN].add(val, val);
+                        plotInputs[yAxisN].add(val, val);
+                        plotInputs[groupN].add(val, val);
                     });
+
+                    plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
+                    plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+
+                    if (chartConfig[groupN]){
+                        plotInputs[groupN].setValue(chartConfig[groupN], true);
+                    }
+
                 }
 
                 createBarPreview();
@@ -221,7 +227,7 @@ bluewave.ChartEditor = function(parent, config) {
                 plotInputs.xAxis.setValue(chartConfig.xAxis, true);
                 plotInputs.yAxis.setValue(chartConfig.yAxis, true);
                 if (chartConfig.group){
-                    plotInputs.group.setValue(chartConfig.group, false);
+                    plotInputs.group.setValue(chartConfig.group, false); //<--firing the onChange event is a hack to show/hide labels
                 }
                 else{
                     var label = chartConfig.label;
@@ -249,7 +255,7 @@ bluewave.ChartEditor = function(parent, config) {
                     plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
 
                     if (chartConfig[groupN]){
-                        plotInputs[groupN].setValue(chartConfig[groupN], false);
+                        plotInputs[groupN].setValue(chartConfig[groupN], false); //<--firing the onChange event is a hack to show/hide labels
                     }
                     else{
                         var label = chartConfig[labelN];
@@ -299,7 +305,10 @@ bluewave.ChartEditor = function(parent, config) {
                     createDropdown("xAxis", plotInputs),
 
                     createLabel("Y-Axis"),
-                    createDropdown("yAxis", plotInputs)
+                    createDropdown("yAxis", plotInputs),
+
+                    createLabel("Separate By"),
+                    createDropdown("group", plotInputs)
                 ]
             }
         );
@@ -313,7 +322,10 @@ bluewave.ChartEditor = function(parent, config) {
                         createDropdown(`xAxis${i+1}`, plotInputs),
 
                         createLabel("Y-Axis"),
-                        createDropdown(`yAxis${i+1}`, plotInputs)
+                        createDropdown(`yAxis${i+1}`, plotInputs),
+
+                        createLabel("Separate By"),
+                        createDropdown(`group${i+1}`, plotInputs),
                     ]
                 }
             );
@@ -411,7 +423,7 @@ bluewave.ChartEditor = function(parent, config) {
         form.onChange = function(input, value){
             var key = input.name;
 
-          //Special case for "Separate By" option
+          //Special case for "Separate By" option. Show/Hide the label field.
             var idx = key.indexOf("group");
             if (idx>-1){
                 var id = key.substring("group".length);
@@ -477,30 +489,6 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** createInput
-  //**************************************************************************
-    var createInput = function(parent,chartConfigRef,displayName,callBack,input,inputType){
-
-        var row = document.createElement("div");
-        parent.appendChild(row);
-
-
-        var label = document.createElement("label");
-        label.innerText = displayName + ":";
-        row.appendChild(label);
-
-        input[inputType] = new javaxt.dhtml.ComboBox(row, {
-            style: config.style.combobox,
-            readOnly: true
-        });
-        input[inputType].onChange = function(name,value){
-            chartConfig[chartConfigRef] = value;
-            callBack();
-        };
-    };
-
-
-  //**************************************************************************
   //** initializeChartSpace
   //**************************************************************************
     var initializeChartSpace = function(){
@@ -518,9 +506,9 @@ bluewave.ChartEditor = function(parent, config) {
         };
 
         barChart = new bluewave.charts.BarChart(svg, {});
-        barChart.onDblClick = function(bar, bars){
-            chartConfig.barColor = d3.select(bar).attr("fill");
-            editStyle("bar");
+        barChart.onClick = function(bar, barID){
+            // chartConfig.barColor = d3.select(bar).attr("fill");
+            editStyle("bar", barID);
 
         };
     };
@@ -727,8 +715,6 @@ bluewave.ChartEditor = function(parent, config) {
                 if (settings.endTags==="true") settings.endTags = true;
                 else settings.endTags = false;
 
-                // if(settings.scaleOptions==="logarithmic") settings.scaleOptions="logarithmic";
-                // else settings.scaleOptions = "linear";
 
                 chartConfig.scaleOption = settings.scaleOptions;
                 chartConfig.xGrid = settings.xGrid;
@@ -758,6 +744,21 @@ bluewave.ChartEditor = function(parent, config) {
             lineDropdown.add("Dotted", "dotted");
             lineDropdown.setValue("solid");
 
+
+          //Create dropdown for smoothing options
+            var smoothingDropdown = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox,
+                    readOnly: true
+
+                }
+            );
+            smoothingDropdown.add("None", "none");
+            smoothingDropdown.add("Simple Spline", "spline");
+            smoothingDropdown.add("Moving Average", "movingAverage");
+            smoothingDropdown.add("Kernel Density Estimation", "kde");
+            smoothingDropdown.setValue("none");
 
 
           //Add style options
@@ -830,10 +831,24 @@ bluewave.ChartEditor = function(parent, config) {
                                 type: "text"
                             }
                         ]
-                    }
+                    },
+                    {
+                        group: "Smoothing",
+                        items: [
+                            {
+                                name: "smoothingType",
+                                label: "Type",
+                                type: smoothingDropdown
+                            },
+                            {
+                                name: "smoothingValue",
+                                label: "Factor",
+                                type: "text"
+                            }
+                        ]
+                    },
                 ]
             });
-
 
 
 
@@ -871,6 +886,8 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.endOpacity = endOpacity;
             form.findField("endOpacity").setValue(endOpacity*100);
 
+
+          //Add radius slider
             createSlider("pointRadius", form, "px", 0, 10, 1);
             var pointRadius = chartConfig.pointRadius;
             if (isNaN(pointRadius)) pointRadius = 0;
@@ -878,10 +895,18 @@ bluewave.ChartEditor = function(parent, config) {
             form.findField("pointRadius").setValue(pointRadius);
 
 
-            //Single line edit case
-            if(datasetID !== null && datasetID !== undefined){
+          //Add smoothing slider
+            var smoothingField = form.findField("smoothingValue");
+            var smoothingSlider = createSlider("smoothingValue", form, "", 0, 100, 1);
+            var smoothingValue = chartConfig.smoothingValue;
+            if (isNaN(smoothingValue)) smoothingValue = 0;
+            smoothingField.setValue(smoothingValue);
 
-                let n = `${datasetID}`;
+
+
+            let n = parseInt(datasetID);
+            if (!isNaN(n)){ //Single line edit case
+
 
                 if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
                 if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
@@ -892,6 +917,8 @@ bluewave.ChartEditor = function(parent, config) {
                 if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
                 if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 0;
 
+
+
                 form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
                 form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
                 form.findField("lineStyle").setValue(chartConfig["lineStyle" + n]);
@@ -901,16 +928,58 @@ bluewave.ChartEditor = function(parent, config) {
                 form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
                 form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
 
+
+                var smoothingType = chartConfig["smoothingType" + n];
+                if (smoothingType){
+                    form.findField("smoothingType").setValue(smoothingType);
+
+                    var smoothingValue = chartConfig["smoothingValue" + n];
+                    if (isNaN(smoothingValue)) smoothingValue = 0;
+                    smoothingField.setValue(smoothingValue);
+                }
+                else{
+                    smoothingField.setValue(0);
+                    form.disableField("smoothingValue");
+                    smoothingSlider.disabled = true;
+                }
+
+
                 form.onChange = function(){
                     let settings = form.getData();
+
                     chartConfig["lineColor" + n] = settings.lineColor;
                     chartConfig["lineStyle" + n] = settings.lineStyle;
                     chartConfig["lineWidth" + n] = settings.lineThickness;
                     chartConfig["opacity" + n] = settings.lineOpacity/100;
+
                     chartConfig["startOpacity" + n] = settings.startOpacity/100;
                     chartConfig["endOpacity" + n] = settings.endOpacity/100;
+
                     chartConfig["pointColor" + n] = settings.pointColor;
                     chartConfig["pointRadius" + n] = settings.pointRadius;
+
+                    var smoothingType = settings.smoothingType;
+                    if (smoothingType==="none"){
+                        delete chartConfig["smoothingType" + n];
+                        delete chartConfig["smoothingValue" + n];
+                        form.disableField("smoothingValue");
+                        smoothingSlider.disabled = true;
+                    }
+                    else if (smoothingType==="spline"){
+                        chartConfig["smoothingType" + n] = smoothingType;
+                        delete chartConfig["smoothingValue" + n];
+                        form.disableField("smoothingValue");
+                        smoothingSlider.disabled = true;
+                    }
+                    else {
+                        chartConfig["smoothingType" + n] = smoothingType;
+                        chartConfig["smoothingValue" + n] = settings.smoothingValue;
+                        form.enableField("smoothingValue");
+                        smoothingSlider.disabled = false;
+                    }
+                    smoothingSlider.focus();
+
+
                     createLinePreview();
                 };
 
@@ -1110,7 +1179,7 @@ bluewave.ChartEditor = function(parent, config) {
                         group: "Fill Style",
                         items: [
                             {
-                                name: "fillColor",
+                                name: "barColor",
                                 label: "Color",
                                 type: new javaxt.dhtml.ComboBox(
                                     document.createElement("div"),
@@ -1130,35 +1199,35 @@ bluewave.ChartEditor = function(parent, config) {
             });
 
 
-            createColorOptions("fillColor", form);
+            createColorOptions("barColor", form);
             createSlider("fillOpacity", form, "%");
 
 
-            form.findField("fillColor").setValue(chartConfig.barColor);
+            // form.findField("barColor").setValue(chartConfig.barColor);
             form.findField("fillOpacity").setValue(0);
 
-          //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
+            if(datasetID !== null && datasetID !== undefined){
 
-                chartConfig.barColor = settings.fillColor;
+                let n = `${datasetID}`;
 
-                createBarPreview();
-            };
+                if( !chartConfig["barColor" + n] ) chartConfig["barColor" + n] = "#6699CC";
+
+                form.findField("barColor").setValue(chartConfig["barColor" + n]);
+
+                form.onChange = function(){
+                    let settings = form.getData();
+                    chartConfig["barColor" + n] = settings.barColor;
+
+                    createBarPreview();
+                };
+
+            }
         }
 
 
       //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);
         form.resize();
-
-
-
-      //Workaround for bar chart legend until editor is split up
-        // if(chartType !== "barChart"){
-        //     let legendContainer = document.querySelector(".bar-legend");
-        //     if(legendContainer) legendContainer.remove();
-        // }
     };
 
 
