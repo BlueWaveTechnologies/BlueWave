@@ -1159,29 +1159,55 @@ bluewave.ChartEditor = function(parent, config) {
                                 type: "text"
                             }
                         ]
+                    },
+
+                    {
+                        group: "Histogram Options",
+                        items: [
+
+                            {
+                                name: "binWidth",
+                                label: "Bin Width",
+                                type: "text"
+                            }
+                        ]
                     }
                 ]
             });
 
 
             createColorOptions("barColor", form);
+
             createSlider("fillOpacity", form, "%");
+            var fillOpacity = chartConfig.fillOpacity;
+            if (isNaN(fillOpacity)) fillOpacity = 1;
+            chartConfig.fillOpacity = fillOpacity;
+            form.findField("fillOpacity").setValue(fillOpacity*100);
 
+            createSlider("binWidth", form, "", 1, 100, 1);
+            var binWidth = chartConfig.binWidth;
+            if (isNaN(binWidth)) binWidth = 10;
+            chartConfig.binWidth = binWidth;
+            form.findField("binWidth").setValue(binWidth);
 
-            // form.findField("barColor").setValue(chartConfig.barColor);
-            form.findField("fillOpacity").setValue(0);
 
             if(datasetID !== null && datasetID !== undefined){
 
                 let n = `${datasetID}`;
 
                 if( !chartConfig["barColor" + n] ) chartConfig["barColor" + n] = "#6699CC";
+                if( isNaN(chartConfig["fillOpacity" + n]) ) chartConfig["fillOpacity" + n] = 1;
+                if( isNaN(chartConfig["binWidth" + n]) ) chartConfig["binWidth" + n] = 10;
 
                 form.findField("barColor").setValue(chartConfig["barColor" + n]);
+                form.findField("fillOpacity").setValue(chartConfig["fillOpacity" + n]*100);
+                form.findField("binWidth").setValue(chartConfig["binWidth" + n]);
 
                 form.onChange = function(){
                     let settings = form.getData();
                     chartConfig["barColor" + n] = settings.barColor;
+                    chartConfig["fillOpacity" + n] = settings.fillOpacity;
+                    chartConfig["binWidth" + n] = settings.binWidth;
 
                     createBarPreview();
                 };

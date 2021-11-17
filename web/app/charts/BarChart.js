@@ -232,15 +232,22 @@ bluewave.charts.BarChart = function(parent, config) {
         for (let i=0; i<dataSets.length; i++){
             var sumData = arr[i];
 
+            let fillOpacity = chartConfig["fillOpacity" + i];
+            if (fillOpacity == null) fillOpacity = 1;
+
             //Render histogram separately
             if(barType === "histogram"){
-
+console.log(sumData)
                 let histKeys = sumData.map(d=>parseFloat(d.key))
+                let binWidth = chartConfig["binWidth" + i];
+                if (!binWidth) binWidth = 10;
 
                 var histogram = d3.histogram()
                     .value(function(d) { return d.key; })
                     .domain(x.domain())
-                    .thresholds(x.ticks(100))
+                    .thresholds(x.ticks(binWidth))
+
+                    // .thresholds(x.ticks(100))
                     //TODO: find general solution for time and ordinal scale
                     // .thresholds(x.domain()) //Not sure why this doesn't work for dates/strings
 
@@ -274,18 +281,9 @@ bluewave.charts.BarChart = function(parent, config) {
                     .attr("height", function (d) { 
                         return (layout === "vertical") ? height - frequencyAxis(d.length) : (x(d.x1) - x(d.x0))/(width/height) - 0.5; 
                     })
+                    .attr("fillOpacity", fillOpacity)
                     .attr("barID", i);
 
-                    let temp = [];
-                    bins.forEach(function(d){
-                        temp.push({
-
-                            key : d,
-                            value: d.length        
-                        });
-
-                    });
-                    console.log("temp", temp)
 
             }
             //Bar Chart rendering
@@ -344,6 +342,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return getWidth(d);
                         })
+                        .attr("fillOpacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -379,6 +378,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return x.bandwidth ? x.bandwidth() : x(d["value"]);
                         })
+                        .attr("fillOpacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -411,6 +411,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return width/sumData.length-5;
                         })
+                        .attr("fillOpacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -446,6 +447,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return x(d["value"]);
                         })
+                        .attr("fillOpacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
