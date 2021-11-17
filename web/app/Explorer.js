@@ -16,7 +16,7 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor,
+    var dbView, lineEditor, barEditor, sankeyEditor, layoutEditor, nameEditor,
     supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager,
     fileViewer, docComparer; //popup dialogs
     var windows = [];
@@ -1403,6 +1403,18 @@ bluewave.Explorer = function(parent, config) {
                     editScatter(this);
                 };
                 break;
+            case "lineChart" :
+
+                node.ondblclick = function(){
+                    editLineChart(this);
+                };
+                break;
+            case "barChart" :
+
+                node.ondblclick = function(){
+                    editBarChart(this);
+                };
+                break;
             case "pieChart" :
 
                 node.ondblclick = function(){
@@ -1461,21 +1473,7 @@ bluewave.Explorer = function(parent, config) {
 
             default:
 
-                node.ondblclick = function(){
-                    var hasData = false;
-                    var inputs = this.inputs;
-                    for (var key in inputs) {
-                        if (inputs.hasOwnProperty(key)){
-                            if (inputs[key].csv){
-                                hasData = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (hasData){
-                        editChart(this);
-                    }
-                };
+                break;
         }
     };
 
@@ -1630,19 +1628,19 @@ bluewave.Explorer = function(parent, config) {
 
 
   //**************************************************************************
-  //** editChart
+  //** editBarChart
   //**************************************************************************
-    var editChart = function(node){
-        if (!chartEditor){
-            chartEditor = createNodeEditor({
-                title: "Edit Chart",
+    var editBarChart = function(node){
+        if (!barEditor){
+            barEditor = createNodeEditor({
+                title: "Edit Bar Chart",
                 width: 1060,
                 height: 600,
                 resizable: true,
-                editor: bluewave.ChartEditor
+                editor: bluewave.charts.BarEditor
             });
         }
-        chartEditor.getNode = function(){
+        barEditor.getNode = function(){
             return node;
         };
 
@@ -1661,9 +1659,47 @@ bluewave.Explorer = function(parent, config) {
         var chartConfig = {};
         merge(chartConfig, node.config);
 
+        chartConfig.chartType = node.type; //is this used for anything?
+        barEditor.update(chartConfig, data);
+        barEditor.show();
+    };
 
-        chartEditor.update(node.type, chartConfig, data, node);
-        chartEditor.show();
+
+  //**************************************************************************
+  //** editLineChart
+  //**************************************************************************
+    var editLineChart = function(node){
+        if (!lineEditor){
+            lineEditor = createNodeEditor({
+                title: "Edit Line Chart",
+                width: 1060,
+                height: 600,
+                resizable: true,
+                editor: bluewave.charts.LineEditor
+            });
+        }
+        lineEditor.getNode = function(){
+            return node;
+        };
+
+
+      //Get data
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                data.push(csv);
+            }
+        }
+
+
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+        chartConfig.chartType = node.type; //is this used for anything?
+        lineEditor.update(chartConfig, data);
+        lineEditor.show();
     };
 
 
