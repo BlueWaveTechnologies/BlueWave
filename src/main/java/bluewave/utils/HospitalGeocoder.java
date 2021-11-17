@@ -3,6 +3,7 @@ import bluewave.Config;
 
 //java includes
 import java.util.*;
+import java.math.BigDecimal;
 
 //javaxt includes
 import javaxt.io.File;
@@ -15,7 +16,7 @@ import me.xdrop.fuzzywuzzy.FuzzySearch;
 
 
 //******************************************************************************
-//**  Geocoder
+//**  HospitalGeocoder
 //******************************************************************************
 /**
  *   Used to generate lat/lon coordinates for Hospitals found in the HHS report
@@ -32,12 +33,14 @@ public class HospitalGeocoder {
     private HashMap<String, JSONObject> hospitals;
     private HashMap<String, ArrayList<JSONObject>> hospitalsByState;
     private HashMap<String, String> coords = new HashMap<>();
+    private GeoCoder geocoder;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     public HospitalGeocoder(String csvFile) throws Exception {
+        geocoder = new GeoCoder();
 
       //Parse HHS file
         hospitals = new HashMap<>();
@@ -211,9 +214,6 @@ public class HospitalGeocoder {
   //** geocodeGoogle
   //**************************************************************************
     public void geocodeGoogle(){
-        String geocoder = "Google";
-        String apiKey = Config.get("google").get("maps").get("key").toString();
-
         Iterator<String> it = hospitals.keySet().iterator();
         while (it.hasNext()){
             String id = it.next();
@@ -228,31 +228,13 @@ public class HospitalGeocoder {
 
                 String address = street + ", " + city + ", " + state + " " + zip;
                 //console.log(address);
-
-
-              //Construct url to hit the google maps geocoding service:
-                StringBuffer url = new StringBuffer();
-                url.append("https://maps.google.com/maps/api/geocode/json?");
-                url.append("address=");
-                url.append(address);
-                url.append("&sensor=false");
-                url.append("&key=");
-                url.append(apiKey);
-
-
-              //Send request to the geocoding service and parse response
-                javaxt.http.Response response = new javaxt.http.Request(url.toString().replace(" ", "%20")).getResponse();
-                JSONObject json = new JSONObject(response.getText());
-                JSONArray results = json.get("results").toJSONArray();
-                for (int i=0; i<results.length(); i++){
-                    JSONObject result = results.get(i).toJSONObject();
-                    JSONObject coords = result.get("geometry").get("location").toJSONObject();
-                    coords.set("lon", coords.remove("lng"));
-                    updateHospital(coords.get("lat").toString(), coords.get("lon").toString(), geocoder, hospital);
-                    break;
+                
+                BigDecimal[] point = geocoder.getCoordinates(address);
+                if (point!=null){
+                    String lat = point[0].toString();
+                    String lon = point[1].toString(); 
+                    updateHospital(lat, lon, "Google", hospital);
                 }
-
-
             }
         }
 

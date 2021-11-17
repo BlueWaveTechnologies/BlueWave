@@ -615,6 +615,23 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** getBasemap
+  //**************************************************************************
+    getBasemap: function(callback){
+        var baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+        bluewave.utils.get("map/basemaps", {
+            success: function(basemaps){
+                if (basemaps.length>0) baseURL = basemaps[0].url;
+                callback.apply(this,[baseURL]);
+            },
+            failure: function(request){
+                callback.apply(this,[baseURL]);
+            }
+        });
+    },
+
+
+  //**************************************************************************
   //** updateExtents
   //**************************************************************************
   /** Adds 2 transparent points to the given map layer. Used to circumvent a

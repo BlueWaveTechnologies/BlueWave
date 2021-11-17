@@ -489,30 +489,6 @@ bluewave.ChartEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** createInput
-  //**************************************************************************
-    var createInput = function(parent,chartConfigRef,displayName,callBack,input,inputType){
-
-        var row = document.createElement("div");
-        parent.appendChild(row);
-
-
-        var label = document.createElement("label");
-        label.innerText = displayName + ":";
-        row.appendChild(label);
-
-        input[inputType] = new javaxt.dhtml.ComboBox(row, {
-            style: config.style.combobox,
-            readOnly: true
-        });
-        input[inputType].onChange = function(name,value){
-            chartConfig[chartConfigRef] = value;
-            callBack();
-        };
-    };
-
-
-  //**************************************************************************
   //** initializeChartSpace
   //**************************************************************************
     var initializeChartSpace = function(){
@@ -739,8 +715,6 @@ bluewave.ChartEditor = function(parent, config) {
                 if (settings.endTags==="true") settings.endTags = true;
                 else settings.endTags = false;
 
-                // if(settings.scaleOptions==="logarithmic") settings.scaleOptions="logarithmic";
-                // else settings.scaleOptions = "linear";
 
                 chartConfig.scaleOption = settings.scaleOptions;
                 chartConfig.xGrid = settings.xGrid;
@@ -770,6 +744,21 @@ bluewave.ChartEditor = function(parent, config) {
             lineDropdown.add("Dotted", "dotted");
             lineDropdown.setValue("solid");
 
+
+          //Create dropdown for smoothing options
+            var smoothingDropdown = new javaxt.dhtml.ComboBox(
+                document.createElement("div"),
+                {
+                    style: config.style.combobox,
+                    readOnly: true
+
+                }
+            );
+            smoothingDropdown.add("None", "none");
+            smoothingDropdown.add("Simple Spline", "spline");
+            smoothingDropdown.add("Moving Average", "movingAverage");
+            smoothingDropdown.add("Kernel Density Estimation", "kde");
+            smoothingDropdown.setValue("none");
 
 
           //Add style options
@@ -842,10 +831,24 @@ bluewave.ChartEditor = function(parent, config) {
                                 type: "text"
                             }
                         ]
-                    }
+                    },
+                    {
+                        group: "Smoothing",
+                        items: [
+                            {
+                                name: "smoothingType",
+                                label: "Type",
+                                type: smoothingDropdown
+                            },
+                            {
+                                name: "smoothingValue",
+                                label: "Factor",
+                                type: "text"
+                            }
+                        ]
+                    },
                 ]
             });
-
 
 
 
@@ -883,6 +886,8 @@ bluewave.ChartEditor = function(parent, config) {
             chartConfig.endOpacity = endOpacity;
             form.findField("endOpacity").setValue(endOpacity*100);
 
+
+          //Add radius slider
             createSlider("pointRadius", form, "px", 0, 10, 1);
             var pointRadius = chartConfig.pointRadius;
             if (isNaN(pointRadius)) pointRadius = 0;
@@ -890,10 +895,18 @@ bluewave.ChartEditor = function(parent, config) {
             form.findField("pointRadius").setValue(pointRadius);
 
 
-            //Single line edit case
-            if(datasetID !== null && datasetID !== undefined){
+          //Add smoothing slider
+            var smoothingField = form.findField("smoothingValue");
+            var smoothingSlider = createSlider("smoothingValue", form, "", 0, 100, 1);
+            var smoothingValue = chartConfig.smoothingValue;
+            if (isNaN(smoothingValue)) smoothingValue = 0;
+            smoothingField.setValue(smoothingValue);
 
-                let n = `${datasetID}`;
+
+
+            let n = parseInt(datasetID);
+            if (!isNaN(n)){ //Single line edit case
+
 
                 if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
                 if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
@@ -904,6 +917,8 @@ bluewave.ChartEditor = function(parent, config) {
                 if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
                 if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 0;
 
+
+
                 form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
                 form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
                 form.findField("lineStyle").setValue(chartConfig["lineStyle" + n]);
@@ -913,16 +928,58 @@ bluewave.ChartEditor = function(parent, config) {
                 form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
                 form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
 
+
+                var smoothingType = chartConfig["smoothingType" + n];
+                if (smoothingType){
+                    form.findField("smoothingType").setValue(smoothingType);
+
+                    var smoothingValue = chartConfig["smoothingValue" + n];
+                    if (isNaN(smoothingValue)) smoothingValue = 0;
+                    smoothingField.setValue(smoothingValue);
+                }
+                else{
+                    smoothingField.setValue(0);
+                    form.disableField("smoothingValue");
+                    smoothingSlider.disabled = true;
+                }
+
+
                 form.onChange = function(){
                     let settings = form.getData();
+
                     chartConfig["lineColor" + n] = settings.lineColor;
                     chartConfig["lineStyle" + n] = settings.lineStyle;
                     chartConfig["lineWidth" + n] = settings.lineThickness;
                     chartConfig["opacity" + n] = settings.lineOpacity/100;
+
                     chartConfig["startOpacity" + n] = settings.startOpacity/100;
                     chartConfig["endOpacity" + n] = settings.endOpacity/100;
+
                     chartConfig["pointColor" + n] = settings.pointColor;
                     chartConfig["pointRadius" + n] = settings.pointRadius;
+
+                    var smoothingType = settings.smoothingType;
+                    if (smoothingType==="none"){
+                        delete chartConfig["smoothingType" + n];
+                        delete chartConfig["smoothingValue" + n];
+                        form.disableField("smoothingValue");
+                        smoothingSlider.disabled = true;
+                    }
+                    else if (smoothingType==="spline"){
+                        chartConfig["smoothingType" + n] = smoothingType;
+                        delete chartConfig["smoothingValue" + n];
+                        form.disableField("smoothingValue");
+                        smoothingSlider.disabled = true;
+                    }
+                    else {
+                        chartConfig["smoothingType" + n] = smoothingType;
+                        chartConfig["smoothingValue" + n] = settings.smoothingValue;
+                        form.enableField("smoothingValue");
+                        smoothingSlider.disabled = false;
+                    }
+                    smoothingSlider.focus();
+
+
                     createLinePreview();
                 };
 
