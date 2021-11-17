@@ -1,0 +1,683 @@
+if(!bluewave) var bluewave={};
+if(!bluewave.charts) bluewave.charts={};
+
+//******************************************************************************
+//**  BarEditor
+//******************************************************************************
+/**
+ *   Panel used to edit bar charts
+ *
+ ******************************************************************************/
+
+bluewave.charts.BarEditor = function(parent, config) {
+    var me = this;
+    var panel;
+    var inputData = [];
+    var svg;
+    var previewArea;
+    var barChart;
+    var optionsDiv;
+    var plotInputs = {
+        xAxis:null,
+        yAxis:null,
+        xAxis2:null,
+        yAxis2:null,
+        group:null
+    };
+    var chartConfig = {};
+    var styleEditor, colorPicker;
+
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
+    var init = function(){
+
+
+        let table = createTable();
+        let tbody = table.firstChild;
+        var tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        parent.appendChild(table);
+        me.el = table;
+        var td;
+
+
+      //Create chart options
+        td = document.createElement("td");
+        td.style.height = "100%";
+        tr.appendChild(td);
+        var outerDiv = document.createElement("div");
+        outerDiv.className = "chart-editor-options";
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflow = "hidden";
+        outerDiv.style.overflowY = "auto";
+        td.appendChild(outerDiv);
+        optionsDiv = document.createElement("div");
+        optionsDiv.style.position = "absolute";
+        outerDiv.appendChild(optionsDiv);
+
+
+      //Create chart preview
+        td = document.createElement("td");
+        td.className = "chart-editor-preview";
+        td.style.width = "100%";
+        td.style.height = "100%";
+        tr.appendChild(td);
+
+        var outerDiv = document.createElement("div");
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflow = "hidden";
+        td.appendChild(outerDiv);
+
+        panel = createDashboardItem(outerDiv,{
+            width: "100%",
+            height: "100%",
+            title: "Untitled",
+            settings: true
+        });
+        previewArea = panel.innerDiv;
+        panel.el.className = "";
+        panel.el.style.position = "absolute";
+
+
+      //Allow users to change the title associated with the chart
+        addTextEditor(panel.title, function(title){
+            panel.title.innerHTML = title;
+            chartConfig.chartTitle = title;
+        });
+
+
+      //Watch for settings
+        panel.settings.onclick = function(){
+            editChart();
+        };
+
+
+      //Initialize chart area when ready
+        onRender(previewArea, function(){
+            initializeChartSpace();
+        });
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(config, inputs){
+        me.clear();
+
+        for (var i=0; i<inputs.length; i++){
+            var input = inputs[i];
+            if (input!=null) inputs[i] = d3.csvParse(input);
+        }
+        inputData = inputs;
+
+
+        if (config) chartConfig = config;
+
+        if (chartConfig.chartTitle){
+            panel.title.innerHTML = chartConfig.chartTitle;
+        }
+
+
+        createForm(optionsDiv);
+        createOptions();
+    };
+
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        inputData = [];
+        chartConfig = {};
+        panel.title.innerHTML = "Untitled";
+        optionsDiv.innerHTML = "";
+
+
+        if (barChart) barChart.clear();
+
+        if (colorPicker) colorPicker.hide();
+        //if (styleEditor) styleEditor.hide();
+    };
+
+
+  //**************************************************************************
+  //** getConfig
+  //**************************************************************************
+  /** Return chart configuration file
+   */
+    this.getConfig = function(){
+        let copy = Object.assign({},chartConfig);
+        return copy;
+    };
+
+
+  //**************************************************************************
+  //** getChart
+  //**************************************************************************
+    this.getChart = function(){
+        return previewArea;
+    };
+
+
+  //**************************************************************************
+  //** createOptions
+  //**************************************************************************
+  /** Initializes Options for Dropdowns.
+   */
+    var createOptions = function() {
+        var data = inputData[0];
+
+        let dataOptions = Object.keys(data[0]);
+
+        plotInputs.group.add("", "");
+        dataOptions.forEach((val)=>{
+            plotInputs.xAxis.add(val,val);
+            plotInputs.yAxis.add(val,val);
+            plotInputs.group.add(val, val);
+        });
+        plotInputs.xAxis.setValue(chartConfig.xAxis, true);
+        plotInputs.yAxis.setValue(chartConfig.yAxis, true);
+        if (chartConfig.group){
+            plotInputs.group.setValue(chartConfig.group, true);
+        }
+
+        //Add dropdown values for each data set
+        for (let i=1; i<inputData.length; i++){
+            let xAxisN = `xAxis${i+1}`;
+            let yAxisN = `yAxis${i+1}`;
+            let groupN = `group${i+1}`;
+            // let labelN = `label${i+1}`;
+
+            plotInputs[groupN].add("", "");
+
+            let multiLineDataOptions = Object.keys(inputData[i][0]);
+            multiLineDataOptions.forEach((val)=>{
+                plotInputs[xAxisN].add(val, val);
+                plotInputs[yAxisN].add(val, val);
+                plotInputs[groupN].add(val, val);
+            });
+
+            plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
+            plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+
+            if (chartConfig[groupN]){
+                plotInputs[groupN].setValue(chartConfig[groupN], true);
+            }
+
+        }
+
+        createBarPreview();
+
+    };
+
+
+  //**************************************************************************
+  //** createForm
+  //**************************************************************************
+    var createForm = function(parent){
+
+        var items = [];
+        items.push(
+            {
+                group: "Series 1",
+                items: [
+                    createLabel("X-Axis"),
+                    createDropdown("xAxis", plotInputs),
+
+                    createLabel("Y-Axis"),
+                    createDropdown("yAxis", plotInputs),
+
+                    createLabel("Separate By"),
+                    createDropdown("group", plotInputs)
+                ]
+            }
+        );
+
+        for (var i=1; i<inputData.length; i++){
+            items.push(
+                {
+                    group: "Series " + (i+1),
+                    items: [
+                        createLabel("X-Axis"),
+                        createDropdown(`xAxis${i+1}`, plotInputs),
+
+                        createLabel("Y-Axis"),
+                        createDropdown(`yAxis${i+1}`, plotInputs),
+
+                        createLabel("Separate By"),
+                        createDropdown(`group${i+1}`, plotInputs),
+                    ]
+                }
+            );
+        }
+
+
+        var div = document.createElement("div");
+        div.style.height = "100%";
+        div.style.zIndex = 1;
+        parent.appendChild(div);
+
+
+        var form = new javaxt.dhtml.Form(div, {
+            style: config.style.form,
+            items: items
+        });
+
+        form.onChange = function(input, value){
+            var key = input.name;
+            chartConfig[key] = value;
+            createBarPreview();
+        };
+    };
+
+
+  //**************************************************************************
+  //** createLabel
+  //**************************************************************************
+    var createLabel = function(label){
+        var row = document.createElement("div");
+        row.className = "form-label";
+        row.innerText = label + ":";
+        return {
+            name: "",
+            label: "",
+            type: {
+                getValue: function(){},
+                setValue: function(){},
+                el: row
+            }
+        };
+    };
+
+
+  //**************************************************************************
+  //** createDropdown
+  //**************************************************************************
+    var createDropdown = function(inputType,input){
+        input[inputType] = new javaxt.dhtml.ComboBox(document.createElement("div"), {
+            style: config.style.combobox,
+            readOnly: true
+        });
+        return {
+            name: inputType,
+            label: "",
+            type: input[inputType]
+        };
+    };
+
+
+  //**************************************************************************
+  //** initializeChartSpace
+  //**************************************************************************
+    var initializeChartSpace = function(){
+        var width = previewArea.offsetWidth;
+        var height = previewArea.offsetHeight;
+
+        svg = d3.select(previewArea).append("svg");
+        svg.attr("width", width);
+        svg.attr("height", height);
+
+
+        barChart = new bluewave.charts.BarChart(svg, {});
+        barChart.onClick = function(bar, barID){
+            // chartConfig.barColor = d3.select(bar).attr("fill");
+            editBar(barID);
+
+        };
+    };
+
+
+  //**************************************************************************
+  //** createBarPreview
+  //**************************************************************************
+    var createBarPreview = function(){
+        onRender(previewArea, function(){
+            barChart.update(chartConfig, inputData);
+        });
+    };
+
+
+  //**************************************************************************
+  //** editStyle
+  //**************************************************************************
+    var editChart = function(){
+
+      //Update form
+        var styleEditor = getStyleEditor(config);
+        var body = styleEditor.getBody();
+        body.innerHTML = "";
+
+
+
+      //Create layout dropdown
+        var chartLayout = new javaxt.dhtml.ComboBox(
+            document.createElement("div"),
+            {
+                style: config.style.combobox,
+                readOnly: true
+            }
+        );
+        chartLayout.add("Vertical", "vertical");
+        chartLayout.add("Horizontal", "horizontal");
+        chartLayout.setValue("vertical");
+
+        //Create chart type dropdown
+        var barChartType = new javaxt.dhtml.ComboBox(
+            document.createElement("div"),
+            {
+                style: config.style.combobox,
+                readOnly: true
+            }
+        );
+        barChartType.add("Bar Chart", "barchart");
+        barChartType.add("Histogram", "histogram");
+        barChartType.setValue("barchart");
+
+
+
+        var form = new javaxt.dhtml.Form(body, {
+            style: config.style.form,
+            items: [
+                {
+                    group: "General",
+                    items: [
+
+                        {
+                            name: "barcharttype",
+                            label: "Chart Type",
+                            type: barChartType
+                        },
+                        {
+                            name: "layout",
+                            label: "Chart Layout",
+                            type: chartLayout
+                        },
+                        {
+                            name: "legend",
+                            label: "Display Legend",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
+                            ]
+                        }
+                    ]
+                },
+
+                {
+                    group: "X-Axis",
+                    items: [
+                        {
+                            name: "xLabel",
+                            label: "Show Labels",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "xGrid",
+                            label: "Show Grid Lines",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
+                            ]
+                        }
+                    ]
+                },
+
+                {
+                    group: "Y-Axis",
+                    items: [
+                        {
+                            name: "yLabel",
+                            label: "Show Labels",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "yGrid",
+                            label: "Show Grid Lines",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
+                            ]
+                        }
+                    ]
+                }
+
+            ]
+        });
+
+
+        var barTypeField = form.findField("barcharttype");
+        var barType = chartConfig.barType;
+        barTypeField.setValue(barType==="histogram" ? "histogram" : "barchart");
+
+        //Set form value for bar layout
+        var layoutField = form.findField("layout");
+        var layout = chartConfig.barLayout;
+        layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
+
+       //Set initial value for X-gridline
+        var xGridField = form.findField("xGrid");
+        var xGrid = chartConfig.xGrid;
+        xGridField.setValue(xGrid===true ? true : false);
+
+       //Set initial value for Y-gridline
+        var yGridField = form.findField("yGrid");
+        var yGrid = chartConfig.yGrid;
+        yGridField.setValue(yGrid===true ? true : false);
+
+        //Set intial value for legend display
+        var legendField = form.findField("legend");
+        var legend = chartConfig.barLegend;
+        legendField.setValue(legend===true ? true : false);
+
+        //Set intial value for xLabel
+        var xLabelField = form.findField("xLabel");
+        var xLabel = chartConfig.xLabel;
+        xLabelField.setValue(xLabel===true ? true : false);
+
+        //Set intial value for yLabel
+        var yLabelField = form.findField("yLabel");
+        var yLabel = chartConfig.yLabel;
+        yLabelField.setValue(yLabel===true ? true : false);
+
+
+      //Process onChange events
+        form.onChange = function(){
+            var settings = form.getData();
+
+
+            if (settings.xGrid==="true") settings.xGrid = true;
+            else settings.xGrid = false;
+
+            if (settings.yGrid==="true") settings.yGrid = true;
+            else settings.yGrid = false;
+
+            if (settings.legend==="true") settings.legend = true;
+            else settings.legend = false;
+
+            if (settings.xLabel==="true") settings.xLabel = true;
+            else settings.xLabel = false;
+
+            if (settings.yLabel==="true") settings.yLabel = true;
+            else settings.yLabel = false;
+
+
+            chartConfig.barType = settings.barcharttype;
+            chartConfig.barLayout = settings.layout;
+            chartConfig.barLegend = settings.legend;
+            chartConfig.xGrid = settings.xGrid;
+            chartConfig.yGrid = settings.yGrid;
+            chartConfig.xLabel = settings.xLabel;
+            chartConfig.yLabel = settings.yLabel;
+            createBarPreview();
+        };
+
+
+      //Render the styleEditor popup and resize the form
+        styleEditor.showAt(108,57);
+        form.resize();
+    };
+
+
+  //**************************************************************************
+  //** editBar
+  //**************************************************************************
+    var editBar = function(datasetID){
+
+      //Update form
+        var styleEditor = getStyleEditor(config);
+        var body = styleEditor.getBody();
+        body.innerHTML = "";
+
+
+      //Add style options
+        var form = new javaxt.dhtml.Form(body, {
+            style: config.style.form,
+            items: [
+                {
+                    group: "Fill Style",
+                    items: [
+                        {
+                            name: "barColor",
+                            label: "Color",
+                            type: new javaxt.dhtml.ComboBox(
+                                document.createElement("div"),
+                                {
+                                    style: config.style.combobox
+                                }
+                            )
+                        },
+                        {
+                            name: "fillOpacity",
+                            label: "Opacity",
+                            type: "text"
+                        }
+                    ]
+                },
+
+                {
+                    group: "Histogram Options",
+                    items: [
+
+                        {
+                            name: "binWidth",
+                            label: "Bin Width",
+                            type: "text"
+                        }
+                    ]
+                }
+            ]
+        });
+
+
+        createColorOptions("barColor", form);
+
+        createSlider("fillOpacity", form, "%");
+        var fillOpacity = chartConfig.fillOpacity;
+        if (isNaN(fillOpacity)) fillOpacity = 1;
+        chartConfig.fillOpacity = fillOpacity;
+        form.findField("fillOpacity").setValue(fillOpacity*100);
+
+        createSlider("binWidth", form, "", 1, 100, 1);
+        var binWidth = chartConfig.binWidth;
+        if (isNaN(binWidth)) binWidth = 10;
+        chartConfig.binWidth = binWidth;
+        form.findField("binWidth").setValue(binWidth);
+
+
+        if(datasetID !== null && datasetID !== undefined){
+
+            let n = `${datasetID}`;
+
+            if( !chartConfig["barColor" + n] ) chartConfig["barColor" + n] = "#6699CC";
+            if( isNaN(chartConfig["fillOpacity" + n]) ) chartConfig["fillOpacity" + n] = 1;
+            if( isNaN(chartConfig["binWidth" + n]) ) chartConfig["binWidth" + n] = 10;
+
+            form.findField("barColor").setValue(chartConfig["barColor" + n]);
+            form.findField("fillOpacity").setValue(chartConfig["fillOpacity" + n]*100);
+            form.findField("binWidth").setValue(chartConfig["binWidth" + n]);
+
+            form.onChange = function(){
+                let settings = form.getData();
+                chartConfig["barColor" + n] = settings.barColor;
+                chartConfig["fillOpacity" + n] = settings.fillOpacity;
+                chartConfig["binWidth" + n] = settings.binWidth;
+
+                createBarPreview();
+            };
+
+        }
+
+
+
+      //Render the styleEditor popup and resize the form
+        styleEditor.showAt(108,57);
+        form.resize();
+    };
+
+
+
+
+
+  //**************************************************************************
+  //** createColorOptions
+  //**************************************************************************
+  /** Creates a custom form input using a combobox
+   */
+    var createColorOptions = function(inputName, form){
+        bluewave.utils.createColorOptions(inputName, form, function(colorField){
+            if (!colorPicker) colorPicker = bluewave.utils.createColorPickerCallout(config);
+            var rect = javaxt.dhtml.utils.getRect(colorField.row);
+            var x = rect.x + rect.width + 15;
+            var y = rect.y + (rect.height/2);
+            colorPicker.showAt(x, y, "right", "middle");
+            colorPicker.setColor(colorField.getValue());
+            colorPicker.onChange = function(color){
+                colorField.setValue(color);
+            };
+        });
+    };
+
+
+  //**************************************************************************
+  //** Utils
+  //**************************************************************************
+    var onRender = javaxt.dhtml.utils.onRender;
+    var createTable = javaxt.dhtml.utils.createTable;
+    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var createSlider = bluewave.utils.createSlider;
+    var addTextEditor = bluewave.utils.addTextEditor;
+    var getStyleEditor = bluewave.charts.utils.getStyleEditor;
+
+    init();
+};
