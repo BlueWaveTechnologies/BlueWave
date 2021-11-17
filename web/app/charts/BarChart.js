@@ -281,7 +281,7 @@ console.log(sumData)
                     .attr("height", function (d) { 
                         return (layout === "vertical") ? height - frequencyAxis(d.length) : (x(d.x1) - x(d.x0))/(width/height) - 0.5; 
                     })
-                    .attr("fillOpacity", fillOpacity)
+                    .attr("opacity", fillOpacity)
                     .attr("barID", i);
 
 
@@ -342,7 +342,7 @@ console.log(sumData)
                         .attr("width", function (d) {
                             return getWidth(d);
                         })
-                        .attr("fillOpacity", fillOpacity)
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -378,7 +378,7 @@ console.log(sumData)
                         .attr("width", function (d) {
                             return x.bandwidth ? x.bandwidth() : x(d["value"]);
                         })
-                        .attr("fillOpacity", fillOpacity)
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -411,7 +411,7 @@ console.log(sumData)
                         .attr("width", function (d) {
                             return width/sumData.length-5;
                         })
-                        .attr("fillOpacity", fillOpacity)
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -447,7 +447,7 @@ console.log(sumData)
                         .attr("width", function (d) {
                             return x(d["value"]);
                         })
-                        .attr("fillOpacity", fillOpacity)
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
