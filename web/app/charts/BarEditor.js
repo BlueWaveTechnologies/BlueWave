@@ -167,36 +167,19 @@ bluewave.charts.BarEditor = function(parent, config) {
   //**************************************************************************
   //** createOptions
   //**************************************************************************
-  /** Initializes Options for Dropdowns.
-   */
     var createOptions = function() {
-        var data = inputData[0];
-
-        let dataOptions = Object.keys(data[0]);
-
-        plotInputs.group.add("", "");
-        dataOptions.forEach((val)=>{
-            plotInputs.xAxis.add(val,val);
-            plotInputs.yAxis.add(val,val);
-            plotInputs.group.add(val, val);
-        });
-        plotInputs.xAxis.setValue(chartConfig.xAxis, true);
-        plotInputs.yAxis.setValue(chartConfig.yAxis, true);
-        if (chartConfig.group){
-            plotInputs.group.setValue(chartConfig.group, true);
-        }
-
-        //Add dropdown values for each data set
-        for (let i=1; i<inputData.length; i++){
-            let xAxisN = `xAxis${i+1}`;
-            let yAxisN = `yAxis${i+1}`;
-            let groupN = `group${i+1}`;
-            // let labelN = `label${i+1}`;
+        
+        for (let i=0; i<inputData.length; i++){
+            var n = i>0 ? (i+1) : "";
+            let xAxisN = `xAxis${n}`;
+            let yAxisN = `yAxis${n}`;
+            let groupN = `group${n}`;
+            // let labelN = `label${n}`;
 
             plotInputs[groupN].add("", "");
 
-            let multiLineDataOptions = Object.keys(inputData[i][0]);
-            multiLineDataOptions.forEach((val)=>{
+            let dataOptions = Object.keys(inputData[i][0]);
+            dataOptions.forEach((val)=>{
                 plotInputs[xAxisN].add(val, val);
                 plotInputs[yAxisN].add(val, val);
                 plotInputs[groupN].add(val, val);
@@ -212,7 +195,6 @@ bluewave.charts.BarEditor = function(parent, config) {
         }
 
         createBarPreview();
-
     };
 
 
@@ -222,35 +204,20 @@ bluewave.charts.BarEditor = function(parent, config) {
     var createForm = function(parent){
 
         var items = [];
-        items.push(
-            {
-                group: "Series 1",
-                items: [
-                    createLabel("X-Axis"),
-                    createDropdown("xAxis", plotInputs),
-
-                    createLabel("Y-Axis"),
-                    createDropdown("yAxis", plotInputs),
-
-                    createLabel("Separate By"),
-                    createDropdown("group", plotInputs)
-                ]
-            }
-        );
-
-        for (var i=1; i<inputData.length; i++){
+        for (var i=0; i<inputData.length; i++){
+            var n = i>0 ? (i+1) : "";
             items.push(
                 {
-                    group: "Series " + (i+1),
+                    group: "Series " + (i>0 ? n : 1),
                     items: [
                         createLabel("X-Axis"),
-                        createDropdown(`xAxis${i+1}`, plotInputs),
+                        createDropdown(`xAxis${n}`, plotInputs),
 
                         createLabel("Y-Axis"),
-                        createDropdown(`yAxis${i+1}`, plotInputs),
+                        createDropdown(`yAxis${n}`, plotInputs),
 
                         createLabel("Separate By"),
-                        createDropdown(`group${i+1}`, plotInputs),
+                        createDropdown(`group${n}`, plotInputs)
                     ]
                 }
             );
@@ -366,19 +333,6 @@ bluewave.charts.BarEditor = function(parent, config) {
         chartLayout.add("Horizontal", "horizontal");
         chartLayout.setValue("vertical");
 
-        //Create chart type dropdown
-        var barChartType = new javaxt.dhtml.ComboBox(
-            document.createElement("div"),
-            {
-                style: config.style.combobox,
-                readOnly: true
-            }
-        );
-        barChartType.add("Bar Chart", "barchart");
-        barChartType.add("Histogram", "histogram");
-        barChartType.setValue("barchart");
-
-
 
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
@@ -386,12 +340,6 @@ bluewave.charts.BarEditor = function(parent, config) {
                 {
                     group: "General",
                     items: [
-
-                        {
-                            name: "barcharttype",
-                            label: "Chart Type",
-                            type: barChartType
-                        },
                         {
                             name: "layout",
                             label: "Chart Layout",
@@ -476,11 +424,8 @@ bluewave.charts.BarEditor = function(parent, config) {
         });
 
 
-        var barTypeField = form.findField("barcharttype");
-        var barType = chartConfig.barType;
-        barTypeField.setValue(barType==="histogram" ? "histogram" : "barchart");
 
-        //Set form value for bar layout
+      //Set form value for bar layout
         var layoutField = form.findField("layout");
         var layout = chartConfig.barLayout;
         layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
@@ -532,7 +477,6 @@ bluewave.charts.BarEditor = function(parent, config) {
             else settings.yLabel = false;
 
 
-            chartConfig.barType = settings.barcharttype;
             chartConfig.barLayout = settings.layout;
             chartConfig.barLegend = settings.legend;
             chartConfig.xGrid = settings.xGrid;
@@ -583,18 +527,6 @@ bluewave.charts.BarEditor = function(parent, config) {
                             type: "text"
                         }
                     ]
-                },
-
-                {
-                    group: "Histogram Options",
-                    items: [
-
-                        {
-                            name: "binWidth",
-                            label: "Bin Width",
-                            type: "text"
-                        }
-                    ]
                 }
             ]
         });
@@ -608,11 +540,6 @@ bluewave.charts.BarEditor = function(parent, config) {
         chartConfig.fillOpacity = fillOpacity;
         form.findField("fillOpacity").setValue(fillOpacity*100);
 
-        createSlider("binWidth", form, "", 1, 100, 1);
-        var binWidth = chartConfig.binWidth;
-        if (isNaN(binWidth)) binWidth = 10;
-        chartConfig.binWidth = binWidth;
-        form.findField("binWidth").setValue(binWidth);
 
 
         if(datasetID !== null && datasetID !== undefined){
@@ -621,32 +548,25 @@ bluewave.charts.BarEditor = function(parent, config) {
 
             if( !chartConfig["barColor" + n] ) chartConfig["barColor" + n] = "#6699CC";
             if( isNaN(chartConfig["fillOpacity" + n]) ) chartConfig["fillOpacity" + n] = 1;
-            if( isNaN(chartConfig["binWidth" + n]) ) chartConfig["binWidth" + n] = 10;
+
 
             form.findField("barColor").setValue(chartConfig["barColor" + n]);
             form.findField("fillOpacity").setValue(chartConfig["fillOpacity" + n]*100);
-            form.findField("binWidth").setValue(chartConfig["binWidth" + n]);
+
 
             form.onChange = function(){
                 let settings = form.getData();
                 chartConfig["barColor" + n] = settings.barColor;
                 chartConfig["fillOpacity" + n] = settings.fillOpacity;
-                chartConfig["binWidth" + n] = settings.binWidth;
-
                 createBarPreview();
             };
-
         }
-
 
 
       //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);
         form.resize();
     };
-
-
-
 
 
   //**************************************************************************
