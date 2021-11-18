@@ -210,6 +210,9 @@ public class Imports {
                 }                
 
                 if (rowID>0) writer.write("\r\n");
+                name = replaceLineBreaks(name);
+                if (name.contains(",")) name = "\""+name+"\""; 
+                address = replaceLineBreaks(address);
                 if (address.contains(",")) address = "\""+address+"\"";                  
                 writer.write(name+","+fei+","+address+","+lat+","+lon);            
                 rowID++;
@@ -218,7 +221,7 @@ public class Imports {
         }                        
     }
     
-    
+
   //**************************************************************************
   //** geocodePortsOfEntry
   //**************************************************************************
@@ -325,6 +328,7 @@ public class Imports {
             }                
 
             if (rowID>0) writer.write("\r\n");
+            address = replaceLineBreaks(address);
             if (address.contains(",")) address = "\""+address+"\"";                  
             writer.write(id+","+address+","+lat+","+lon);            
             rowID++;
@@ -332,5 +336,20 @@ public class Imports {
         writer.close();
 
         
-    }      
+    }    
+    
+    
+  //**************************************************************************
+  //** replaceLineBreaks
+  //**************************************************************************
+    private String replaceLineBreaks(String name){
+        name = name.replace("\r\n", " ");
+        name = name.replace("\r", " ");
+        name = name.replace("\n", " ");
+        name = name.trim();
+        while (name.contains("  ")){
+            name = name.replace("  ", " ");
+        }
+        return name;
+    }    
 }
