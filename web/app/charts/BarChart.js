@@ -86,26 +86,32 @@ bluewave.charts.BarChart = function(parent, config) {
             );
 
 
-        var xKey = chartConfig.xAxis;
-        var yKey = chartConfig.yAxis;
-        var group = chartConfig.group;
+        var xKey;
+        var yKey;
         let xKey2;
         let yKey2;
-
+        var barType = chartConfig.barType;
+        if (barType === "histogram"){
+            xKey = chartConfig.values;
+            yKey = xKey;
+        }
+        else{
+            xKey = chartConfig.xAxis;
+            yKey = chartConfig.yAxis;
+        }
         if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
+
 
         if (chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
             xKey2 = chartConfig.xAxis2;
             yKey2 = chartConfig.yAxis2;
         }
 
-
         var data1 = data[0];
         var data2 = data[1];
         var dataSets = data;
         // data = data1;
-        var dataLength = data.length;
-        var keys = data1.columns.slice(0)
+
 
         var mergedData = d3.merge(dataSets);
 
@@ -120,15 +126,13 @@ bluewave.charts.BarChart = function(parent, config) {
         //Get sum of tallest bar
         //TODO: axis being set by first dataset - set with largest data
 
-// maxData = d3.max(mergedData, function (g) {
-//     return parseFloat(g[yKey]);
-// });
 
             // if(data2!==null && data2!==undefined && xKey2 && yKey2){
             //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
             // }
 
         //Reformat data if "group by" is selected
+        var group = chartConfig.group;
         if(group !== null && group !== undefined && group!==""){
 
             var groupData = d3.nest()
@@ -145,9 +149,8 @@ bluewave.charts.BarChart = function(parent, config) {
 
             let tempDataSets = [];
             groupData.forEach(function(g){
-
-                tempDataSets.push(g.values)
-            })
+                tempDataSets.push(g.values);
+            });
 
             dataSets = tempDataSets;
 
@@ -159,9 +162,8 @@ bluewave.charts.BarChart = function(parent, config) {
             x0.domain(subgroups);
         }
 
-// let m = d3.max(data, function(d) { return parseFloat(d[yKey]);} );
 
-
+        //Get x and y values for each data set and format object for rendering
         var arr = [];
         for (let i=0; i<dataSets.length; i++){
 
@@ -191,26 +193,37 @@ bluewave.charts.BarChart = function(parent, config) {
         }
 
 
-  
-// sumData = (d => keys.map(key => ({key, value: d[key]})))
+        //Flip axes if layout is horizontal
+        var leftLabel, bottomLabel;
 
-
-
-        //Set intitial value for layout to vertical
-        if(!chartConfig.barLayout) chartConfig.barLayout = "vertical";
+        //Set intitial value for layout to vertical and barType to barchart
+        if (!chartConfig.barLayout) chartConfig.barLayout = "vertical";
         var layout = chartConfig.barLayout;
 
-        //Flip axis if layout is horizontal
-        let leftLabel, bottomLabel;
-        if(layout === "vertical"){
-            displayAxis("key", "value", maxData);
-            leftLabel = chartConfig.yAxis;
-            bottomLabel = chartConfig.xAxis;
-        }else if(layout === "horizontal"){
-            displayAxis("value", "key", maxData);
-            leftLabel = chartConfig.xAxis;
-            bottomLabel = chartConfig.yAxis;
+        if (barType === "histogram") {
+            if (layout === "vertical") {
+                displayAxis("key", "key", maxData);
+                leftLabel = "Frequency";
+                bottomLabel = chartConfig.xAxis;
+            } else if (layout === "horizontal") {
+                displayAxis("key", "key", maxData);
+                leftLabel = chartConfig.xAxis;
+                bottomLabel = "Frequency";
+            }
         }
+        else{
+            if (layout === "vertical") {
+                displayAxis("key", "value", maxData);
+                leftLabel = chartConfig.yAxis;
+                bottomLabel = chartConfig.xAxis;
+            } else if (layout === "horizontal") {
+                displayAxis("value", "key", maxData);
+                leftLabel = chartConfig.xAxis;
+                bottomLabel = chartConfig.yAxis;
+            }
+        }
+
+
 
         width = plotWidth;
         height = plotHeight;
@@ -218,6 +231,61 @@ bluewave.charts.BarChart = function(parent, config) {
         for (let i=0; i<dataSets.length; i++){
             var sumData = arr[i];
 
+            let fillOpacity = parseFloat(chartConfig["fillOpacity" + i]);
+            if (isNaN(fillOpacity) || fillOpacity<0 || fillOpacity>1) fillOpacity = 1;
+
+
+            if (barType === "histogram"){
+
+
+                let binWidth = parseInt(chartConfig.binWidth);
+                if (isNaN(binWidth) || binWidth<1) binWidth = 10;
+
+                var histogram = d3.histogram()
+                    .value(function(d) { return d.key; })
+                    .domain(x.domain())
+                    .thresholds(x.ticks(binWidth));
+
+                    // .thresholds(x.ticks(100))
+                    //TODO: find general solution for time and ordinal scale
+                    // .thresholds(x.domain()) //Not sure why this doesn't work for dates/strings
+
+                 var bins = histogram(sumData);
+
+                 var frequencyMax = d3.max(bins, d => d.length)
+
+                 var frequencyAxis = d3.scaleLinear()
+                    .range(layout === "vertical" ? [height, 0] : [0, width]);
+                    frequencyAxis.domain([0, frequencyMax]);
+
+                if (layout === "vertical") displayHistogramAxis(x, frequencyAxis);
+                else if(layout === "horizontal") displayHistogramAxis(frequencyAxis, y);
+
+
+                plotArea.selectAll("rect")
+                    .data(bins)
+                    .enter()
+                    .append("rect")
+
+                    .attr("x", function (d) {
+                        return (layout === "vertical") ? x(d.x0) : 0;
+                    })
+                    .attr("y", function (d) {
+                        return (layout === "vertical") ? frequencyAxis(d.length) : height - x(d.x1)/(width/height) //This is a dumb way of doing this probably
+                        // y(d.key) - height/sumData.length / 2;
+                    })
+                    .attr("width", function (d) {
+                        return (layout === "vertical") ? (x(d.x1) - x(d.x0) - 0.5) : frequencyAxis(d.length);
+                    })
+                    .attr("height", function (d) {
+                        return (layout === "vertical") ? height - frequencyAxis(d.length) : (x(d.x1) - x(d.x0))/(width/height) - 0.5;
+                    })
+                    .attr("opacity", fillOpacity)
+                    .attr("barID", i);
+
+
+            }
+            else { //regular bar chart
 
 
             let keyType = typeOfAxisValue(sumData[0].key);
@@ -225,7 +293,6 @@ bluewave.charts.BarChart = function(parent, config) {
 
             var getX = function (d) {
 
-                // if (layout==="vertical")
                 if (keyType === "date") {
                     return x(new Date(d.key));
                 } else {
@@ -239,6 +306,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 return y(v);
             };
 
+
             if (y.bandwidth || x.bandwidth) {
                 if (chartConfig.barLayout === "vertical"){
 
@@ -249,11 +317,6 @@ bluewave.charts.BarChart = function(parent, config) {
                             return x.bandwidth ? x.bandwidth() : getX(d);
                         }
                     };
-
-                    var getHeight = function(d){
-
-
-                    }
 
 
                     plotArea
@@ -277,6 +340,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return getWidth(d);
                         })
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -294,15 +358,11 @@ bluewave.charts.BarChart = function(parent, config) {
                             return 0;
                         })
                         .attr("y", function (d) {
-                            // if (keyType === "date") {
-                            //     return y(new Date(d.key));
-                            // } else {
-                            //     return y(d.key);
-                            // }
+
                             var w = y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["key"]);
                             var left = y.bandwidth ? y(d["key"]) : 0;
                             return group ? left+(w*i): y(d["key"]);
- 
+
                         })
                         .attr("height", function (d) {
 
@@ -311,11 +371,12 @@ bluewave.charts.BarChart = function(parent, config) {
                             }else{
                                 return y.bandwidth ? y.bandwidth() : height - y(d["value"]);
                             }
-                            
+
                         })
                         .attr("width", function (d) {
                             return x.bandwidth ? x.bandwidth() : x(d["value"]);
                         })
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -348,6 +409,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return width/sumData.length-5;
                         })
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -383,6 +445,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         .attr("width", function (d) {
                             return x(d["value"]);
                         })
+                        .attr("opacity", fillOpacity)
                         .attr("barID", function(d, n, j){
                             // i is external loop incrementor for multiple data sets and grouping
                             // n is for single data set where all bars are rendered on enter()
@@ -391,7 +454,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         // .attr("fill", getBarColor(i));
                 }
             }
-
+        }
         }
 
         //Set color defaults
@@ -409,7 +472,7 @@ bluewave.charts.BarChart = function(parent, config) {
         var bars = plotArea.selectAll("rect");
 
         bars.each(function (d, i) {
-            
+
             //i is a d3 internal callback incrementer
             let bar = d3.select(this);
             let barID = parseInt(d3.select(this).attr("barID"));
@@ -531,7 +594,32 @@ bluewave.charts.BarChart = function(parent, config) {
         xAxis = plotArea
             .append("g")
             .attr("transform", "translate(0," + axisHeight + ")")
-            .call(d3.axisBottom(x))
+            .call(d3.axisBottom(x));
+
+            xAxis
+            .selectAll("text")
+            .attr("transform", "translate(-10,0)rotate(-45)")
+            .style("text-anchor", "end");
+
+        yAxis = plotArea
+            .append("g")
+            .call(d3.axisLeft(y));
+    };
+
+  //**************************************************************************
+  //** displayHistogramAxis
+  //**************************************************************************
+    var displayHistogramAxis = function (x, y) {
+
+        if (xAxis) xAxis.selectAll("*").remove();
+        if (yAxis) yAxis.selectAll("*").remove();
+
+        xAxis = plotArea
+            .append("g")
+            .attr("transform", "translate(0," + axisHeight + ")")
+            .call(d3.axisBottom(x));
+
+            xAxis
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
@@ -613,7 +701,7 @@ bluewave.charts.BarChart = function(parent, config) {
                     val[key] = new Date(val[key]);
                     return val;
                 });
-// console.log("chartdata", timeRange, chartData)
+
                 scale = d3
                     .scaleTime()
                     .domain(timeRange)
@@ -649,34 +737,13 @@ bluewave.charts.BarChart = function(parent, config) {
     };
 
 
-  //**************************************************************************
-  //** mergeToAxis
-  //**************************************************************************
-    const mergeToAxis = (data1,data2,xKey1,xKey2,newXKey,yKey1,yKey2,newYKey)=>{
-        let mergedArray = [];
-        data1.forEach(val=>{
-          let updatedVal = {...val,[newXKey]:val[xKey1],[newYKey]:val[yKey1]};
-          mergedArray.push(updatedVal);
-        });
-        if(data2===null || data2 === undefined){
-          return mergedArray;
-        }
-        data2.forEach(val=>{
-          let updatedVal = {...val,[newXKey]:val[xKey2],[newYKey]:val[yKey2]}
-          mergedArray.push(updatedVal);
-        });
-        return mergedArray;
-    };
-
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-    var isArray = javaxt.dhtml.utils.isArray;
     var initChart = bluewave.utils.initChart;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
     var drawGridlines = bluewave.utils.drawGridlines;
     var drawLabels = bluewave.utils.drawLabels;
 

@@ -16,8 +16,8 @@ bluewave.Explorer = function(parent, config) {
     var button = {};
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor,
-    supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager,
+    var dbView, lineEditor, barEditor, sankeyEditor, layoutEditor, nameEditor,
+    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager,
     fileViewer, docComparer; //popup dialogs
     var windows = [];
     var zoom = 0;
@@ -969,8 +969,9 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("pieChart", "fas fa-chart-pie", "Pie Chart", menubar);
         createMenuButton("barChart", "fas fa-chart-bar", "Bar Chart", menubar);
         createMenuButton("lineChart", "fas fa-chart-line", "Line Chart", menubar);
+        createMenuButton("histogramChart", "fas fa-chart-area", "Histogram Chart", menubar);
         createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
-        createMenuButton("mapChart", "fas fa-map-marked-alt", "Map", menubar);
+        createMenuButton("mapChart", "fas fa-globe-americas", "Map", menubar);
         //createMenuButton("treemapChart", "fas fa-border-all", "Treemap Chart", menubar);
         //createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
@@ -1400,9 +1401,69 @@ bluewave.Explorer = function(parent, config) {
             case "scatterChart" :
 
                 node.ondblclick = function(){
-                    editScatter(this);
+
+                    if (!scatterEditor){
+                        scatterEditor = createNodeEditor({
+                            title: "Edit Scatter Chart",
+                            width: 1060,
+                            height: 600,
+                            editor: bluewave.charts.ScatterEditor
+                        });
+                    }
+
+                    editChart(this, scatterEditor);
                 };
                 break;
+            case "lineChart" :
+
+                node.ondblclick = function(){
+
+                    if (!lineEditor){
+                        lineEditor = createNodeEditor({
+                            title: "Edit Line Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.LineEditor
+                        });
+                    }
+
+                    editChart(this, lineEditor);
+                };
+                break;
+            case "barChart" :
+
+                node.ondblclick = function(){
+
+                    if (!barEditor){
+                        barEditor = createNodeEditor({
+                            title: "Edit Bar Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.BarEditor
+                        });
+                    }
+
+                    editChart(this, barEditor);
+                };
+                break;
+
+            case "histogramChart":
+                node.ondblclick = function(){
+                    if (!histogramEditor){
+                        histogramEditor = createNodeEditor({
+                            title: "Edit Histogram",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.HistogramEditor
+                        });
+                    }
+                    editChart(this, histogramEditor);
+                };
+                break;
+
             case "pieChart" :
 
                 node.ondblclick = function(){
@@ -1461,21 +1522,7 @@ bluewave.Explorer = function(parent, config) {
 
             default:
 
-                node.ondblclick = function(){
-                    var hasData = false;
-                    var inputs = this.inputs;
-                    for (var key in inputs) {
-                        if (inputs.hasOwnProperty(key)){
-                            if (inputs[key].csv){
-                                hasData = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (hasData){
-                        editChart(this);
-                    }
-                };
+                break;
         }
     };
 
@@ -1632,17 +1679,9 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** editChart
   //**************************************************************************
-    var editChart = function(node){
-        if (!chartEditor){
-            chartEditor = createNodeEditor({
-                title: "Edit Chart",
-                width: 1060,
-                height: 600,
-                resizable: true,
-                editor: bluewave.ChartEditor
-            });
-        }
-        chartEditor.getNode = function(){
+    var editChart = function(node, editor){
+
+        editor.getNode = function(){
             return node;
         };
 
@@ -1661,9 +1700,9 @@ bluewave.Explorer = function(parent, config) {
         var chartConfig = {};
         merge(chartConfig, node.config);
 
-
-        chartEditor.update(node.type, chartConfig, data, node);
-        chartEditor.show();
+        chartConfig.chartType = node.type; //is this used for anything?
+        editor.update(chartConfig, data);
+        editor.show();
     };
 
 
@@ -1731,42 +1770,6 @@ bluewave.Explorer = function(parent, config) {
 
       //Show sankeyEditor when we are in the editor view
         sankeyEditor.show();
-    };
-
-
-  //**************************************************************************
-  //** editScatter
-  //**************************************************************************
-    var editScatter = function(node){
-        if (!scatterEditor){
-            scatterEditor = createNodeEditor({
-                title: "Edit Scatter Chart",
-                width: 1060,
-                height: 600,
-                editor: bluewave.charts.ScatterEditor
-            });
-        }
-        scatterEditor.getNode = function(){
-            return node;
-        };
-
-
-      //Get config
-        var chartConfig = {};
-        merge(chartConfig, node.config);
-
-
-      //Get data
-        var data = [];
-        for (var key in node.inputs) {
-            if (node.inputs.hasOwnProperty(key)){
-                var csv = node.inputs[key].csv;
-                data.push(csv);
-            }
-        }
-
-        scatterEditor.update(chartConfig, data);
-        scatterEditor.show();
     };
 
 
