@@ -1931,7 +1931,8 @@ bluewave.Explorer = function(parent, config) {
             });
             docComparer.getConfig = function(){
                 return {
-                    chartTitle: title
+                    chartTitle: title,
+                    similarities: docComparer.getSimilarities()
                 };
             };
             docComparer.getChart = function(){
@@ -1959,7 +1960,7 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update and show docComparer
-        docComparer.update(inputs, chartConfig);
+        docComparer.update(inputs, chartConfig.similarities);
         docComparer.show();
     };
 
@@ -2031,9 +2032,11 @@ bluewave.Explorer = function(parent, config) {
                                 if (el.show) el.show();
                                 setTimeout(function(){
                                     createPreview(el, function(canvas){
-                                        node.preview = canvas.toDataURL("image/png");
-                                        createThumbnail(node, canvas);
-                                        win.close();
+                                        if (canvas && canvas.toDataURL){
+                                            node.preview = canvas.toDataURL("image/png");
+                                            createThumbnail(node, canvas);
+                                        }
+                                        win.close();                                        
                                         waitmask.hide();
                                     }, this);
                                 },800);
