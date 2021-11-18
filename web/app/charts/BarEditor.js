@@ -17,15 +17,9 @@ bluewave.charts.BarEditor = function(parent, config) {
     var previewArea;
     var barChart;
     var optionsDiv;
-    var plotInputs = {
-        xAxis:null,
-        yAxis:null,
-        xAxis2:null,
-        yAxis2:null,
-        group:null
-    };
+    var plotInputs = {};
     var chartConfig = {};
-    var styleEditor, colorPicker;
+    var colorPicker;
 
 
   //**************************************************************************
@@ -134,6 +128,7 @@ bluewave.charts.BarEditor = function(parent, config) {
     this.clear = function(){
         inputData = [];
         chartConfig = {};
+        plotInputs = {};
         panel.title.innerHTML = "Untitled";
         optionsDiv.innerHTML = "";
 
@@ -168,7 +163,7 @@ bluewave.charts.BarEditor = function(parent, config) {
   //** createOptions
   //**************************************************************************
     var createOptions = function() {
-        
+
         for (let i=0; i<inputData.length; i++){
             var n = i>0 ? (i+1) : "";
             let xAxisN = `xAxis${n}`;
