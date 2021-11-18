@@ -42,7 +42,7 @@
         <dependency>
           <groupId>javaxt</groupId>
           <artifactId>javaxt-server</artifactId>
-          <version>4.1.0</version>
+          <version>4.1.1</version>
         </dependency>
         <dependency>
           <groupId>javaxt</groupId>
@@ -116,6 +116,14 @@
             <version>0.1.55</version>
         </dependency>
 
+
+        <!-- Excel Streaming Reader -->
+        <dependency>
+            <groupId>com.monitorjbl</groupId>
+            <artifactId>xlsx-streamer</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        
     </dependencies>
 
 
