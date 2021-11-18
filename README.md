@@ -60,19 +60,22 @@ file should include connection information to the neo4j database
         "localLog" : "temp/graph/logs"
     },
 
-    "ldap" : {
-        "host" : "localhost:389",
-        "domain" : "my.domain.com"
-    },
-
     "webserver" : {
         "webDir" : "web",
         "logDir" : "",
         "jobDir" : "temp",
+        "scriptDir" : "scripts",
         "keystore" : "",
         "keypass" : "",
         "port": 8080
     },
+
+    "basemaps": [
+        {
+            "name": "ESRI",
+            "url": "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        }
+    ],
 
     "google" : {
         "maps": {
