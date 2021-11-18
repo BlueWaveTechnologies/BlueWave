@@ -17,13 +17,7 @@ bluewave.charts.LineEditor = function(parent, config) {
     var previewArea;
     var lineChart, barChart;
     var optionsDiv;
-    var plotInputs = {
-        xAxis:null,
-        yAxis:null,
-        xAxis2:null,
-        yAxis2:null,
-        group:null
-    };
+    var plotInputs = {};
     var chartConfig = {};
     var colorPicker;
 
@@ -134,6 +128,7 @@ bluewave.charts.LineEditor = function(parent, config) {
     this.clear = function(){
         inputData = [];
         chartConfig = {};
+        plotInputs = {};
         panel.title.innerHTML = "Untitled";
         optionsDiv.innerHTML = "";
 
@@ -167,40 +162,19 @@ bluewave.charts.LineEditor = function(parent, config) {
   //**************************************************************************
   //** createOptions
   //**************************************************************************
-  /** Initializes Options for Dropdowns.
-   */
     var createOptions = function() {
-        var data = inputData[0];
-        let dataOptions = Object.keys(data[0]);
 
-        plotInputs.group.add("", "");
-        dataOptions.forEach((val)=>{
-            plotInputs.xAxis.add(val,val);
-            plotInputs.yAxis.add(val,val);
-            plotInputs.group.add(val,val);
-        });
-        plotInputs.xAxis.setValue(chartConfig.xAxis, true);
-        plotInputs.yAxis.setValue(chartConfig.yAxis, true);
-        if (chartConfig.group){
-            plotInputs.group.setValue(chartConfig.group, false); //<--firing the onChange event is a hack to show/hide labels
-        }
-        else{
-            var label = chartConfig.label;
-            if (!label) label = "Series 1";
-            plotInputs.label.setValue(label, true);
-        }
-
-      //Add dropdown values for each data set
-        for (let i=1; i<inputData.length; i++){
-            let xAxisN = `xAxis${i+1}`;
-            let yAxisN = `yAxis${i+1}`;
-            let groupN = `group${i+1}`;
-            let labelN = `label${i+1}`;
+        for (let i=0; i<inputData.length; i++){
+            var n = i>0 ? (i+1) : "";
+            let xAxisN = `xAxis${n}`;
+            let yAxisN = `yAxis${n}`;
+            let groupN = `group${n}`;
+            let labelN = `label${n}`;
 
             plotInputs[groupN].add("", "");
 
-            let multiLineDataOptions = Object.keys(inputData[i][0]);
-            multiLineDataOptions.forEach((val)=>{
+            let dataOptions = Object.keys(inputData[i][0]);
+            dataOptions.forEach((val)=>{
                 plotInputs[xAxisN].add(val, val);
                 plotInputs[yAxisN].add(val, val);
                 plotInputs[groupN].add(val, val);
@@ -229,42 +203,23 @@ bluewave.charts.LineEditor = function(parent, config) {
     var createForm = function(parent){
 
         var items = [];
-        items.push(
-            {
-                group: "Series 1",
-                items: [
-                    createLabel("X-Axis"),
-                    createDropdown("xAxis", plotInputs),
-
-                    createLabel("Y-Axis"),
-                    createDropdown("yAxis", plotInputs),
-
-                    createLabel("Separate By"),
-                    createDropdown("group", plotInputs),
-
-                    createLabel("Label", "label"),
-                    { name: "label", label: "", type: "text" }
-
-                ]
-            }
-        );
-
-        for (var i=1; i<inputData.length; i++){
+        for (var i=0; i<inputData.length; i++){
+            var n = i>0 ? (i+1) : "";
             items.push(
                 {
                     group: "Series " + (i+1),
                     items: [
                         createLabel("X-Axis"),
-                        createDropdown(`xAxis${i+1}`, plotInputs),
+                        createDropdown(`xAxis${n}`, plotInputs),
 
                         createLabel("Y-Axis"),
-                        createDropdown(`yAxis${i+1}`, plotInputs),
+                        createDropdown(`yAxis${n}`, plotInputs),
 
                         createLabel("Separate By"),
-                        createDropdown(`group${i+1}`, plotInputs),
+                        createDropdown(`group${n}`, plotInputs),
 
                         createLabel("Label"),
-                        { name: (`label${i+1}`), label: "", type: "text" }
+                        { name: (`label${n}`), label: "", type: "text" }
 
                     ]
                 }
