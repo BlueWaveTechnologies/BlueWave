@@ -63,6 +63,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     this.getSummaryPanel = function(){
         return summaryPanel.el;
     };
+    
+    
+  //**************************************************************************
+  //** getSimilarities
+  //**************************************************************************
+    this.getSimilarities = function(){
+        return results;
+    };
 
 
   //**************************************************************************
@@ -86,7 +94,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(inputs, chartConfig){
+    this.update = function(inputs, similarities){
         me.clear();
 
         var files = "";
@@ -95,15 +103,25 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             files+= inputs[i];
         }
 
-        get("document/similarity?files="+files,{
-            success: function(json){
-                results = json;
-                update(results);
-            },
-            failure: function(request){
-                alert(request);
-            }
-        });
+        if (similarities){
+            results = similarities;
+            update(results);
+        }
+        else{
+
+            waitmask.show(500);
+            get("document/similarity?files="+files,{
+                success: function(json){
+                    waitmask.hide();
+                    results = json;
+                    update(results);
+                },
+                failure: function(request){
+                    alert(request);
+                    waitmask.hide();
+                }
+            });
+        }
     };
 
 
@@ -211,10 +229,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 }
 
 
+                var elapsedTime = Math.round(results.elapsed_time_sec);
+                if (elapsedTime<1) elapsedTime = "<1 sec";
+                else elapsedTime += " sec";
+                
+
               //Update body
                 tbody.innerHTML = "";
                 addRow("Files Analyzed", results.files.length);
-                addRow("Elapsed Time", results.elapsed_time_sec);
+                addRow("Suspicious Pairs", suspiciousPairs.length);                
+                addRow("Elapsed Time", elapsedTime);
                 addRow("Pages Per Second", results.pages_per_second);
             }
         };
@@ -296,13 +320,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
-            img.onload = function(){
-                parent.innerHTML = "";
-                parent.appendChild(img);
-            };
-            var idx = fileName.lastIndexOf("/");
-            if (idx>-1) fileName = fileName.substring(idx+1);
-            img.src = "document/thumbnail?file="+fileName+"&page="+page;
+            img.src = "document/thumbnail?file="+fileName+"&page="+page;      
+            parent.appendChild(img);
         };
 
 
@@ -326,15 +345,17 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var pages = suspiciousPair.pages;
                 var left = pages[0];
                 var right = pages[1];
-                createPreview(left.filename, left.page, leftPanel);
-                createPreview(right.filename, right.page, rightPanel);
+                var leftFile = getFileName(left.filename);
+                var rightFile = getFileName(right.filename);
+                createPreview(leftFile, left.page, leftPanel);
+                createPreview(rightFile, right.page, rightPanel);
 
-                leftFooter.innerText = "Page " + left.page + " of " + left.filename;
-                rightFooter.innerText = "Page " + right.page + " of " + right.filename;
+                leftFooter.innerText = "Page " + left.page + " of " + leftFile;
+                rightFooter.innerText = "Page " + right.page + " of " + rightFile;
             }
         };
     };
-
+    
 
   //**************************************************************************
   //** createBody
@@ -469,7 +490,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
-
+  //**************************************************************************
+  //** getFileName
+  //**************************************************************************
+    var getFileName = function(fileName){
+        fileName = fileName.replaceAll("\\","/");
+        var idx = fileName.lastIndexOf("/");
+        if (idx>-1) fileName = fileName.substring(idx+1);
+        return fileName;
+    };
 
 
   //**************************************************************************
