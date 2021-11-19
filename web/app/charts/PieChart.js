@@ -149,6 +149,7 @@ bluewave.charts.PieChart = function(parent, config) {
               //Add the polylines between chart and labels:
               if (parseInt(chartConfig.labelOffset) > 100) {
                 var lineGroup = pieChart.append("g");
+                let endPoints = [];
                 lineGroup.attr("name", "lines");
                 lineGroup.selectAll("*")
                   .data(pieData)
@@ -159,15 +160,29 @@ bluewave.charts.PieChart = function(parent, config) {
                   .attr("stroke-width", 1)
                   .attr("points", function (d) {
 
-                    var firstArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * 90/50);
-                    var endArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * (chartConfig.labelOffset-1)/50);
+                  var firstArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * 90/50);
+                  var breakArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * (chartConfig.labelOffset)/50);
+
+                  var posA = firstArc.centroid(d);
+                  var posB = breakArc.centroid(d);
+                  var posC = newArc.centroid(d);
 
 
+                  endPoints.forEach((val) => {
+                    if (posC[1] < val + 5 && posC[1] > val - 5) {
+                      posC[1] -= 14;
+                      posB[1] -= 14;
+                    }
+                  });
 
-                    var posA = firstArc.centroid(d);
-                    var posB = endArc.centroid(d);
 
-                    return [posA, posB];
+                  endPoints.push(posC[1]);
+
+                  var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; // we need the angle to see if the X position will be at the extreme right or extreme left
+                  posC[0] = labelArea * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+
+
+                  return [posA, posB, posC];
                   });
               }
 
@@ -184,10 +199,30 @@ bluewave.charts.PieChart = function(parent, config) {
                       return d.data.key;
                   })
                   .attr("transform", function (d) {
+                    if (parseInt(chartConfig.labelOffset) > 100) {
+                        var pos = newArc.centroid(d);
+                        positions.forEach((val) => {
+                          if (pos[1] < val + 5 && pos[1] > val - 5) {
+                            pos[1] -= 14;
+                          }
+                        });
+                        positions.push(pos[1]);
+
+                        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                        pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
+
+
+                        return "translate(" + pos + ")";
+                    }
                     return "translate(" + newArc.centroid(d) + ")";
 
                   })
                   .style("text-anchor", function (d) {
+                   if (parseInt(chartConfig.labelOffset) > 100) {
+                      var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                      return midangle < Math.PI ? "start" : "end";
+                   }
+
                     return "middle";
                   });
 
