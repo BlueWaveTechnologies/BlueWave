@@ -209,7 +209,7 @@ bluewave.charts.PieChart = function(parent, config) {
                         positions.push(pos[1]);
 
                         var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                        pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
+                        pos[0] = labelArea * (midangle < Math.PI ? 1 : -1);
 
 
                         return "translate(" + pos + ")";
@@ -231,7 +231,10 @@ bluewave.charts.PieChart = function(parent, config) {
                 var box = pieArea.node().getBBox();
                 if (box.width>width || box.height>height){
                     var scale, x, y;
-                    if (box.width> width){
+                    var widthDiff = box.width - width;
+                    var heightDiff = box.height - height;
+
+                    if (widthDiff > heightDiff){
                         scale = width/box.width;
                         if (scale>1){
                             scale = 1+(1-scale);
@@ -239,7 +242,7 @@ bluewave.charts.PieChart = function(parent, config) {
                         x = width/2; //needs to be updated...
                         y = height/2;
                     }
-                    else {
+                    else if (heightDiff > widthDiff) {
                         scale = height/box.height;
                         x = width/2;
                         y = (box.height+box.y); //not quite right...
