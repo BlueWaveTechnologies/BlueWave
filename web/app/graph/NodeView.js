@@ -1,4 +1,5 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.graph) bluewave.graph={};
 
 //******************************************************************************
 //**  NodeView
@@ -8,7 +9,7 @@ if(!bluewave) var bluewave={};
  *
  ******************************************************************************/
 
-bluewave.NodeView = function(parent, config) {
+bluewave.graph.NodeView = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
@@ -147,7 +148,7 @@ bluewave.NodeView = function(parent, config) {
             tooltip.show();
             tooltip.innerHTML = "<b>" + d.node + "</b><br>" +
             formatNumber(d[key]) + " " + (key=="count"? "nodes" : key);
-    
+
             var box = tooltip.parentNode.getBoundingClientRect();
             tooltip.style.left = (d3.event.pageX-box.left)+20 + "px";
             tooltip.style.top = (d3.event.pageY-box.top) + "px";

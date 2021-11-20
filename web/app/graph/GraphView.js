@@ -1,4 +1,5 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.graph) bluewave.graph={};
 
 //******************************************************************************
 //**  GraphView
@@ -10,7 +11,7 @@ if(!bluewave) var bluewave={};
  *
  ******************************************************************************/
 
-bluewave.GraphView = function(parent, config) {
+bluewave.graph.GraphView = function(parent, config) {
 
     var me = this;
     var defaultConfig = {

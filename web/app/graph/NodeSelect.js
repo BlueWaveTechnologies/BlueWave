@@ -1,4 +1,5 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.graph) bluewave.graph={};
 
 //******************************************************************************
 //**  NodeSelect
@@ -8,7 +9,7 @@ if(!bluewave) var bluewave={};
  *
  ******************************************************************************/
 
-bluewave.NodeSelect = function(parent, config) {
+bluewave.graph.NodeSelect = function(parent, config) {
 
     var me = this;
     var nodeList, propertyList, selectionList;
