@@ -437,10 +437,13 @@ bluewave.graph.NodeSearch = function(parent, config) {
                 div.node = n;
                 div.onclick = function(){
                     var opacity = parseFloat(this.style.opacity);
-                    console.log(opacity);
                     if (isNaN(opacity) || opacity>0.5){
+
+                      //Show navbar
                         navBar.show();
 
+
+                      //Highlight current node
                         var div = this;
                         innerDiv.childNodes.forEach(function(d){
                             d.className = className;
@@ -450,12 +453,22 @@ bluewave.graph.NodeSearch = function(parent, config) {
                         });
 
 
+                      //Set focus
                         div.focus();
-                        gridPanel.show(function(){
-                            div.blur();
-                            div.focus();
-                            selectColumns(div.node);
-                        });
+
+
+                        var q = searchBar.getValue();
+                        if (q){
+
+                          //Show grid panel
+                            gridPanel.show(function(){
+                                div.blur();
+                                div.focus();
+                            });
+                        }
+                        else{
+                            findRelatedNodes(div.node);
+                        }
                     }
                     else{
                         gridPanel.hide();
@@ -562,7 +575,8 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
 
       //Function used to render search results
-        var update = function(q, nodes, links){
+        var update = function(nodes, links){
+            console.log(nodes, links);
             clear();
             var g = container.append("g");
 
@@ -849,7 +863,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
 
 
-                selectColumns(nodeName, relatedNodes);
+                //selectColumns(nodeName, relatedNodes);
                 if (n.type==="match"){
                     nodeList.selectNode(n);
                 }
@@ -950,6 +964,195 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
 
   //**************************************************************************
+  //** findRelatedNodes
+  //**************************************************************************
+    var findRelatedNodes = function(node){
+
+
+      //Cancel current query (if running)
+        cancel();
+
+
+
+      //Clear last query
+        gridPanel.hide();
+        nodeView.clear();
+
+
+        var nodes = [];
+        var links = []; //{source: 'gloves', target: 'registrationlisting_registration_us_agent'}
+        nodes.push({
+           name: node.name,
+           type: "match"
+        });
+
+
+        var getRelatedNodesQuery = function(nodeName, where){
+            if (!where) where = "";
+            where+="\n";
+
+            return "MATCH (a:" + nodeName + ")\n" +
+            "OPTIONAL MATCH (a)-[r]-(b)\n" +
+            where +
+            "return\n" +
+            "labels(startNode(r)) as source,\n" +
+            "type(r) as relationship,\n" +
+            "labels(endNode(r)) as target,\n" +
+            "count(endNode(r)) as count";
+        };
+
+
+
+
+
+
+
+        var getLabel = function(str){
+            if (str.indexOf("[")===0 && str.indexOf("]"===str.length)){
+                str = str.substring(1,str.length-1);
+            }
+            return str;
+        };
+
+        var addNode = function(nodeName, nodeType){
+            for (var i=0; i<nodes.length; i++){
+                if (nodes[i].name===nodeName) return false;
+            }
+            var node = {
+               name: nodeName,
+               type: nodeType
+            };
+            console.log(node);
+            nodes.push(node);
+            return node;
+        };
+
+        var addLink = function(source, target, relationship){
+            for (var i=0; i<links.length; i++){
+                var link = links[i];
+                if (link.source===source &&
+                    link.target===target &&
+                    link.relationship===relationship)
+                return false;
+            }
+            var link = {
+                source: source,
+                target: target,
+                relationship: relationship
+            };
+            links.push(link);
+            return link;
+        };
+
+        var parseRelatedNodes = function(csv, nodeName){
+            var relationships = [];
+            var rows = d3.csvParse(csv);
+            if (rows.length>0){
+
+
+                rows.forEach(function(row){
+
+                    var source = getLabel(row.source);
+                    var target = getLabel(row.target);
+                    var relationship = row.relationship;
+                    var count = parseInt(row.count);
+
+                    if (count>0){
+
+
+                        if (source===nodeName){
+                            addNode(target, "related");
+                        }
+                        else{
+                            addNode(source, "related");
+                        }
+
+                        var r = addLink(source, target, relationship);
+                        if (r) relationships.push(r);
+
+                    }
+                });
+            }
+
+            return relationships;
+        };
+
+
+        var onReady = function(){
+            waitmask.hide();
+            nodeView.update(nodes, links);
+        };
+
+
+        var queries = [];
+        var getRelatedNodes = function(){
+            var item = queries.pop();
+            getCSV(item.query, function(csv){
+
+                var relationships = parseRelatedNodes(csv, item.node);
+                relationships.forEach(function(r){
+                    var query;
+
+                  //Find nodes related to the source
+                    query =
+                    "MATCH (a:" + r.source + ")-[r:" + r.relationship + "]-(b:" + r.target + ")\n" +
+                    "WITH COLLECT(ID(a)) as nodeIDs\n" +
+                    "CALL {\n" +
+                    "with nodeIDs\n" +
+                    getRelatedNodesQuery(r.source, "WHERE ID(a) in nodeIDs") + "\n" +
+                    "}\n" +
+                    "RETURN source, relationship, target, count";
+
+                    queries.push({
+                        query: query,
+                        node: r.source
+                    });
+
+
+                  //Find nodes related to the target
+                    query =
+                    "MATCH (a:" + r.source + ")-[r:" + r.relationship + "]-(b:" + r.target + ")\n" +
+                    "WITH COLLECT(ID(b)) as nodeIDs\n" +
+                    "CALL {\n" +
+                    "with nodeIDs\n" +
+                    getRelatedNodesQuery(r.target, "WHERE ID(a) in nodeIDs") + "\n" +
+                    "}\n" +
+                    "RETURN source, relationship, target, count";
+
+                    queries.push({
+                        query: query,
+                        node: r.target
+                    });
+
+                });
+
+
+                if (queries.length>0){
+                    getRelatedNodes();
+                }
+                else{
+                    onReady();
+                }
+            });
+        };
+
+
+
+
+      //Get related nodes
+        waitmask.show(500);
+        queries.push({
+            query: getRelatedNodesQuery(node.name),
+            node: node.name
+        });
+        getRelatedNodes();
+
+
+    };
+
+
+
+  //**************************************************************************
   //** findNodes
   //**************************************************************************
   /** Used to find nodes that contain a given keyword and update the node
@@ -1004,7 +1207,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
         var onReady = function(){
             updateRelatedNodes();
-            nodeView.update(q, nodes, links);
+            nodeView.update(nodes, links);
         };
 
 
