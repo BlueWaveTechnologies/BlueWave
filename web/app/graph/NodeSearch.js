@@ -97,7 +97,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         searchBar.clear();
-        nodeList.clear();
+        nodeList.disable();
         nodeView.clear();
         gridPanel.clear();
         gridPanel.hide();
@@ -118,8 +118,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
                     return a.name.localeCompare(b.name);
                 });
                 nodes.forEach(function(n){
-                    n = nodeList.addNode(n);
-                    n.div.enable();
+                    nodeList.addNode(n);
                 });
             },
             failure: function(request){
@@ -421,13 +420,25 @@ bluewave.graph.NodeSearch = function(parent, config) {
                 overflow.update();
             },
             clear: function(){
-                //innerDiv.innerHTML = "";
-                //this.nodes = [];
+                innerDiv.innerHTML = "";
+                this.nodes = [];
+                nodeList.resize();
+            },
+            disable: function(){
                 innerDiv.childNodes.forEach(function(div){
                     div.className = className;
                     div.disable();
                 });
-                nodeList.resize();
+            },
+            highlight: function(div){
+                innerDiv.childNodes.forEach(function(d){
+                    d.className = className;
+                    if (d===div){
+                        d.className += " highlight";
+                    }
+                });
+                div.enable();
+                div.focus();
             },
             addNode: function(n){
                 var div = document.createElement("div");
@@ -436,8 +447,9 @@ bluewave.graph.NodeSearch = function(parent, config) {
                 div.tabIndex = -1;
                 div.node = n;
                 div.onclick = function(){
+                    if (this.className.indexOf("highlight")>-1) return;
                     var opacity = parseFloat(this.style.opacity);
-                    if (isNaN(opacity) || opacity>0.5){
+                    if (isNaN(opacity)){
 
                       //Show navbar
                         navBar.show();
@@ -445,20 +457,50 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
                       //Highlight current node
                         var div = this;
-                        innerDiv.childNodes.forEach(function(d){
-                            d.className = className;
-                            if (d===div){
-                                d.className += " highlight";
-                            }
-                        });
+                        nodeList.highlight(div);
 
-
-                      //Set focus
-                        div.focus();
 
 
                         var q = searchBar.getValue();
                         if (q){
+
+
+                        }
+                        else{
+                            findRelatedNodes(div.node);
+                        }
+
+                      //Show grid panel
+                        gridPanel.show(function(){
+                            div.blur();
+                            div.focus();
+                        });
+
+                    }
+                    else{
+
+
+                        var q = searchBar.getValue();
+                        if (q){
+
+                            gridPanel.hide();
+                            navBar.hide();
+                        }
+                        else{
+
+                          //Show navbar
+                            navBar.show();
+
+
+                          //Highlight current node
+                            var div = this;
+                            nodeList.disable();
+                            nodeList.highlight(div);
+
+
+                          //Find related nodes
+                            findRelatedNodes(div.node);
+
 
                           //Show grid panel
                             gridPanel.show(function(){
@@ -466,13 +508,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
                                 div.focus();
                             });
                         }
-                        else{
-                            findRelatedNodes(div.node);
-                        }
-                    }
-                    else{
-                        gridPanel.hide();
-                        navBar.hide();
+
                     }
 
                     nodeList.resize();
@@ -484,7 +520,17 @@ bluewave.graph.NodeSearch = function(parent, config) {
                     this.node.ids = [];
                 };
                 div.enable = function(nodeIDs){
-                    if (nodeIDs){
+                    var arr = [];
+                    var numNodes = 0;
+                    if (isArray(nodeIDs)){
+                        arr = nodeIDs;
+                        numNodes = arr.length;
+                    }
+                    else{
+                        if (!isNaN(nodeIDs)) numNodes = nodeIDs;
+                    }
+
+                    if (numNodes){
                         this.innerHTML = "";
 
                         var wrapper = document.createElement("div");
@@ -498,18 +544,15 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
                         var nodeCount = document.createElement("div");
                         nodeCount.className = "node-search-list-item-count";
-                        nodeCount.innerText = nodeIDs.length;
+                        nodeCount.innerText = numNodes;
                         wrapper.appendChild(nodeCount);
                         nodeCount.style.right = -(nodeCount.offsetWidth+2);
 
+                    }
+
+
                         this.style.opacity = "";
-                        this.node.ids = nodeIDs;
-                    }
-                    else{
-                        this.innerText = this.node.name;
-                        this.style.opacity = 0.65;
-                        this.node.ids = [];
-                    }
+                        this.node.ids = arr;
                 };
                 div.disable();
                 innerDiv.appendChild(div);
@@ -576,7 +619,6 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
       //Function used to render search results
         var update = function(nodes, links){
-            console.log(nodes, links);
             clear();
             var g = container.append("g");
 
@@ -980,7 +1022,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
 
         var nodes = [];
-        var links = []; //{source: 'gloves', target: 'registrationlisting_registration_us_agent'}
+        var links = [];
         nodes.push({
            name: node.name,
            type: "match"
@@ -1001,12 +1043,6 @@ bluewave.graph.NodeSearch = function(parent, config) {
             "count(endNode(r)) as count";
         };
 
-
-
-
-
-
-
         var getLabel = function(str){
             if (str.indexOf("[")===0 && str.indexOf("]"===str.length)){
                 str = str.substring(1,str.length-1);
@@ -1014,15 +1050,18 @@ bluewave.graph.NodeSearch = function(parent, config) {
             return str;
         };
 
-        var addNode = function(nodeName, nodeType){
+        var addNode = function(nodeName, nodeType, nodeCount){
             for (var i=0; i<nodes.length; i++){
-                if (nodes[i].name===nodeName) return false;
+                if (nodes[i].name===nodeName){
+                    if (isNaN(nodes[i].count)) nodes[i].count = nodeCount;
+                    return false;
+                }
             }
             var node = {
                name: nodeName,
-               type: nodeType
+               type: nodeType,
+               count: nodeCount
             };
-            console.log(node);
             nodes.push(node);
             return node;
         };
@@ -1061,10 +1100,10 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
 
                         if (source===nodeName){
-                            addNode(target, "related");
+                            addNode(target, "related", count);
                         }
                         else{
-                            addNode(source, "related");
+                            addNode(source, "related", count);
                         }
 
                         var r = addLink(source, target, relationship);
@@ -1077,10 +1116,25 @@ bluewave.graph.NodeSearch = function(parent, config) {
             return relationships;
         };
 
-
         var onReady = function(){
             waitmask.hide();
+            //TODO: save the query results?
+
+          //Updae nodeView
             nodeView.update(nodes, links);
+
+          //Update nodeList
+            nodeList.disable();
+            nodes.forEach(function(n){
+                var nodeName = n.name;
+                nodeList.nodes.every(function(node){
+                    if (node.name===nodeName){
+                        node.div.enable(n.count);
+                        return false;
+                    }
+                    return true;
+                });
+            });
         };
 
 
@@ -1108,8 +1162,13 @@ bluewave.graph.NodeSearch = function(parent, config) {
                         node: r.source
                     });
 
+//if (true) return;
 
-                  //Find nodes related to the target
+                  //Find nodes related to the target. This initiates deep dive.
+                  //The node ID constraint is not guaranteed to match the original
+                  //node passed into the findRelatedNodes() method. As a result,
+                  //we might see more relationships than are actually there
+                  //resulting in empty fields/column values
                     query =
                     "MATCH (a:" + r.source + ")-[r:" + r.relationship + "]-(b:" + r.target + ")\n" +
                     "WITH COLLECT(ID(b)) as nodeIDs\n" +
@@ -1891,6 +1950,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addResizeListener = javaxt.dhtml.utils.addResizeListener;
+    var isArray = javaxt.dhtml.utils.isArray;
 
     init();
 };
