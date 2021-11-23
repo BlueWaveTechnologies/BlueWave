@@ -13,12 +13,15 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
     var me = this;
     var waitmask;
-    var searchBar, navBar, nodeList, nodeView, gridPanel; //panels
-    var carousel, sliding;
+    var searchBar, nodeList, nodeView, nodeSelect, gridPanel, editor; //panels
+    var runButton, cancelButton; //buttons
+    var navBar, carousel, sliding;
     var horizontalResizeHandle;
     var queryService = "query";
     var jobID;
 
+
+    var charts = [];
 
 
   //**************************************************************************
@@ -51,7 +54,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
         });
 
 
-      //Row 2 (Node view)
+      //Row 2 (Main panel)
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
@@ -88,6 +91,30 @@ bluewave.graph.NodeSearch = function(parent, config) {
         addResizeListener(table, function(){
             nodeList.resize();
             carousel.resize();
+        });
+
+
+      //Update carousel after the table has been rendered
+        onRender(table, function(){
+
+          //Update carousel
+            carousel.resize();
+
+
+          //Select default chart
+            var chart = charts[0];
+            chart.select();
+
+
+          //Add default chart to carousel
+            var panels = carousel.getPanels();
+            for (var i=0; i<panels.length; i++){
+                var panel = panels[i];
+                if (panel.isVisible){
+                    panel.div.appendChild(chart.div);
+                    break;
+                }
+            }
         });
     };
 
@@ -222,6 +249,190 @@ bluewave.graph.NodeSearch = function(parent, config) {
   //**************************************************************************
     var createBody = function(parent){
 
+      //Create navbar
+        var ul = document.createElement("ul");
+        ul.className = "node-search-nav";
+        parent.appendChild(ul);
+        addShowHide(ul);
+        navBar = ul;
+        console.log(ul);
+
+
+        var div = document.createElement("div");
+        div.style.height = "100%";
+        parent.appendChild(div);
+
+      //Create carousel
+        carousel = new javaxt.dhtml.Carousel(div, {
+            drag: false, //should be true if touchscreen
+            loop: true,
+            animate: true,
+            animationSteps: 600,
+            transitionEffect: "easeInOutCubic",
+            fx: config.fx
+        });
+
+
+      //Add panels to the carousel
+        var currPanel = document.createElement('div');
+        currPanel.style.height = "100%";
+        carousel.add(currPanel);
+
+        var nextPanel = currPanel.cloneNode(false);
+        carousel.add(nextPanel);
+
+        var prevPanel = currPanel.cloneNode(false);
+        carousel.add(prevPanel);
+
+
+      //Add event handlers
+        carousel.beforeChange = function(){
+            parent.className = "blur";
+            sliding = true;
+        };
+        carousel.onChange = function(currPanel){
+            parent.className = "";
+            sliding = false;
+
+            for (var i=0; i<charts.length; i++){
+                if (charts[i].isSelected()){
+                    charts[i].update(currPanel);
+                    break;
+                }
+            }
+        };
+
+
+      //
+        createPanel("Relationships", createMainPanel);
+        //createPanel("Fields", createHourGraph);
+        createPanel("Query", createQueryEditor);
+
+    };
+
+
+  //**************************************************************************
+  //** createPanel
+  //**************************************************************************
+    var createPanel = function(label, createChart){
+
+
+        var div = document.createElement("div");
+        div.style.width = "100%";
+        div.style.height = "100%";
+        div.setAttribute("desc", label);
+        var chart = createChart(div);
+        chart.div = div;
+        chart.name = label;
+
+        var nav = navBar;
+
+
+        var li = document.createElement("li");
+        li.tabIndex = -1; //allows the element to have focus
+        li.innerHTML = label;
+
+        li.select = function(){
+            if (sliding){
+                this.blur();
+                return;
+            }
+            this.focus();
+
+
+          //Find the selected menu item
+            var idx = 0;
+            var currSelection = -1;
+            for (var i=0; i<nav.childNodes.length; i++){
+                var li = nav.childNodes[i];
+                if (li==this) idx = i;
+
+                if (li.selected){
+                    currSelection = i;
+
+                    if (li!==this){
+                        li.selected = false;
+                        li.className = "";
+                    }
+                }
+            }
+
+
+          //Update selected item and the carousel
+            if (idx!=currSelection){
+
+              //Update selection
+                this.selected = true;
+                this.className = "selected";
+
+
+              //If nothing was selected, then no need to continue
+                if (currSelection==-1) return;
+
+
+              //Find next panel and previous panel
+                var nextPanel, prevPanel;
+                var panels = carousel.getPanels();
+                for (var i=0; i<panels.length; i++){
+                    if (panels[i].isVisible){
+                        if (i==0){
+                            prevPanel = panels[panels.length-1];
+                        }
+                        else{
+                            prevPanel = panels[i-1];
+                        }
+                        if (i==panels.length-1){
+                            nextPanel = panels[0];
+                        }
+                        else{
+                            nextPanel = panels[i+1];
+                        }
+                        break;
+                    }
+                }
+
+
+              //Update panels
+                if (currSelection<idx){
+                    var el = prevPanel.div;
+                    removeChild(el);
+                    el.appendChild(charts[idx].div);
+                    removeChild(nextPanel.div);
+                    //console.log("slide right");
+                    carousel.back();
+                }
+                else if (currSelection>idx){
+                    var el = nextPanel.div;
+                    removeChild(el);
+                    el.appendChild(charts[idx].div);
+                    removeChild(prevPanel.div);
+                    //console.log("slide left");
+                    carousel.next();
+                }
+            }
+        };
+        li.onclick = function(){
+            this.select();
+        };
+        nav.appendChild(li);
+
+
+        chart.select = function(){
+            li.select();
+        };
+        chart.isSelected = function(){
+            return li.selected;
+        };
+        charts.push(chart);
+    };
+
+
+
+  //**************************************************************************
+  //** createMainPanel
+  //**************************************************************************
+    var createMainPanel = function(parent){
+
       //Create table with 2 columns
         var table = createTable();
         parent.appendChild(table);
@@ -244,145 +455,9 @@ bluewave.graph.NodeSearch = function(parent, config) {
         tr.appendChild(td);
         var div = addVerticalResizer(td, nodeList.el);
         div.className = "node-search-main-panel";
-        createMainPanel(div);
-    };
+        createNodeView(div);
 
-
-  //**************************************************************************
-  //** createMainPanel
-  //**************************************************************************
-    var createMainPanel = function(parent){
-
-        var mainPanel = document.createElement("div");
-        mainPanel.style.position = "realtive";
-        mainPanel.style.height = "100%";
-        parent.appendChild(mainPanel);
-
-        var ul = document.createElement("ul");
-        ul.className = "node-search-nav";
-        mainPanel.appendChild(ul);
-        addShowHide(ul);
-        navBar = ul;
-
-
-        var createMenuItem = function(label){
-            var li = document.createElement("li");
-            li.innerText = label;
-            li.tabIndex = -1; //allows the element to have focus
-            li.select = function(){
-                if (sliding){
-                    //this.blur();
-                    return;
-                }
-                this.focus();
-
-
-              //Find the selected menu item
-                var idx = 0;
-                var currSelection = -1;
-                for (var i=0; i<ul.childNodes.length; i++){
-                    var li = ul.childNodes[i];
-                    if (li==this) idx = i;
-
-                    if (li.selected){
-                        currSelection = i;
-
-                        if (li!==this){
-                            li.selected = false;
-                            li.className = "";
-                        }
-                    }
-                }
-
-
-              //Update selected item and the carousel
-                if (idx!=currSelection){
-
-                  //Update selection
-                    this.selected = true;
-                    this.className = "selected";
-
-
-                  //If nothing was selected, then no need to continue
-                    if (currSelection==-1) return;
-
-
-
-
-
-                  //Update panels
-                    if (currSelection<idx){
-
-                        //console.log("slide right");
-                        carousel.back();
-                    }
-                    else if (currSelection>idx){
-
-                        //console.log("slide left");
-                        carousel.next();
-                    }
-                }
-            };
-            li.onclick = function(){
-                this.select();
-            };
-            ul.appendChild(li);
-        };
-
-        createMenuItem("Nodes");
-        createMenuItem("Fields");
-        createMenuItem("Query");
-
-
-        var div = document.createElement("div");
-        div.style.height = "100%";
-        mainPanel.appendChild(div);
-
-
-      //Create carousel
-        carousel = new javaxt.dhtml.Carousel(div, {
-            drag: false, //should be true if touchscreen
-            loop: false,
-            animate: true,
-            animationSteps: 600,
-            transitionEffect: "easeInOutCubic",
-            fx: config.fx
-        });
-
-
-      //Add panels to the carousel
-        var panel = document.createElement('div');
-        panel.style.height = "100%";
-        carousel.add(panel);
-        createNodeView(panel);
-
-
-        panel = panel.cloneNode(false);
-        carousel.add(panel);
-
-        panel = panel.cloneNode(false);
-        carousel.add(panel);
-
-
-      //Add event handlers
-        carousel.beforeChange = function(){
-            //parent.className = "blur";
-            sliding = true;
-        };
-        carousel.onChange = function(currPanel){
-            //parent.className = "";
-            sliding = false;
-
-//            for (var i=0; i<charts.length; i++){
-//                if (charts[i].isSelected()){
-//                    charts[i].update(currPanel);
-//                    break;
-//                }
-//            }
-        };
-
-
-
+        return table;
     };
 
 
@@ -1008,6 +1083,8 @@ bluewave.graph.NodeSearch = function(parent, config) {
   //**************************************************************************
   //** findRelatedNodes
   //**************************************************************************
+  /** Used to find nodes related to a given node
+   */
     var findRelatedNodes = function(node){
 
 
@@ -1120,7 +1197,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
             waitmask.hide();
             //TODO: save the query results?
 
-          //Updae nodeView
+          //Update nodeView
             nodeView.update(nodes, links);
 
           //Update nodeList
@@ -1129,12 +1206,17 @@ bluewave.graph.NodeSearch = function(parent, config) {
                 var nodeName = n.name;
                 nodeList.nodes.every(function(node){
                     if (node.name===nodeName){
+                        n.properties = node.properties;
                         node.div.enable(n.count);
                         return false;
                     }
                     return true;
                 });
             });
+
+
+
+            ////availableProperties, selectedProperties
         };
 
 
@@ -1198,14 +1280,13 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
 
 
-      //Get related nodes
+      //Initiate search
         waitmask.show(500);
         queries.push({
             query: getRelatedNodesQuery(node.name),
             node: node.name
         });
         getRelatedNodes();
-
 
     };
 
@@ -1520,33 +1601,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
         };
 
 
-      //Function used to execute a query
-        var executeQuery = function(callback){
-            waitmask.show(500);
-            getResponse(
-                queryService,
-                JSON.stringify({
-                    query: getQuery(),
-                    limit: limit
-                }),
-                function(request){
-                    var json = JSON.parse(request.responseText);
-                    var data = parseResponse(json);
 
-                    if (data.records.length<limit){
-                        offset = null;
-                    }
-                    else{
-                        offset += data.records.length;
-                    }
-
-                    waitmask.hide();
-
-                    callback.apply(me, [data, request]);
-
-                }
-            );
-        };
 
 
 
@@ -1684,13 +1739,134 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
 
   //**************************************************************************
+  //** createQueryEditor
+  //**************************************************************************
+    var createQueryEditor = function(parent){
+
+        var table = createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+
+      //Create toolbar
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+        td.className = "panel-toolbar";
+
+
+      //Run button
+        runButton = createButton(td, {
+            label: "Run",
+            icon: "fas fa-play",
+            disabled: false
+        });
+        runButton.onClick = function(){
+            //executeQuery();
+        };
+
+
+      //Cancel button
+        cancelButton = createButton(td, {
+            label: "Cancel",
+            icon: "fas fa-stop",
+            disabled: true
+        });
+        cancelButton.onClick = function(){
+            cancel(function(){
+                if (waitmask) waitmask.hide();
+            });
+        };
+
+
+
+      //Create editor
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+
+        var outerDiv = document.createElement("div");
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        td.appendChild(outerDiv);
+
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        innerDiv.style.position = "absolute";
+        innerDiv.style.overflow = "hidden";
+        innerDiv.style.overflowX = "auto";
+        outerDiv.appendChild(innerDiv);
+
+        editor = CodeMirror(innerDiv, {
+            value: "",
+            mode:  config.queryLanguage,
+            lineNumbers: true,
+            indentUnit: 4
+        });
+        td.childNodes[0].style.height = "100%";
+
+        editor.setValue = function(str){
+            var doc = this.getDoc();
+            doc.setValue(str);
+            doc.clearHistory();
+
+            var cm = this;
+            setTimeout(function() {
+                cm.refresh();
+            },200);
+        };
+        editor.getValue = function(){
+            return this.getDoc().getValue();
+        };
+
+        parent.appendChild(table);
+
+        return table;
+    };
+
+
+  //**************************************************************************
+  //** executeQuery
+  //**************************************************************************
+    var executeQuery = function(callback){
+        waitmask.show(500);
+        getResponse(
+            queryService,
+            JSON.stringify({
+                query: editor.getValue(),
+                limit: limit
+            }),
+            function(request){
+                var json = JSON.parse(request.responseText);
+                var data = parseResponse(json);
+
+                if (data.records.length<limit){
+                    offset = null;
+                }
+                else{
+                    offset += data.records.length;
+                }
+
+                waitmask.hide();
+
+                callback.apply(me, [data, request]);
+
+            }
+        );
+    };
+
+
+  //**************************************************************************
   //** cancel
   //**************************************************************************
   /** Used to cancel the current query
    */
     var cancel = function(callback){
         if (jobID){
-            javaxt.dhtml.utils.delete(config.queryService + jobID,{
+            javaxt.dhtml.utils.delete(queryService + jobID,{
                 success : function(){
                     //cancelButton.disable();
                     if (callback) callback.apply(null,[]);
@@ -1747,7 +1923,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
                 var timer;
                 var checkStatus = function(){
                     if (jobID){
-                        var request = get(config.queryService + jobID, {
+                        var request = get(queryService + jobID, {
                             success : function(text){
                                 if (text==="pending" || text==="running"){
                                     timer = setTimeout(checkStatus, 250);
@@ -1935,6 +2111,17 @@ bluewave.graph.NodeSearch = function(parent, config) {
         });
 
         return div;
+    };
+
+
+  //**************************************************************************
+  //** createButton
+  //**************************************************************************
+    var createButton = function(parent, btn){
+        var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
+        if (btn.style) btn.style = merge(btn.style, defaultStyle);
+        else btn.style = defaultStyle;
+        return bluewave.utils.createButton(parent, btn);
     };
 
 
