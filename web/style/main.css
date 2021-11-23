@@ -1011,6 +1011,7 @@ li.tree-node:hover {
   position: absolute;
   right: 5px;
   top: 5px;
+  z-index: 2;
 }
 
 .node-search-nav li {
@@ -1419,6 +1420,38 @@ li.tree-node:hover {
     width: 12px;
     height: 12px;
     padding: 12px;
+}
+
+/**************************************************************************/
+/** CodeMirror Overrides
+/**************************************************************************/
+
+.CodeMirror {
+    height: 100%;
+}
+
+.CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like{
+    background-color: #fff;
+    z-index: 4;
+}
+
+.CodeMirror-linenumber {
+    margin-left:-30px;
+}
+
+.CodeMirror-scroll {
+    margin-right: 0px;
+    padding-bottom: 0px;
+}
+
+.CodeMirror-sizer {
+    position: relative;
+    border-left: 25px solid transparent;
+    border-right: 6px solid transparent;
+}
+
+.CodeMirror-gutters {
+    left: -2px !important;
 }
 
 
