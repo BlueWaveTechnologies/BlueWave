@@ -1,0 +1,11 @@
+services:
+  neo4j:
+    image: neo4j
+    ports:
+    - "7687:7687"
+    volumes:
+    - neo4jvol:/data
+    environment:
+    - NEO4J_AUTH=none
+volumes:
+  neo4jvol: {}
