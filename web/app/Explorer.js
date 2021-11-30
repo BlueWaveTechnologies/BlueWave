@@ -410,6 +410,7 @@ bluewave.Explorer = function(parent, config) {
 
 
               //Enable map and pieChart buttons as needed
+                var numNodes = 0;
                 for (var key in nodes) {
                     if (nodes.hasOwnProperty(key)){
                         var node = nodes[key];
@@ -419,10 +420,11 @@ bluewave.Explorer = function(parent, config) {
                         if (node.type==="supplyChain"){
                             button.mapChart.enable();
                         }
+                        numNodes++;
                     }
                 }
 
-                arrow.show();
+                if (numNodes===0) arrow.show();
 
             }
 
