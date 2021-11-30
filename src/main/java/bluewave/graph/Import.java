@@ -14,30 +14,64 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
 
+//******************************************************************************
+//**  Import
+//******************************************************************************
+/**
+ *  Used to create nodes in the graph using CSV and JSON files
+ *
+ ******************************************************************************/
+
 public class Import {
 
     public static final String UTF8_BOM = "\uFEFF";
 
-    
+
   //**************************************************************************
   //** importCSV
   //**************************************************************************
   /** Used to import a CSV file into a node/vertex in a Neo4J instance.
-   *  @param csvFile Accepts files with a .csv or .gz file extension. Assumes 
+   *  @param csvFile Accepts files with a .csv or .gz file extension. Assumes
    *  that the first line in the file contains a header.
    *  @param vertex Label for the nodes that will be created
-   *  @param keys Column IDs with unique values used to create a unique 
+   *  @param keys Column IDs with unique values used to create a unique
    *  constraint. Intended for upserts. Optional.
    */
     public static void importCSV(File csvFile, String vertex, Integer[] keys, Neo4J database) throws Exception {
+
+
+      //Count total records in the file
+        AtomicLong totalRecords = new AtomicLong(0);
+        if (true){
+            System.out.print("Analyzing File...");
+            long t = System.currentTimeMillis();
+            java.io.BufferedReader br = getBufferedReader(csvFile);
+            String row = br.readLine(); //skip header
+            while ((row = br.readLine()) != null){
+                totalRecords.incrementAndGet();
+            }
+            br.close();
+            System.out.print(" Done!");
+            System.out.println("\nFound " + format(totalRecords.get()) + " records in " + getElapsedTime(t));
+        }
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        Runnable statusLogger = getStatusLogger(recordCounter, totalRecords);
+        ScheduledExecutorService executor = getExecutor(statusLogger);
+
 
 
       //Parse header and create query to insert records
@@ -61,7 +95,7 @@ public class Import {
             query.append(colName);
             query.append(": $");
             query.append(colName);
-        } 
+        }
         if (keys==null){
             uniqueColName = null;
         }
@@ -147,6 +181,8 @@ public class Import {
                 catch(Exception e){
                     //console.log(e.getMessage());
                 }
+
+                recordCounter.incrementAndGet();
             }
 
 
@@ -177,6 +213,14 @@ public class Import {
       //Notify the pool that we have finished added records and Wait for threads to finish
         pool.done();
         pool.join();
+
+
+      //Send one last status update
+        statusLogger.run();
+
+
+      //Clean up
+        executor.shutdown();
     }
 
 
@@ -194,27 +238,20 @@ public class Import {
         JsonReader jr = new JsonReader(jsonFile.getBufferedReader());
         importJSON(jr, vertex, target, database);
     }
-    
+
     public static void importJSON(InputStream is, String vertex, String target, Neo4J database) throws Exception {
         JsonReader jr = new JsonReader(new InputStreamReader(is));
         importJSON(jr, vertex, target, database);
     }
-    
+
     public static void importJSON(JsonReader jr, String vertex, String target, Neo4J database) throws Exception {
-        /*
-        Session session = null;
-        try {
-            session = database.getSession();
-            JsonReader jr = new JsonReader(jsonFile.getBufferedReader());
-            createNode(jr, vertex, target, null, new LinkedHashMap<>(), session);
-            jr.close();
-            session.close();
-        }
-        catch (Exception e) {
-            if (session != null) session.close();
-            throw e;
-        }
-        */
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        Runnable statusLogger = getStatusLogger(recordCounter, null);
+        ScheduledExecutorService executor = getExecutor(statusLogger);
+
 
         ConcurrentHashMap<Long, Value> jobs = new ConcurrentHashMap<>();
         AtomicLong jobIDs = new AtomicLong(0);
@@ -586,6 +623,7 @@ public class Import {
                     jobs.put(jobID, new Value(obj));
                     jobs.notifyAll();
                 }
+                recordCounter.incrementAndGet();
             }
 
 
@@ -609,6 +647,14 @@ public class Import {
 
         pool.add(new Object[]{jr, vertex, target, null, new LinkedHashMap<>(), jobIDs.get()});
         pool.join();
+
+
+      //Send one last status update
+        statusLogger.run();
+
+
+      //Clean up
+        executor.shutdown();
     }
 
 
@@ -674,11 +720,11 @@ public class Import {
     private static Result addRow(final Transaction tx, final String query, Map<String, Object> params){
         return tx.run( query, params );
     }
-    
-    
+
+
   //**************************************************************************
   //** getBufferedReader
-  //**************************************************************************    
+  //**************************************************************************
     private static java.io.BufferedReader getBufferedReader(File file) throws Exception {
         String ext = file.getExtension();
         if (ext.equals("gz")){
@@ -689,5 +735,78 @@ public class Import {
         else{
             return file.getBufferedReader("UTF-8");
         }
+    }
+
+
+  //**************************************************************************
+  //** getStatusLogger
+  //**************************************************************************
+  /** Used to print status updates to the standard output stream
+   */
+    private static Runnable getStatusLogger(AtomicLong recordCounter, AtomicLong totalRecords){
+        long startTime = System.currentTimeMillis();
+        return new Runnable() {
+            private String statusText = "0 records processed (0 records per second)";
+            public void run() {
+                long currTime = System.currentTimeMillis();
+                double elapsedTime = (currTime-startTime)/1000; //seconds
+                long x = recordCounter.get();
+
+                String rate = "0";
+                try{
+                    rate = format(Math.round(x/elapsedTime));
+                }
+                catch(Exception e){}
+
+                int len = statusText.length();
+                for (int i=0; i<len; i++){
+                    System.out.print("\b");
+                }
+
+                statusText = format(x) + " records processed (" + rate + " records per second)";
+
+
+                if (totalRecords!=null && totalRecords.get()>0){
+                    double p = ((double) x / (double) totalRecords.get());
+                    int currPercent = (int) Math.round(p*100);
+                    statusText += " " + x + "/" + totalRecords.get() + " " + currPercent + "%";
+                }
+
+                while (statusText.length()<len) statusText += " ";
+
+
+                System.out.print(statusText);
+            }
+        };
+    }
+
+    private static ScheduledExecutorService getExecutor(Runnable statusLogger){
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(statusLogger, 0, 1, TimeUnit.SECONDS);
+        return executor;
+    }
+
+  //**************************************************************************
+  //** format
+  //**************************************************************************
+  /** Used to format a number with commas.
+   */
+    private static String format(long l){
+        return java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(l);
+    }
+
+  //**************************************************************************
+  //** getElapsedTime
+  //**************************************************************************
+  /** Computes elapsed time between a given startTime and now. Returns a
+   *  human-readable string representing the elapsed time.
+   */
+    public static String getElapsedTime(long startTime){
+        long t = System.currentTimeMillis()-startTime;
+        if (t<1000) return t + "ms";
+        long s = Math.round(t/1000);
+        if (s<60) return s + "s";
+        long m = Math.round(s/60);
+        return m + "m";
     }
 }
