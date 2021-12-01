@@ -37,7 +37,6 @@ bluewave.charts.PieChart = function(parent, config) {
     this.clear = function(){
         if (pieArea){
             pieArea.node().innerHTML = "";
-            //pieArea.selectAll("*").remove();
             pieArea.attr("transform", null);
         }
     };
@@ -118,11 +117,13 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
             if (chartConfig.pieLabels===null) chartConfig.pieLabels = true;
-            if (chartConfig.pieLabels===true){
+            if (chartConfig.pieLabels===true && pieData[0].data.key !== "undefined" && !isNaN(pieData[0].value)){
 
 
-                var labelStart = radius - ((radius-innerRadius)*0.2);
+                var labelStart = radius - ((radius-innerRadius)*0.1);
                 var labelEnd = radius * 1.2;
+
+                var labelArea = innerRadius + (radius - innerRadius) * chartConfig.labelOffset/50;
 
                 var innerArc = d3.arc()
                   .innerRadius(labelStart)
@@ -132,11 +133,23 @@ bluewave.charts.PieChart = function(parent, config) {
                   .innerRadius(labelEnd)
                   .outerRadius(labelEnd);
 
+                var centerArc = d3.arc()
+                  .innerRadius(innerRadius)
+                  .outerRadius(radius);
+
+                var insideArc = d3.arc()
+                  .innerRadius(innerRadius)
+                  .outerRadius(radius/2);
+
+                var newArc = d3.arc()
+                  .innerRadius(innerRadius)
+                  .outerRadius(labelArea);
 
 
               //Add the polylines between chart and labels:
-                let endPoints = [];
+              if (parseInt(chartConfig.labelOffset) > 100) {
                 var lineGroup = pieChart.append("g");
+                let endPoints = [];
                 lineGroup.attr("name", "lines");
                 lineGroup.selectAll("*")
                   .data(pieData)
@@ -146,27 +159,35 @@ bluewave.charts.PieChart = function(parent, config) {
                   .style("fill", "none")
                   .attr("stroke-width", 1)
                   .attr("points", function (d) {
-                    var posA = innerArc.centroid(d); //line start
-                    var posB = outerArc.centroid(d); //line break (will be adjusted below)
-                    var posC = outerArc.centroid(d); //line end (will be adjusted below)
 
-                    endPoints.forEach((val) => {
-                      if (posC[1] < val + 5 && posC[1] > val - 5) {
-                        posC[1] -= 14;
-                        posB[1] -= 14;
-                      }
-                    });
+                  var firstArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * 90/50);
+                  var breakArc = d3.arc().innerRadius(innerRadius).outerRadius(innerRadius + (radius - innerRadius) * (chartConfig.labelOffset)/50);
+
+                  var posA = firstArc.centroid(d);
+                  var posB = breakArc.centroid(d);
+                  var posC = newArc.centroid(d);
 
 
-                    endPoints.push(posC[1]);
-
-                    var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; // we need the angle to see if the X position will be at the extreme right or extreme left
-                    posC[0] = labelEnd * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
-                    return [posA, posB, posC];
+                  endPoints.forEach((val) => {
+                    if (posC[1] < val + 5 && posC[1] > val - 5) {
+                      posC[1] -= 14;
+                      posB[1] -= 14;
+                    }
                   });
 
 
-              //Add the polylines between chart and labels:
+                  endPoints.push(posC[1]);
+
+                  var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; // we need the angle to see if the X position will be at the extreme right or extreme left
+                  posC[0] = labelArea * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+
+
+                  return [posA, posB, posC];
+                  });
+              }
+
+
+              //Add the labels:
                 var positions = [];
                 var labelGroup = pieChart.append("g");
                 labelGroup.attr("name", "labels");
@@ -178,29 +199,42 @@ bluewave.charts.PieChart = function(parent, config) {
                       return d.data.key;
                   })
                   .attr("transform", function (d) {
-                    var pos = outerArc.centroid(d);
-                    positions.forEach((val) => {
-                      if (pos[1] < val + 5 && pos[1] > val - 5) {
-                        pos[1] -= 14;
-                      }
-                    });
-                    positions.push(pos[1]);
+                    if (parseInt(chartConfig.labelOffset) > 100) {
+                        var pos = newArc.centroid(d);
+                        positions.forEach((val) => {
+                          if (pos[1] < val + 5 && pos[1] > val - 5) {
+                            pos[1] -= 14;
+                          }
+                        });
+                        positions.push(pos[1]);
 
-                    var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                    pos[0] = labelEnd * (midangle < Math.PI ? 1 : -1);
-                    return "translate(" + pos + ")";
+                        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                        pos[0] = labelArea * (midangle < Math.PI ? 1 : -1);
+
+
+                        return "translate(" + pos + ")";
+                    }
+                    return "translate(" + newArc.centroid(d) + ")";
+
                   })
                   .style("text-anchor", function (d) {
-                    var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-                    return midangle < Math.PI ? "start" : "end";
+                   if (parseInt(chartConfig.labelOffset) > 100) {
+                      var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                      return midangle < Math.PI ? "start" : "end";
+                   }
+
+                    return "middle";
                   });
 
 
               //Update pieChart as needed
-                var box = labelGroup.node().getBBox();
+                var box = pieArea.node().getBBox();
                 if (box.width>width || box.height>height){
                     var scale, x, y;
-                    if (box.width>=box.height){
+                    var widthDiff = box.width - width;
+                    var heightDiff = box.height - height;
+
+                    if (widthDiff > heightDiff){
                         scale = width/box.width;
                         if (scale>1){
                             scale = 1+(1-scale);
@@ -208,7 +242,7 @@ bluewave.charts.PieChart = function(parent, config) {
                         x = width/2; //needs to be updated...
                         y = height/2;
                     }
-                    else{
+                    else if (heightDiff > widthDiff) {
                         scale = height/box.height;
                         x = width/2;
                         y = (box.height+box.y); //not quite right...
