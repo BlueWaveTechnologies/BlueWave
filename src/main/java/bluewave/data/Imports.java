@@ -5,8 +5,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.math.BigDecimal;
 
-import static javaxt.utils.Console.console;
 import javaxt.utils.ThreadPool;
+import javaxt.express.utils.CSV;
+import static javaxt.utils.Console.console;
 
 import com.monitorjbl.xlsx.StreamingReader;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -28,6 +29,7 @@ public class Imports {
     private LinkedHashMap<String, Integer> header;
     private GeoCoder geocoder;
     private int sheetID;
+    private String[] companyTypes = new String[]{"Manufacturer","Shipper","Importer","Consignee","DII"};
     
     
   //**************************************************************************
@@ -83,6 +85,188 @@ public class Imports {
     
     
   //**************************************************************************
+  //** exportSummary
+  //**************************************************************************
+  /** Used to export a csv file with select fields from the input xlsx file
+   */
+    public void exportSummary() throws Exception {
+        javaxt.io.File output = new javaxt.io.File(this.file.getDirectory(), "ImportSummary.csv");
+        java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
+      
+        java.io.InputStream is = file.getInputStream();
+        Workbook workbook = StreamingReader.builder()
+            .rowCacheSize(10)
+            .bufferSize(4096)
+            .open(is);                            
+
+        int rowID = 0;                                        
+        for (Row row : workbook.getSheetAt(sheetID)){   
+            if (rowID>0){  
+                
+                try{
+                
+                    if (rowID>1) writer.write("\r\n");
+
+                  //Get date
+                    String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
+                    if (date!=null) date = date.trim();
+                    if (date.isEmpty()) date = row.getCell(header.get("Submission Date")).getStringCellValue();
+                    writer.write(date); 
+                    writer.write(",");                    
+                    
+                    
+                  //Get port of entry code
+                    String port = row.getCell(header.get("Port of Entry Code & Name")).getStringCellValue();
+                    if (port!=null){
+                        port = port.trim();
+                        if (!port.isEmpty()){
+                            int idx = port.indexOf(" - ");
+                            if (idx>-1){
+                                port = port.substring(0, idx).trim();
+                            }
+                        }
+                    }       
+                    writer.write(port);
+                    writer.write(",");
+
+                    
+                  //Unladed Thru Port Code
+                    String thruPort = row.getCell(header.get("Unladed Thru Port Code")).getStringCellValue();
+                    writer.write(thruPort);
+                    writer.write(",");
+                    
+                    
+                  //Country of Origin
+                    writer.write(row.getCell(header.get("Country Of Origin")).getStringCellValue());  
+                    writer.write(",");
+                  
+                    
+                  //Carrier Type
+                    String carrierType = row.getCell(header.get("Carrier Type")).getStringCellValue();
+                    if (carrierType==null) carrierType = "";
+                    carrierType = carrierType.trim().toLowerCase();
+                    if (carrierType.contains("rail") || carrierType.contains("road") || carrierType.contains("truck")){
+                        carrierType = "land";
+                    }
+                    else if (carrierType.contains("air")){
+                        carrierType = "air";
+                    }                    
+                    else if (carrierType.contains("sea")){
+                        carrierType = "sea";
+                    }
+                    else{
+                        if (!carrierType.isEmpty()) carrierType = "other";
+                    }
+                    writer.write(carrierType);
+                    writer.write(",");
+                    
+
+                 //Product code
+                    writer.write(row.getCell(header.get("Product Code")).getStringCellValue()); 
+                    writer.write(",");
+
+                    
+                  //Total reported quantity
+                    writer.write(row.getCell(header.get("Reported Total Quantity")).getStringCellValue());
+                    writer.write(",");
+
+                    
+                  //Declared value in USD
+                    String value = row.getCell(header.get("Value of Goods")).getStringCellValue();
+                    if (value!=null) value = value.replace("$", "").replace(",", "");
+                    writer.write(value);
+                    writer.write(",");
+
+                    
+                  //FEI
+                    for (int i=0; i<companyTypes.length; i++){
+                        if (i>0) writer.write(",");
+                        Integer feiField = header.get(companyTypes[i] + " FEI Number");
+                        String fei = row.getCell(feiField).getStringCellValue();
+                        writer.write(fei);
+                    }
+                
+                }
+                catch(Exception e){
+                    console.log("Failed to parse row " + rowID);
+                }
+                
+            }
+            rowID++;
+        }   
+        
+        writer.close();
+        workbook.close();
+        is.close();                 
+    }
+    
+    
+  //**************************************************************************
+  //** getShipmentsByPortOfUnlading
+  //**************************************************************************
+    public void getShipmentsByPortOfUnlading(Integer portOfEntryID, javaxt.io.File importsSummary) throws Exception {
+        HashMap<Integer, HashMap<String, LinkedHashMap<String, Double>>> shipmentsByPortOfUnlading = new HashMap<>();
+        java.io.BufferedReader br = importsSummary.getBufferedReader();
+        String row;
+        while ((row = br.readLine()) != null){
+            CSV.Columns columns = CSV.getColumns(row, ",");
+            Integer portOfEntry = columns.get(1).toInteger();
+            Integer portOfUnlading = columns.get(2).toInteger();
+            String countryOfOrigin = columns.get(3).toString();
+            String carrierType = columns.get(4).toString();
+
+            if (portOfEntry!=portOfEntryID) continue;
+            if (portOfUnlading==null) portOfUnlading = -1;
+
+            HashMap<String, LinkedHashMap<String, Double>> shipmentsByCountry = shipmentsByPortOfUnlading.get(portOfUnlading);
+            if (shipmentsByCountry==null){
+                shipmentsByCountry = new HashMap<>();
+                shipmentsByPortOfUnlading.put(portOfUnlading, shipmentsByCountry);
+            }
+
+
+            LinkedHashMap<String, Double> shipmentMethods = shipmentsByCountry.get(countryOfOrigin);
+            if (shipmentMethods==null){
+                shipmentMethods = new LinkedHashMap<>();
+                shipmentMethods.put("air", 0.0);
+                shipmentMethods.put("sea", 0.0);
+                shipmentMethods.put("land", 0.0);
+                shipmentMethods.put("other", 0.0);
+                shipmentMethods.put("n/a", 0.0);
+                shipmentsByCountry.put(countryOfOrigin, shipmentMethods);
+            }
+            if (carrierType==null || carrierType.isEmpty()) carrierType = "n/a";
+            Double sum = shipmentMethods.get(carrierType);        
+            sum++;
+            shipmentMethods.put(carrierType,sum);
+        }    
+        br.close();
+
+
+        Iterator<Integer> i2 = shipmentsByPortOfUnlading.keySet().iterator();
+        while (i2.hasNext()){
+            Integer portOfUnlading = i2.next();
+
+            HashMap<String, LinkedHashMap<String, Double>> shipmentsByCountry = shipmentsByPortOfUnlading.get(portOfUnlading);
+            Iterator<String> it = shipmentsByCountry.keySet().iterator();
+            while (it.hasNext()){
+                String countryOfOrigin = it.next();
+                LinkedHashMap<String, Double> shipmentMethods = shipmentsByCountry.get(countryOfOrigin);
+                Double air = shipmentMethods.get("air");
+                Double sea = shipmentMethods.get("sea");
+                Double land = shipmentMethods.get("land");
+                Double other = shipmentMethods.get("other");
+                Double na = shipmentMethods.get("n/a");
+                row = portOfUnlading + "," + countryOfOrigin + "," + air + "," + sea + "," + land + "," + other + "," + na;
+                System.out.println(row);
+            }
+
+
+        }         
+    }
+    
+    
+  //**************************************************************************
   //** geocodeCompanies
   //**************************************************************************
     public void geocodeCompanies() throws Exception {
@@ -90,9 +274,8 @@ public class Imports {
         HashSet<String> addresses = new HashSet<>();
         ConcurrentHashMap<String, BigDecimal[]> coords = new ConcurrentHashMap<>();
         HashMap<String, HashMap<String, String[]>> companies = new HashMap<>();        
-        String[] companyTypes = new String[]{"Manufacturer","Shipper","Importer","Consignee","DII"};
         
-        
+            
       //Parse file and generate unique list of addresses by company type
         java.io.InputStream is = file.getInputStream();
         Workbook workbook = StreamingReader.builder()
