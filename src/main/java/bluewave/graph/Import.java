@@ -87,9 +87,15 @@ public class Import {
         CSV.Columns columns = CSV.getColumns(row, ",");
         for (int i=0; i<columns.length(); i++){
             String colName = columns.get(i).toString();
-            colName = colName.replace("-", "N").replace("+", "P"); //custom replacement
+            while (colName.contains("  ")) colName = colName.replace("  ", " ");
+            colName = colName.toLowerCase().replace(" ", "_");
+            colName = colName.trim().toLowerCase();
+            
+          //Special case for HHS hospitilization data - should be removed in the future
+            colName = colName.replace("-", "N").replace("+", "P");           
+            
+            
             colNames.add(colName);
-
             header.put(colName, i);
             if (i>0) query.append(", ");
             query.append(colName);
