@@ -101,11 +101,31 @@ public class Imports {
 
         int rowID = 0;                                        
         for (Row row : workbook.getSheetAt(sheetID)){   
-            if (rowID>0){  
+            if (rowID==0){
+                    ArrayList<String> fields = new ArrayList<>(Arrays.asList(
+                    "Entry","Date","Port of Entry","Unladed Port","Country of Origin",
+                    "Shipment Method","Product Code","Quantity","Value"));  
+                    for (String companyType : companyTypes){
+                        fields.add(companyType);
+                    }
+                    fields.add("Final Disposition");                
+                    
+                    for (int i=0; i<fields.size(); i++){
+                        if (i>0) writer.write(",");
+                        writer.write(fields.get(i));
+                    }
+            }
+            else {  
                 
                 try{
                 
-                    if (rowID>1) writer.write("\r\n");
+                    writer.write("\r\n");
+                    
+                  //Get ID
+                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                    writer.write(id);
+                    writer.write(",");
+                    
 
                   //Get date
                     String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
@@ -186,6 +206,34 @@ public class Imports {
                         writer.write(fei);
                     }
                 
+
+                    
+                  //Final Disposition
+                    String finalDisposition = row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue();
+                    if (finalDisposition.equals("OASIS MPro Issued"))
+                        finalDisposition = "OASIS MPro Issued";
+                    else if(finalDisposition.equals("MPro Issued"))
+                        finalDisposition = "MPro Issued";
+                    else if(Arrays.asList("Rel after Detain", 
+                                         "Rel/IB", "Refuse (MB)",
+                                         "Released").contains(finalDisposition))
+                        finalDisposition = "Good";
+                    else if(Arrays.asList("Rel w/Cmnt after Detain", 
+                                         "Released w/Comment",
+                                         "Refuse Inform After Export",
+                                         "Refuse Inform Before Export",
+                                         "Refuse (MB)",
+                                         "Recon Matls Rel/Rem Refuse IA",
+                                         "Recon Matls Rel/Rem Refuse IB",
+                                         "Recon Matls Released").contains(finalDisposition))
+                        finalDisposition = "Bad";
+                    else
+                        finalDisposition = "Other";                    
+                    
+                    writer.write(",");
+                    writer.write(finalDisposition);
+                                        
+                    
                 }
                 catch(Exception e){
                     console.log("Failed to parse row " + rowID);
