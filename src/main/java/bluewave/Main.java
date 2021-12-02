@@ -1,6 +1,6 @@
 package bluewave;
 import bluewave.app.User;
-import bluewave.data.Premier;
+import bluewave.data.*;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
 
@@ -13,7 +13,7 @@ import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.*;
-
+import javaxt.express.utils.CSV;
 
 //******************************************************************************
 //**  Main
@@ -252,6 +252,10 @@ public class Main {
         if (str.equalsIgnoreCase("Premier")){
             importPremier(args);
         }
+        else if (str.equalsIgnoreCase("Imports")){
+            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
+            imports.exportSummary();
+        }        
         else{
             java.io.File f = new java.io.File(str);
             if (f.isFile()) importFile(args);
@@ -280,6 +284,7 @@ public class Main {
 
       //Get node type
         String nodeType = args.get("-nodeType");
+        if (nodeType==null) nodeType = args.get("-node");
         if (nodeType==null) nodeType = args.get("-vertex");
         if (nodeType==null) throw new IllegalArgumentException("-nodeType or -vertex is required");
 
