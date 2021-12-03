@@ -226,10 +226,11 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
         if (chartConfig.stack){
-        //Nest merged data object by X-axis value for stack
-        var groupedStackData = d3.nest()
-            .key((d) => d[xKey])
-            .entries(mergedData)
+
+            //Nest merged data object by X-axis value for stack
+            var groupedStackData = d3.nest()
+                .key((d) => d[xKey])
+                .entries(mergedData)
 
     console.log("groupedStackData",groupedStackData)
 
@@ -257,7 +258,6 @@ bluewave.charts.BarChart = function(parent, config) {
                 .selectAll("g")
                 .data(stackedData)
                 .enter().append("g")
-                // .attr("fill", "red")
                 .selectAll("rect")
                 
                 .data(function (d) { return d; })
@@ -270,18 +270,13 @@ bluewave.charts.BarChart = function(parent, config) {
                 })
                 .attr("y", function (d) { return y(d[1]); })
                 .attr("height", function (d) { return y(d[0]) - y(d[1]); })
-                .attr("width", x.bandwidth())
-                .attr("barID", function(d, i){
-
-                    // colorIncrementer = i;
-                    // let id = colorIncrementer + i;
-                    // console.log(colorIncrementer)
-                    // return id;
-                    // console.log(i, colorIncrementer)
-                    // let id = (colorIncrementer*i)%stackLength;
-                    // colorIncrementer++;
-                    // return id;
-                    return i;
+                .attr("width", x.bandwidth());
+                
+                //Mod through color array assigning barId. Rolls over at number of stacks
+                plotArea.selectAll("rect").attr("barID", function(d, i){
+                
+                    if (i%stackLength === 0) colorIncrementer++;
+                    return colorIncrementer-1;
 
                 });
                 
@@ -317,12 +312,12 @@ bluewave.charts.BarChart = function(parent, config) {
                     .domain(x.domain())
                     .thresholds(x.ticks(binWidth));
 
-                    // .thresholds(x.ticks(100))
+                   
                     //TODO: find general solution for time and ordinal scale
                     // .thresholds(x.domain()) //Not sure why this doesn't work for dates/strings
-// console.log(sumData)
+
                  var bins = histogram(sumData);
-// console.log(bins)
+
                  var frequencyMax = d3.max(bins, d => d.length)
 
                  var frequencyAxis = d3.scaleLinear()
