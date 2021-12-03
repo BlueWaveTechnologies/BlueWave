@@ -110,6 +110,7 @@ bluewave.charts.BarChart = function(parent, config) {
         var data1 = data[0];
         var data2 = data[1];
         var dataSets = data;
+        var colors = bluewave.utils.getColorPalette(true);
         // data = data1;
 
 
@@ -171,7 +172,7 @@ bluewave.charts.BarChart = function(parent, config) {
             let yAxisN = chartConfig[`yAxis${i+1}`];
 
             //If axes not picked, skip pushing/rendering this dataset
-            if ((!xAxisN || !yAxisN) && !group && i>0) continue;
+            if ((!xAxisN || !yAxisN) && !group && barType !== "histogram" && i>0) continue;
 
             if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
 
@@ -224,11 +225,78 @@ bluewave.charts.BarChart = function(parent, config) {
         }
 
 
+        if (chartConfig.stack){
+        //Nest merged data object by X-axis value for stack
+        var groupedStackData = d3.nest()
+            .key((d) => d[xKey])
+            .entries(mergedData)
+
+    console.log("groupedStackData",groupedStackData)
+
+            let stackGroup = [];
+            let stackLength = groupedStackData[0].values.length;
+            for (let i = 0; i < stackLength; i++) {
+                stackGroup.push(i);
+            }
+            console.log("stackgroup",stackGroup)
+            // console.log(subgroups)
+            var stackedData = d3.stack()
+                // .keys(subgroups)
+                .keys(stackGroup)
+                .value(function (d, key) {
+    
+                    let v = d.values[key];
+                    return v[yKey];
+    
+                })
+                (groupedStackData)
+    console.log("stackedData",stackedData)
+    
+            let colorIncrementer = 0;
+            plotArea.append("g")
+                .selectAll("g")
+                .data(stackedData)
+                .enter().append("g")
+                // .attr("fill", "red")
+                .selectAll("rect")
+                
+                .data(function (d) { return d; })
+                .enter().append("rect")
+                .attr("x", function (d) { 
+                    
+                    // return x(new Date(d.data.key)); 
+                    //keep in case we change how we're handling timescale
+                    return x(d.data.key)
+                })
+                .attr("y", function (d) { return y(d[1]); })
+                .attr("height", function (d) { return y(d[0]) - y(d[1]); })
+                .attr("width", x.bandwidth())
+                .attr("barID", function(d, i){
+
+                    // colorIncrementer = i;
+                    // let id = colorIncrementer + i;
+                    // console.log(colorIncrementer)
+                    // return id;
+                    // console.log(i, colorIncrementer)
+                    // let id = (colorIncrementer*i)%stackLength;
+                    // colorIncrementer++;
+                    // return id;
+                    return i;
+
+                });
+                
+            }
+
+
 
         width = plotWidth;
         height = plotHeight;
 
         for (let i=0; i<dataSets.length; i++){
+
+            if (chartConfig.stack) break;
+
+
             var sumData = arr[i];
 
             let fillOpacity = parseFloat(chartConfig["fillOpacity" + i]);
@@ -241,6 +309,9 @@ bluewave.charts.BarChart = function(parent, config) {
                 let binWidth = parseInt(chartConfig.binWidth);
                 if (isNaN(binWidth) || binWidth<1) binWidth = 10;
 
+                //Ensure consistent bin size 
+                x.nice();
+
                 var histogram = d3.histogram()
                     .value(function(d) { return d.key; })
                     .domain(x.domain())
@@ -249,9 +320,9 @@ bluewave.charts.BarChart = function(parent, config) {
                     // .thresholds(x.ticks(100))
                     //TODO: find general solution for time and ordinal scale
                     // .thresholds(x.domain()) //Not sure why this doesn't work for dates/strings
-
+// console.log(sumData)
                  var bins = histogram(sumData);
-
+// console.log(bins)
                  var frequencyMax = d3.max(bins, d => d.length)
 
                  var frequencyAxis = d3.scaleLinear()
@@ -458,7 +529,6 @@ bluewave.charts.BarChart = function(parent, config) {
         }
 
         //Set color defaults
-        var colors = bluewave.utils.getColorPalette(true);
         var getBarColor = function(i){
             var barColor = chartConfig["barColor" + i];
             if (!barColor) {

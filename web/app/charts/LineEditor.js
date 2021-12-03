@@ -396,6 +396,19 @@ bluewave.charts.LineEditor = function(parent, config) {
                                 }
 
                             ]
+                        },
+                        {
+                            name: "stack",
+                            label: "Stack Lines",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
                         }
 
 
@@ -491,6 +504,10 @@ bluewave.charts.LineEditor = function(parent, config) {
         var endTags = chartConfig.endTags;
         tagField.setValue(endTags===true ? true : false);
 
+        var stackField = form.findField("stack");
+        var stack = chartConfig.stack;
+        stackField.setValue(stack===true ? true : false);
+
         var scalingField = form.findField("scaleOptions");
         var scale = chartConfig.scaleOption;
         scalingField.setValue(scale==="logarithmic" ? "logarithmic" : "linear");
@@ -515,6 +532,8 @@ bluewave.charts.LineEditor = function(parent, config) {
             if (settings.endTags==="true") settings.endTags = true;
             else settings.endTags = false;
 
+            if (settings.stack==="true") settings.stack = true;
+            else settings.stack = false;
 
             chartConfig.scaleOption = settings.scaleOptions;
             chartConfig.xGrid = settings.xGrid;
@@ -522,6 +541,7 @@ bluewave.charts.LineEditor = function(parent, config) {
             chartConfig.xLabel = settings.xLabel;
             chartConfig.yLabel = settings.yLabel;
             chartConfig.endTags = settings.endTags;
+            chartConfig.stack = settings.stack;
             createLinePreview();
         };
 
@@ -721,8 +741,9 @@ bluewave.charts.LineEditor = function(parent, config) {
         let n = parseInt(datasetID);
         if (!isNaN(n)){ //Single line edit case
 
+            var colors = bluewave.utils.getColorPalette(true);
 
-            if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = "#6699CC";
+            if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = colors[n%colors.length];
             if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
             if( !chartConfig["lineStyle" + n] ) chartConfig["lineStyle" + n] = "solid";
             if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;

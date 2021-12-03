@@ -117,6 +117,8 @@ bluewave.charts.LineChart = function(parent, config) {
         dataSets = data;
         data = data1;
 
+        var globalxKeyType = typeOfAxisValue(data1[0][xKey]);
+
         var mergedData = d3.merge(dataSets);
         // if (data2!==null && data2!==undefined && xKey2 && yKey2){
         //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
@@ -126,7 +128,7 @@ bluewave.charts.LineChart = function(parent, config) {
         var maxData = d3.nest()
             .key(function (d) { return d[xKey]; })
             .rollup(function (d) {
-                return d3.max(d, function (g) {
+                return d3.sum(d, function (g) {
                     return parseFloat(g[yKey]);
                 });
             }).entries(mergedData);
@@ -143,8 +145,6 @@ bluewave.charts.LineChart = function(parent, config) {
          //Set axes with merged data
         displayAxis("key", "value", maxData, minData);
 
-        let xType = typeOfAxisValue();
-
 
       //Reformat data if "group by" is selected
         if(group !== null && group !== undefined && group !==""){
@@ -160,7 +160,76 @@ bluewave.charts.LineChart = function(parent, config) {
             })
 
             dataSets = tempDataSets;
+            var subgroups = groupData.map(function(d) { return d["key"]; });
         }
+
+        if (chartConfig.stack){
+        //Nest merged data object by X-axis value for stacked area
+        var groupedStackData = d3.nest()
+            .key( (d) => d[xKey])
+            .entries(mergedData)
+
+        console.log("data", mergedData)
+        console.log("groupedStackData", groupedStackData)
+
+        let stackGroup=[];
+        let stackLength = groupedStackData[0].values.length;
+        for (let i=0; i<stackLength; i++){
+            stackGroup.push(i);
+        }
+            console.log(stackGroup)
+        // console.log(subgroups)
+        var stackedData = d3.stack()
+            // .keys(subgroups) no idea why this doesn'r work
+            .keys(stackGroup)
+            .value(function (d, key) {
+
+                let v = d.values[key];
+                return v[yKey];
+
+            })
+            (groupedStackData)
+        console.log(stackedData)
+        
+        var colors = bluewave.utils.getColorPalette(true);
+
+        plotArea
+            .selectAll("stacks")
+            .data(stackedData)
+            .enter()
+            .append("path")
+            .attr("dataset", (d, i) => i )
+            .style("fill", function(d, i){
+                //Get color from config or mod through color array
+                return chartConfig["lineColor" + i] || colors[i%colors.length];
+            })
+            .style("opacity", function(d, i){
+                return chartConfig["opacity" + i];
+            })
+            .attr("d", d3.area()
+                .x(function (d, i) { 
+
+                    let subData = d.data;
+                    let subKey = d.data.key;
+
+                    if (globalxKeyType === "date"){
+                        subKey = new Date(subKey)
+                    }
+ 
+                    return x(subKey);
+                    
+                })
+                .y0(function (d) { return y(d[0]); })
+                .y1(function (d) { return y(d[1]); })
+            )
+            .attr("class", "stackarea")
+            .on("click", function(d){
+                var datasetID = parseInt(d3.select(this).attr("dataset"));
+                me.onClick(this, datasetID, d);
+            });
+
+        }
+
 
 
       //Create dataset to render
@@ -230,6 +299,8 @@ bluewave.charts.LineChart = function(parent, config) {
         var fillGroup = plotArea.append("g");
         fillGroup.attr("name", "fill");
         for (let i=0; i<arr.length; i++){
+
+            if(chartConfig.stack) break;
             var sumData = arr[i];
 
             let lineColor = chartConfig["lineColor" + i];
@@ -282,6 +353,8 @@ bluewave.charts.LineChart = function(parent, config) {
         circleGroup.attr("name", "circles");
         lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
+
+            if(chartConfig.stack) break;
             var sumData = arr[i];
 
             let lineColor = chartConfig["lineColor" + i];
