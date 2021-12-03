@@ -224,6 +224,8 @@ bluewave.charts.BarChart = function(parent, config) {
             }
         }
 
+        width = plotWidth;
+        height = plotHeight;
 
         if (chartConfig.stack){
 
@@ -266,11 +268,21 @@ bluewave.charts.BarChart = function(parent, config) {
                     
                     // return x(new Date(d.data.key)); 
                     //keep in case we change how we're handling timescale
-                    return x(d.data.key)
+                    return layout === "vertical" ? x(d.data.key) : x(d[0]);
                 })
-                .attr("y", function (d) { return y(d[1]); })
-                .attr("height", function (d) { return y(d[0]) - y(d[1]); })
-                .attr("width", x.bandwidth());
+                .attr("y", function (d) { 
+ 
+                    return layout === "vertical" ? y(d[1]) : y(d.data.key); 
+                })
+                .attr("height", function (d) { 
+
+                    return layout === "vertical" ? y(d[0]) - y(d[1]) : y.bandwidth();
+                })
+                .attr("width", function(d){
+
+                    return layout==="vertical" ? x.bandwidth() : x(d[1]) - x(d[0]);
+                });
+                
                 
                 //Mod through color array assigning barId. Rolls over at number of stacks
                 plotArea.selectAll("rect").attr("barID", function(d, i){
@@ -283,9 +295,6 @@ bluewave.charts.BarChart = function(parent, config) {
             }
 
 
-
-        width = plotWidth;
-        height = plotHeight;
 
         for (let i=0; i<dataSets.length; i++){
 
