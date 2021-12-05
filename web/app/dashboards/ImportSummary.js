@@ -18,6 +18,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var data = [];
     var countryOptions, productOptions, establishmentOptions; //dropdowns
     var slider, thresholdInput;
+    var lineChart, barChart, scatterChart;
     var waitmask;
     
     
@@ -56,11 +57,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
+        td.style.height = "350px";
         tr.appendChild(td);
-        var div = document.createElement("div");
-        div.style.width = "100%";
-        div.style.height = "250px";
-        td.appendChild(div);
         createCharts(td);
 
 
@@ -157,10 +155,68 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 }
 
                 data.sort(function(a,b){
-                    return b.totalQuantity-a.totalQuantity;
+                    return b.totalShipments-a.totalShipments;
                 });
                 
+
+              //Update main table
                 grid.update(data);
+                
+                
+                
+              //Update line chart
+                getData("Imports_Per_Day", function(csv){
+                    var lineData = [];
+                    parseCSV(csv, ",").forEach((row)=>{
+                        var date = new Date(row[0]).getTime();
+                        var count = parseFloat(row[1]);                           
+                        lineData.push({
+                            date: date,
+                            count: count
+                        });
+                    });
+                    
+                    lineData.sort(function(a,b){
+                        return b.date-a.date;
+                    });                    
+                    
+                    lineData.forEach((d)=>{
+                        var date = new Date(d.date);
+                        d.date = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
+                    });
+                    
+                    lineChart.update({
+                        xAxis: "date",
+                        yAxis: "count"
+                    },[lineData]);
+                });                
+
+                
+                
+              //Update bar chart
+                var lineData = [];
+                for (var i=0; i<Math.min(10,data.length); i++){
+                    var d = data[i];
+                    lineData.push({
+                        name: "fei_"+d.name,
+                        quantity: d.totalShipments
+                    });
+                }
+                barChart.update({
+                    xAxis: "name",
+                    yAxis: "quantity"
+                }, [lineData]);
+
+
+//                scatterChart.update({
+//                    xAxis: "name",
+//                    yAxis: "totalShipments"
+//                },[d3.csvParse(csv)]);
+
+
+
+
+
                 waitmask.hide();
             },
             failure: function(request){
@@ -361,7 +417,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
       //Add custom update method
         grid.update = function(){
             grid.clear();
-            grid.load(data);
+            grid.load(data);     
         };        
     };
 
@@ -370,9 +426,91 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** createCharts
   //**************************************************************************
     var createCharts = function(parent){
-        
-    };
 
+      //Create table
+        var table = createTable();
+        parent.appendChild(table);
+        var tbody = table.firstChild;
+        var tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        var td;
+        
+
+      //Create line chart
+        td = document.createElement("td");       
+        td.style.height = "100%";
+        td.style.width = "34%";
+        td.style.padding = "10px";
+        td.style.overflow = "hidden";
+        tr.appendChild(td);
+        createLineChart(td);
+        
+
+      //Create bar chart
+        td = document.createElement("td"); 
+        td.style.height = "100%";
+        td.style.width = "33%";
+        td.style.padding = "10px 0px";        
+        td.style.overflow = "hidden";
+        tr.appendChild(td);
+        createBarChart(td);
+        
+        
+      //Create scatter chart
+        td = document.createElement("td");       
+        td.style.height = "100%";
+        td.style.width = "33%";
+        td.style.padding = "10px";
+        td.style.overflow = "hidden";
+        tr.appendChild(td);        
+        createScatterChart(td);
+    };
+    
+    
+  //**************************************************************************
+  //** createLineChart
+  //**************************************************************************    
+    var createLineChart = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Shipment History",
+            width: "100%",
+            height: "360px"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
+    };
+    
+    
+  //**************************************************************************
+  //** createBarChart
+  //**************************************************************************    
+    var createBarChart = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Top Shipments",
+            width: "100%",
+            height: "360px"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
+    };
+    
+    
+  //**************************************************************************
+  //** createScatterChart
+  //**************************************************************************    
+    var createScatterChart = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Quantity vs Exams",
+            width: "100%",
+            height: "360px"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{});
+    };    
+    
 
   //**************************************************************************
   //** getArray
@@ -400,6 +538,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
+    var createDashboardItem = bluewave.utils.createDashboardItem;
 
 
     init();
