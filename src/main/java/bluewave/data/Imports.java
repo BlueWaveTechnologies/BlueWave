@@ -29,7 +29,7 @@ public class Imports {
     private LinkedHashMap<String, Integer> header;
     private GeoCoder geocoder;
     private int sheetID;
-    private String[] companyTypes = new String[]{"Manufacturer","Shipper","Importer","Consignee","DII"};
+    private String[] establishmentTypes = new String[]{"Manufacturer","Shipper","Importer","Consignee","DII"};
     
     
   //**************************************************************************
@@ -103,12 +103,15 @@ public class Imports {
         for (Row row : workbook.getSheetAt(sheetID)){   
             if (rowID==0){
                     ArrayList<String> fields = new ArrayList<>(Arrays.asList(
-                    "Entry","Date","Port of Entry","Unladed Port","Country of Origin",
-                    "Shipment Method","Product Code","Quantity","Value"));  
-                    for (String companyType : companyTypes){
-                        fields.add(companyType);
+                    "Entry","DOC","Line","Date","Port of Entry","Unladed Port","Country of Origin",
+                    "Shipment Method","Product Code","Product Name","Quantity","Value"));  
+                    for (String establishment : establishmentTypes){
+                        fields.add(establishment);
                     }
+                    fields.add("Affirmations"); 
                     fields.add("Final Disposition");                
+                    fields.add("Predict Risk"); 
+                    fields.add("Predict Score");                     
                     
                     for (int i=0; i<fields.size(); i++){
                         if (i>0) writer.write(",");
@@ -121,11 +124,28 @@ public class Imports {
                 
                     writer.write("\r\n");
                     
-                  //Get ID
-                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
-                    writer.write(id);
-                    writer.write(",");
                     
+                  //Get entry
+                    String entry = "";
+                    String doc = "";
+                    String line = "";                  
+                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                    if (id!=null){
+                        id = id.trim();
+                        if (!id.isEmpty()){
+                            String[] arr = id.split("/");
+                            if (arr.length>0) entry = arr[0];
+                            if (arr.length>1) doc = arr[1];
+                            if (arr.length>2) line = arr[2];
+                        }
+                    }
+                    writer.write(entry);
+                    writer.write(",");
+                    writer.write(doc);
+                    writer.write(",");
+                    writer.write(line);
+                    writer.write(",");
+                                        
 
                   //Get date
                     String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
@@ -181,10 +201,22 @@ public class Imports {
                     writer.write(",");
                     
 
-                 //Product code
-                    writer.write(row.getCell(header.get("Product Code")).getStringCellValue()); 
+                  //Product code
+                    String productCode = row.getCell(header.get("Product Code")).getStringCellValue();
+                    String industryCode = row.getCell(header.get("Industry Code")).getStringCellValue();
+                    if (productCode!=null){
+                        if (productCode.startsWith(industryCode)){ 
+                            productCode = productCode.substring(industryCode.length());
+                        }
+                    }
+                    writer.write(productCode); 
                     writer.write(",");
-
+                                        
+                    
+                  //Product name
+                    writer.write(row.getCell(header.get("Brand Name")).getStringCellValue());
+                    writer.write(",");
+                    
                     
                   //Total reported quantity
                     writer.write(row.getCell(header.get("Reported Total Quantity")).getStringCellValue());
@@ -199,40 +231,60 @@ public class Imports {
 
                     
                   //FEI
-                    for (int i=0; i<companyTypes.length; i++){
+                    for (int i=0; i<establishmentTypes.length; i++){
                         if (i>0) writer.write(",");
-                        Integer feiField = header.get(companyTypes[i] + " FEI Number");
+                        Integer feiField = header.get(establishmentTypes[i] + " FEI Number");
                         String fei = row.getCell(feiField).getStringCellValue();
                         writer.write(fei);
                     }
-                
-
-                    
-                  //Final Disposition
-                    String finalDisposition = row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue();
-                    if (finalDisposition.equals("OASIS MPro Issued"))
-                        finalDisposition = "OASIS MPro Issued";
-                    else if(finalDisposition.equals("MPro Issued"))
-                        finalDisposition = "MPro Issued";
-                    else if(Arrays.asList("Rel after Detain", 
-                                         "Rel/IB", "Refuse (MB)",
-                                         "Released").contains(finalDisposition))
-                        finalDisposition = "Good";
-                    else if(Arrays.asList("Rel w/Cmnt after Detain", 
-                                         "Released w/Comment",
-                                         "Refuse Inform After Export",
-                                         "Refuse Inform Before Export",
-                                         "Refuse (MB)",
-                                         "Recon Matls Rel/Rem Refuse IA",
-                                         "Recon Matls Rel/Rem Refuse IB",
-                                         "Recon Matls Released").contains(finalDisposition))
-                        finalDisposition = "Bad";
-                    else
-                        finalDisposition = "Other";                    
-                    
                     writer.write(",");
-                    writer.write(finalDisposition);
+                
+                    
+
+                  //Affirmations
+                    writer.write(row.getCell(header.get("All Affirmations")).getStringCellValue());
+                    writer.write(",");
+                   
+                  //Final Disposition
+                    writer.write(row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue());
+                    writer.write(",");                    
+                    
+                    
+//                  //Final Disposition
+//                    String finalDisposition = row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue();
+//                    if (finalDisposition.equals("OASIS MPro Issued"))
+//                        finalDisposition = "OASIS MPro Issued";
+//                    else if(finalDisposition.equals("MPro Issued"))
+//                        finalDisposition = "MPro Issued";
+//                    else if(Arrays.asList("Rel after Detain", 
+//                                         "Rel/IB", "Refuse (MB)",
+//                                         "Released").contains(finalDisposition))
+//                        finalDisposition = "Good";
+//                    else if(Arrays.asList("Rel w/Cmnt after Detain", 
+//                                         "Released w/Comment",
+//                                         "Refuse Inform After Export",
+//                                         "Refuse Inform Before Export",
+//                                         "Refuse (MB)",
+//                                         "Recon Matls Rel/Rem Refuse IA",
+//                                         "Recon Matls Rel/Rem Refuse IB",
+//                                         "Recon Matls Released").contains(finalDisposition))
+//                        finalDisposition = "Bad";
+//                    else
+//                        finalDisposition = "Other";                    
+//                    
+//                    writer.write(",");
+//                    writer.write(finalDisposition);
                                         
+                    
+
+
+                  //PREDICT Risk
+                    writer.write(row.getCell(header.get("PREDICT Risk Percentile")).getStringCellValue());
+                    writer.write(",");                      
+                    
+                  //PREDICT Score
+                    writer.write(row.getCell(header.get("PREDICT Total Risk Score")).getStringCellValue());
+                     
                     
                 }
                 catch(Exception e){
@@ -246,6 +298,236 @@ public class Imports {
         writer.close();
         workbook.close();
         is.close();                 
+    }
+    
+    
+  //**************************************************************************
+  //** exportEstablishments
+  //**************************************************************************    
+  /** Used to export a csv file with a unique list of establishments found 
+   *  in the input xlsx file
+   */    
+    public void exportEstablishments() throws Exception {
+        HashMap<String, HashSet<String>> companies = new HashMap<>();    
+        
+      //Parse file and generate unique list of addresses by company type
+        java.io.InputStream is = file.getInputStream();
+        Workbook workbook = StreamingReader.builder()
+            .rowCacheSize(10)
+            .bufferSize(4096)
+            .open(is);                            
+
+        int rowID = 0;                                        
+        for (Row row : workbook.getSheetAt(sheetID)){   
+            if (rowID>0){
+                
+                for (String type : establishmentTypes){                
+                    try{
+                        Integer nameField = header.get(type + " Legal Name");
+                        Integer addressField = header.get(type + " Name & Address");
+                        Integer feiField = header.get(type + " FEI Number");
+                        
+                      //Special case for DII
+                        if (addressField==null) addressField = header.get(type + " Name and Address");
+                        
+                        if (nameField==null||addressField==null||feiField==null) continue;
+                        
+                        String name = row.getCell(nameField).getStringCellValue();
+                        String address = row.getCell(addressField).getStringCellValue();
+                        String fei = row.getCell(feiField).getStringCellValue();
+
+                        if (name==null) name = "";
+                        else name = name.trim();
+                        
+                        if (address==null) address = "";
+                        else address = address.trim();
+                        
+                        if (fei==null) fei = "";
+                        else fei = fei.trim();      
+                        
+                       
+                                
+                        String addr = "";
+                        while (address.contains("  ")){
+                            address = address.replace("  ", " ");
+                        }         
+                        address = address.trim();
+                        for (String str : address.split("\n")){
+                            str = str.trim();
+                            if (str.isEmpty() || str.equals(fei) || str.equals(name)) continue;
+                            if (!addr.isEmpty()) addr += " ";
+                            addr += str;
+                        }
+                                                
+                        address = replaceLineBreaks(addr).trim();
+
+
+                        if (address.startsWith(fei + " ")){
+                            address = address.substring((fei + " ").length());
+                        }
+                        if (address.startsWith(name + " ")){
+                            address = address.substring((name + " ").length());
+                        }
+
+
+                        HashSet<String> info = companies.get(fei);
+                        if (info==null){
+                            info = new HashSet<>();                                    
+                            companies.put(fei, info);
+                        }
+                        info.add(name + "\n" + address);                                                                                
+
+                    }
+                    catch(Exception e){
+                        console.log("Failed to parse " + type + " at line " + rowID);
+                    }
+                }
+            }
+            rowID++;
+        }                               
+                     
+        workbook.close();
+        is.close();        
+                
+        console.log("Found " + companies.size() + " establishments");
+        
+
+        
+        
+        javaxt.io.File output = new javaxt.io.File(this.file.getDirectory(), "Establishments.csv");
+        java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
+        
+        writer.write("fei,name,address");
+        
+        Iterator<String> it = companies.keySet().iterator();
+        while (it.hasNext()){
+            
+            String fei = it.next();
+            HashSet<String> info = companies.get(fei);
+            if (info.size()>1) console.log(fei, info.size());
+            
+            Iterator<String> i2 = info.iterator();
+            while (i2.hasNext()){
+                String[] entry = i2.next().split("\n");
+                String name = entry[0];
+                String address = entry[1];
+                
+                writer.write("\r\n");
+                
+                name = replaceLineBreaks(name);
+                if (name.contains(",")) name = "\""+name+"\""; 
+                address = replaceLineBreaks(address);
+                if (address.contains(",")) address = "\""+address+"\"";                  
+                writer.write(fei+","+name+","+address);  
+            }
+        }
+        writer.close();        
+        
+        
+    }       
+    
+    
+  //**************************************************************************
+  //** geocodeEstablishments
+  //**************************************************************************
+  /** Used to add lat/lon coordinates to the Establishments.csv using results
+   *  from a previous geocoding attempt using the geocodeCompanies() method.
+   */
+    public void geocodeEstablishments() throws Exception {
+        
+        javaxt.io.Directory dir = this.file.getDirectory();
+        
+        
+        HashMap<String, String[]> addresses = new HashMap<>();
+        for (String establishment : establishmentTypes){
+            javaxt.io.File file = new javaxt.io.File(dir, establishment + ".csv");
+            java.io.BufferedReader br = file.getBufferedReader();
+            String row;
+            while ((row = br.readLine()) != null){
+                CSV.Columns columns = CSV.getColumns(row, ",");
+                String address = columns.get(2).toString();
+                String lat = columns.get(3).toString();
+                String lon = columns.get(3).toString();
+                addresses.put(address, new String[]{lat,lon});
+            }            
+            br.close();
+        }
+        
+        console.log("Found " + addresses.size() + " addresses");
+        
+        
+        javaxt.io.File input = new javaxt.io.File(dir, "Establishments.csv");        
+        java.io.BufferedReader br = input.getBufferedReader();
+        
+        javaxt.io.File output = new javaxt.io.File(dir, "Establishments2.csv");
+        java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
+        
+        writer.write("fei,name,address,lat,lon");       
+        
+        HashSet<String> unmatched = new HashSet<>();
+        String row = br.readLine(); //skip header
+        while ((row = br.readLine()) != null){
+            CSV.Columns columns = CSV.getColumns(row, ",");
+            String fei = columns.get(0).toString();
+            String name = columns.get(1).toString();
+            String address = columns.get(2).toString();
+            String lat = "";
+            String lon = "";
+            String[] coord = addresses.get(address);
+            if (coord!=null){
+                lat = coord[0];
+                lon = coord[1];
+            }
+            else{
+                int min = Integer.MAX_VALUE;
+                for (int i=0; i<10; i++){
+                    int x = address.indexOf(i+"");
+                    if (x>-1) min = Math.min(min, x);
+                }
+
+                console.log(address);
+
+                
+                try{
+                    
+                    String addr = address;
+                    if (min>0 && min<Integer.MAX_VALUE){
+                        addr = address.substring(min);
+                        String prefix = "";
+                        for (int i=0; i<min; i++) prefix+="-";
+                        console.log(prefix+addr);                    
+                    }                    
+                    
+                    
+                    BigDecimal[] point = geocoder.getCoordinates(addr);                                              
+                    if (point!=null){
+                        lat = point[0].toString();
+                        lon = point[1].toString();                     
+                    }                      
+                }
+                catch(Exception e){
+                }
+                
+                if (lat.isEmpty() || lon.isEmpty()) unmatched.add(fei);
+            }
+            
+            writer.write("\r\n");
+
+            name = replaceLineBreaks(name);
+            if (name.contains(",")) name = "\""+name+"\""; 
+            address = replaceLineBreaks(address);
+            if (address.contains(",")) address = "\""+address+"\"";                  
+            writer.write(fei+","+name+","+address+","+lat+","+lon);              
+        }            
+        br.close();
+        writer.close();
+        
+        console.log("Geocoded " + (addresses.size()-unmatched.size()) + " addresses");
+        
+        Iterator<String> it = unmatched.iterator();
+        while (it.hasNext()){
+            console.log(it.next());
+        }
     }
     
     
@@ -313,7 +595,7 @@ public class Imports {
         }         
     }
     
-    
+        
   //**************************************************************************
   //** geocodeCompanies
   //**************************************************************************
@@ -335,7 +617,7 @@ public class Imports {
         for (Row row : workbook.getSheetAt(sheetID)){   
             if (rowID>0){
                 
-                for (String type : companyTypes){                
+                for (String type : establishmentTypes){                
                     try{
                         Integer nameField = header.get(type + " Legal Name");
                         Integer addressField = header.get(type + " Name & Address");
@@ -421,7 +703,7 @@ public class Imports {
         
         
       //Dump results to a file
-        for (String type : companyTypes){ 
+        for (String type : establishmentTypes){ 
             rowID = 0; 
             javaxt.io.File output = new javaxt.io.File(this.file.getDirectory(), type + ".csv");
             java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
@@ -574,13 +856,14 @@ public class Imports {
   //** replaceLineBreaks
   //**************************************************************************
     private String replaceLineBreaks(String name){
+        if (name==null) return "";
         name = name.replace("\r\n", " ");
         name = name.replace("\r", " ");
         name = name.replace("\n", " ");
         name = name.trim();
         while (name.contains("  ")){
             name = name.replace("  ", " ");
-        }
-        return name;
+        }        
+        return name.trim();
     }    
 }
