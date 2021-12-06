@@ -48,7 +48,7 @@ public class Import {
    *  @param keys Column IDs with unique values used to create a unique
    *  constraint. Intended for upserts. Optional.
    */
-    public static void importCSV(File csvFile, String vertex, Integer[] keys, Neo4J database) throws Exception {
+    public static void importCSV(File csvFile, String vertex, Integer[] keys, int numThreads, Neo4J database) throws Exception {
 
 
       //Count total records in the file
@@ -156,7 +156,7 @@ public class Import {
 
 
       //Instantiate the ThreadPool
-        ThreadPool pool = new ThreadPool(20, 1000){
+        ThreadPool pool = new ThreadPool(numThreads, 1000){
             public void process(Object obj){
                 String row = (String) obj;
                 try{
