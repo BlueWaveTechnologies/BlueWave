@@ -254,7 +254,8 @@ public class Main {
         }
         else if (str.equalsIgnoreCase("Imports")){
             Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
-            imports.exportSummary();
+            //imports.exportSummary();
+            //imports.removeDuplicateEstablishments();
         }        
         else{
             java.io.File f = new java.io.File(str);
@@ -298,12 +299,18 @@ public class Main {
                 keys[i] = Integer.parseInt(arr[i]);
             }
         }
+        
+        
+      //Get number of threads
+        String numThreads = args.get("-threads");
+        if (numThreads==null) numThreads = args.get("-t");
+        if (numThreads==null) numThreads = "1";
 
-
+        
       //Import file
         Neo4J graph = Config.getGraph(null);
         if (fileType.equals("csv")){
-            bluewave.graph.Import.importCSV(file, nodeType, keys, graph);
+            bluewave.graph.Import.importCSV(file, nodeType, keys, Integer.parseInt(numThreads), graph);
         }
         else if (fileType.equals("json")){
             String target = args.get("-target");

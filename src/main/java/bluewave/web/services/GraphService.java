@@ -1123,7 +1123,7 @@ public class GraphService extends WebService {
         try{
             bluewave.graph.Neo4J graph = bluewave.Config.getGraph(user);
             if (fileType.equals("csv")){
-                bluewave.graph.Import.importCSV(file, nodeType, keys, graph);
+                bluewave.graph.Import.importCSV(file, nodeType, keys, 12, graph);
             }
             else if (fileType.equals("json")){
                 String target = request.getParameter("target").toString();
