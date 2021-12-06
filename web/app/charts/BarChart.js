@@ -665,10 +665,26 @@ bluewave.charts.BarChart = function(parent, config) {
         if (xAxis) xAxis.selectAll("*").remove();
         if (yAxis) yAxis.selectAll("*").remove();
 
+        var labelWidth = 10;
+        var domainLength = x.domain().length;
+        var widthCheck = domainLength * labelWidth < axisWidth;
+        
+        var tickFilter = function(d, i) {
+            
+            let maxLabels = parseInt(axisWidth / labelWidth);
+
+            //Ensure first tick is displayed and every multiple of maxLabels
+            if (i === 0) return true;
+            return !(i % maxLabels)
+        }
+
         xAxis = plotArea
             .append("g")
             .attr("transform", "translate(0," + axisHeight + ")")
-            .call(d3.axisBottom(x));
+            .call(
+                d3.axisBottom(x)
+                .tickValues(widthCheck ? null : x.domain().filter(tickFilter))
+            );
 
             xAxis
             .selectAll("text")
