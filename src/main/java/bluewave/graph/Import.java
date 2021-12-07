@@ -1,4 +1,6 @@
 package bluewave.graph;
+import bluewave.utils.StatusLogger;
+import static bluewave.utils.StatusLogger.*;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -14,10 +16,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 import java.io.BufferedReader;
@@ -69,8 +68,7 @@ public class Import {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-        Runnable statusLogger = getStatusLogger(recordCounter, totalRecords);
-        ScheduledExecutorService executor = getExecutor(statusLogger);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
 
 
 
@@ -185,7 +183,7 @@ public class Import {
                     getSession().writeTransaction( tx -> addRow( tx, query.toString(), params ) );
                 }
                 catch(Exception e){
-                    //console.log(e.getMessage());
+                    console.log(e.getMessage(), row);
                 }
 
                 recordCounter.incrementAndGet();
@@ -219,14 +217,10 @@ public class Import {
       //Notify the pool that we have finished added records and Wait for threads to finish
         pool.done();
         pool.join();
-
-
-      //Send one last status update
-        statusLogger.run();
-
-
+       
+        
       //Clean up
-        executor.shutdown();
+        statusLogger.shutdown();
     }
 
 
@@ -255,8 +249,7 @@ public class Import {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-        Runnable statusLogger = getStatusLogger(recordCounter, null);
-        ScheduledExecutorService executor = getExecutor(statusLogger);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
 
 
         ConcurrentHashMap<Long, Value> jobs = new ConcurrentHashMap<>();
@@ -655,12 +648,8 @@ public class Import {
         pool.join();
 
 
-      //Send one last status update
-        statusLogger.run();
-
-
       //Clean up
-        executor.shutdown();
+        statusLogger.shutdown();
     }
 
 
@@ -723,7 +712,7 @@ public class Import {
   //**************************************************************************
   //** addRow
   //**************************************************************************
-    private static Result addRow(final Transaction tx, final String query, Map<String, Object> params){
+    public static Result addRow(final Transaction tx, final String query, Map<String, Object> params){
         return tx.run( query, params );
     }
 
@@ -744,75 +733,4 @@ public class Import {
     }
 
 
-  //**************************************************************************
-  //** getStatusLogger
-  //**************************************************************************
-  /** Used to print status updates to the standard output stream
-   */
-    private static Runnable getStatusLogger(AtomicLong recordCounter, AtomicLong totalRecords){
-        long startTime = System.currentTimeMillis();
-        return new Runnable() {
-            private String statusText = "0 records processed (0 records per second)";
-            public void run() {
-                long currTime = System.currentTimeMillis();
-                double elapsedTime = (currTime-startTime)/1000; //seconds
-                long x = recordCounter.get();
-
-                String rate = "0";
-                try{
-                    rate = format(Math.round(x/elapsedTime));
-                }
-                catch(Exception e){}
-
-                int len = statusText.length();
-                for (int i=0; i<len; i++){
-                    System.out.print("\b");
-                }
-
-                statusText = format(x) + " records processed (" + rate + " records per second)";
-
-
-                if (totalRecords!=null && totalRecords.get()>0){
-                    double p = ((double) x / (double) totalRecords.get());
-                    int currPercent = (int) Math.round(p*100);
-                    statusText += " " + x + "/" + totalRecords.get() + " " + currPercent + "%";
-                }
-
-                while (statusText.length()<len) statusText += " ";
-
-
-                System.out.print(statusText);
-            }
-        };
-    }
-
-    private static ScheduledExecutorService getExecutor(Runnable statusLogger){
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(statusLogger, 0, 1, TimeUnit.SECONDS);
-        return executor;
-    }
-
-  //**************************************************************************
-  //** format
-  //**************************************************************************
-  /** Used to format a number with commas.
-   */
-    private static String format(long l){
-        return java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(l);
-    }
-
-  //**************************************************************************
-  //** getElapsedTime
-  //**************************************************************************
-  /** Computes elapsed time between a given startTime and now. Returns a
-   *  human-readable string representing the elapsed time.
-   */
-    public static String getElapsedTime(long startTime){
-        long t = System.currentTimeMillis()-startTime;
-        if (t<1000) return t + "ms";
-        long s = Math.round(t/1000);
-        if (s<60) return s + "s";
-        long m = Math.round(s/60);
-        return m + "m";
-    }
 }
