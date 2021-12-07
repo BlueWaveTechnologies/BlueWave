@@ -93,14 +93,13 @@ bluewave.charts.LineChart = function(parent, config) {
         if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
 
-
+      //Get chart options
         scaleOption = chartConfig.scaleOption;
-        if (!scaleOption) scaleOption = chartConfig.scaleOption = "linear";
-
-
+        if (!scaleOption) scaleOption = "linear";
         var group = chartConfig.group;
         var showLabels = chartConfig.endTags;
-        if (showLabels!==false) showLabels = chartConfig.endTags = true;
+        if (showLabels===true || showLabels===false){}
+        else showLabels = data.length>1;
 
 
         var data1 = data[0];
@@ -443,7 +442,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     if (!label) label = "Series " + (i+1);
                 }
                 var line = chartElements[i].line2;
-                chartElements[i].tag = createLabel(sumData, lineColor, label, line);
+                chartElements[i].tag = createTag(sumData, lineColor, label, line);
             }
         };
 
@@ -469,9 +468,9 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** createLabelTag
+  //** createTag
   //**************************************************************************
-    var createLabel = function(dataSet, color, label, line){
+    var createTag = function(dataSet, color, label, line){
 
         var lastItem = dataSet[dataSet.length - 1];
         var lastKey = lastItem.key;
