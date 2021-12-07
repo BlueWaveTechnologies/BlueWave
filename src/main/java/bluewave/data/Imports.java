@@ -1,8 +1,12 @@
 package bluewave.data;
 import bluewave.utils.GeoCoder;
+import bluewave.graph.Neo4J;
+import bluewave.utils.StatusLogger;
+import static bluewave.utils.StatusLogger.*;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.math.BigDecimal;
 
 import javaxt.utils.ThreadPool;
@@ -14,6 +18,9 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Cell;
+
+import org.neo4j.driver.Session;
+
 
 //******************************************************************************
 //**  Imports Data
@@ -528,6 +535,192 @@ public class Imports {
         while (it.hasNext()){
             console.log(it.next());
         }
+    }
+    
+    
+  //**************************************************************************
+  //** loadEstablishments
+  //**************************************************************************
+    public static void loadEstablishments(javaxt.io.File csvFile, Neo4J database) 
+    throws Exception {
+        
+        
+      //Count total records in the file
+        AtomicLong totalRecords = new AtomicLong(0);
+        if (true){
+            System.out.print("Analyzing File...");
+            long t = System.currentTimeMillis();
+            java.io.BufferedReader br = csvFile.getBufferedReader();
+            String row = br.readLine(); //skip header
+            while ((row = br.readLine()) != null){
+                totalRecords.incrementAndGet();
+            }
+            br.close();
+            System.out.print(" Done!");
+            System.out.println(
+            "\nFound " + format(totalRecords.get()) + " records in " + getElapsedTime(t));
+        }
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
+
+        
+
+        Session session = null;
+        try{
+            session = database.getSession();
+
+          //Create unique key constraint
+            try{ session.run("CREATE CONSTRAINT ON (n:address) ASSERT n.address IS UNIQUE"); }
+            catch(Exception e){}
+            try{ session.run("CREATE CONSTRAINT ON (n:import_establishment) ASSERT n.fei IS UNIQUE"); }
+            catch(Exception e){}
+            
+
+          //Create indexes
+            try{ session.run("CREATE INDEX idx_address IF NOT EXISTS FOR (n:address) ON (n.address)"); }
+            catch(Exception e){}
+            try{ session.run("CREATE INDEX idx_import_establishment IF NOT EXISTS FOR (n:import_establishment) ON (n.fei)"); }
+            catch(Exception e){}
+                        
+            
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }        
+
+        
+        
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                String row = (String) obj;
+                try{
+                    CSV.Columns columns = CSV.getColumns(row, ",");
+                    Long fei = columns.get(0).toLong();
+                    String name = columns.get(1).toString();
+                    String address = columns.get(2).toString();
+                    String lat = columns.get(3).toString();
+                    String lon = columns.get(4).toString();
+
+                    Map<String, Object> params = new LinkedHashMap<>();                    
+                    params.put("address", address);
+                    params.put("lat", lat);
+                    params.put("lon", lon);
+                    
+                    
+                    Session session = getSession();
+                    
+                    String createAddress = getQuery("address", params);
+                    //getSession().writeTransaction( tx -> addRow( tx, createAddress, params ) );
+                    Long addressID;
+                    try{
+                        addressID = session.run(createAddress, params).single().get(0).asLong();                   
+                    }
+                    catch(Exception e){
+                        addressID = getIdFromError(e);
+                    }
+                    
+                    
+                    params = new LinkedHashMap<>();    
+                    params.put("fei", fei);
+                    params.put("name", name);
+                    
+                    
+                    String createEstablishment = getQuery("import_establishment", params);
+                    //getSession().writeTransaction( tx -> addRow( tx, createEstablishment, params ) );    
+                    
+                    Long establishmentID;
+                    try{
+                        establishmentID = session.run(createEstablishment, params).single().get(0).asLong();  
+                    }
+                    catch(Exception e){
+                        establishmentID = getIdFromError(e);
+                    }
+                    
+                    
+                    session.run("MATCH (r),(s) WHERE id(r) =" + establishmentID + " AND id(s) = " + addressID + 
+                    " MERGE(r)-[:has]->(s)");
+                    
+                }
+                catch(Exception e){
+                    console.log(e.getMessage(), row);
+                }
+
+                recordCounter.incrementAndGet();
+            }
+            
+            
+            private Long getIdFromError(Exception e){
+              //Parse error string (super hacky)
+              //Node(4846531) already exists
+                String err = e.getMessage().trim();
+                if (err.contains("Node(") && err.contains(") already exists")){
+                    err = err.substring(err.indexOf("(")+1, err.indexOf(")"));
+                    return Long.parseLong(err);
+                }
+                return null;
+            }
+            
+            
+            private String getQuery(String node, Map<String, Object> params){
+                String key = "create_"+node;
+                String q = (String) get(key);
+                if (q==null){
+                    StringBuilder query = new StringBuilder("CREATE (a:" + node + " {");
+                    Iterator<String> it = params.keySet().iterator();
+                    while (it.hasNext()){
+                        String param = it.next();
+                        query.append(param);
+                        query.append(": $");
+                        query.append(param);
+                        if (it.hasNext()) query.append(" ,");
+                    }                    
+                    query.append("}) RETURN id(a)");
+                    q = query.toString();
+                    set(key, q);
+                }
+                return q;
+            }
+
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+      //Insert records
+        java.io.BufferedReader reader = csvFile.getBufferedReader();
+        String row = reader.readLine();  //skip header    
+        while ((row = reader.readLine()) != null){
+            pool.add(row);
+        }
+        reader.close();
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+                
+        
+      //Clean up
+        statusLogger.shutdown();        
     }
     
     
