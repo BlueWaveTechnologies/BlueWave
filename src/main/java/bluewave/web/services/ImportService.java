@@ -1,5 +1,6 @@
 package bluewave.web.services;
 import bluewave.graph.Neo4J;
+import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
 //import java.math.BigDecimal;
@@ -26,27 +27,28 @@ public class ImportService extends WebService {
   //**************************************************************************
   //** getSummary
   //**************************************************************************
-  /** Used to generate an import summary for a given country, product, and 
+  /** Used to generate an import summary for a given country, product, and
    *  date range
    */
-    public ServiceResponse getSummary(ServiceRequest request, Database database) 
+    public ServiceResponse getSummary(ServiceRequest request, Database database)
     throws ServletException {
-        
+
       //Get parameters
         String country = request.getParameter("country").toString();
         if (country==null) return new ServiceResponse(400, "country is required");
-        
+
         String establishment = request.getParameter("establishment").toString();
-        if (establishment==null) establishment = "Manufacturer"; //should be lower case
-        
+        if (establishment==null) establishment = "manufacturer";
+        else establishment = establishment.toLowerCase();
+
         Double threshold = request.getParameter("threshold").toDouble();
         if (threshold!=null && threshold<=0) threshold = null;
-        
-        
+
+
       //Get sql
         String sql = bluewave.queries.Index.getQuery("Imports_By_Country");
-        
-        
+
+
       //Update sql with country keyword
         if (country!=null){
             StringBuilder str = new StringBuilder();
@@ -60,20 +62,20 @@ public class ImportService extends WebService {
                 str.append("'" + cc + "'");
             }
             sql = sql.replace("{country}", str);
-        }        
-        
-        
+        }
+
+
       //Update sql with establishment keyword
         sql = sql.replace("{establishment}", establishment);
-        
-        
+
+
       //Get graph
         bluewave.app.User user = (bluewave.app.User) request.getUser();
-        Neo4J graph = bluewave.Config.getGraph(user);        
-        
-        
-        
-      //Execute query   
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+
+      //Execute query
         HashMap<Long,Object[]> entries = new HashMap<>();
         HashMap<Long,String> facilities = new HashMap<>();
         Session session = null;
@@ -89,72 +91,70 @@ public class ImportService extends WebService {
                 Long fei = new Value(r.get("fei").asObject()).toLong();
                 Long numShipments = new Value(r.get("num_entries").asObject()).toLong();
                 List quantities = r.get("quantities").asList();
-                
+
                 entries.put(fei, new Object[]{numShipments, quantities});
             }
-            
-            
+
+
           //Get establishment names
             StringBuilder str = new StringBuilder();
-            str.append("MATCH (n:facility)\n");
+            str.append("MATCH (n:import_establishment)\n");
             str.append("WHERE n.fei IN[\n");
             Iterator<Long> it = entries.keySet().iterator();
             while (it.hasNext()){
-                long fei = it.next();
+                Long fei = it.next();
                 str.append(fei);
                 if (it.hasNext()) str.append(",");
-facilities.put(fei, fei+""); //for testing only
             }
             str.append("]\n");
             str.append("RETURN n.fei as fei, n.name as name");
             sql = str.toString();
-//            rs = session.run(sql);
-//            while (rs.hasNext()){
-//                Record r = rs.next();
-//                Long fei = new Value(r.get("fei").asObject()).toLong();
-//                String name = new Value(r.get("name").asObject()).toString();
-//                facilities.put(fei, name);
-//            }
-            
+            rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long fei = new Value(r.get("fei").asObject()).toLong();
+                String name = new Value(r.get("name").asObject()).toString();
+                facilities.put(fei, name);
+            }
+
 
             session.close();
         }
         catch(Exception e){
             if (session!=null) session.close();
             return new ServiceResponse(e);
-        }      
-        
+        }
 
-        
-        
+
+
+
       //Fuzzy match facility names and combine entries
-        HashMap<String, Object[]> combinedEntries = new HashMap<>();        
-        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeFacilities(facilities);
-        
+        HashMap<String, Object[]> combinedEntries = new HashMap<>();
+        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
         Iterator<String> it = uniqueFacilities.keySet().iterator();
         while (it.hasNext()){
-            String name = it.next();           
+            String name = it.next();
             long numShipments = 0;
             List quantities = null;
-            
+
             for (Long fei : uniqueFacilities.get(name)){
-                
+
                 Object[] obj = entries.get(fei);
                 Long n = (Long) obj[0];
                 List q = (List) obj[1];
-                
+
                 numShipments+= n;
-                if (quantities==null) quantities = q;
-                else quantities.addAll(q);                
-            }            
-            
+                if (quantities==null) quantities = new ArrayList<>();
+                quantities.addAll(q);
+            }
+
             combinedEntries.put(name, new Object[]{numShipments, quantities});
         }
-        
-    
-        
+
+
+
       //For each facility...
-        StringBuilder str = new StringBuilder("name,numShipments,totalValue,totalQuantity");
+        StringBuilder str = new StringBuilder("name,fei,numShipments,totalValue,totalQuantity");
         it = combinedEntries.keySet().iterator();
         while (it.hasNext()){
             String name = it.next();
@@ -163,17 +163,16 @@ facilities.put(fei, fei+""); //for testing only
             List quantities = (List) obj[1];
             long totalValue = 0;
             long totalQuantity = 0;
-            
 
 
 
-            
-          //Compute total quantity and value  
+
+          //Compute total quantity and value
             if (threshold!=null){
 
 
               //Group quantities by product code
-                HashMap<String, ArrayList<ArrayList<Double>>> nums = new HashMap<>();                        
+                HashMap<String, ArrayList<ArrayList<Double>>> nums = new HashMap<>();
                 Iterator i2 = quantities.iterator();
                 while (i2.hasNext()){
                     String val = i2.next().toString();
@@ -184,7 +183,7 @@ facilities.put(fei, fei+""); //for testing only
                     Double unitPrice = 0D;
 
                     if (amount==null) amount = 0D;
-                    if (quantity==null) quantity = 0D;                
+                    if (quantity==null) quantity = 0D;
                     if (amount>0 && quantity>0) unitPrice = amount/quantity;
 
 
@@ -204,7 +203,7 @@ facilities.put(fei, fei+""); //for testing only
 
 
 
-              //Compute total quantity and value            
+              //Compute total quantity and value
                 i2 = nums.keySet().iterator();
                 while (i2.hasNext()){
                     String productCode = i2.next().toString();
@@ -215,7 +214,7 @@ facilities.put(fei, fei+""); //for testing only
                     ArrayList<Double> unitPrices = new ArrayList<>();
                     double total = 0;
                     for (Double unitPrice : a.get(2)){
-                        if (unitPrice>0){ 
+                        if (unitPrice>0){
                             unitPrices.add(unitPrice);
                             total += unitPrice;
                         }
@@ -243,14 +242,14 @@ facilities.put(fei, fei+""); //for testing only
 
                   //Calculate z-score
                     unitPrices = a.get(2);
-                    for (int i=0; i<unitPrices.size(); i++){                        
+                    for (int i=0; i<unitPrices.size(); i++){
                         double unitPrice = unitPrices.get(i);
 
                         boolean add = true;
                         if (numSamples==1){
                             add = true;
                         }
-                        else{                        
+                        else{
 
                             double z = ((double) unitPrice - mean)/std; //z-score
                             if (z<0) z = -z;
@@ -268,8 +267,8 @@ facilities.put(fei, fei+""); //for testing only
                 }
             }
             else{
-                
-                
+
+
                 Iterator i2 = quantities.iterator();
                 while (i2.hasNext()){
                     String val = i2.next().toString();
@@ -279,72 +278,42 @@ facilities.put(fei, fei+""); //for testing only
                     Double quantity = new Value(arr[2]).toDouble();
 
                     if (amount==null) amount = 0D;
-                    if (quantity==null) quantity = 0D; 
-                    
+                    if (quantity==null) quantity = 0D;
+
                     totalValue += amount;
-                    totalQuantity += quantity;                    
+                    totalQuantity += quantity;
                 }
-                
+
             }
-            
-            
+
+
             str.append("\r\n");
-            str.append(name);
+            str.append(name.contains(",") ? "\"" + name + "\"" : name);
             str.append(",");
+
+
+            ArrayList<Long> feis = uniqueFacilities.get(name);
+            boolean addQuotes = feis.size()>1;
+            if (addQuotes) str.append("\"");
+            for (int i=0; i<feis.size(); i++){
+                Long fei = feis.get(i);
+                if (i>0) str.append(",");
+                str.append(fei);
+            }
+            if (addQuotes) str.append("\"");
+            str.append(",");
+
+
             str.append(numShipments);
             str.append(",");
             str.append(totalValue);
             str.append(",");
-            str.append(totalQuantity);            
+            str.append(totalQuantity);
 
         }
-        
-        
-        
+
+
+
         return new ServiceResponse(str.toString());
     }
-    
-    
-    
-  //**************************************************************************
-  //** mergeFacilities
-  //**************************************************************************
-    private HashMap<String, ArrayList<Long>> mergeFacilities(HashMap<Long,String> facilities){        
-        HashMap<String, ArrayList<Long>> results = new HashMap<>();
-        
-        
-        Iterator<Long> it = facilities.keySet().iterator();
-        while (it.hasNext()){
-            Long id = it.next();
-            String name = facilities.get(id);
-            
-            ArrayList<Long> ids = results.get(name);
-            if (ids==null){
-                ids = new ArrayList<>();
-                results.put(name, ids);
-                ids.add(id);
-            }
-            else{
-            
-            
-//                Iterator<Long> i2 = facilities.keySet().iterator();
-//                while (i2.hasNext()){
-//                    String n = facilities.get(i2.next());
-//
-//                    double wordScore = FuzzySearch.tokenSortPartialRatio(name, n);
-//                    if (wordScore>90){
-//
-//                        break;
-//                    }                  
-//                }
-            
-            }
-        }
-        
-      
-        
-        
-        return results;        
-    }     
-
 }
