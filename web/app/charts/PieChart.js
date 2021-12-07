@@ -243,7 +243,7 @@ bluewave.charts.PieChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
-    var initChart = bluewave.utils.initChart;
+    var initChart = bluewave.chart.utils.initChart;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();
