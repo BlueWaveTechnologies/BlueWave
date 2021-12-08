@@ -20,7 +20,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
             left: 82
         }
     };
-    var svg, chart, scatterArea, line;
+    var svg, chart, plotArea, line;
     var x, y;
 
 
@@ -73,8 +73,8 @@ bluewave.charts.ScatterChart = function(parent, config) {
         var axisWidth = width - margin.left - margin.right;
         var plotHeight = height - margin.top - margin.bottom;
         var plotWidth = width - margin.left - margin.right;
-        scatterArea = chart.append("g");
-        scatterArea
+        plotArea = chart.append("g");
+        plotArea
             .attr("width", plotWidth)
             .attr("height", plotHeight)
             .attr(
@@ -90,11 +90,12 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
       //Only use the first dataset
         data = data[0];
+        if (data.length==0) return;
 
 
 
       //Render X/Y axis
-        var axes = drawAxes(scatterArea, axisWidth, axisHeight, xKey, yKey, data);
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, xKey, yKey, data);
         x = axes.x;
         y = axes.y;
 
@@ -136,7 +137,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
 
-        scatterArea
+        plotArea
            .selectAll("dot")
            .data(data)
            .enter()
@@ -157,20 +158,35 @@ bluewave.charts.ScatterChart = function(parent, config) {
               .on("mouseleave", mouseleave);
 
 
-        var linReg = calculateLinReg(data, xKey, yKey,
-            d3.min(data, function(d) {return d[xKey]}),
-            d3.min(data, function(d) { return d[yKey]}));
+
+      //Draw grid lines if option is checked
+        if (chartConfig.xGrid || chartConfig.yGrid){
+            drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+        }
 
 
-        let xScale = getScale(xKey,xType,[0,axisWidth], data).scale;
-        let yScale = getScale(yKey,yType,[axisHeight,0], data).scale;
+      //Draw labels if checked
+        if (chartConfig.xLabel || chartConfig.yLabel){
+            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+                axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
+        }
 
-        line = d3.line()
-        .x(function(d) { return xScale(d[0])})
-        .y(function(d) { return yScale(d[1])});
 
-        if (chartConfig.showRegLine) {
-             scatterArea.append("path")
+      //Show regression line
+        if (chartConfig.showRegLine) {            
+            var linReg = calculateLinReg(data, xKey, yKey,
+                d3.min(data, function(d) {return d[xKey]}),
+                d3.min(data, function(d) { return d[yKey]}));
+
+
+            let xScale = getScale(xKey,xType,[0,axisWidth], data).scale;
+            let yScale = getScale(yKey,yType,[axisHeight,0], data).scale;
+
+            line = d3.line()
+            .x(function(d) { return xScale(d[0])})
+            .y(function(d) { return yScale(d[1])});            
+            
+             plotArea.append("path")
                   .datum(linReg)
                   .attr("class", "line")
                   .attr("d", line)
@@ -260,6 +276,8 @@ bluewave.charts.ScatterChart = function(parent, config) {
     var getType = bluewave.chart.utils.getType;
     var getScale = bluewave.chart.utils.getScale;
     var drawAxes = bluewave.chart.utils.drawAxes;
+    var drawLabels = bluewave.chart.utils.drawLabels;
+    var drawGridlines = bluewave.chart.utils.drawGridlines;
 
 
     init();
