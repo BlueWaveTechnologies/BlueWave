@@ -18,7 +18,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var data = [];
     var countryOptions, productOptions, establishmentOptions; //dropdowns
     var slider, thresholdInput;
-    var lineChart, barChart, scatterChart;
+    var lineChart, barChart, scatterChart;    
     var waitmask;
     
     
@@ -137,22 +137,28 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         
         var establishment = establishmentOptions.getValue();
         var country = countryOptions.getValue();
-        var threshold = parseFloat(thresholdInput.value);
-        if (isNaN(threshold)) threshold = "";
+
 
         data = [];
-        get("import/summary?country=" + country + "&establishment=" + establishment + "&threshold=" + threshold, {
+        get("import/summary?country=" + country + "&establishment=" + establishment, {
             success: function(csv){            
-                var rows = parseCSV(csv, ",");
-                for (var i=1; i<rows.length; i++){ //skip header
-                    var col = rows[i];
-                    data.push({
-                        name: col[0],
-                        totalShipments: parseFloat(col[1]),
-                        totalValue: parseFloat(col[2]),
-                        totalQuantity: parseFloat(col[3])
+                var rows = parseCSV(csv, ",");      
+                var header = rows.shift();
+                var createRecord = function(row){
+                    var r = {};                    
+                    header.forEach((field, i)=>{
+                        var val = row[i];
+                        if (field==="fei") val = val.split(",");
+                        else if (field!="name"){
+                            val = Math.round(parseFloat(val));
+                        }
+                        r[field] = val;
                     });
-                }
+                    return r;
+                };
+                rows.forEach((row)=>{
+                    data.push(createRecord(row));
+                });
 
                 data.sort(function(a,b){
                     return b.totalShipments-a.totalShipments;
@@ -198,7 +204,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 for (var i=0; i<Math.min(10,data.length); i++){
                     var d = data[i];
                     lineData.push({
-                        name: "fei_"+d.name,
+                        name: d.name,
                         quantity: d.totalShipments
                     });
                 }
@@ -295,7 +301,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
       //Create slider
         td = document.createElement("td");   
         td.style.paddingLeft = paddingLeft;
-        td.innerHTML = "Outlier Filter:";
+        td.innerHTML = "PREDICT Filter:";
         tr.appendChild(td);                  
         td = document.createElement("td");
         td.style.width = "175px";
@@ -306,7 +312,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         slider.className = "dashboard-slider";
         slider.style.width = "100%";
         slider.setAttribute("min", 1);
-        slider.setAttribute("max", 7);
+        slider.setAttribute("max", 20);
         slider.value = 1;
         slider.getValue = function(){
             var val = this.value-1;
@@ -317,12 +323,12 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             if (val>0){ 
                 val = (val/2)+""; 
                 if (val.indexOf(".")===-1) val += ".0";
-                thresholdInput.value = val + "z";
+                thresholdInput.value = val + "%";
             }
             else{
                 thresholdInput.value = "";
             }
-            update();
+            //update();
         };
         td.appendChild(slider);     
         td = document.createElement("td");
@@ -395,17 +401,44 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
       //Create grid control
         grid = new javaxt.dhtml.DataGrid(parent, {
             style: config.style.table,
+            localSort: true,
             columns: [
-                {header: 'Name', width:'100%'},
-                {header: 'Reported Quantity', width:'150px', align:'right'},
-                {header: 'Reported Value', width:'150px', align:'right'},
-                {header: 'Total Shipments', width:'150px', align:'right'}
+                {header: 'Name', width:'100%', sortable: true},
+                {header: 'Reported Quantity', width:'200px', align:'right', sortable: true},
+                {header: 'Reported Value', width:'150px', align:'right', sortable: true},
+                {header: 'Total Shipments', width:'120px', align:'right', sortable: true},
+                {header: 'Field Exams', width:'120px', align:'right', sortable: true},
+                {header: 'Label Exams', width:'120px', align:'right', sortable: true},
+                {header: '% Elevated Risk', width:'135px', align:'right', sortable: true}
+                
             ],
             update: function(row, d){
-                row.set('Name', d.name);
+                var name = d.name;
+                if (d.fei.length>1) name += " (" + formatNumber(d.fei.length) + ")";
+                row.set('Name', name);
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
                 row.set('Total Shipments', formatNumber(d.totalShipments));
+                if (d.fieldExams>0){ 
+                    var str = formatNumber(d.fieldExams);
+                    if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
+                    row.set('Field Exams', str);
+                }
+                if (d.labelExams>0){ 
+                    var str = formatNumber(d.labelExams);
+                    if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";                    
+                    row.set('Label Exams', str);
+                }
+                
+                var p = (d.highPredict/d.totalShipments)*100;
+                if (p>0){
+                    p = round(p, 1);
+                    row.set('% Elevated Risk', formatNumber(p)+"%");
+                }
+                else{
+                    row.set('% Elevated Risk', "0%");
+                }
+
             }
         });
 
@@ -526,7 +559,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     const formatNumber = (x) => {
         if (x!==null && typeof x !== "string") x+="";
-        return x.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        var parts = x.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
     };    
     
     
@@ -534,7 +569,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
-    var onRender = javaxt.dhtml.utils.onRender;
+    var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
