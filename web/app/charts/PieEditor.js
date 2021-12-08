@@ -15,6 +15,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         pieCutout: 0.65,
         piePadding: 0,
         maximumSlices: 8,
+        labelOffset: 120,
         showOther: true
     };
 
@@ -499,6 +500,11 @@ bluewave.charts.PieEditor = function(parent, config) {
                                     value: false
                                 }
                             ]
+                        },
+                        {
+                            name: "labelOffset",
+                            label: "Label Offset",
+                            type: "text"
                         }
                     ]
                 }
@@ -508,8 +514,8 @@ bluewave.charts.PieEditor = function(parent, config) {
 
       //Update cutout field (add slider) and set initial value
         createSlider("cutout", form, "%");
-        var cutout = chartConfig.pieCutout;
-        form.findField("cutout").setValue(cutout*100);
+        var cutout = Math.round(chartConfig.pieCutout*100.0);
+        form.findField("cutout").setValue(cutout);
 
 
         var labelField = form.findField("labels");
@@ -517,9 +523,17 @@ bluewave.charts.PieEditor = function(parent, config) {
         labelField.setValue(labels===true ? true : false);
 
 
+        createSlider("labelOffset", form, "%", 0, 120, 1);
+        var labelOffset = chartConfig.labelOffset;
+        form.findField("labelOffset").setValue(labelOffset);
+
+
+
       //Set initial value for padding and update
         createSlider("padding", form, "%", 0, 100, 1);
         var padding = chartConfig.piePadding;
+        var maxPadding = 5;
+        padding = Math.round((padding/maxPadding)*100.0);
         form.findField("padding").setValue(padding);
 
 
@@ -538,14 +552,22 @@ bluewave.charts.PieEditor = function(parent, config) {
             var settings = form.getData();
             chartConfig.pieCutout = settings.cutout/100;
 
-            var maxPadding = 5;
+
             chartConfig.piePadding = (settings.padding*maxPadding)/100;
 
             chartConfig.maximumSlices = settings.maximumSlices;
 
-            if (settings.labels==="true") settings.labels = true;
-            else if (settings.labels==="false") settings.labels = false;
+            if (settings.labels==="true") {
+                settings.labels = true;
+                form.enableField("labelOffset");
+            }
+            else if (settings.labels==="false") {
+                settings.labels = false;
+                form.disableField("labelOffset");
+            }
             chartConfig.pieLabels = settings.labels;
+
+            chartConfig.labelOffset = settings.labelOffset;
 
             if (settings.showOther==="true") settings.showOther = true;
             else if (settings.showOther==="false") settings.showOther = false;

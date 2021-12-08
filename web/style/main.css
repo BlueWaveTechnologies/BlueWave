@@ -1,4 +1,5 @@
 @import url(https://fonts.googleapis.com/css?family=Open+Sans);
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300&display=swap');
 
 html, body {
     height:100%;
@@ -574,7 +575,7 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
-/** Drawflow Overrides
+/** Drawflow
 /**************************************************************************/
 
 .drawflow-toolbar {
@@ -630,6 +631,25 @@ li.tree-node:hover {
     width: 34px;
     margin-left: -2px;
     margin-top: -4px;
+}
+
+
+.drawflow-toolbar-hint {
+    position: absolute;
+    left: 50px;
+    top: 5px;
+    background: url(../images/arrow.png) no-repeat;
+    width: 85px;
+    height: 120px;
+    color: #ef5646;
+    font-size: 32px;
+    font-family: 'Kalam', cursive;
+}
+.drawflow-toolbar-hint:after {
+    content:"Drag icon onto canvas";
+    line-height: 225px;
+    margin: 0 0 0 82px;
+    white-space: nowrap;
 }
 
 

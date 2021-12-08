@@ -14,6 +14,7 @@ bluewave.Explorer = function(parent, config) {
     var dashboardPanel, editPanel, toggleButton, mask, waitmask; //primary components
     var id, name, thumbnail; //dashboard attributes
     var button = {};
+    var arrow;
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
     var dbView, lineEditor, barEditor, sankeyEditor, layoutEditor, nameEditor,
@@ -29,6 +30,7 @@ bluewave.Explorer = function(parent, config) {
     var init = function(){
 
         if (!config) config = {};
+        if (!config.fx) config.fx = new javaxt.dhtml.Effects();
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
@@ -370,6 +372,8 @@ bluewave.Explorer = function(parent, config) {
   //** updateButtons
   //**************************************************************************
     var updateButtons = function(){
+        arrow.hide();
+
         if (me.isReadOnly()){
             for (var key in button) {
                 if (button.hasOwnProperty(key)){
@@ -406,6 +410,7 @@ bluewave.Explorer = function(parent, config) {
 
 
               //Enable map and pieChart buttons as needed
+                var numNodes = 0;
                 for (var key in nodes) {
                     if (nodes.hasOwnProperty(key)){
                         var node = nodes[key];
@@ -415,8 +420,12 @@ bluewave.Explorer = function(parent, config) {
                         if (node.type==="supplyChain"){
                             button.mapChart.enable();
                         }
+                        numNodes++;
                     }
                 }
+
+                if (numNodes===0) arrow.show();
+
             }
 
 
@@ -916,6 +925,7 @@ bluewave.Explorer = function(parent, config) {
             var nodeType = nodes[nodeID+""].type;
             delete nodes[nodeID+""];
             if (nodeType==="layout" && !getLayoutNode()) toggleButton.hide();
+            updateButtons();
         });
         drawflow.on('connectionRemoved', function(info) {
             var outputID = info.output_id+"";
@@ -961,7 +971,7 @@ bluewave.Explorer = function(parent, config) {
         });
 
 
-      //Create menubar
+      //Create toolbar
         var menubar = document.createElement("div");
         menubar.className = "drawflow-toolbar";
         div.appendChild(menubar);
@@ -978,6 +988,19 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("compareDocs", "fas fa-not-equal", "Document Analysis", menubar);
         createMenuButton("layout", "far fa-object-ungroup", "Layout", menubar);
+
+
+      //Create little arrow/hint for the toolbar
+        arrow = document.createElement("div");
+        arrow.className = "drawflow-toolbar-hint noselect";
+        arrow.style.display = "none";
+        menubar.appendChild(arrow);
+        arrow.show = function(){
+            config.fx.fadeIn(this,"easeIn",500);
+        };
+        arrow.hide = function(){
+            config.fx.fadeOut(this,"easeIn",100);
+        };
     };
 
 
@@ -1058,6 +1081,8 @@ bluewave.Explorer = function(parent, config) {
 
         e.stopPropagation();
         e.preventDefault();
+
+        arrow.hide();
 
         if (e.type === "touchend") {
             /*
@@ -1917,7 +1942,8 @@ bluewave.Explorer = function(parent, config) {
             });
             docComparer.getConfig = function(){
                 return {
-                    chartTitle: title
+                    chartTitle: title,
+                    similarities: docComparer.getSimilarities()
                 };
             };
             docComparer.getChart = function(){
@@ -1945,7 +1971,7 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update and show docComparer
-        docComparer.update(inputs, chartConfig);
+        docComparer.update(inputs, chartConfig.similarities);
         docComparer.show();
     };
 
@@ -2017,8 +2043,10 @@ bluewave.Explorer = function(parent, config) {
                                 if (el.show) el.show();
                                 setTimeout(function(){
                                     createPreview(el, function(canvas){
-                                        node.preview = canvas.toDataURL("image/png");
-                                        createThumbnail(node, canvas);
+                                        if (canvas && canvas.toDataURL){
+                                            node.preview = canvas.toDataURL("image/png");
+                                            createThumbnail(node, canvas);
+                                        }
                                         win.close();
                                         waitmask.hide();
                                     }, this);

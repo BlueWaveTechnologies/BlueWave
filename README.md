@@ -1,6 +1,6 @@
-# Project BlueWave
+# BlueWave
 
-Web application used visualize supply chain shortages and fraud analysis.
+Web application used to create charts and dashboards using a graph database.
 
 
 # Technology Stack

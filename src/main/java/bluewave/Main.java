@@ -1,8 +1,9 @@
 package bluewave;
 import bluewave.app.User;
-import bluewave.data.Premier;
+import bluewave.data.*;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
+import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
 import java.net.InetSocketAddress;
@@ -13,7 +14,7 @@ import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.*;
-
+import javaxt.express.utils.CSV;
 
 //******************************************************************************
 //**  Main
@@ -33,7 +34,7 @@ public class Main {
    */
     public static void main(String[] arr) throws Exception {
         HashMap<String, String> args = console.parseArgs(arr);
-
+    
 
       //Get jar file and schema
         Jar jar = new Jar(Main.class);
@@ -252,6 +253,16 @@ public class Main {
         if (str.equalsIgnoreCase("Premier")){
             importPremier(args);
         }
+        else if (str.equalsIgnoreCase("Imports")){
+            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));            
+            //imports.exportSummary();
+            //imports.removeDuplicateEstablishments();
+        }     
+        else if (str.equalsIgnoreCase("Establishments")){
+            Neo4J database = Config.getGraph(null);
+            Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            database.close();
+        }
         else{
             java.io.File f = new java.io.File(str);
             if (f.isFile()) importFile(args);
@@ -280,6 +291,7 @@ public class Main {
 
       //Get node type
         String nodeType = args.get("-nodeType");
+        if (nodeType==null) nodeType = args.get("-node");
         if (nodeType==null) nodeType = args.get("-vertex");
         if (nodeType==null) throw new IllegalArgumentException("-nodeType or -vertex is required");
 
@@ -293,12 +305,18 @@ public class Main {
                 keys[i] = Integer.parseInt(arr[i]);
             }
         }
+        
+        
+      //Get number of threads
+        String numThreads = args.get("-threads");
+        if (numThreads==null) numThreads = args.get("-t");
+        if (numThreads==null) numThreads = "1";
 
-
+        
       //Import file
         Neo4J graph = Config.getGraph(null);
         if (fileType.equals("csv")){
-            bluewave.graph.Import.importCSV(file, nodeType, keys, graph);
+            bluewave.graph.Import.importCSV(file, nodeType, keys, Integer.parseInt(numThreads), graph);
         }
         else if (fileType.equals("json")){
             String target = args.get("-target");
@@ -419,6 +437,13 @@ public class Main {
         }
         else if (test.equalsIgnoreCase("premier")){
             bluewave.data.Premier.testConnect(args.get("-username"), args.get("-password"));
+        }
+        else if (test.equals("company")){
+
+            String name = args.get("-name");
+            console.log(name);            
+            console.log(getCompanyName(name));
+                
         }
         else{
             console.log("Unsupported test: " + test);
