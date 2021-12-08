@@ -91,7 +91,7 @@ bluewave.chart.utils = {
   //**************************************************************************
   /** Used to render x/y axis on the plotArea
    */
-    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey, chartData, minData, scaleOption){
+    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey, chartData, minData, scaleOption, chartType){
         if (!scaleOption) scaleOption = "linear";
 
         var getType = bluewave.chart.utils.getType;
@@ -101,11 +101,13 @@ bluewave.chart.utils = {
         var sb;
 
         let xType = getType(chartData[0][xKey]);
+        if (chartType=="barChart" && xType == "date") xType = "string";
         sb = getScale(xKey,xType,[0,axisWidth],chartData,minData);
         x = sb.scale;
         xBand = sb.band;
 
         let yType = getType(chartData[0][yKey]);
+        if (chartType=="barChart" && yType == "date") yType = "string";
         sb = getScale(yKey,yType,[axisHeight,0],chartData,minData,scaleOption);
         y = sb.scale;
         yBand = sb.band;
@@ -131,7 +133,9 @@ bluewave.chart.utils = {
             .call(
                 d3.axisBottom(x)
                 .tickValues(widthCheck ? null : x.domain().filter(tickFilter))
-            )
+            );
+
+            xAxis
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
@@ -172,7 +176,7 @@ bluewave.chart.utils = {
                     })
                 )
                 .range(axisRange)
-                .padding(1);
+                .padding(0.2);
                 break;
 
             case "date":
@@ -216,7 +220,7 @@ bluewave.chart.utils = {
 
                 if (scaleOption === "linear"){
 
-                    if (minVal>0) minVal=1;
+                    if (minVal>0) minVal=0;
 
                     scale = d3.scaleLinear()
                     .domain([minVal, maxVal]);

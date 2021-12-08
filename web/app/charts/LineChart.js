@@ -100,6 +100,7 @@ bluewave.charts.LineChart = function(parent, config) {
         var showLabels = chartConfig.endTags;
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
+        var stack = chartConfig.stack;
 
 
         var data1 = data[0];
@@ -110,14 +111,33 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var mergedData = d3.merge(dataSets);
 
-
-        //Get max line
+        
+            //Get max line
+        //     var maxData = d3.nest()
+        //         .key(function (d) { return d[xKey]; })
+        //         .rollup(function (d) {
+        //             return d3.max(d, function (g) {
+        //                 return parseFloat(g[yKey]);
+        //             });
+        //         }).entries(mergedData);
+        // }
+        
+        //Consolidate all this into max/sum/min function
+        //Get max line or sum of lines for stack
         var maxData = d3.nest()
             .key(function (d) { return d[xKey]; })
             .rollup(function (d) {
-                return d3.sum(d, function (g) {
-                    return parseFloat(g[yKey]);
-                });
+
+                if (stack) {
+                    return d3.sum(d, function (g) {
+                        return parseFloat(g[yKey]);
+                    });
+                } else {
+                    return d3.max(d, function (g) {
+                        return parseFloat(g[yKey]);
+                    });
+                }
+
             }).entries(mergedData);
 
         //Get minimum line
@@ -153,7 +173,7 @@ bluewave.charts.LineChart = function(parent, config) {
             var subgroups = groupData.map(function(d) { return d["key"]; });
         }
 
-        if (chartConfig.stack){
+        if (stack){
         //Nest merged data object by X-axis value for stacked area
         var groupedStackData = d3.nest()
             .key( (d) => d[xKey])
@@ -290,7 +310,7 @@ bluewave.charts.LineChart = function(parent, config) {
         fillGroup.attr("name", "fill");
         for (let i=0; i<arr.length; i++){
 
-            if(chartConfig.stack) break;
+            if(stack) break;
             var sumData = arr[i];
 
             let lineColor = chartConfig["lineColor" + i];
@@ -344,7 +364,7 @@ bluewave.charts.LineChart = function(parent, config) {
         lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
 
-            if(chartConfig.stack) break;
+            if(stack) break;
             var sumData = arr[i];
 
             let lineColor = chartConfig["lineColor" + i];

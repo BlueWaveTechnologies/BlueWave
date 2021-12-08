@@ -199,22 +199,22 @@ bluewave.charts.BarChart = function(parent, config) {
         var axes;
         if (barType === "histogram") {
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData);
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
                 leftLabel = "Frequency";
                 bottomLabel = chartConfig.xAxis;
             } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData);
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = "Frequency";
             }
         }
         else{
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData);
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, null, null, "barChart");
                 leftLabel = chartConfig.yAxis;
                 bottomLabel = chartConfig.xAxis;
             } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData);
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData, null, null, "barChart");
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = chartConfig.yAxis;
             }
@@ -660,7 +660,7 @@ bluewave.charts.BarChart = function(parent, config) {
         if (xAxis) xAxis.selectAll("*").remove();
         if (yAxis) yAxis.selectAll("*").remove();
 
-        var xAxis = plotArea
+        xAxis = plotArea
             .append("g")
             .attr("transform", "translate(0," + axisHeight + ")")
             .call(d3.axisBottom(x));
@@ -670,7 +670,7 @@ bluewave.charts.BarChart = function(parent, config) {
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
 
-        var yAxis = plotArea
+        yAxis = plotArea
             .append("g")
             .call(d3.axisLeft(y));
     };
