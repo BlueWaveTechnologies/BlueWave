@@ -15,25 +15,34 @@ import java.util.concurrent.atomic.AtomicLong;
  ******************************************************************************/
 
 public class StatusLogger implements Runnable {
-    
+
     private long startTime;
     private AtomicLong recordCounter;
     private AtomicLong totalRecords;
     private String statusText = "0 records processed (0 records per second)";
     private ScheduledExecutorService executor;
-    
-    
+
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     public StatusLogger(AtomicLong recordCounter, AtomicLong totalRecords){
         startTime = System.currentTimeMillis();
         this.recordCounter = recordCounter;
-        this.totalRecords = totalRecords;
-        executor = getExecutor(this); 
+        this.totalRecords = totalRecords==null ? new AtomicLong(0) : totalRecords;
+        executor = getExecutor(this);
     }
-    
-    
+
+
+  //**************************************************************************
+  //** setTotalRecords
+  //**************************************************************************
+    public void setTotalRecords(long n){
+        totalRecords.set(n);
+        run();
+    }
+
+
   //**************************************************************************
   //** run
   //**************************************************************************
@@ -67,21 +76,21 @@ public class StatusLogger implements Runnable {
 
         System.out.print(statusText);
     }
-    
-    
+
+
   //**************************************************************************
   //** shutdown
   //**************************************************************************
     public void shutdown(){
-        
+
       //Send one last status update
         run();
 
       //Clean up
-        executor.shutdown();      
+        executor.shutdown();
     }
-    
-    
+
+
   //**************************************************************************
   //** getExecutor
   //**************************************************************************
@@ -91,7 +100,7 @@ public class StatusLogger implements Runnable {
         return executor;
     }
 
-    
+
   //**************************************************************************
   //** format
   //**************************************************************************
@@ -101,7 +110,7 @@ public class StatusLogger implements Runnable {
         return java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(l);
     }
 
-    
+
   //**************************************************************************
   //** getElapsedTime
   //**************************************************************************
@@ -115,6 +124,6 @@ public class StatusLogger implements Runnable {
         if (s<60) return s + "s";
         long m = Math.round(s/60);
         return m + "m";
-    }    
-    
+    }
+
 }
