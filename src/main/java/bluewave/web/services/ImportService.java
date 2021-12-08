@@ -18,7 +18,6 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
-import me.xdrop.fuzzywuzzy.FuzzySearch;
 
 
 public class ImportService extends WebService {
@@ -41,8 +40,8 @@ public class ImportService extends WebService {
         if (establishment==null) establishment = "manufacturer";
         else establishment = establishment.toLowerCase();
 
-        Double threshold = request.getParameter("threshold").toDouble();
-        if (threshold!=null && threshold<=0) threshold = null;
+        Integer threshold = request.getParameter("threshold").toInteger();
+        if (threshold==null || threshold<0 || threshold>100) threshold = 0;
 
 
       //Get sql
@@ -65,8 +64,9 @@ public class ImportService extends WebService {
         }
 
 
-      //Update sql with establishment keyword
+      //Update sql with additional keywords
         sql = sql.replace("{establishment}", establishment);
+        sql = sql.replace("{threshold}", threshold+"");
 
 
       //Get graph
@@ -74,9 +74,14 @@ public class ImportService extends WebService {
         Neo4J graph = bluewave.Config.getGraph(user);
 
 
+        String[] extraFields = new String[]{
+        "num_entries", "quantity", "value", "num_exams", "num_field_exams",
+        "num_label_exams", "num_hi_predict", "num_field_fails", "num_label_fails"
+        };
+
 
       //Execute query
-        HashMap<Long,Object[]> entries = new HashMap<>();
+        HashMap<Long,HashMap<String, Value>> entries = new HashMap<>();
         HashMap<Long,String> facilities = new HashMap<>();
         Session session = null;
         try{
@@ -89,10 +94,13 @@ public class ImportService extends WebService {
                 Record r = rs.next();
 
                 Long fei = new Value(r.get("fei").asObject()).toLong();
-                Long numShipments = new Value(r.get("num_entries").asObject()).toLong();
-                List quantities = r.get("quantities").asList();
 
-                entries.put(fei, new Object[]{numShipments, quantities});
+
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field: extraFields){
+                    values.put(field, new Value(r.get(field).asObject()));
+                }
+                entries.put(fei, values);
             }
 
 
@@ -121,176 +129,69 @@ public class ImportService extends WebService {
             session.close();
         }
         catch(Exception e){
+            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
 
 
 
-
       //Fuzzy match facility names and combine entries
-        HashMap<String, Object[]> combinedEntries = new HashMap<>();
         HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
+
+
+
+
+      //Generate csv output
+        StringBuilder str = new StringBuilder(
+        "name,fei,totalShipments,totalValue,totalQuantity,totalExams,fieldExams,labelExams,failedFieldExams,failedLabelExams,highPredict");
         Iterator<String> it = uniqueFacilities.keySet().iterator();
         while (it.hasNext()){
             String name = it.next();
-            long numShipments = 0;
-            List quantities = null;
+
+
+          //Combine values
+            long totalShipments = 0;
+            double totalQuantity = 0;
+            double totalValue = 0;
+            long totalExams = 0;
+            long totalFieldExams = 0;
+            long totalLabelExams = 0;
+            long totalFailedFieldExams = 0;
+            long totalFailedLabelExams = 0;
+            long totalPredict = 0;
 
             for (Long fei : uniqueFacilities.get(name)){
 
-                Object[] obj = entries.get(fei);
-                Long n = (Long) obj[0];
-                List q = (List) obj[1];
+                HashMap<String, Value> values = entries.get(fei);
+                Long n = values.get("num_entries").toLong();
+                Double q = values.get("quantity").toDouble();
+                Double v = values.get("value").toDouble();
+                Long exams = values.get("num_exams").toLong();
+                Long fieldExams = values.get("num_field_exams").toLong();
+                Long labelExams = values.get("num_label_exams").toLong();
+                Long failedFieldExams = values.get("num_field_fails").toLong();
+                Long failedLabelExams = values.get("num_label_fails").toLong();
 
-                numShipments+= n;
-                if (quantities==null) quantities = new ArrayList<>();
-                quantities.addAll(q);
-            }
-
-            combinedEntries.put(name, new Object[]{numShipments, quantities});
-        }
-
-
-
-      //For each facility...
-        StringBuilder str = new StringBuilder("name,fei,numShipments,totalValue,totalQuantity");
-        it = combinedEntries.keySet().iterator();
-        while (it.hasNext()){
-            String name = it.next();
-            Object[] obj = combinedEntries.get(name);
-            long numShipments = (Long) obj[0];
-            List quantities = (List) obj[1];
-            long totalValue = 0;
-            long totalQuantity = 0;
+                Long predict = values.get("num_hi_predict").toLong();
 
 
-
-
-          //Compute total quantity and value
-            if (threshold!=null){
-
-
-              //Group quantities by product code
-                HashMap<String, ArrayList<ArrayList<Double>>> nums = new HashMap<>();
-                Iterator i2 = quantities.iterator();
-                while (i2.hasNext()){
-                    String val = i2.next().toString();
-                    String[] arr = val.split("/");
-                    String productCode = (String) arr[0];
-                    Double amount = new Value(arr[1]).toDouble();
-                    Double quantity = new Value(arr[2]).toDouble();
-                    Double unitPrice = 0D;
-
-                    if (amount==null) amount = 0D;
-                    if (quantity==null) quantity = 0D;
-                    if (amount>0 && quantity>0) unitPrice = amount/quantity;
-
-
-                    ArrayList<ArrayList<Double>> a = nums.get(productCode);
-                    if (a==null){
-                        a = new ArrayList<>();
-                        a.add(new ArrayList<Double>());
-                        a.add(new ArrayList<Double>());
-                        a.add(new ArrayList<Double>());
-                        nums.put(productCode, a);
-                    }
-
-                    a.get(0).add(amount);
-                    a.get(1).add(quantity);
-                    a.get(2).add(unitPrice);
-                }
-
-
-
-              //Compute total quantity and value
-                i2 = nums.keySet().iterator();
-                while (i2.hasNext()){
-                    String productCode = i2.next().toString();
-                    ArrayList<ArrayList<Double>> a = nums.get(productCode);
-
-
-                  //Generate a list of unitPrices > 0
-                    ArrayList<Double> unitPrices = new ArrayList<>();
-                    double total = 0;
-                    for (Double unitPrice : a.get(2)){
-                        if (unitPrice>0){
-                            unitPrices.add(unitPrice);
-                            total += unitPrice;
-                        }
-                    }
-
-                    int numSamples = unitPrices.size();
-
-
-
-                  //Work out the Mean (the simple average of the numbers)
-                    double mean = total / (double) numSamples;
-
-
-                  //Then for each number: subtract the Mean and square the result
-                    double sum = 0.0;
-                    for (double unitPrice : unitPrices){
-                        sum += Math.pow(unitPrice - mean, 2);
-                    }
-
-
-                  //Then compute the square root of the mean of the squared differences
-                    double std = Math.sqrt(sum/numSamples);
-
-
-
-                  //Calculate z-score
-                    unitPrices = a.get(2);
-                    for (int i=0; i<unitPrices.size(); i++){
-                        double unitPrice = unitPrices.get(i);
-
-                        boolean add = true;
-                        if (numSamples==1){
-                            add = true;
-                        }
-                        else{
-
-                            double z = ((double) unitPrice - mean)/std; //z-score
-                            if (z<0) z = -z;
-
-                            add = z<=threshold;
-                        }
-
-                        if (add){
-                            totalValue += a.get(0).get(i);
-                            totalQuantity += a.get(1).get(i);
-                        }
-                    }
-
-
-                }
-            }
-            else{
-
-
-                Iterator i2 = quantities.iterator();
-                while (i2.hasNext()){
-                    String val = i2.next().toString();
-                    String[] arr = val.split("/");
-
-                    Double amount = new Value(arr[1]).toDouble();
-                    Double quantity = new Value(arr[2]).toDouble();
-
-                    if (amount==null) amount = 0D;
-                    if (quantity==null) quantity = 0D;
-
-                    totalValue += amount;
-                    totalQuantity += quantity;
-                }
-
+                totalShipments+=n;
+                totalQuantity+=q;
+                totalValue+=v;
+                totalExams+=exams;
+                totalFieldExams+=fieldExams;
+                totalLabelExams+=labelExams;
+                totalFailedFieldExams+=failedFieldExams;
+                totalFailedLabelExams+=failedLabelExams;
+                totalPredict+=predict;
             }
 
 
+          //Create csv entry
             str.append("\r\n");
             str.append(name.contains(",") ? "\"" + name + "\"" : name);
             str.append(",");
-
 
             ArrayList<Long> feis = uniqueFacilities.get(name);
             boolean addQuotes = feis.size()>1;
@@ -303,17 +204,24 @@ public class ImportService extends WebService {
             if (addQuotes) str.append("\"");
             str.append(",");
 
-
-            str.append(numShipments);
+            str.append(totalShipments);
             str.append(",");
             str.append(totalValue);
             str.append(",");
             str.append(totalQuantity);
-
+            str.append(",");
+            str.append(totalExams);
+            str.append(",");
+            str.append(totalFieldExams);
+            str.append(",");
+            str.append(totalLabelExams);
+            str.append(",");
+            str.append(totalFailedFieldExams);
+            str.append(",");
+            str.append(totalFailedLabelExams);
+            str.append(",");
+            str.append(totalPredict);
         }
-
-
-
         return new ServiceResponse(str.toString());
     }
 }
