@@ -18,7 +18,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var data = [];
     var countryOptions, productOptions, establishmentOptions; //dropdowns
     var slider, thresholdInput;
-    var lineChart, barChart, scatterChart;    
+    var lineChart, barChart, scatterChart;
+    var nodeView;
     var waitmask;
     
     
@@ -33,7 +34,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
       //Create main table
         var table = createTable();
         var tbody = table.firstChild;
-        var tr, td, div;
+        var tr, td;
 
       //Create toolbar
         tr = document.createElement("tr");
@@ -131,16 +132,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var update = function(){
         
         
-        console.log("update!");
         waitmask.show(500);
         
         
-        var establishment = establishmentOptions.getValue();
+        var establishment = establishmentOptions.getValue().toLowerCase();
         var country = countryOptions.getValue();
-
+        var threshold = parseFloat(thresholdInput.value);
+        if (isNaN(threshold)) threshold = "";
 
         data = [];
-        get("import/summary?country=" + country + "&establishment=" + establishment, {
+        get("import/summary?country=" + country + "&establishment=" + establishment + "&threshold=" + threshold, {
             success: function(csv){            
                 var rows = parseCSV(csv, ",");      
                 var header = rows.shift();
@@ -148,7 +149,10 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     var r = {};                    
                     header.forEach((field, i)=>{
                         var val = row[i];
-                        if (field==="fei") val = val.split(",");
+                        if (field==="fei"||field==="manufacturer"||field==="shipper"||
+                            field==="importer"||field==="consignee"||field==="dii"){ 
+                            val = val.split(",");
+                        }
                         else if (field!="name"){
                             val = Math.round(parseFloat(val));
                         }
@@ -175,16 +179,24 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     var lineData = [];
                     parseCSV(csv, ",").forEach((row)=>{
                         var date = new Date(row[0]).getTime();
-                        var count = parseFloat(row[1]);                           
-                        lineData.push({
-                            date: date,
-                            count: count
-                        });
+                        if (!isNaN(date)){
+                            var count = parseFloat(row[1]);                           
+                            lineData.push({
+                                date: date,
+                                count: count
+                            });
+                        }
                     });
                     
                     lineData.sort(function(a,b){
-                        return b.date-a.date;
-                    });                    
+                        return a.date-b.date;
+                    });
+                    
+//                    var firstDate = new Date(lineData[0].date);
+//                    var lastDate = new Date(lineData[lineData.length-1].date);
+//                    console.log(lineData.length);
+//                    console.log(firstDate, lastDate);
+                    
                     
                     lineData.forEach((d)=>{
                         var date = new Date(d.date);
@@ -200,26 +212,172 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 
                 
               //Update bar chart
-                var lineData = [];
-                for (var i=0; i<Math.min(10,data.length); i++){
-                    var d = data[i];
-                    lineData.push({
-                        name: d.name,
-                        quantity: d.totalShipments
-                    });
+                if (barChart){
+                    var chartData = [];
+                    for (var i=0; i<Math.min(10,data.length); i++){
+                        var d = data[i];
+                        chartData.push({
+                            name: d.name,
+                            quantity: d.totalShipments
+                        });
+                    }
+                    barChart.update({
+                        xAxis: "name",
+                        yAxis: "quantity"
+                    }, [chartData]);
                 }
-                barChart.update({
-                    xAxis: "name",
-                    yAxis: "quantity"
-                }, [lineData]);
 
 
-//                scatterChart.update({
-//                    xAxis: "name",
-//                    yAxis: "totalShipments"
-//                },[d3.csvParse(csv)]);
 
+                if (scatterChart){
+                    var chartData = [];
+                    data.forEach((d)=>{
+                        var totalExams = d.totalExams;
+                        if (!isNaN(totalExams)){
+                            if (totalExams>0){
+                                chartData.push({
+                                    totalExams: totalExams,
+                                    totalShipments: d.totalShipments
+                                });
+                            }
+                        }
+                    });
 
+                    scatterChart.update({
+                        xAxis: "totalExams",
+                        yAxis: "totalShipments",
+                        xGrid: true,
+                        yGrid: true,
+                        xLabel: true,
+                        yLabel: true                     
+                    },[chartData]);
+
+                }
+                
+
+              //Update graph
+                var feis = {};
+                var nodes = [];
+                var links = [];              
+                var entityTypes = ["manufacturer","shipper","importer","consignee","dii"];
+                data.forEach((d)=>{
+                    
+                    entityTypes.forEach((entity)=>{
+                        if (entity!==establishment){
+                            d[entity].forEach((fei)=>{
+                                if (!feis[fei]){
+                                    feis[fei] = false;
+                                }
+                            });
+                        }
+                    });
+                    
+                    d.fei.forEach((fei)=>{
+                        feis[fei] = d.name;
+                    });
+                    
+                    nodes.push({
+                        name: d.name,
+                        fei: d.fei
+                    });
+                    
+                });                
+                
+                
+              //Generate list of FEIs to match
+                var numFEIs = 0;
+                var str = "";
+                for (var fei in feis) {
+                    if (feis.hasOwnProperty(fei)){                        
+                        if (!feis[fei]){                        
+                            if (str.length>0) str += ",";
+                            str += fei;
+                            numFEIs++;
+                        }
+                    }   
+                }                     
+                console.log(nodes.length, numFEIs);
+                
+              //Match FEIs
+                post("import/companies", str, {
+                    success: function(csv){
+                        
+                      //Update FEIs
+                        var rows = parseCSV(csv, ",");      
+                        rows.shift(); //remove header
+                        rows.forEach((arr)=>{
+                            var name = arr[0];
+                            var ids = arr[1].split(",");
+                            
+                            nodes.push({
+                                name: name,
+                                fei: ids
+                            });                            
+                            
+                            ids.forEach((fei)=>{
+                                feis[fei] = name;
+                            });
+                        });
+                        
+                        
+
+                      //Create Links
+                        data.forEach((d)=>{
+
+                            entityTypes.forEach((entity)=>{
+                                if (entity!==establishment){
+                                    var ids = d[entity];
+                                    var name;
+                                    for (var fei in feis) {
+                                        if (feis.hasOwnProperty(fei)){  
+                                            ids.every((id)=>{
+                                                var foundMatch = false;
+                                                if (id===fei){
+                                                    name = feis[fei];
+                                                    foundMatch = true;
+                                                }
+                                                return !foundMatch;
+                                            });
+                                            if (name) break;
+                                        }
+                                    }                                    
+                                    
+                                    if (d.name!==name){
+                                        var source = d.name;
+                                        var target = name;
+                                        var addLink = true;
+                                        
+                                        links.every((link)=>{
+                                            var foundMatch = false;
+                                            if (link.source===source && link.target===target){
+                                                if (link.relationship.indexOf(entity)===-1){
+                                                    link.relationship += "," + entity;
+                                                }
+                                                addLink = false;
+                                            }
+                                            return !foundMatch;
+                                        });
+                                        
+                                        if (addLink){
+                                            links.push({
+                                                source: source,
+                                                target: target,
+                                                relationship: entity
+                                            });
+                                        }
+                                    }
+                                }
+                            });
+          
+                            
+
+                        });  
+                        
+                        
+                        nodeView.update({},{nodes:nodes,links:links});
+                        
+                    }
+                });
 
 
 
@@ -312,7 +470,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         slider.className = "dashboard-slider";
         slider.style.width = "100%";
         slider.setAttribute("min", 1);
-        slider.setAttribute("max", 20);
+        slider.setAttribute("max", 21);
         slider.value = 1;
         slider.getValue = function(){
             var val = this.value-1;
@@ -321,18 +479,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         slider.onchange = function(){ 
             var val = this.getValue();
             if (val>0){ 
-                val = (val/2)+""; 
-                if (val.indexOf(".")===-1) val += ".0";
-                thresholdInput.value = val + "%";
+                thresholdInput.value = (5*val) + "%";
             }
             else{
                 thresholdInput.value = "";
             }
-            //update();
+            update();
         };
         td.appendChild(slider);     
         td = document.createElement("td");
-        td.style.width = "40px";
+        td.style.width = "45px";
         tr.appendChild(td);
         thresholdInput = document.createElement("input");
         thresholdInput.className = "form-input";
@@ -486,7 +642,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         td.style.padding = "10px 0px";        
         td.style.overflow = "hidden";
         tr.appendChild(td);
-        createBarChart(td);
+        //createBarChart(td);
+        createRelationshipGraph(td);
         
         
       //Create scatter chart
@@ -535,7 +692,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************    
     var createScatterChart = function(parent){
         var dashboardItem = createDashboardItem(parent,{
-            title: "Quantity vs Exams",
+            title: "Total Entries vs Exams",
             width: "100%",
             height: "360px"
         });
@@ -543,6 +700,21 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         dashboardItem.el.style.display = "table";
         scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{});
     };    
+    
+    
+  //**************************************************************************
+  //** createRelationshipGraph
+  //**************************************************************************    
+    var createRelationshipGraph = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Relationships",
+            width: "100%",
+            height: "360px"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        nodeView = new bluewave.charts.ForceDirectedChart(dashboardItem.innerDiv,{});
+    };       
     
 
   //**************************************************************************
@@ -570,6 +742,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var round = javaxt.dhtml.utils.round;
+    var post = javaxt.dhtml.utils.post;
     var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
