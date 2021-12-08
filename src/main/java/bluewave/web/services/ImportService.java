@@ -75,8 +75,10 @@ public class ImportService extends WebService {
 
 
         String[] extraFields = new String[]{
-        "num_entries", "quantity", "value", "num_exams", "num_field_exams",
-        "num_label_exams", "num_hi_predict", "num_field_fails", "num_label_fails"
+        "num_entries", "quantity", "value",
+        "manufacturer","shipper","importer","consignee","dii",
+        "num_exams", "num_field_exams","num_label_exams", "num_field_fails", "num_label_fails",
+        "num_hi_predict"
         };
 
 
@@ -144,7 +146,10 @@ public class ImportService extends WebService {
 
       //Generate csv output
         StringBuilder str = new StringBuilder(
-        "name,fei,totalShipments,totalValue,totalQuantity,totalExams,fieldExams,labelExams,failedFieldExams,failedLabelExams,highPredict");
+        "name,fei,totalShipments,totalValue,totalQuantity,"+
+        "manufacturer,shipper,importer,consignee,dii,"+
+        "totalExams,fieldExams,labelExams,failedFieldExams,failedLabelExams," +
+        "highPredict");
         Iterator<String> it = uniqueFacilities.keySet().iterator();
         while (it.hasNext()){
             String name = it.next();
@@ -161,6 +166,13 @@ public class ImportService extends WebService {
             long totalFailedLabelExams = 0;
             long totalPredict = 0;
 
+            HashSet<Long> manufacturer = new HashSet<>();
+            HashSet<Long> shipper = new HashSet<>();
+            HashSet<Long> importer = new HashSet<>();
+            HashSet<Long> consignee = new HashSet<>();
+            HashSet<Long> dii = new HashSet<>();
+
+
             for (Long fei : uniqueFacilities.get(name)){
 
                 HashMap<String, Value> values = entries.get(fei);
@@ -175,6 +187,11 @@ public class ImportService extends WebService {
 
                 Long predict = values.get("num_hi_predict").toLong();
 
+                mergeList(manufacturer, (List) values.get("manufacturer").toObject());
+                mergeList(shipper, (List) values.get("shipper").toObject());
+                mergeList(importer, (List) values.get("importer").toObject());
+                mergeList(consignee, (List) values.get("consignee").toObject());
+                mergeList(dii, (List) values.get("dii").toObject());
 
                 totalShipments+=n;
                 totalQuantity+=q;
@@ -209,6 +226,18 @@ public class ImportService extends WebService {
             str.append(totalValue);
             str.append(",");
             str.append(totalQuantity);
+
+            str.append(",");
+            str.append(getCSV(manufacturer));
+            str.append(",");
+            str.append(getCSV(shipper));
+            str.append(",");
+            str.append(getCSV(importer));
+            str.append(",");
+            str.append(getCSV(consignee));
+            str.append(",");
+            str.append(getCSV(dii));
+
             str.append(",");
             str.append(totalExams);
             str.append(",");
@@ -223,5 +252,101 @@ public class ImportService extends WebService {
             str.append(totalPredict);
         }
         return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
+  //** getCompanies
+  //**************************************************************************
+    public ServiceResponse getCompanies(ServiceRequest request, Database database)
+    throws ServletException {
+        String ids = request.getParameter("id").toString();
+        if (ids==null) ids = new String(request.getPayload());
+        if (ids==null) return new ServiceResponse(400, "id is required");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Get establishment names
+        HashMap<Long,String> facilities = new HashMap<>();
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+
+            StringBuilder str = new StringBuilder();
+            str.append("MATCH (n:import_establishment)\n");
+            str.append("WHERE n.fei IN[\n");
+            str.append(ids);
+            str.append("]\n");
+            str.append("RETURN n.fei as fei, n.name as name");
+
+            Result rs = session.run(str.toString());
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long fei = new Value(r.get("fei").asObject()).toLong();
+                String name = new Value(r.get("name").asObject()).toString();
+                facilities.put(fei, name);
+            }
+
+
+            session.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+
+
+      //Fuzzy match facility names and combine entries
+        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
+
+
+
+      //Generate csv response
+        StringBuilder str = new StringBuilder("name,fei");
+        Iterator<String> it = uniqueFacilities.keySet().iterator();
+        while (it.hasNext()){
+            String name = it.next();
+            ArrayList<Long> feis = uniqueFacilities.get(name);
+            str.append("\r\n");
+            str.append(name.contains(",") ? "\"" + name + "\"" : name);
+            str.append(",");
+            str.append(getCSV(feis));
+
+        }
+        return new ServiceResponse(str.toString());
+    }
+
+
+    public ServiceResponse saveCompanies(ServiceRequest request, Database database)
+    throws ServletException { return getCompanies(request, database); }
+
+    private void mergeList(HashSet<Long> a, List b){
+        for (int i=0; i<b.size(); i++){
+            a.add(new Value(b.get(i)).toLong());
+        }
+    }
+
+    private String getCSV(HashSet<Long> a){
+        return getCSV(new ArrayList<>(a));
+    }
+
+    private String getCSV(List<Long> a){
+        if (a.isEmpty()) return "";
+        if (a.size()==1) return a.iterator().next()+"";
+        StringBuilder str = new StringBuilder("\"");
+        Iterator<Long> it = a.iterator();
+        while (it.hasNext()) {
+            str.append(it.next());
+            if (it.hasNext()) str.append(",");
+        }
+        str.append("\"");
+        return str.toString();
     }
 }
