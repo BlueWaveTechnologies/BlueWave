@@ -21,10 +21,7 @@ bluewave.charts.LineChart = function(parent, config) {
         }
     };
     var svg, chart, plotArea;
-    var xAxis, yAxis;
-    var axisWidth, axisHeight;
-    var x, y, xBand, yBand;
-    var timeAxis;
+    var x, y;
     var dataSets;
     var scaleOption;
 
@@ -74,8 +71,8 @@ bluewave.charts.LineChart = function(parent, config) {
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
         var margin = config.margin;
-        axisHeight = height - margin.top - margin.bottom;
-        axisWidth = width - margin.left - margin.right;
+        var axisHeight = height - margin.top - margin.bottom;
+        var axisWidth = width - margin.left - margin.right;
         var plotHeight = height - margin.top - margin.bottom;
         var plotWidth = width - margin.left - margin.right;
         plotArea = chart.append("g");
@@ -96,39 +93,51 @@ bluewave.charts.LineChart = function(parent, config) {
         if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
 
-        let xKey2;
-        let yKey2;
-        if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-            xKey2 = chartConfig.xAxis2;
-            yKey2 = chartConfig.yAxis2;
-        }
-
+      //Get chart options
         scaleOption = chartConfig.scaleOption;
-        if (!scaleOption) scaleOption = chartConfig.scaleOption = "linear";
-
-
+        if (!scaleOption) scaleOption = "linear";
         var group = chartConfig.group;
         var showLabels = chartConfig.endTags;
-        if (showLabels!==false) showLabels = chartConfig.endTags = true;
+        if (showLabels===true || showLabels===false){}
+        else showLabels = data.length>1;
+        var stack = chartConfig.stack;
 
 
         var data1 = data[0];
-        var data2 = data[1];
         dataSets = data;
         data = data1;
 
-        var mergedData = d3.merge(dataSets);
-        // if (data2!==null && data2!==undefined && xKey2 && yKey2){
-        //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-        // }
+        var globalxKeyType = getType(data1[0][xKey]);
 
-        //Get max line
+        var mergedData = d3.merge(dataSets);
+
+        
+            //Get max line
+        //     var maxData = d3.nest()
+        //         .key(function (d) { return d[xKey]; })
+        //         .rollup(function (d) {
+        //             return d3.max(d, function (g) {
+        //                 return parseFloat(g[yKey]);
+        //             });
+        //         }).entries(mergedData);
+        // }
+        
+        //Consolidate all this into max/sum/min function
+        //Get max line or sum of lines for stack
         var maxData = d3.nest()
             .key(function (d) { return d[xKey]; })
             .rollup(function (d) {
-                return d3.max(d, function (g) {
-                    return parseFloat(g[yKey]);
-                });
+
+                if (stack) {
+                    return d3.sum(d, function (g) {
+                        return parseFloat(g[yKey]);
+                    });
+                } else {
+                    return d3.max(d, function (g) {
+                        return parseFloat(g[yKey]);
+                    });
+                }
+
             }).entries(mergedData);
 
         //Get minimum line
@@ -140,10 +149,11 @@ bluewave.charts.LineChart = function(parent, config) {
                 });
             }).entries(mergedData);
 
-         //Set axes with merged data
-        displayAxis("key", "value", maxData, minData);
 
-        let xType = typeOfAxisValue();
+      //Render X/Y axis
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption);
+        x = axes.x;
+        y = axes.y;
 
 
       //Reformat data if "group by" is selected
@@ -160,7 +170,76 @@ bluewave.charts.LineChart = function(parent, config) {
             })
 
             dataSets = tempDataSets;
+            var subgroups = groupData.map(function(d) { return d["key"]; });
         }
+
+        if (stack){
+        //Nest merged data object by X-axis value for stacked area
+        var groupedStackData = d3.nest()
+            .key( (d) => d[xKey])
+            .entries(mergedData)
+
+        console.log("data", mergedData)
+        console.log("groupedStackData", groupedStackData)
+
+        let stackGroup=[];
+        let stackLength = groupedStackData[0].values.length;
+        for (let i=0; i<stackLength; i++){
+            stackGroup.push(i);
+        }
+            console.log(stackGroup)
+        // console.log(subgroups)
+        var stackedData = d3.stack()
+            // .keys(subgroups) no idea why this doesn'r work
+            .keys(stackGroup)
+            .value(function (d, key) {
+
+                let v = d.values[key];
+                return v[yKey];
+
+            })
+            (groupedStackData)
+        console.log(stackedData)
+
+        var colors = bluewave.utils.getColorPalette(true);
+
+        plotArea
+            .selectAll("stacks")
+            .data(stackedData)
+            .enter()
+            .append("path")
+            .attr("dataset", (d, i) => i )
+            .style("fill", function(d, i){
+                //Get color from config or mod through color array
+                return chartConfig["lineColor" + i] || colors[i%colors.length];
+            })
+            .style("opacity", function(d, i){
+                return chartConfig["opacity" + i];
+            })
+            .attr("d", d3.area()
+                .x(function (d, i) {
+
+                    let subData = d.data;
+                    let subKey = d.data.key;
+
+                    if (globalxKeyType === "date"){
+                        subKey = new Date(subKey)
+                    }
+
+                    return x(subKey);
+
+                })
+                .y0(function (d) { return y(d[0]); })
+                .y1(function (d) { return y(d[1]); })
+            )
+            .attr("class", "stackarea")
+            .on("click", function(d){
+                var datasetID = parseInt(d3.select(this).attr("dataset"));
+                me.onClick(this, datasetID, d);
+            });
+
+        }
+
 
 
       //Create dataset to render
@@ -230,12 +309,14 @@ bluewave.charts.LineChart = function(parent, config) {
         var fillGroup = plotArea.append("g");
         fillGroup.attr("name", "fill");
         for (let i=0; i<arr.length; i++){
+
+            if(stack) break;
             var sumData = arr[i];
 
             let lineColor = chartConfig["lineColor" + i];
             let startOpacity = chartConfig["startOpacity" + i];
             let endOpacity = chartConfig["endOpacity" + i];
-            let keyType = typeOfAxisValue(sumData[0].key);
+            let keyType = getType(sumData[0].key);
 
             var getX = function(d){
                 if(keyType==="date"){
@@ -282,6 +363,8 @@ bluewave.charts.LineChart = function(parent, config) {
         circleGroup.attr("name", "circles");
         lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
+
+            if(stack) break;
             var sumData = arr[i];
 
             let lineColor = chartConfig["lineColor" + i];
@@ -379,7 +462,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     if (!label) label = "Series " + (i+1);
                 }
                 var line = chartElements[i].line2;
-                chartElements[i].tag = createLabel(sumData, lineColor, label, line);
+                chartElements[i].tag = createTag(sumData, lineColor, label, line);
             }
         };
 
@@ -405,14 +488,14 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** createLabelTag
+  //** createTag
   //**************************************************************************
-    var createLabel = function(dataSet, color, label, line){
+    var createTag = function(dataSet, color, label, line){
 
         var lastItem = dataSet[dataSet.length - 1];
         var lastKey = lastItem.key;
         var lastVal = lastItem.value;
-        var keyType = typeOfAxisValue(dataSet[0].key);
+        var keyType = getType(dataSet[0].key);
 
 
         if(keyType==="date"){
@@ -529,172 +612,6 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** displayAxis
-  //**************************************************************************
-    var displayAxis = function(xKey,yKey,chartData,minData){
-
-        let axisTemp = createAxisScale(xKey,'x',chartData,minData);
-        x = axisTemp.scale;
-        xBand = axisTemp.band;
-
-        axisTemp = createAxisScale(yKey,'y',chartData, minData, scaleOption);
-        y = axisTemp.scale;
-        yBand = axisTemp.band;
-
-
-        if (xAxis) xAxis.selectAll("*").remove();
-        if (yAxis) yAxis.selectAll("*").remove();
-
-        xAxis = plotArea
-            .append("g")
-            .attr("transform", "translate(0," + axisHeight + ")")
-            .call(d3.axisBottom(x))
-            .selectAll("text")
-            .attr("transform", "translate(-10,0)rotate(-45)")
-            .style("text-anchor", "end");
-
-        yAxis = plotArea
-            .append("g")
-            .call(scaleOption==="linear" ? d3.axisLeft(y) :
-                    d3.axisLeft(y)
-                    .ticks(10, ",")
-                    .tickFormat(d3.format("d"))
-            );
-
-    };
-
-
-  //**************************************************************************
-  //** typeOfAxisValue
-  //**************************************************************************
-     var typeOfAxisValue = function(value) {
-        let dataType;
-
-        const validNumberRegex = /^[\+\-]?\d*\.?\d+(?:[Ee][\+\-]?\d+)?$/;
-        switch (typeof value) {
-            case "string":
-                if(value.match(validNumberRegex)){
-                    dataType =  "number";
-                }else if (Date.parse(value)){
-                    dataType =  "date";
-                }else{
-                    dataType = "string";
-                }
-                break;
-            case "number":
-                dataType = "number";
-                break;
-            case "object":
-                dataType = "date";
-                break;
-            default:
-                break;
-        }
-        return dataType;
-    };
-
-
-  //**************************************************************************
-  //** createAxisScale
-  //**************************************************************************
-    var createAxisScale = function(key, axisName, chartData, minData, scaleOption){
-        let scale;
-        let band;
-        let type = typeOfAxisValue(chartData[0][key]);
-
-
-        let axisRange;
-        let axisRangePadded;
-        if (axisName === "x"){
-            axisRange = [0,axisWidth];
-            axisRangePadded = [10,axisWidth-10];
-        }
-        else{
-            axisRange = [axisHeight,0];
-            axisRangePadded = [axisHeight-10,10];
-        }
-
-
-
-        switch (type) {
-            case "string":
-                scale = d3
-                .scaleBand()
-                .domain(
-                    chartData.map(function (d) {
-                        return d[key];
-                    })
-                )
-                .range(axisRange)
-                .padding(1);
-                break;
-
-            case "date":
-
-                var timeRange = [new Date(chartData[0][key]),new Date(chartData[chartData.length-1][key])];
-                chartData.map((val) => {
-                    val[key] = new Date(val[key]);
-                    return val;
-                });
-
-                scale = d3
-                    .scaleTime()
-                    .domain(timeRange)
-                    .rangeRound(axisRange);
-
-                band = d3
-                    .scaleBand()
-                    .domain(d3.timeDay.range(...scale.domain()))
-                    .rangeRound(axisRange)
-                    .padding(0.2);
-
-                timeAxis = axisName;
-                break;
-
-            default: //number
-
-                // var extent = d3.extent(chartData, function(d) { return parseFloat(d[key]); });
-                // var minVal = extent[0];
-                // var maxVal = extent[1];
-                //Having objects for both the min and max lines could possibly come in handy
-                var minVal = d3.min(minData, function(d) { return parseFloat(d[key]);} );
-                var maxVal = d3.max(chartData, function(d) { return parseFloat(d[key]);} );
-                if (minVal == maxVal) maxVal = minVal + 1;
-
-                if (scaleOption === "linear"){
-
-                    if (minVal>0) minVal=1;
-
-                    scale = d3.scaleLinear()
-                    .domain([minVal, maxVal]);
-
-                }
-                else if (scaleOption === "logarithmic"){
-
-                    // minVal = Math.pow(10, Math.floor(Math.log10(minVal+1)));
-                    // maxVal = Math.pow(10, Math.ceil(Math.log10(maxVal)));
-                    if(minVal<1) minVal = 1;
-
-                    scale = d3.scaleLog()
-                    .domain([minVal, maxVal+1]);
-
-                }
-
-                scale.range(axisRange);
-
-
-                break;
-        }
-
-
-        return {
-            scale,
-            band
-        };
-    };
-
-
-  //**************************************************************************
   //** applySmoothing
   //**************************************************************************
     var applySmoothing = function(smoothingType, smoothingValue, data){
@@ -780,35 +697,16 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** mergeToAxis
-  //**************************************************************************
-    const mergeToAxis = (data1,data2,xKey1,xKey2,newXKey,yKey1,yKey2,newYKey)=>{
-        let mergedArray = [];
-        data1.forEach(val=>{
-          let updatedVal = {...val,[newXKey]:val[xKey1],[newYKey]:val[yKey1]};
-          mergedArray.push(updatedVal);
-        });
-        if(data2===null || data2 === undefined){
-          return mergedArray;
-        }
-        data2.forEach(val=>{
-          let updatedVal = {...val,[newXKey]:val[xKey2],[newYKey]:val[yKey2]}
-          mergedArray.push(updatedVal);
-        });
-        return mergedArray;
-    };
-
-
-
-  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-    var isArray = javaxt.dhtml.utils.isArray;
-    var initChart = bluewave.utils.initChart;
-    var drawGridlines = bluewave.utils.drawGridlines;
-    var drawLabels = bluewave.utils.drawLabels;
+
+    var initChart = bluewave.chart.utils.initChart;
+    var getType = bluewave.chart.utils.getType;
+    var drawAxes = bluewave.chart.utils.drawAxes;
+    var drawLabels = bluewave.chart.utils.drawLabels;
+    var drawGridlines = bluewave.chart.utils.drawGridlines;
 
     init();
 };
