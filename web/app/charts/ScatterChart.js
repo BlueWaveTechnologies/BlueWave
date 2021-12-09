@@ -72,7 +72,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
 
-        config = merge(config, chartConfig);
+        config = merge(chartConfig, config);
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
@@ -159,6 +159,10 @@ bluewave.charts.ScatterChart = function(parent, config) {
         };
 
 
+      //Draw grid lines if option is checked
+        if (config.xGrid || config.yGrid){
+            drawGridlines(plotArea, x, y, axisHeight, axisWidth, config.xGrid, config.yGrid);
+        }
 
 
         var getX = function(d){
@@ -206,20 +210,16 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 .attr("x", function(d){
                     var cx = getX(d);
                     var r = config.getPointRadius(d);
-                    return cx+r;
+                    return cx+r+1;
                 })
                 .attr("y", getY)
+                .attr("font-size", 10)
                 .text(config.getPointLabel)
                 .on("click", function(node){
                     //selectNode(node, this);
                 });
         }
 
-
-      //Draw grid lines if option is checked
-        if (config.xGrid || config.yGrid){
-            drawGridlines(plotArea, x, y, axisHeight, axisWidth, config.xGrid, config.yGrid);
-        }
 
 
       //Draw labels if checked
