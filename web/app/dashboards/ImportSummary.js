@@ -16,9 +16,11 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var title = "Import Summary";
     var grid;
     var data = [];
+    var lineData = [];
     var countryOptions, productOptions, establishmentOptions; //dropdowns
     var slider, thresholdInput;
     var lineChart, barChart, scatterChart;
+    var yAxis;
     var nodeView;
     var waitmask;
     
@@ -81,10 +83,12 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         data = [];
+        lineData = [];
         grid.clear();
         establishmentOptions.setValue("Manufacturer", true);
         countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
         productOptions.setValue("All", true);
+        yAxis = "totalShipments";
     };
 
 
@@ -125,7 +129,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         
     };    
     
-    
+
   //**************************************************************************
   //** update
   //**************************************************************************
@@ -135,7 +139,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         waitmask.show(500);
         
         
-        var establishment = establishmentOptions.getValue().toLowerCase();
+        var establishment = getEstablishment();
         var country = countryOptions.getValue();
         var threshold = parseFloat(thresholdInput.value);
         if (isNaN(threshold)) threshold = "";
@@ -175,39 +179,52 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 
                 
               //Update line chart
-                getData("Imports_Per_Day", function(csv){
-                    var lineData = [];
-                    parseCSV(csv, ",").forEach((row)=>{
-                        var date = new Date(row[0]).getTime();
-                        if (!isNaN(date)){
-                            var count = parseFloat(row[1]);                           
-                            lineData.push({
-                                date: date,
-                                count: count
+                lineChart.clear();
+                get("import/history?country=" + country + "&threshold=" + threshold, {
+                    success: function(csv){
+
+                        var rows = parseCSV(csv, ",");      
+                        var header = rows.shift();
+                        var createRecord = function(row){
+                            var r = {};                    
+                            header.forEach((field, i)=>{
+                                var val = row[i];
+                                if (field!=="date"){
+                                    val = Math.round(parseFloat(val));
+                                }                                                        
+                                r[field] = val;
                             });
-                        }
-                    });
-                    
-                    lineData.sort(function(a,b){
-                        return a.date-b.date;
-                    });
-                    
-//                    var firstDate = new Date(lineData[0].date);
-//                    var lastDate = new Date(lineData[lineData.length-1].date);
-//                    console.log(lineData.length);
-//                    console.log(firstDate, lastDate);
-                    
-                    
-                    lineData.forEach((d)=>{
-                        var date = new Date(d.date);
-                        d.date = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
-                    });
-                    
-                    lineChart.update({
-                        xAxis: "date",
-                        yAxis: "count"
-                    },[lineData]);
-                });                
+                            return r;
+                        };                    
+                        
+                        rows.forEach((row)=>{
+                            var d = createRecord(row);                            
+
+                            var date = new Date(d.date).getTime();
+                            if (!isNaN(date)){
+                                d.date = date;
+                                lineData.push(d);
+                            }
+                        });
+
+                        lineData.sort(function(a,b){
+                            return a.date-b.date;
+                        });
+
+//                        var firstDate = new Date(lineData[0].date);
+//                        var lastDate = new Date(lineData[lineData.length-1].date);
+//                        console.log(lineData.length);
+//                        console.log(firstDate, lastDate);
+                        
+
+                        lineData.forEach((d)=>{
+                            var date = new Date(d.date);
+                            d.date = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
+                        });                   
+                        
+                        lineChart.update();
+                    }
+                });
 
                 
                 
@@ -228,31 +245,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 }
 
 
-
-                if (scatterChart){
-                    var chartData = [];
-                    data.forEach((d)=>{
-                        var totalExams = d.totalExams;
-                        if (!isNaN(totalExams)){
-                            if (totalExams>0){
-                                chartData.push({
-                                    totalExams: totalExams,
-                                    totalShipments: d.totalShipments
-                                });
-                            }
-                        }
-                    });
-
-                    scatterChart.update({
-                        xAxis: "totalExams",
-                        yAxis: "totalShipments",
-                        xGrid: true,
-                        yGrid: true,
-                        xLabel: true,
-                        yLabel: true                     
-                    },[chartData]);
-
-                }
+                scatterChart.update();
                 
 
               //Update graph
@@ -278,7 +271,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     
                     nodes.push({
                         name: d.name,
-                        fei: d.fei
+                        fei: d.fei,
+                        type: establishment
                     });
                     
                 });                
@@ -296,7 +290,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         }
                     }   
                 }                     
-                console.log(nodes.length, numFEIs);
+                //console.log(nodes.length, numFEIs);
                 
               //Match FEIs
                 post("import/companies", str, {
@@ -374,7 +368,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         });  
                         
                         
-                        nodeView.update({},{nodes:nodes,links:links});
+                        nodeView.update(nodes, links);
                         
                     }
                 });
@@ -550,6 +544,14 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
   //**************************************************************************
+  //** getEstablishment
+  //**************************************************************************
+    var getEstablishment = function(){
+        return establishmentOptions.getValue().toLowerCase();
+    };
+    
+
+  //**************************************************************************
   //** createGrid
   //**************************************************************************
     var createGrid = function(parent){
@@ -562,7 +564,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 {header: 'Name', width:'100%', sortable: true},
                 {header: 'Reported Quantity', width:'200px', align:'right', sortable: true},
                 {header: 'Reported Value', width:'150px', align:'right', sortable: true},
-                {header: 'Total Shipments', width:'120px', align:'right', sortable: true},
+                {header: 'Total Entries', width:'120px', align:'right', sortable: true},
                 {header: 'Field Exams', width:'120px', align:'right', sortable: true},
                 {header: 'Label Exams', width:'120px', align:'right', sortable: true},
                 {header: '% Elevated Risk', width:'135px', align:'right', sortable: true}
@@ -574,7 +576,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 row.set('Name', name);
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
-                row.set('Total Shipments', formatNumber(d.totalShipments));
+                row.set('Total Entries', formatNumber(d.totalShipments));
                 if (d.fieldExams>0){ 
                     var str = formatNumber(d.fieldExams);
                     if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
@@ -608,6 +610,38 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             grid.clear();
             grid.load(data);     
         };        
+        
+        grid.setSortIndicator(3, "DESC");
+        grid.onSort = function(idx, sortDirection){
+            
+            var key;
+            switch (idx) {
+                case 1:
+                    key = "totalQuantity";
+                    break;
+                case 2:
+                    key = "totalValue";
+                    break;
+                case 3:
+                    key = "totalShipments";
+                    break;
+                default:
+                    break;
+            }            
+            
+            if (key && key!==yAxis){
+                yAxis = key;
+                scatterChart.update();
+                lineChart.update();
+            }
+            
+            
+        };        
+        grid.onRowClick = function(row, e){
+            if (e.detail === 2) {
+                console.log("Open Details!", row.record);
+            }
+        };
     };
 
 
@@ -662,13 +696,53 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************    
     var createLineChart = function(parent){
         var dashboardItem = createDashboardItem(parent,{
-            title: "Shipment History",
+            title: "Timeline",
             width: "100%",
             height: "360px"
         });
         dashboardItem.el.style.margin = "0px";
         dashboardItem.el.style.display = "table";
         lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
+        lineChart._update = lineChart.update;
+        lineChart.update = function(){
+
+            var key;
+            switch (yAxis) {
+                case "totalQuantity":
+                    key = "quantity";
+                    break;
+                case "totalValue":
+                    key = "value";
+                    break;
+                case "totalShipments":
+                    key = "entries";
+                    break;
+                default:
+                    break;
+            } 
+            
+            console.log(key);
+            
+
+            lineChart._update({
+                yGrid: true,
+                xAxis: "date",
+                yAxis: key,                   
+                xAxis2: "date",
+                yAxis2: key,                      
+                endTags: false,
+                lineColor0: "#6699cc", //blue             
+                lineColor1: "#ff7800", //orange
+                smoothingType1: "movingAverage",
+                smoothingValue1: 30,
+                margin: {
+                    top: 15,
+                    right: 15,
+                    bottom: 15,
+                    left: 82
+                }                    
+            },[lineData,lineData]);              
+        };
     };
     
     
@@ -692,13 +766,64 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************    
     var createScatterChart = function(parent){
         var dashboardItem = createDashboardItem(parent,{
-            title: "Total Entries vs Exams",
+            title: "Exams",
             width: "100%",
             height: "360px"
-        });
+        });                
         dashboardItem.el.style.margin = "0px";
         dashboardItem.el.style.display = "table";
-        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{});
+        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{
+            
+        });
+        scatterChart._update = scatterChart.update;
+        scatterChart.update = function(){
+            
+            var title = yAxis.replace("total","");            
+            dashboardItem.title.innerText = title + " vs Exams";
+            
+            var chartData = [];
+            data.forEach((d)=>{
+                var totalExams = d.totalExams;
+                if (!isNaN(totalExams)){
+                    if (totalExams>0){
+                        
+                        var failedExams = 0;
+                        if (!isNaN(d.failedFieldExams)) failedExams+=d.failedFieldExams;
+                        if (!isNaN(d.failedLabelExams)) failedExams+=d.failedLabelExams;
+                        
+                        chartData.push({
+                            Exams: totalExams,
+                            yAxis: d[yAxis],
+                            label: d.name,
+                            failedExams: failedExams                            
+                        });
+                    }
+                }
+            });
+
+            scatterChart._update({
+                xAxis: "Exams",
+                yAxis: "yAxis",
+                xGrid: true,
+                yGrid: true,
+                xLabel: true,
+                yLabel: false,
+                margin: {
+                    top: 15,
+                    right: 15,
+                    bottom: 32,
+                    left: 82
+                },                
+                pointLabels: true,
+                getPointLabel: function(d){
+                    return d.label;
+                },
+                getPointColor: function(d){
+                    if (d.failedExams>0) return "#e66869";
+                    return "#6699cc";
+                }
+            },[chartData]);            
+        };
     };    
     
     
@@ -713,10 +838,38 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         });
         dashboardItem.el.style.margin = "0px";
         dashboardItem.el.style.display = "table";
-        nodeView = new bluewave.charts.ForceDirectedChart(dashboardItem.innerDiv,{});
+        nodeView = new bluewave.charts.ForceDirectedChart(dashboardItem.innerDiv,{
+            getNodeFill: function(node){
+                var establishment = getEstablishment();
+                if (node.type===establishment){
+                    return "#e66869";
+                }
+                else{
+                    return "#dcdcdc";
+                }
+            },
+            getNodeOutline: function(node){
+                var establishment = getEstablishment();
+                if (node.type===establishment){
+                    return "#dd3131";
+                }
+                else{
+                    return "#777";
+                }
+            },
+            getNodeRadius: function(node){
+                var establishment = getEstablishment();
+                if (node.type===establishment){
+                    return 20;
+                }
+                else{
+                    return 10;
+                }
+            }
+        });
     };       
     
-
+    
   //**************************************************************************
   //** getArray
   //**************************************************************************
