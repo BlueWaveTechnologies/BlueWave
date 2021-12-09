@@ -15,9 +15,27 @@ bluewave.charts.ScatterChart = function(parent, config) {
     var defaultConfig = {
         margin: {
             top: 15,
-            right: 5,
+            right: 15,
             bottom: 65,
             left: 82
+        },
+        getPointLabel: function(d){
+            return "";
+        },
+        getPointRadius: function(d){
+            var pointRadius = parseFloat(config.pointRadius);
+            if (isNaN(pointRadius)) pointRadius = 7;
+            return pointRadius;
+        },
+        getPointColor: function(d){
+            var pointColor = config.pointColor;
+            if (!pointColor) pointColor = "#6699cc";
+            return pointColor;
+        },
+        getPointOpacity: function(d){
+            var pointOpacity = parseFloat(config.pointOpacity);
+            if (isNaN(pointOpacity)) pointOpacity = 0.8;
+            return pointOpacity;
         }
     };
     var svg, chart, plotArea, line;
@@ -44,6 +62,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         if (chart) chart.selectAll("*").remove();
+        config = merge({}, defaultConfig);
     };
 
 
@@ -53,9 +72,11 @@ bluewave.charts.ScatterChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
 
+        config = merge(config, chartConfig);
+
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-            renderChart(chartConfig, data, parent);
+            renderChart(data, parent);
         });
     };
 
@@ -63,8 +84,8 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
   //** renderChart
   //**************************************************************************
-    var renderChart = function(chartConfig, data, parent){
-        me.clear();
+    var renderChart = function(data, parent){
+        //me.clear();
 
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
@@ -83,8 +104,8 @@ bluewave.charts.ScatterChart = function(parent, config) {
             );
 
 
-        let xKey = chartConfig.xAxis;
-        let yKey = chartConfig.yAxis;
+        let xKey = config.xAxis;
+        let yKey = config.yAxis;
         if (!xKey || !yKey) return;
 
 
@@ -117,41 +138,55 @@ bluewave.charts.ScatterChart = function(parent, config) {
          .style("padding", "10px");
 
         var mouseover = function(d) {
-          tooltip
-          .style("opacity", 1)
+            if (config.tooltip!==true) return;
+            tooltip.style("opacity", 1);
         };
 
         var mousemove = function(d) {
-          tooltip
-          .html("X: " + d[xKey]+ "     Y: " + d[yKey])
-          .style("left", (d3.mouse(this)[0]+90) + "px")
-          .style("top", (d3.mouse(this)[1]) + "px")
+            if (config.tooltip!==true) return;
+            tooltip
+            .html("X: " + d[xKey]+ "     Y: " + d[yKey])
+            .style("left", (d3.mouse(this)[0]+90) + "px")
+            .style("top", (d3.mouse(this)[1]) + "px");
         };
 
         var mouseleave = function(d) {
-          tooltip
-          .transition()
-          .duration(200)
-          .style("opacity", 0)
+            if (config.tooltip!==true) return;
+            tooltip
+            .transition()
+            .duration(200)
+            .style("opacity", 0);
         };
 
 
 
-        plotArea
-           .selectAll("dot")
+
+        var getX = function(d){
+            if (xType==="date"){
+                return x(new Date(d[xKey]));
+            }
+            else{
+                return x(d[xKey]);
+            }
+        };
+
+        var getY = function (d) {
+            return y(d[yKey]);
+        };
+
+
+      //Draw points
+        var pointGroup = plotArea.append("g");
+        pointGroup.attr("name", "points");
+        pointGroup.selectAll("*")
            .data(data)
            .enter()
            .append("circle")
-              .attr("cx", function (d) {
-              if(xType==="date"){
-                return x(new Date(d[xKey]));
-              } else{
-                return x(d[xKey]);
-              }})
-              .attr("cy", function (d) { return y(d[yKey]); } )
-              .attr("r", 7)
-              .style("fill", "#12b84c")
-              .style("opacity", 0.3)
+              .attr("cx", getX)
+              .attr("cy", getY)
+              .attr("r", config.getPointRadius)
+              .style("fill", config.getPointColor)
+              .style("opacity", config.getPointOpacity)
               .style("stroke", "white")
               .on("mouseover", mouseover)
               .on("mousemove", mousemove)
@@ -159,21 +194,43 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
 
+      //Draw labels
+        if (config.pointLabels===true){
+            var labelGroup = plotArea.append("g");
+            labelGroup.attr("name", "labels");
+            labelGroup.append("g")
+            .selectAll("text")
+            .data(data)
+            .enter()
+            .append("text")
+                .attr("x", function(d){
+                    var cx = getX(d);
+                    var r = config.getPointRadius(d);
+                    return cx+r;
+                })
+                .attr("y", getY)
+                .text(config.getPointLabel)
+                .on("click", function(node){
+                    //selectNode(node, this);
+                });
+        }
+
+
       //Draw grid lines if option is checked
-        if (chartConfig.xGrid || chartConfig.yGrid){
-            drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
+        if (config.xGrid || config.yGrid){
+            drawGridlines(plotArea, x, y, axisHeight, axisWidth, config.xGrid, config.yGrid);
         }
 
 
       //Draw labels if checked
-        if (chartConfig.xLabel || chartConfig.yLabel){
-            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
+        if (config.xLabel || config.yLabel){
+            drawLabels(plotArea, config.xLabel, config.yLabel,
+                axisHeight, axisWidth, margin, config.xAxis, config.yAxis);
         }
 
 
       //Show regression line
-        if (chartConfig.showRegLine) {            
+        if (config.showRegLine) {
             var linReg = calculateLinReg(data, xKey, yKey,
                 d3.min(data, function(d) {return d[xKey]}),
                 d3.min(data, function(d) { return d[yKey]}));
@@ -184,8 +241,8 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
             line = d3.line()
             .x(function(d) { return xScale(d[0])})
-            .y(function(d) { return yScale(d[1])});            
-            
+            .y(function(d) { return yScale(d[1])});
+
              plotArea.append("path")
                   .datum(linReg)
                   .attr("class", "line")
