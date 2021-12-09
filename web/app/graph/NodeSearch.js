@@ -427,7 +427,6 @@ bluewave.graph.NodeSearch = function(parent, config) {
     };
 
 
-
   //**************************************************************************
   //** createMainPanel
   //**************************************************************************
@@ -455,9 +454,60 @@ bluewave.graph.NodeSearch = function(parent, config) {
         tr.appendChild(td);
         var div = addVerticalResizer(td, nodeList.el);
         div.className = "node-search-main-panel";
-        nodeView = new bluewave.charts.ForceDirectedChart(div,{});
+        createNodeView(div);
 
         return table;
+    };
+
+
+  //**************************************************************************
+  //** createNodeView
+  //**************************************************************************
+    var createNodeView = function(parent){
+
+        var div = document.createElement("div");
+        div.className = "node-search-graph";
+        div.style.height = "100%";
+        parent.appendChild(div);
+
+        nodeView = new bluewave.charts.ForceDirectedChart(div,{
+            getNodeFill: function(node){
+                if (node.type==="search"){
+                    return "#e66869";
+                }
+                else if (node.type==="match"){
+                    return "#d07393";
+                }
+                else if (node.type==="related"){
+                    return "#d89df8";
+                }
+                else{
+                    return "#dcdcdc";
+                }
+            },
+            getNodeOutline: function(node){
+                if (node.type==="search"){
+                    return "#dd3131";
+                }
+                else if (node.type==="match"){
+                    return "#c0416b";
+                }
+                else if (node.type==="related"){
+                    return "#b886d3";
+                }
+                else{
+                    return "#777";
+                }
+            },
+            getNodeRadius: function(node){
+                if (node.type==="search"){
+                    return 20;
+                }
+                else{
+                    return 10;
+                }
+            }
+        });
     };
 
 
@@ -843,7 +893,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
             //TODO: save the query results?
 
           //Update nodeView
-            nodeView.update({},{nodes:nodes,links:links});
+            nodeView.update(nodes, links);
 
           //Update nodeList
             nodeList.disable();
@@ -992,7 +1042,7 @@ bluewave.graph.NodeSearch = function(parent, config) {
 
         var onReady = function(){
             updateRelatedNodes();
-            nodeView.update({},{nodes:nodes,links:links});
+            nodeView.update(nodes, links);
         };
 
 
