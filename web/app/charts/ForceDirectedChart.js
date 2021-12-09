@@ -13,10 +13,20 @@ bluewave.charts.ForceDirectedChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-
+        getNodeLabel: function(node){
+            return node.name;
+        },
+        getNodeFill: function(node){
+            return "#dcdcdc";
+        },
+        getNodeOutline: function(node){
+            return "#777";
+        },
+        getNodeRadius: function(node){
+            return 10;
+        }
     };
-    var svg, chart;
-    var div, container;
+    var svg, container;
 
 
   //**************************************************************************
@@ -27,24 +37,9 @@ bluewave.charts.ForceDirectedChart = function(parent, config) {
         config = merge(config, defaultConfig);
 
 
-        div = document.createElement("div");
-        div.className = "node-search-graph";
-        div.style.height = "100%";
-        parent.appendChild(div);
-
-
-        initChart(div, function(s, g){
+        initChart(parent, function(s, g){
             svg = s;
-            container = chart = g;
-
-
-    //      //Create svg element
-    //        var svg = d3.select(div)
-    //        .append("svg")
-    //          .attr("width", "100%")
-    //          .attr("height", "100%");
-
-    //        var container = svg.append("g");
+            container = g;
 
 
           //Add panning and zooming to the svg element
@@ -65,7 +60,7 @@ bluewave.charts.ForceDirectedChart = function(parent, config) {
                 .attr("markerHeight", 6)
                 .attr("orient", "auto")
               .append("svg:path")
-                .attr("d", "M0,-5L10,0L0,5");            
+                .attr("d", "M0,-5L10,0L0,5");
 
         });
     };
@@ -75,7 +70,7 @@ bluewave.charts.ForceDirectedChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (chart) chart.selectAll("*").remove();
+        if (container) container.selectAll("*").remove();
         //container.node().innerHTML = "";
     };
 
@@ -83,34 +78,30 @@ bluewave.charts.ForceDirectedChart = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(chartConfig, data){
+    this.update = function(nodes, links){
         me.clear();
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-            renderChart(chartConfig, data);
+            update(nodes, links);
         });
     };
 
 
   //**************************************************************************
-  //** renderChart
+  //** update
   //**************************************************************************
-    var renderChart = function(chartConfig, data){
+    var update = function(nodes, links){
         me.clear();
 
 
 
-        var nodes = data.nodes;
-        var links = data.links;
-
-
-        //clear();
         var g = container.append("g");
 
 
-        var cx = div.offsetWidth/2;
-        var cy = div.offsetHeight/2;
+        var cx = parent.offsetWidth/2;
+        var cy = parent.offsetHeight/2;
+
 
       //Create graph
         var graph = d3.forceSimulation(nodes)
@@ -141,41 +132,14 @@ bluewave.charts.ForceDirectedChart = function(parent, config) {
                 return "translate(" + cx + "," + cy + ")";
             })
             .attr("r", function(node){
-                if (node.type==="search"){
-                    return 20;
-                }
-                else{
-                    return 10;
-                }
+                return config.getNodeRadius.apply(me,[node]);
             })
             .style("fill", function(node){
-                if (node.type==="search"){
-                    return "#e66869";
-                }
-                else if (node.type==="match"){
-                    return "#d07393";
-                }
-                else if (node.type==="related"){
-                    return "#d89df8";
-                }
-                else{
-                    return "#dcdcdc";
-                }
+                return config.getNodeFill.apply(me,[node]);
             })
             .attr("stroke-width", 1.5)
             .attr("stroke", function(node){
-                if (node.type==="search"){
-                    return "#dd3131";
-                }
-                else if (node.type==="match"){
-                    return "#c0416b";
-                }
-                else if (node.type==="related"){
-                    return "#b886d3";
-                }
-                else{
-                    return "#777";
-                }
+                return config.getNodeOutline.apply(me,[node]);
             })
             .on("click", function(node){
                 selectNode(node, this);
@@ -189,7 +153,7 @@ bluewave.charts.ForceDirectedChart = function(parent, config) {
         .enter()
         .append("text")
             .text(function(node) {
-                return node.name;
+                return config.getNodeLabel.apply(me,[node]);
             })
             .attr("fill", function(node) {
                 if (node.type==="search"){
