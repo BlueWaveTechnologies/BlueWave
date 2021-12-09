@@ -256,6 +256,82 @@ public class ImportService extends WebService {
 
 
   //**************************************************************************
+  //** getHistory
+  //**************************************************************************
+    public ServiceResponse getHistory(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Get parameters
+        String country = request.getParameter("country").toString();
+        if (country==null) return new ServiceResponse(400, "country is required");
+
+        Integer threshold = request.getParameter("threshold").toInteger();
+        if (threshold==null || threshold<0 || threshold>100) threshold = 0;
+
+
+      //Get sql
+        String sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
+
+
+      //Update sql with country keyword
+        if (country!=null){
+            StringBuilder str = new StringBuilder();
+            for (String cc : country.split(",")){
+                cc = cc.trim();
+                if (cc.isEmpty()) continue;
+                if (cc.startsWith("'") && cc.endsWith("'")){
+                    cc = cc.substring(1, cc.length()-1);
+                }
+                if (str.length()>0) str.append(",");
+                str.append("'" + cc + "'");
+            }
+            sql = sql.replace("{country}", str);
+        }
+
+
+      //Update sql with additional keywords
+        sql = sql.replace("{threshold}", threshold+"");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+
+
+      //Execute query and generate response
+        String[] fields = new String[]{"date","entries","quantity","value"};
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            Result rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                str.append("\r\n");
+
+                for (int i=0; i<fields.length; i++){
+                    if (i>0) str.append(",");
+                    str.append(r.get(fields[i]).asObject());
+                }
+            }
+
+
+            session.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+        return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
   //** getCompanies
   //**************************************************************************
     public ServiceResponse getCompanies(ServiceRequest request, Database database)
