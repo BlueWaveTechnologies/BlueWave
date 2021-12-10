@@ -12,12 +12,15 @@ import javaxt.http.servlet.ServletException;
 
 import javaxt.sql.Database;
 import javaxt.sql.Value;
+import javaxt.json.*;
 
 
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 
 public class ImportService extends WebService {
@@ -78,7 +81,7 @@ public class ImportService extends WebService {
         "num_entries", "quantity", "value",
         "manufacturer","shipper","importer","consignee","dii",
         "num_exams", "num_field_exams","num_label_exams", "num_field_fails", "num_label_fails",
-        "num_hi_predict"
+        "num_bad_samples","num_hi_predict"
         };
 
 
@@ -146,10 +149,10 @@ public class ImportService extends WebService {
 
       //Generate csv output
         StringBuilder str = new StringBuilder(
-        "name,fei,totalShipments,totalValue,totalQuantity,"+
+        "name,fei,totalEntries,totalValue,totalQuantity,"+
         "manufacturer,shipper,importer,consignee,dii,"+
         "totalExams,fieldExams,labelExams,failedFieldExams,failedLabelExams," +
-        "highPredict");
+        "badSamples,highPredict");
         Iterator<String> it = uniqueFacilities.keySet().iterator();
         while (it.hasNext()){
             String name = it.next();
@@ -164,6 +167,7 @@ public class ImportService extends WebService {
             long totalLabelExams = 0;
             long totalFailedFieldExams = 0;
             long totalFailedLabelExams = 0;
+            long totalBadSamples = 0;
             long totalPredict = 0;
 
             HashSet<Long> manufacturer = new HashSet<>();
@@ -184,7 +188,7 @@ public class ImportService extends WebService {
                 Long labelExams = values.get("num_label_exams").toLong();
                 Long failedFieldExams = values.get("num_field_fails").toLong();
                 Long failedLabelExams = values.get("num_label_fails").toLong();
-
+                Long badSamples = values.get("num_bad_samples").toLong();
                 Long predict = values.get("num_hi_predict").toLong();
 
                 mergeList(manufacturer, (List) values.get("manufacturer").toObject());
@@ -201,6 +205,7 @@ public class ImportService extends WebService {
                 totalLabelExams+=labelExams;
                 totalFailedFieldExams+=failedFieldExams;
                 totalFailedLabelExams+=failedLabelExams;
+                totalBadSamples+=badSamples;
                 totalPredict+=predict;
             }
 
@@ -249,9 +254,122 @@ public class ImportService extends WebService {
             str.append(",");
             str.append(totalFailedLabelExams);
             str.append(",");
+            str.append(totalBadSamples);
+            str.append(",");
             str.append(totalPredict);
         }
         return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
+  //** getEntries
+  //**************************************************************************
+    public ServiceResponse getEntries(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Get parameters
+        String ids = request.getParameter("id").toString();
+        if (ids==null) ids = new String(request.getPayload());
+        if (ids==null) return new ServiceResponse(400, "id is required");
+
+        String establishment = request.getParameter("establishment").toString();
+        if (establishment==null) establishment = "manufacturer";
+        else establishment = establishment.toLowerCase();
+
+
+      //Get Offset and Limit
+        Long offset = request.getParameter("offset").toLong();
+        Long limit = request.getParameter("limit").toLong();
+        if (limit==null) limit = 25L;
+        if (limit<1) limit = null;
+        if (offset==null){
+            Long page = request.getParameter("page").toLong();
+            if (page!=null && limit!=null) offset = (page*limit)-limit;
+        }
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Compile query
+        StringBuilder query = new StringBuilder("MATCH (n:import_entry) WHERE n.");
+        query.append(establishment);
+        query.append(" IN [");
+        String[] arr = ids.split(",");
+        for (int i=0; i<arr.length; i++){
+            if (i>0) query.append(",");
+            query.append("'" + arr[i] + "'");
+        }
+        query.append("] RETURN properties(n) as entry");
+
+        if (offset!=null) query.append(" SKIP " + offset);
+        if (limit!=null) query.append(" LIMIT " + limit);
+
+
+
+      //Execute query and return response
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+
+            LinkedHashSet<String> header = new LinkedHashSet<>();
+            ArrayList<JSONObject> entries = new ArrayList<>();
+
+            Result rs = session.run(query.toString());
+            while (rs.hasNext()){
+                Record record = rs.next();
+
+                JSONObject entry = getJson(record.get("entry"));
+                entries.add(entry);
+                Iterator<String> it = entry.keys();
+                while (it.hasNext()){
+                    header.add(it.next());
+                }
+            }
+            session.close();
+
+            StringBuilder str = new StringBuilder();
+            Iterator<String> it = header.iterator();
+            while (it.hasNext()){
+                str.append(it.next());
+                if (it.hasNext()) str.append(",");
+            }
+            for (JSONObject entry : entries){
+                str.append("\r\n");
+                it = header.iterator();
+                while (it.hasNext()){
+                    String key = it.next();
+                    Object value = entry.get(key).toObject();
+
+                    if (value==null){
+                        value = "";
+                    }
+                    else{
+                        if (value instanceof String){
+                            String v = (String) value;
+                            if (v.contains(",")){
+                                value = "\"" + v + "\"";
+                            }
+                        }
+                    }
+
+
+                    str.append(value);
+                    if (it.hasNext()) str.append(",");
+                }
+            }
+
+            return new ServiceResponse(str.toString());
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
     }
 
 
@@ -332,9 +450,61 @@ public class ImportService extends WebService {
 
 
   //**************************************************************************
-  //** getCompanies
+  //** getEstablishment
   //**************************************************************************
-    public ServiceResponse getCompanies(ServiceRequest request, Database database)
+    public ServiceResponse getEstablishment(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Parse params
+        String fei = request.getParameter("fei").toString();
+        if (fei==null) return new ServiceResponse(400, "fei is required");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+
+      //Compile query
+        String query =
+        "MATCH (n:import_establishment)-[r:has]->(a:address)\n" +
+        "WHERE n.fei=" + fei + "\n" +
+        "RETURN\n" +
+        "properties(n) as establishment,\n" +
+        "properties(a) as address";
+
+
+      //Execute query and return response
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            JSONObject establishment = new JSONObject();
+            Result rs = session.run(query);
+            if (rs.hasNext()){
+                Record record = rs.next();
+
+                establishment = getJson(record.get("establishment"));
+                JSONObject address = getJson(record.get("address"));
+                establishment.set("address", address);
+            }
+            session.close();
+
+            return new ServiceResponse(establishment);
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getEstablishmentNames
+  //**************************************************************************
+    public ServiceResponse getEstablishmentNames(ServiceRequest request, Database database)
     throws ServletException {
         String ids = request.getParameter("id").toString();
         if (ids==null) ids = new String(request.getPayload());
@@ -400,8 +570,8 @@ public class ImportService extends WebService {
     }
 
 
-    public ServiceResponse saveCompanies(ServiceRequest request, Database database)
-    throws ServletException { return getCompanies(request, database); }
+    public ServiceResponse saveEstablishmentNames(ServiceRequest request, Database database)
+    throws ServletException { return getEstablishmentNames(request, database); }
 
     private void mergeList(HashSet<Long> a, List b){
         for (int i=0; i<b.size(); i++){
@@ -409,10 +579,18 @@ public class ImportService extends WebService {
         }
     }
 
+
+  //**************************************************************************
+  //** getCSV
+  //**************************************************************************
     private String getCSV(HashSet<Long> a){
         return getCSV(new ArrayList<>(a));
     }
 
+
+  //**************************************************************************
+  //** getCSV
+  //**************************************************************************
     private String getCSV(List<Long> a){
         if (a.isEmpty()) return "";
         if (a.size()==1) return a.iterator().next()+"";
@@ -424,5 +602,18 @@ public class ImportService extends WebService {
         }
         str.append("\"");
         return str.toString();
+    }
+
+
+  //**************************************************************************
+  //** getJson
+  //**************************************************************************
+    private static JSONObject getJson(org.neo4j.driver.Value val){
+        JSONObject json = new JSONObject();
+        if (!val.isNull()){
+            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+            json = new JSONObject(gson.toJson(val.asMap()));
+        }
+        return json;
     }
 }
