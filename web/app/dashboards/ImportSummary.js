@@ -22,6 +22,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var lineChart, barChart, scatterChart;
     var yAxis;
     var nodeView;
+    var companyProfile;    
     var waitmask;
     
     
@@ -88,7 +89,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         establishmentOptions.setValue("Manufacturer", true);
         countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
         productOptions.setValue("All", true);
-        yAxis = "totalShipments";
+        yAxis = "totalEntries";
     };
 
 
@@ -134,6 +135,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** update
   //**************************************************************************
     var update = function(){
+        if (companyProfile) companyProfile.hide();
+        if (grid) grid.setSortIndicator(3, "DESC");
         
         
         waitmask.show(500);
@@ -169,7 +172,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 });
 
                 data.sort(function(a,b){
-                    return b.totalShipments-a.totalShipments;
+                    return b.totalEntries-a.totalEntries;
                 });
                 
 
@@ -235,7 +238,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         var d = data[i];
                         chartData.push({
                             name: d.name,
-                            quantity: d.totalShipments
+                            quantity: d.totalEntries
                         });
                     }
                     barChart.update({
@@ -293,7 +296,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 //console.log(nodes.length, numFEIs);
                 
               //Match FEIs
-                post("import/companies", str, {
+                get("import/EstablishmentNames", str, {
                     success: function(csv){
                         
                       //Update FEIs
@@ -567,6 +570,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 {header: 'Total Entries', width:'120px', align:'right', sortable: true},
                 {header: 'Field Exams', width:'120px', align:'right', sortable: true},
                 {header: 'Label Exams', width:'120px', align:'right', sortable: true},
+                {header: 'Bad Samples', width:'120px', align:'right', sortable: true},
                 {header: '% Elevated Risk', width:'135px', align:'right', sortable: true}
                 
             ],
@@ -576,7 +580,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 row.set('Name', name);
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
-                row.set('Total Entries', formatNumber(d.totalShipments));
+                row.set('Total Entries', formatNumber(d.totalEntries));
                 if (d.fieldExams>0){ 
                     var str = formatNumber(d.fieldExams);
                     if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
@@ -587,8 +591,11 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";                    
                     row.set('Label Exams', str);
                 }
-                
-                var p = (d.highPredict/d.totalShipments)*100;
+                if (d.badSamples>0){ 
+                    var str = formatNumber(d.badSamples);                  
+                    row.set('Bad Samples', str);
+                }                
+                var p = (d.highPredict/d.totalEntries)*100;
                 if (p>0){
                     p = round(p, 1);
                     row.set('% Elevated Risk', formatNumber(p)+"%");
@@ -623,7 +630,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     key = "totalValue";
                     break;
                 case 3:
-                    key = "totalShipments";
+                    key = "totalEntries";
                     break;
                 default:
                     break;
@@ -639,7 +646,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         };        
         grid.onRowClick = function(row, e){
             if (e.detail === 2) {
-                console.log("Open Details!", row.record);
+                showCompanyProfile(row.record);
             }
         };
     };
@@ -714,14 +721,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 case "totalValue":
                     key = "value";
                     break;
-                case "totalShipments":
+                case "totalEntries":
                     key = "entries";
                     break;
                 default:
                     break;
-            } 
+            }             
             
-            console.log(key);
+
+            var title = yAxis.replace("total","");            
+            dashboardItem.title.innerText = title + " Timeline";
             
 
             lineChart._update({
@@ -810,7 +819,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 yLabel: false,
                 margin: {
                     top: 15,
-                    right: 15,
+                    right: 65,
                     bottom: 32,
                     left: 82
                 },                
@@ -867,7 +876,32 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 }
             }
         });
-    };       
+    };
+    
+    
+  //**************************************************************************
+  //** showCompanyProfile
+  //**************************************************************************
+    var showCompanyProfile = function(d){        
+        if (!companyProfile){
+
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Company Profile",
+                width: 1060,
+                height: 600,
+                modal: true,
+                style: config.style.window,
+                resizable: true
+            });
+
+            companyProfile = new bluewave.dashboards.CompanyProfile(win.getBody(), config);
+            companyProfile.show = win.show;
+            companyProfile.hide = win.hide;
+        }
+        
+        companyProfile.update(d.name,d.fei,getEstablishment());
+        companyProfile.show();
+    };
     
     
   //**************************************************************************
@@ -883,7 +917,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** numberWithCommas
   //**************************************************************************
     const formatNumber = (x) => {
-        if (x!==null && typeof x !== "string") x+="";
+        if (x==null) return "";
+        if (typeof x !== "string") x+="";
         var parts = x.toString().split(".");
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         return parts.join(".");
@@ -895,7 +930,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var round = javaxt.dhtml.utils.round;
-    var post = javaxt.dhtml.utils.post;
     var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
