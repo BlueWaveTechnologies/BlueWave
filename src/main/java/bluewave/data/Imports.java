@@ -894,6 +894,172 @@ public class Imports {
 
 
   //**************************************************************************
+  //** loadSamples
+  //**************************************************************************
+  /** Used to update import_entry nodes with sample details from an input xlsx
+   */
+    public static void loadSamples(javaxt.io.File file, Neo4J database) throws Exception {
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                Object[] arr = (Object[]) obj;
+                String entry = (String) arr[0];
+                String doc = (String) arr[1];
+                String line = (String) arr[2];
+                Map<String, Object> params = (Map<String, Object>) arr[3];
+
+
+
+                String node = "import_entry";
+                StringBuilder query = new StringBuilder();
+                query.append("MATCH (n:" + node + ") WHERE ");
+                query.append("n.entry='" + entry + "' AND ");
+                query.append("n.doc='" + doc + "' AND ");
+                query.append("n.line='" + line + "' ");
+                query.append("SET n+= {");
+
+
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String key = it.next();
+                    query.append(key);
+                    query.append(": $");
+                    query.append(key);
+                    if (it.hasNext()) query.append(", ");
+                }
+
+                query.append("}");
+
+                try{
+                    getSession().run(query.toString(), params);
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+
+
+                recordCounter.incrementAndGet();
+            }
+
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+
+
+        java.io.InputStream is = file.getInputStream();
+        Workbook workbook = StreamingReader.builder()
+            .rowCacheSize(10)
+            .bufferSize(4096)
+            .open(is);
+
+        LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+
+        int rowID = 0;
+        int totalRecords = 0;
+        for (Row row : workbook.getSheetAt(1)){
+            if (rowID==0){
+
+              //Parse header
+                int idx = 0;
+                for (Cell cell : row) {
+                    header.put(cell.getStringCellValue(), idx);
+                    idx++;
+                }
+
+            }
+            else{
+                try{
+
+                  //Get entry
+                    String entry = "";
+                    String doc = "";
+                    String line = "";
+                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                    if (id!=null){
+                        id = id.trim();
+                        if (!id.isEmpty()){
+                            String[] arr = id.split("/");
+                            if (arr.length>0) entry = arr[0];
+                            if (arr.length>1) doc = arr[1];
+                            if (arr.length>2) line = arr[2];
+                        }
+                    }
+
+
+                    Map<String, Object> params = new LinkedHashMap<>();
+
+                    String[] fields = new String[]{
+                        "Sample Lab Classification"
+                    };
+
+                    for (String field : fields){
+                        String val = row.getCell(header.get(field)).getStringCellValue();
+
+                        String colName = field;
+                        while (colName.contains("  ")) colName = colName.replace("  ", " ");
+                        colName = colName.toLowerCase().replace(" ", "_");
+                        colName = colName.trim().toLowerCase();
+
+                        params.put(colName, val);
+
+                    }
+
+
+                    pool.add(new Object[]{entry,doc,line,params});
+                    totalRecords++;
+                }
+                catch(Exception e){
+                    console.log("Failed to parse row " + rowID);
+                }
+
+            }
+            rowID++;
+        }
+
+
+      //Update statusLogger
+        statusLogger.setTotalRecords(totalRecords);
+
+
+      //Close workbook
+        workbook.close();
+        is.close();
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
+    }
+
+
+  //**************************************************************************
   //** getShipmentsByPortOfUnlading
   //**************************************************************************
     public void getShipmentsByPortOfUnlading(Integer portOfEntryID, javaxt.io.File importsSummary) throws Exception {
