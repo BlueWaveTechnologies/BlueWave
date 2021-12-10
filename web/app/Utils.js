@@ -8,8 +8,16 @@ bluewave.utils = {
   /** Used to execute http GET requests and generate json from the response
    */
     get: function(url, config){
+        var payload = null;
+        if (arguments.length>2){
+            payload = arguments[1];
+            config = arguments[2];
+        }
+        
         var get = javaxt.dhtml.utils.get;
+        
         get(url,{
+            payload: payload,
             success: function(response){
                 var s = response.substring(0,1);
                 if (s=="{" || s=="["){
