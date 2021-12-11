@@ -36,7 +36,8 @@ public class Imports {
     private LinkedHashMap<String, Integer> header;
     private GeoCoder geocoder;
     private int sheetID;
-    private String[] establishmentTypes = new String[]{"Manufacturer","Shipper","Importer","Consignee","DII"};
+    private static String[] establishmentTypes = new String[]{
+    "Manufacturer","Shipper","Importer","Consignee","DII"};
 
 
   //**************************************************************************
@@ -454,7 +455,7 @@ public class Imports {
                 CSV.Columns columns = CSV.getColumns(row, ",");
                 String address = columns.get(2).toString();
                 String lat = columns.get(3).toString();
-                String lon = columns.get(3).toString();
+                String lon = columns.get(4).toString();
                 addresses.put(address, new String[]{lat,lon});
             }
             br.close();
@@ -492,7 +493,7 @@ public class Imports {
                     if (x>-1) min = Math.min(min, x);
                 }
 
-                console.log(address);
+                //console.log(address);
 
 
                 try{
