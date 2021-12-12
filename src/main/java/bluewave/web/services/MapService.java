@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.Config;
 import bluewave.utils.SpatialIndex;
+import static bluewave.utils.Python.*;
 
 import java.io.IOException;
 import java.util.*;
@@ -120,6 +121,51 @@ public class MapService extends WebService {
         return new ServiceResponse(Config.get("basemaps").toJSONArray());
     }
 
+    
+  //**************************************************************************
+  //** getRoute
+  //**************************************************************************
+  /** Used to compute an transportation route between 2 points on the earth
+   *  for a given mode of transport (land, sea, air)
+   */
+    public ServiceResponse getRoute(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+        
+      //Parse params
+        String start = request.getParameter("start").toString();
+        if (start==null) return new ServiceResponse(400, "start coordinate is required");
+        
+        String end = request.getParameter("end").toString();
+        if (end==null) return new ServiceResponse(400, "end coordinate is required");
+        
+        String method = request.getParameter("method").toString();
+        if (method==null) return new ServiceResponse(400, "method is required");
+        
+
+      //Get script
+        javaxt.io.File[] scripts = getScriptDir().getFiles("shipment_route.py", true);
+        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+
+
+      //Compile command line options
+        ArrayList<String> params = new ArrayList<>();
+        params.add("-o");
+        params.add(start);
+        params.add("-d");
+        params.add(end);
+        params.add("--entrymode");
+        params.add(method);
+        
+        
+      //Execute script
+        try{
+            return new ServiceResponse(executeScript(scripts[0], params));
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+    
 
   //**************************************************************************
   //** getPin
