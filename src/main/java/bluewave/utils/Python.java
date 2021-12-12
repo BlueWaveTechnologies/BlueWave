@@ -1,5 +1,6 @@
 package bluewave.utils;
 
+import bluewave.Config;
 import java.util.*;
 import javaxt.json.JSONObject;
 
@@ -54,5 +55,29 @@ public class Python {
             err.append(":\r\n" + result);
             throw new Exception(err.toString());
         }
+    }
+    
+
+  //**************************************************************************
+  //** getScriptDir
+  //**************************************************************************
+    public static javaxt.io.Directory getScriptDir(){
+        JSONObject config = Config.get("webserver").toJSONObject();
+        javaxt.io.Directory scriptDir = null;
+        if (config.has("scriptDir")){
+            String dir = config.get("scriptDir").toString().trim();
+            if (dir.length()>0){
+                scriptDir = new javaxt.io.Directory(dir);
+            }
+        }
+        else{ //look for a scripts folder next to the web folder
+            String dir = config.get("webDir").toString().trim();
+            javaxt.io.Directory webDir = new javaxt.io.Directory(dir);
+            scriptDir = new javaxt.io.Directory(webDir.getParentDirectory() + "scripts");
+        }
+        if (scriptDir==null || !scriptDir.exists()){
+            throw new IllegalArgumentException("Invalid \"scriptDir\" defined in the \"webserver\" section of the config file");
+        }
+        return scriptDir;
     }
 }
