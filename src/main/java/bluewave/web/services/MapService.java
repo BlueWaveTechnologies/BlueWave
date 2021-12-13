@@ -149,14 +149,11 @@ public class MapService extends WebService {
 
       //Compile command line options
         ArrayList<String> params = new ArrayList<>();
-        params.add("-o");
-        params.add(start);
-        params.add("-d");
-        params.add(end);
-        params.add("--entrymode");
-        params.add(method);
+        params.add("-o="+start);
+        params.add("-d="+end);
+        params.add("--entrymode="+method);
         
-        
+ 
       //Execute script
         try{
             return new ServiceResponse(executeScript(scripts[0], params));
