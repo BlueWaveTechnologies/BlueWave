@@ -91,11 +91,12 @@ bluewave.chart.utils = {
   //**************************************************************************
   /** Used to render x/y axis on the plotArea
    */
-    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey, chartData, minData, scaleOption, chartType){
+    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey, chartData, minData, scaleOption, chartType, ticks){
         if (!scaleOption) scaleOption = "linear";
 
         var getType = bluewave.chart.utils.getType;
         var getScale = bluewave.chart.utils.getScale;
+        var autoRotateLabels = bluewave.chart.utils.autoRotateLabels;
 
         var xAxis, yAxis, xBand, yBand, x, y;
         var sb;
@@ -117,6 +118,26 @@ bluewave.chart.utils = {
         var labelWidth = 10;
         var domainLength = x.domain().length;
         var widthCheck = domainLength * labelWidth < axisWidth;
+        var timeFormat = d3.timeFormat("%d-%b-%y");
+
+        const formatMillisecond = d3.timeFormat(".%L"),
+            formatSecond = d3.timeFormat(":%S"),
+            formatMinute = d3.timeFormat("%I:%M"),
+            formatHour = d3.timeFormat("%I %p"),
+            formatDay = d3.timeFormat("%a %d"),
+            formatWeek = d3.timeFormat("%b %d"),
+            formatMonth = d3.timeFormat("%B"),
+            formatYear = d3.timeFormat("%Y");
+
+        function multiFormat(date) {
+            return (d3.timeSecond(date) < date ? formatMillisecond
+                : d3.timeMinute(date) < date ? formatSecond
+                    : d3.timeHour(date) < date ? formatMinute
+                        : d3.timeDay(date) < date ? formatHour
+                            : d3.timeMonth(date) < date ? (d3.timeWeek(date) < date ? formatDay : formatWeek)
+                                : d3.timeYear(date) < date ? formatMonth
+                                    : formatYear)(date);
+        }
 
         var tickFilter = function(d, i) {
 
@@ -132,13 +153,13 @@ bluewave.chart.utils = {
             .attr("transform", "translate(0," + axisHeight + ")")
             .call(
                 d3.axisBottom(x)
+                .ticks(ticks)
                 .tickValues(widthCheck ? null : x.domain().filter(tickFilter))
+                .tickFormat(xType == "date" ? multiFormat : null)
             );
 
-            xAxis
-            .selectAll("text")
-            .attr("transform", "translate(-10,0)rotate(-45)")
-            .style("text-anchor", "end");
+
+        autoRotateLabels(xAxis, axisWidth);
 
         yAxis = plotArea
             .append("g")
@@ -228,8 +249,6 @@ bluewave.chart.utils = {
                 }
                 else if (scaleOption === "logarithmic"){
 
-                    // minVal = Math.pow(10, Math.floor(Math.log10(minVal+1)));
-                    // maxVal = Math.pow(10, Math.ceil(Math.log10(maxVal)));
                     if(minVal<1) minVal = 1;
 
                     scale = d3.scaleLog()
@@ -250,6 +269,58 @@ bluewave.chart.utils = {
         };
     },
 
+  //**************************************************************************
+  //** autoRotateLabels
+  //**************************************************************************
+    autoRotateLabels : function(axis, axisWidth){
+
+        let labelWidths = [];
+        // 1 - phi
+        const minRatio = 0.618/1.618;
+
+        axis
+            .selectAll("text")
+            .each(function (d) {
+                let me = this;
+                labelWidths.push(me.getBBox().width);
+            });
+
+        let widthSum = d3.sum(labelWidths);
+        let meanWidth = d3.mean(labelWidths);
+        
+        let axisRatio = widthSum / axisWidth;
+        if (axisRatio > 1) axisRatio = 1;
+        
+        var angleScale = d3.scalePow()
+            .domain([minRatio, 1])
+            .range([-15, -60]);
+
+        var offsetScale = d3.scaleLinear()
+            .domain([minRatio, 1])
+            .range([0, -10]);
+
+
+        //If labels take up more than ~38% of the axis width, start rotating
+        var getTransform = function(){
+            if (axisRatio < minRatio) return `translate(0,0)rotate(0)`;
+
+            let offset = offsetScale(axisRatio);
+            let angle = angleScale(axisRatio);
+
+            return `translate(${offset},1)rotate(${angle})`;
+        }
+
+        axis
+            .selectAll("text")
+            .attr("transform", getTransform)
+            .style("text-anchor", function(){
+                return (axisRatio < minRatio) ? "middle" : "end";
+            });
+            // .attr("transform", "translate(-10,0)rotate(-45)")
+            // .style("text-anchor", "end");
+            
+
+    },
 
   //**************************************************************************
   //** getType
