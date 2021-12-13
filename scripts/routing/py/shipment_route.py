@@ -15,6 +15,8 @@ TODO:
     - Take multiple pairs of start and end coordinates
 """
 import os
+import json
+from pathlib import Path
 import argparse
 
 import pyproj
@@ -28,7 +30,8 @@ import matplotlib.pyplot as plt
 from itertools import combinations
 from geopy import distance
 from shapely.geometry import Point, LineString
-from sklearn.neighbors import NearestNeighbors
+from sklearn.neighbors import BallTree, KDTree
+# from sklearn.neighbors import NearestNeighbors
 
 import time
 import logging
@@ -40,14 +43,11 @@ warnings.filterwarnings("ignore")
 
 # UTIL
 #-------------------------------------------------------------------------------
-datadir = ''
-output = ''
-def get_dir():
-    import os
-    from pathlib import Path
-    currdir = os.path.dirname(os.path.realpath(__file__))
-    parentdir = str(Path(currdir).parent)
-    return parentdir + os.path.sep
+def get_parent_dir():
+    curr_dir = os.path.dirname(os.path.realpath(__file__))
+    parent_dir = str(Path(curr_dir).parent)
+    return parent_dir
+
 
 def str_to_tup(lonlat_str):
     """
@@ -130,25 +130,92 @@ def length_km(geometry):
     return distance_km
 
 
-
 def get_nearest_point(reference_points, input_points):
     """
     For each input point, finds the nearest reference point.
     We use a custom distance function.
     Points are all (x, y) aka (lon, lat)
     """
-    nbrs = NearestNeighbors(n_neighbors=1, metric=gc_distance)
-    nbrs.fit(reference_points)
+    ref_in_rads = np.deg2rad(reference_points)
+    inp_in_rads = np.deg2rad(input_points)
+    ball = BallTree(ref_in_rads, metric='haversine')
 
-    distances, indices = nbrs.kneighbors(input_points)
+    distances, indices = ball.query(inp_in_rads, k=1)
     nearest_points = np.array(reference_points)[indices, :]
 
     nearest_points = [tuple(*p) for p in nearest_points]
     return nearest_points
 
 
-# HELPERS
+# load_or_build_transport_graphs AND HELPERS
 #-------------------------------------------------------------------------------
+def try_loading_graph(data_dir):
+    if os.path.exists(f'{data_dir}/transport_graph.p'):
+        logging.info('Found previously calculated transport graph.')
+        with open(f'{data_dir}/transport_graph.p', 'rb') as f:
+            try:
+                G = pickle.load(f)
+            except EOFError:
+                raise Exception(('Corrupted pickle file. '
+                    'Delete "data/transport_graph.p" and try again.'))
+        
+        assert type(G) == nx.Graph, ('Pickle file contains wrong data'
+                    ' and must be regenerated. '
+                    'Delete "data/transport_graph.p" and try again.')
+        return G
+
+
+def get_airport_coord_pairs():
+
+    def get_lufthansa_links():
+        #   Add Lufthansa connections
+        lh1_names = 'RowNr;RD;RA;CD;CA;AL;FNR;SNR;DEP;ARR;STD;DDC;STA;ADC;Mo;Tu;We;Th;Fr;Sa;So;ACtype;ACtypefullname;AG;AGfullname;Start_Op;End_Op'.split(';')
+        lh1 = pd.read_csv(datadir + 'air/airline-cargo-schedules/lh1.csv', 
+            skiprows=2, names=lh1_names)
+        lh1 = lh1.drop([43084])
+        lh1_pairs = set(tuple(sorted(row)) for row in lh1[['DEP', 'ARR']].values)
+        return lh1_pairs
+
+
+    def get_american_airlines_links():
+        #   Add American Airlines connections
+        aa_names = [
+            'origin',
+            'destination',
+            'flight_no',
+            'flight_freq',
+            'dep_time',
+            'arr_time',
+            'aircraft_type',
+            'subfleet_type',
+            'effective_date',
+            'discontinue_date',
+        ]
+        aa1 = pd.read_csv(datadir + 'air/airline-cargo-schedules/aa1.csv',
+            names=aa_names, skiprows=6)
+        aa1_pairs = set(tuple(sorted(row)) for row in aa1[['origin', 'destination']].dropna().values)
+        aa2 = pd.read_csv(datadir + 'air/airline-cargo-schedules/aa2.csv',
+            names=aa_names, skiprows=6)
+        aa2_pairs = set(tuple(sorted(row)) for row in aa2[['origin', 'destination']].dropna().values)
+        return set.union(aa1_pairs, aa2_pairs)
+
+    airports = pd.read_csv(datadir + 'air/airports.csv')
+    airports['tup'] = [tuple(row) for row in airports[['lon', 'lat']].values]
+    airports = airports.set_index('iata')
+
+    airport_pairs = set()
+    airport_pairs = airport_pairs.union(get_lufthansa_links())
+    airport_pairs = airport_pairs.union(get_american_airlines_links())
+
+    airport_points = airports['tup'].to_dict()
+    airport_points = {k: v for k, v in airport_points.items() if v != (0, 0)}
+    coord_pairs = []
+    for a, b in airport_pairs:
+        tup = (airport_points.get(a, None), airport_points.get(b, None))
+        coord_pairs.append(tup)
+    return coord_pairs
+
+
 def add_edge(geometry, G, transport_mode, distance_km=None):
     if not distance_km:
         distance_km = length_km(geometry)
@@ -192,91 +259,35 @@ def add_edge(geometry, G, transport_mode, distance_km=None):
     return G
 
 
-def get_lufthansa_links():
-    #   Add Lufthansa connections
-    lh1_names = 'RowNr;RD;RA;CD;CA;AL;FNR;SNR;DEP;ARR;STD;DDC;STA;ADC;Mo;Tu;We;Th;Fr;Sa;So;ACtype;ACtypefullname;AG;AGfullname;Start_Op;End_Op'.split(';')
-    lh1 = pd.read_csv(datadir + 'air/airline-cargo-schedules/lh1.csv', 
-        skiprows=2, names=lh1_names)
-    lh1 = lh1.drop([43084])
-    lh1_pairs = set(tuple(sorted(row)) for row in lh1[['DEP', 'ARR']].values)
-    return lh1_pairs
+def load_or_build_transport_graph():
+    parent_dir = get_parent_dir()
+    data_dir = parent_dir + os.path.sep + 'data'
+    output_dir = parent_dir + os.path.sep + 'output'
 
-
-def get_american_airlines_links():
-    #   Add American Airlines connections
-    aa_names = [
-        'origin',
-        'destination',
-        'flight_no',
-        'flight_freq',
-        'dep_time',
-        'arr_time',
-        'aircraft_type',
-        'subfleet_type',
-        'effective_date',
-        'discontinue_date',
-    ]
-    aa1 = pd.read_csv(datadir + 'air/airline-cargo-schedules/aa1.csv',
-        names=aa_names, skiprows=6)
-    aa1_pairs = set(tuple(sorted(row)) for row in aa1[['origin', 'destination']].dropna().values)
-    aa2 = pd.read_csv(datadir + 'air/airline-cargo-schedules/aa2.csv',
-        names=aa_names, skiprows=6)
-    aa2_pairs = set(tuple(sorted(row)) for row in aa2[['origin', 'destination']].dropna().values)
-    return set.union(aa1_pairs, aa2_pairs)
-
-
-def get_airport_coord_pairs():
-    airports = pd.read_csv(datadir + 'air/airports.csv')
-    airports['tup'] = [tuple(row) for row in airports[['lon', 'lat']].values]
-    airports = airports.set_index('iata')
-
-    airport_pairs = set()
-    airport_pairs = airport_pairs.union(get_lufthansa_links())
-    airport_pairs = airport_pairs.union(get_american_airlines_links())
-    
-
-    airport_points = airports['tup'].to_dict()
-    airport_points = {k: v for k, v in airport_points.items() if v != (0, 0)}
-    coord_pairs = []
-    for a, b in airport_pairs:
-        tup = (airport_points.get(a, None), airport_points.get(b, None))
-        coord_pairs.append(tup)
-    return coord_pairs
-
-
-# TOP LEVEL FUNCTIONS
-#-------------------------------------------------------------------------------
-def load_or_build_transport_graph(dir):
-    datadir = dir + 'data' + os.path.sep
-    output = dir + 'output' + os.path.sep
     logging.info('Looking for previously calculated transport graph...')
-    if os.path.exists(datadir + 'transport_graph.p'):
-        logging.info('Found previously calculated transport graph.')
-        with open(datadir + 'transport_graph.p', 'rb') as f:
-            try:
-                G = pickle.load(f)
-            except EOFError:
-                raise Exception('Corrupted pickle file. Delete "data/transport_graph.p" and try again.')
-            logging.info('Loaded previously calculated transport graph.')
-            return G
+    G = try_loading_graph(data_dir)
+    if G:
+        logging.info('Loaded previously calculated transport graph.')
+        return G
 
-    logging.info(('Could not find previously calculated graph.'
+    logging.info(('Could not find previously calculated graphs.'
         'Creating new graph...'))
+
     G = nx.Graph()
 
     # Add air, road, rail and sea
     logging.info(f'Adding sea connections...')
-    gdf = gpd.read_file(datadir + 'shipping_lanes.geojson')
+    gdf = gpd.read_file(f'{data_dir}/shipping_lanes.geojson')
     for row in gdf.itertuples():
         G = add_edge(row.geometry, G, transport_mode='sea')
 
     logging.info(f'Adding road connections...')
-    gdf = gpd.read_file(datadir + 'major_road/major_road.shp')
+    gdf = gpd.read_file(f'{data_dir}/major_road/major_road.shp')
     for row in gdf.itertuples():
         G = add_edge(row.geometry, G, transport_mode='road')
 
     logging.info(f'Adding rail connections...')
-    gdf = gpd.read_file(datadir + 'major_rail/major_rail.shp')
+    gdf = gpd.read_file(f'{data_dir}/major_rail/major_rail.shp')
     gdf = gdf[gdf['geometry'].notnull()]
     for row in gdf.itertuples():
         G = add_edge(row.geometry, G, transport_mode='rail')
@@ -291,11 +302,9 @@ def load_or_build_transport_graph(dir):
         G = add_edge(geometry, G, transport_mode='air', distance_km=d_gc)
 
     # Create links in big cities
-    """
-    Approach: take all nodes within 50 km of city and just connect them all
-    """
+    # Approach: take all nodes within 50 km of city and just connect them all
     logging.info(f'Adding major city connections...')
-    cities = gpd.read_file(datadir + 'cities.geojson')
+    cities = gpd.read_file(f'{data_dir}/cities.geojson')
     
     nodes_df = pd.DataFrame(list(G.nodes), columns=['lon', 'lat'])
     nodes_df['point'] = [Point(x, y) for x, y in nodes_df.values]
@@ -314,6 +323,8 @@ def load_or_build_transport_graph(dir):
                 geometry = LineString([Point(a), Point(b)])
                 G = add_edge(geometry, G, transport_mode='transfer')
 
+    # Add country info to nodes so we know which edges cross country borders
+    # (for entrymode)
     logging.info('Adding country information to nodes...')
     nodes_df = pd.DataFrame(list(G.nodes), columns=['lon', 'lat'])
     nodes_df['point'] = [Point(x, y) for x, y in nodes_df.values]
@@ -327,30 +338,70 @@ def load_or_build_transport_graph(dir):
     country_dict = joined.set_index('node')['NAME'].to_dict()
     nx.set_node_attributes(G, country_dict, 'country')
 
-    logging.info(f'Saving transport network...')
-    with open(datadir + 'transport_graph.p', 'wb') as f:
+    logging.info(f'Saving transport graph...')
+    with open(f'{data_dir}/transport_graph.p', 'wb') as f:
         pickle.dump(G, f)
-    logging.info(f'Saved transport network to "data/transport_graph.p".')
+    logging.info(f'Saved transport network to "{data_dir}/transport_graph.p".')
 
     return G
 
+# get_entry_mode_subgraph AND HELPERS
+#-------------------------------------------------------------------------------
+def read_edges_from_json(filename):
+    with open(filename, 'r') as f:
+        my_edges_json = json.load(f)
+    my_edges = []
+    for a, b in my_edges_json:
+        my_edges.append((tuple(a), tuple(b)))
+    return my_edges
+
+
+def get_subgraph_edges(G, country_entry_mode, dest_country):
+    parent_dir = get_parent_dir()
+    # Look for cached
+    # logging.info(
+    #     (f'Looking for cached subgraph edges for entry mode {country_entry_mode}'
+    #      f' and destination country {dest_country}.')
+    # )
+    # filename = f'{parent_dir}/data/cache/{dest_country}-entry-{country_entry_mode}.json'
+    # if not os.path.exists(f'{parent_dir}/data/cache'):
+    #     os.mkdir(f'{parent_dir}/data/cache')
+    # if os.path.exists(filename):
+    #     logging.info('Found cached subgraph edges. Loading them...')
+    #     my_edges = read_edges_from_json(filename)
+    #     return my_edges
+
+    logging.info('Did not find cached subgraph edges. Calculating...')
+    my_edges = []
+    for a, b in G.edges:
+        # One node matches country or other, but not both (XOR)
+        is_entering_country = ((G.nodes()[a]['country'] == dest_country)
+            != (G.nodes()[b]['country'] == dest_country))
+        # Allow transfers in addition to selected mode (prevents glitches)
+        is_wrong_mode = G[a][b]['mode'] not in ['transfer', country_entry_mode]
+        if is_entering_country and is_wrong_mode:
+            continue
+        else:
+            my_edges.append((a, b))
+    # with open(filename, 'w') as f:
+    #     json.dump(my_edges, f)
+    # logging.info(f'Saved subgraph edges to {filename}.')
+    return my_edges
+
 
 def get_entry_mode_subgraph(G, country_entry_mode, dest_country):
-    my_edges = []
-    if country_entry_mode == 'air':
-        for a, b in G.edges:
-            # One node matches country or other, but not both (XOR)
-            is_entering_country = ((G.nodes()[a]['country'] == dest_country)
-                != (G.nodes()[b]['country'] == dest_country))
-            is_wrong_mode = G[a][b]['mode'] != country_entry_mode
-            if is_entering_country and is_wrong_mode:
-                continue
-            else:
-                my_edges.append((a, b))
+    """
+    Get a subgraph of the full transportation graph, where we exclude edges
+    crossing into our destination country in the wrong mode. For instance,
+    if the user specifies entrymode=sea, we block out all edges entering the 
+    destination country that are not sea links.
+    """
+    my_edges = get_subgraph_edges(G, country_entry_mode, dest_country)
     G2 = G.edge_subgraph(my_edges).copy()
     return G2
 
-
+# get_entry_mode_subgraph AND HELPERS
+#-------------------------------------------------------------------------------
 def create_path_gdf(origin, destination, path, G):
     gdf_rows = []
 
@@ -382,12 +433,13 @@ def create_path_gdf(origin, destination, path, G):
 
 
 def draw_path_and_save(path_gdf):
+    parent_dir = get_parent_dir()
     world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
     fig, ax = plt.subplots(figsize=(16, 8))
     base = world.plot(ax=ax, color='gainsboro', edgecolor='grey')
     path_gdf.plot(ax=ax, column='mode')
     plt.tight_layout()
-    plt.savefig(f'' + output + 'path_{int(time.time())}.png')
+    plt.savefig(f'{parent_dir}/output/path_{int(time.time())}.png')
     plt.close()
 
 
@@ -407,19 +459,17 @@ def main(
             destination country
         cost (str) - minimize: cost, distance or time?
         render (bool) - whether to render an image of the path
-    """
-
-    dir = get_dir()
-    logfile = dir+'output/messages.log'
+    """    
+    parent_dir = get_parent_dir()
     logging.basicConfig(
-        filename=f''+logfile, 
+        filename=f'{parent_dir}/output/messages.log', 
         level=logging.INFO,
         filemode='a',
     )
-
+    logging.info('-'*50)
 
     logging.info('Building or loading transport graph...')
-    G = load_or_build_transport_graph(dir)
+    G = load_or_build_transport_graph()
 
     node_origin, node_destination = get_nearest_point(
         reference_points=G.nodes,
@@ -455,10 +505,12 @@ def main(
             draw_path_and_save(path_gdf)
 
         print(path_gdf.to_json())
+        return path_gdf.to_json()
     
-    except:
+    except Exception as e:
         empty = {"type": "FeatureCollection", "features": []}
         print(empty)
+        return empty
 
 
 if __name__ == '__main__':
