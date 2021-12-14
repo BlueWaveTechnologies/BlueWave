@@ -25,7 +25,7 @@ public class Python {
                 return python;
             }
             catch(Exception e){
-                e.printStackTrace();
+                //e.printStackTrace();
             }
         }
 
