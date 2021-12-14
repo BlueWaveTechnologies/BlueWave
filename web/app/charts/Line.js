@@ -9,7 +9,7 @@ if(!bluewave.chart) bluewave.chart={};
  *
  ******************************************************************************/
 
-bluewave.chart.Line = function(data, config) {
+bluewave.chart.Line = function(config) {
     var me = this;
     var defaultConfig = {
         color: "#6699CC",
@@ -33,6 +33,12 @@ bluewave.chart.Line = function(data, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
+        
+        if (!config){
+            config = defaultConfig;
+            return;
+        }
+        
         var chartConfig = config;
         config = defaultConfig;
         
@@ -44,9 +50,6 @@ bluewave.chart.Line = function(data, config) {
         }
     };
     
-    this.getData = function(){
-        return data;
-    };
     
     this.getConfig = function(){
         return config;
