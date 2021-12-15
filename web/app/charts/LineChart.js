@@ -55,10 +55,25 @@ bluewave.charts.LineChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
 
-        var parent = svg.node().parentNode;
-        onRender(parent, function(){
-            renderChart(chartConfig, data, parent);
-        });
+        if (arguments.length===0){
+            //renderChart
+        }
+        else{
+
+            var parent = svg.node().parentNode;
+            onRender(parent, function(){
+                renderChart(chartConfig, data, parent);
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** addLine
+  //**************************************************************************
+    this.addLine = function(line, data){
+        console.log(line.getConfig());
+        console.log(data);
     };
 
 
@@ -111,7 +126,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var mergedData = d3.merge(dataSets);
 
-        
+
             //Get max line
         //     var maxData = d3.nest()
         //         .key(function (d) { return d[xKey]; })
@@ -121,7 +136,7 @@ bluewave.charts.LineChart = function(parent, config) {
         //             });
         //         }).entries(mergedData);
         // }
-        
+
         //Consolidate all this into max/sum/min function
         //Get max line or sum of lines for stack
         var maxData = d3.nest()
