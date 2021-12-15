@@ -246,20 +246,20 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 axisHeight, axisWidth, margin, config.xAxis, config.yAxis);
         }
 
-
+config.showRegLine = true;
       //Show regression line
         if (config.showRegLine) {
             var linReg = calculateLinReg(data, xKey, yKey,
                 d3.min(data, function(d) {return d[xKey]}),
-                d3.min(data, function(d) { return d[yKey]}));
+                d3.min(data, function(d) { return d[yKey]}), x, y)
 
 
-            let xScale = getScale(xKey,xType,[0,axisWidth], data).scale;
-            let yScale = getScale(yKey,yType,[axisHeight,0], data).scale;
+            // let xScale = getScale(xKey,xType,[0,axisWidth], data).scale;
+            // let yScale = getScale(yKey,yType,[axisHeight,0], data).scale;
 
             line = d3.line()
-            .x(function(d) { return xScale(d[0])})
-            .y(function(d) { return yScale(d[1])});
+            .x(function(d) { return (d[0])})
+            .y(function(d) { return (d[1])});
 
              plotArea.append("path")
                   .datum(linReg)
@@ -276,7 +276,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
   //** calculateLinReg
   //**************************************************************************
-    var calculateLinReg = function(data, xKey, yKey, minX, minY) {
+    var calculateLinReg = function(data, xKey, yKey, minX, minY, xScale, yScale) {
         // Let n = the number of data points
         var n = data.length;
 
@@ -287,13 +287,13 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
         data.forEach((val) => {
           var obj = {};
-          obj.x = parseFloat(val[xKey]);
-          obj.y = parseFloat(val[yKey]);
+          obj.x = parseFloat(xScale(val[xKey]));
+          obj.y = parseFloat(yScale(val[yKey]));
           obj.mult = obj.x*obj.y;
           pts.push(obj);
 
-          xAxisData.push(parseFloat(val[xKey]));
-          yAxisData.push(parseFloat(val[yKey]));
+          xAxisData.push(parseFloat(xScale(val[xKey])));
+          yAxisData.push(parseFloat(yScale(val[yKey])));
         });
 
         var sum_x = 0;
