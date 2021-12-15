@@ -20,22 +20,27 @@ bluewave.charts.ScatterChart = function(parent, config) {
             left: 82
         },
         getPointLabel: function(d){
-            return "";
+            return "labeltestloooooooooong";
         },
         getPointRadius: function(d){
-            var pointRadius = parseFloat(config.pointRadius);
+            var pointRadius = parseFloat(config.pointRadius0);
             if (isNaN(pointRadius)) pointRadius = 7;
             return pointRadius;
         },
         getPointColor: function(d){
-            var pointColor = config.pointColor;
+            var pointColor = config.pointColor0;
             if (!pointColor) pointColor = "#6699cc";
             return pointColor;
         },
         getPointOpacity: function(d){
-            var pointOpacity = parseFloat(config.pointOpacity);
+            var pointOpacity = parseFloat(config.pointOpacity0);
             if (isNaN(pointOpacity)) pointOpacity = 0.8;
             return pointOpacity;
+        },
+        getShowRegLine: function(d){
+            var showRegLine = config.showRegLine0;
+            if (showRegLine !== true) showRegLine = false;
+            return showRegLine;
         }
     };
     var svg, chart, plotArea, line;
@@ -119,6 +124,14 @@ bluewave.charts.ScatterChart = function(parent, config) {
         var axes = drawAxes(plotArea, axisWidth, axisHeight, xKey, yKey, data);
         x = axes.x;
         y = axes.y;
+        var xAxis = axes.xAxis;
+
+        //Extend x-axis if point labels are checked
+        if (config.pointLabels){
+
+            x = extendScale({scale:axes.x, band:axes.xBand}, [0, axisWidth], 8).scale;
+            reDrawAxes(plotArea, xAxis, x, null, null, axisHeight);
+        }
 
 
 
@@ -186,6 +199,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
            .data(data)
            .enter()
            .append("circle")
+              .attr("dataset", 0)
               .attr("cx", getX)
               .attr("cy", getY)
               .attr("r", config.getPointRadius)
@@ -194,7 +208,11 @@ bluewave.charts.ScatterChart = function(parent, config) {
               .style("stroke", "white")
               .on("mouseover", mouseover)
               .on("mousemove", mousemove)
-              .on("mouseleave", mouseleave);
+              .on("mouseleave", mouseleave)
+              .on("click", function(d){
+                var datasetID = parseInt(d3.select(this).attr("dataset"));
+                me.onClick(this, datasetID, d);
+            });
 
 
 
@@ -335,6 +353,8 @@ bluewave.charts.ScatterChart = function(parent, config) {
     var drawAxes = bluewave.chart.utils.drawAxes;
     var drawLabels = bluewave.chart.utils.drawLabels;
     var drawGridlines = bluewave.chart.utils.drawGridlines;
+    var extendScale = bluewave.chart.utils.extendScale;
+    var reDrawAxes = bluewave.chart.utils.reDrawAxes;
 
 
     init();
