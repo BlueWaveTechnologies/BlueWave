@@ -1,4 +1,4 @@
-MATCH (n:import_entry)
+MATCH (n:import_line)
 WHERE n.country_of_origin IN[{country}]
 AND toFloat(n.predict_risk)>={threshold}
 RETURN
