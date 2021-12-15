@@ -5,7 +5,7 @@ if(!bluewave.dashboards) bluewave.dashboards={};
 //**  ImportSummary
 //******************************************************************************
 /**
- *   Used to render ports of entry
+ *   Used render a summary of imports by country, company, product code, etc
  *
  ******************************************************************************/
 
@@ -317,7 +317,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         });
                         
                         
-
+ 
                       //Create Links
                         data.forEach((d)=>{
 
@@ -371,6 +371,43 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         });  
                         
                         
+                      //Update node.type attributes using realtionships
+                        var nodeTypes = {};
+                        links.forEach((link)=>{
+                            if (link.relationship){
+                                var relationships = link.relationship.split(",");
+                                if (nodeTypes[link.target]){
+                                    var currRelationships = nodeTypes[link.target];
+                                    relationships.forEach((relationship)=>{
+                                        var foundMatch = false;
+                                        for (var i=0; i<currRelationships.length; i++){
+                                            if (currRelationships[i]===relationship){
+                                                foundMatch = true;
+                                            }
+                                        }
+                                        if (!foundMatch){
+                                            currRelationships.push(relationship);
+                                        }
+                                    });
+                                    
+                                }
+                                else{
+                                    nodeTypes[link.target] = link.relationship.split(",");
+                                }
+                            }
+                        });
+                        nodes.forEach((node)=>{
+                            if (!node.type){
+                                var relationships = nodeTypes[node.name];
+                                if (relationships){
+                                    node.type = relationships.join(",");
+                                }
+                            }
+                        });
+                        
+                        
+                        
+                      //Update graph
                         nodeView.update(nodes, links);
                         
                     }
@@ -844,6 +881,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** createRelationshipGraph
   //**************************************************************************    
     var createRelationshipGraph = function(parent){
+        
+      //Create dashboard item
         var dashboardItem = createDashboardItem(parent,{
             title: "Relationships",
             width: "100%",
@@ -851,20 +890,41 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         });
         dashboardItem.el.style.margin = "0px";
         dashboardItem.el.style.display = "table";
+        
+        
+      //Get colors
+        var themeColors = getColorPalette(true);
+        var numColors = themeColors.length/2;
+        var colors = {};
+        var i = 0;
+        ["blue","green","red","orange","purple","gray"].forEach((color)=>{
+            colors[color] = {dark: themeColors[i], light: themeColors[i+numColors]};
+            i++;
+        });
+        var colorMap = {
+            manufacturer: "green",
+            shipper: "orange",
+            importer: "red",
+            consignee: "blue",
+            dii: "purple"
+        };
+
+
+      //Create relationship graph
         nodeView = new bluewave.charts.ForceDirectedChart(dashboardItem.innerDiv,{
             getNodeFill: function(node){
-                var establishment = getEstablishment();
-                if (node.type===establishment){
-                    return "#e66869";
+                var color = colorMap[node.type];
+                if (color){
+                    return colors[color].light;
                 }
                 else{
                     return "#dcdcdc";
                 }
             },
             getNodeOutline: function(node){
-                var establishment = getEstablishment();
-                if (node.type===establishment){
-                    return "#dd3131";
+                var color = colorMap[node.type];
+                if (color){
+                    return colors[color].dark;
                 }
                 else{
                     return "#777";
@@ -938,7 +998,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-
+    var getColorPalette = bluewave.utils.getColorPalette;
 
     init();
 };
