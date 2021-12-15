@@ -234,10 +234,10 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
         grid = new javaxt.dhtml.DataGrid(innerDiv, {
             style: config.style.table,
-            url: "import/entries",
+            url: "import/lines",
             autoload: false,
             getResponse: function(url, payload, callback){             
-                url += "?establishment=" + establishment.name + "&id=" + establishment.fei.join(",");
+                url += "?establishment=" + establishment.type + "&id=" + establishment.fei.join(",");
                 get(url, {
                     success: function(csv){
                         
