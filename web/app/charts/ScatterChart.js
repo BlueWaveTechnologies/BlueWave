@@ -246,9 +246,9 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 axisHeight, axisWidth, margin, config.xAxis, config.yAxis);
         }
 
-config.showRegLine = true;
+
       //Show regression line
-        if (config.showRegLine) {
+        if (config.getShowRegLine()) {
             var linReg = calculateLinReg(data, xKey, yKey,
                 d3.min(data, function(d) {return d[xKey]}),
                 d3.min(data, function(d) { return d[yKey]}), x, y)
@@ -263,11 +263,16 @@ config.showRegLine = true;
 
              plotArea.append("path")
                   .datum(linReg)
-                  .attr("class", "line")
+                //   .attr("class", "line")
+                  .attr("dataset", 0)
                   .attr("d", line)
-                  .attr("stroke", function(d) { return "#000000"; })
+                  .attr("stroke", config.getPointColor)
                   .attr("stroke-linecap", 'round')
-                  .attr("stroke-width", 500);
+                  .attr("stroke-width", 2)
+                  .on("click", function(d){
+                    var datasetID = parseInt(d3.select(this).attr("dataset"));
+                    me.onClick(this, datasetID, d);
+                });
 
         }
     };

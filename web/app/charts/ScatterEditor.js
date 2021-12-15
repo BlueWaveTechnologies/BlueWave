@@ -587,6 +587,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
           if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = colors[n%colors.length];
           if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 7;
           if( isNaN(chartConfig["pointOpacity" + n]) ) chartConfig["pointOpacity" + n] = 0.8;
+          if( chartConfig["showLineReg" + n] !== true) chartConfig["showLineReg" + n] = false;
 
 
           form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
