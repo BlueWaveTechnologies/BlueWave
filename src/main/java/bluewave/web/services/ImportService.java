@@ -1,5 +1,6 @@
 package bluewave.web.services;
 import bluewave.graph.Neo4J;
+import static bluewave.graph.Utils.*;
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
@@ -19,8 +20,6 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 
 public class ImportService extends WebService {
@@ -78,10 +77,10 @@ public class ImportService extends WebService {
 
 
         String[] extraFields = new String[]{
-        "num_entries", "quantity", "value",
+        "num_lines", "quantity", "value",
         "manufacturer","shipper","importer","consignee","dii",
         "num_exams", "num_field_exams","num_label_exams", "num_field_fails", "num_label_fails",
-        "num_bad_samples","num_hi_predict"
+        "num_samples","num_bad_samples","num_hi_predict"
         };
 
 
@@ -149,10 +148,10 @@ public class ImportService extends WebService {
 
       //Generate csv output
         StringBuilder str = new StringBuilder(
-        "name,fei,totalEntries,totalValue,totalQuantity,"+
+        "name,fei,totalLines,totalValue,totalQuantity,"+
         "manufacturer,shipper,importer,consignee,dii,"+
         "totalExams,fieldExams,labelExams,failedFieldExams,failedLabelExams," +
-        "badSamples,highPredict");
+        "totalSamples,badSamples,highPredict");
         Iterator<String> it = uniqueFacilities.keySet().iterator();
         while (it.hasNext()){
             String name = it.next();
@@ -167,6 +166,7 @@ public class ImportService extends WebService {
             long totalLabelExams = 0;
             long totalFailedFieldExams = 0;
             long totalFailedLabelExams = 0;
+            long totalSamples = 0;
             long totalBadSamples = 0;
             long totalPredict = 0;
 
@@ -180,7 +180,7 @@ public class ImportService extends WebService {
             for (Long fei : uniqueFacilities.get(name)){
 
                 HashMap<String, Value> values = entries.get(fei);
-                Long n = values.get("num_entries").toLong();
+                Long n = values.get("num_lines").toLong();
                 Double q = values.get("quantity").toDouble();
                 Double v = values.get("value").toDouble();
                 Long exams = values.get("num_exams").toLong();
@@ -188,6 +188,7 @@ public class ImportService extends WebService {
                 Long labelExams = values.get("num_label_exams").toLong();
                 Long failedFieldExams = values.get("num_field_fails").toLong();
                 Long failedLabelExams = values.get("num_label_fails").toLong();
+                Long samples = values.get("num_samples").toLong();
                 Long badSamples = values.get("num_bad_samples").toLong();
                 Long predict = values.get("num_hi_predict").toLong();
 
@@ -205,6 +206,7 @@ public class ImportService extends WebService {
                 totalLabelExams+=labelExams;
                 totalFailedFieldExams+=failedFieldExams;
                 totalFailedLabelExams+=failedLabelExams;
+                totalSamples+=samples;
                 totalBadSamples+=badSamples;
                 totalPredict+=predict;
             }
@@ -254,6 +256,8 @@ public class ImportService extends WebService {
             str.append(",");
             str.append(totalFailedLabelExams);
             str.append(",");
+            str.append(totalSamples);
+            str.append(",");
             str.append(totalBadSamples);
             str.append(",");
             str.append(totalPredict);
@@ -263,9 +267,9 @@ public class ImportService extends WebService {
 
 
   //**************************************************************************
-  //** getEntries
+  //** getLines
   //**************************************************************************
-    public ServiceResponse getEntries(ServiceRequest request, Database database)
+    public ServiceResponse getLines(ServiceRequest request, Database database)
     throws ServletException {
 
       //Get parameters
@@ -295,15 +299,15 @@ public class ImportService extends WebService {
 
 
       //Compile query
-        StringBuilder query = new StringBuilder("MATCH (n:import_entry) WHERE n.");
+        StringBuilder query = new StringBuilder("MATCH (n:import_line) WHERE n.");
         query.append(establishment);
         query.append(" IN [");
         String[] arr = ids.split(",");
         for (int i=0; i<arr.length; i++){
             if (i>0) query.append(",");
-            query.append("'" + arr[i] + "'");
+            query.append(arr[i]);
         }
-        query.append("] RETURN properties(n) as entry");
+        query.append("] RETURN properties(n) as line");
 
         if (offset!=null) query.append(" SKIP " + offset);
         if (limit!=null) query.append(" LIMIT " + limit);
@@ -323,7 +327,7 @@ public class ImportService extends WebService {
             while (rs.hasNext()){
                 Record record = rs.next();
 
-                JSONObject entry = getJson(record.get("entry"));
+                JSONObject entry = getJson(record.get("line"));
                 entries.add(entry);
                 Iterator<String> it = entry.keys();
                 while (it.hasNext()){
@@ -602,18 +606,5 @@ public class ImportService extends WebService {
         }
         str.append("\"");
         return str.toString();
-    }
-
-
-  //**************************************************************************
-  //** getJson
-  //**************************************************************************
-    private static JSONObject getJson(org.neo4j.driver.Value val){
-        JSONObject json = new JSONObject();
-        if (!val.isNull()){
-            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-            json = new JSONObject(gson.toJson(val.asMap()));
-        }
-        return json;
     }
 }
