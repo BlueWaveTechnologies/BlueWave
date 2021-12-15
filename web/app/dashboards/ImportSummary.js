@@ -89,7 +89,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         establishmentOptions.setValue("Manufacturer", true);
         countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
         productOptions.setValue("All", true);
-        yAxis = "totalEntries";
+        yAxis = "totalLines";
     };
 
 
@@ -172,7 +172,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 });
 
                 data.sort(function(a,b){
-                    return b.totalEntries-a.totalEntries;
+                    return b.totalLines-a.totalLines;
                 });
                 
 
@@ -238,7 +238,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         var d = data[i];
                         chartData.push({
                             name: d.name,
-                            quantity: d.totalEntries
+                            quantity: d.totalLines
                         });
                     }
                     barChart.update({
@@ -567,10 +567,10 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 {header: 'Name', width:'100%', sortable: true},
                 {header: 'Reported Quantity', width:'200px', align:'right', sortable: true},
                 {header: 'Reported Value', width:'150px', align:'right', sortable: true},
-                {header: 'Total Entries', width:'120px', align:'right', sortable: true},
+                {header: 'Total Lines', width:'120px', align:'right', sortable: true},
                 {header: 'Field Exams', width:'120px', align:'right', sortable: true},
                 {header: 'Label Exams', width:'120px', align:'right', sortable: true},
-                {header: 'Bad Samples', width:'120px', align:'right', sortable: true},
+                {header: 'Samples', width:'120px', align:'right', sortable: true},
                 {header: '% Elevated Risk', width:'135px', align:'right', sortable: true}
                 
             ],
@@ -580,7 +580,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 row.set('Name', name);
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
-                row.set('Total Entries', formatNumber(d.totalEntries));
+                row.set('Total Lines', formatNumber(d.totalLines));
                 if (d.fieldExams>0){ 
                     var str = formatNumber(d.fieldExams);
                     if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
@@ -591,11 +591,15 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";                    
                     row.set('Label Exams', str);
                 }
-                if (d.badSamples>0){ 
-                    var str = formatNumber(d.badSamples);                  
-                    row.set('Bad Samples', str);
-                }                
-                var p = (d.highPredict/d.totalEntries)*100;
+                if (d.totalSamples>0){
+                    var str = formatNumber(d.totalSamples);  
+                    if (d.badSamples>0){ 
+                        str += " (" + formatNumber(d.badSamples) + " Bad)";                  
+                        
+                    }
+                    row.set('Samples', str);
+                }
+                var p = (d.highPredict/d.totalLines)*100;
                 if (p>0){
                     p = round(p, 1);
                     row.set('% Elevated Risk', formatNumber(p)+"%");
@@ -630,7 +634,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     key = "totalValue";
                     break;
                 case 3:
-                    key = "totalEntries";
+                    key = "totalLines";
                     break;
                 default:
                     break;
@@ -721,16 +725,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 case "totalValue":
                     key = "value";
                     break;
-                case "totalEntries":
+                case "totalLines":
                     key = "entries";
                     break;
                 default:
                     break;
-            }             
+            }
             
 
             var title = yAxis.replace("total","");            
-            dashboardItem.title.innerText = title + " Timeline";
+            dashboardItem.title.innerText = title + " Per Day";
             
 
             lineChart._update({
