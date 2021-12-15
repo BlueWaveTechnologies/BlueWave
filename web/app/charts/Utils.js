@@ -291,7 +291,7 @@ bluewave.chart.utils = {
         let axisRatio = widthSum / axisWidth;
         if (axisRatio > 1) axisRatio = 1;
         
-        var angleScale = d3.scalePow()
+        var angleScale = d3.scaleLinear()
             .domain([minRatio, 1])
             .range([-15, -60]);
 
