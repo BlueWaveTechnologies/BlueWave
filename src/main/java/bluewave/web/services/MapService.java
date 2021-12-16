@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.Config;
 import bluewave.graph.Neo4J;
+import bluewave.utils.Address;
 import bluewave.utils.SpatialIndex;
 import static bluewave.utils.Python.*;
 
@@ -155,44 +156,12 @@ public class MapService extends WebService {
         Neo4J graph = bluewave.Config.getGraph(user);
 
 
-      //Compile query
-        String query =
-        "MATCH (n:" + node + ")-[r:has]->(a:address)\n" +
-        "WHERE n." + key + " IN [" + id + "]\n" +
-        "RETURN\n" +
-        "n." + key + " as " + key + ",a.lat as lat, a.lon as lon";
-
-
       //Execute query and return response
-        Session session = null;
         try{
-            session = graph.getSession();
-
-            StringBuilder str = new StringBuilder();
-            str.append(key);
-            str.append(",lat,lon");
-
-            Result rs = session.run(query);
-            while (rs.hasNext()){
-                Record record = rs.next();
-                id = new Value(record.get(key)).toString();
-                if (id!=null && id.contains(",")) id = "\"" + id + "\"";
-                BigDecimal lat = new Value(record.get("lat")).toBigDecimal();
-                BigDecimal lon = new Value(record.get("lon")).toBigDecimal();
-
-                str.append("\r\n");
-                str.append(id);
-                str.append(",");
-                str.append(lat);
-                str.append(",");
-                str.append(lon);
-            }
-            session.close();
-
-            return new ServiceResponse(str.toString());
+            BigDecimal[] coords = Address.getCoords(node, key, id, graph);
+            return new ServiceResponse(coords[0]+","+coords[1]);
         }
         catch(Exception e){
-            if (session!=null) session.close();
             return new ServiceResponse(e);
         }
     }
