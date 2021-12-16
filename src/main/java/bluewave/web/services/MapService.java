@@ -1,9 +1,11 @@
 package bluewave.web.services;
 import bluewave.Config;
+import bluewave.graph.Neo4J;
 import bluewave.utils.SpatialIndex;
 import static bluewave.utils.Python.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.awt.*;
 
@@ -24,6 +26,12 @@ import org.locationtech.jts.io.WKTReader;
 //scripting includes
 import javax.script.*;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
+
+
+//Neo4J includes
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
 
 
 //******************************************************************************
@@ -121,7 +129,75 @@ public class MapService extends WebService {
         return new ServiceResponse(Config.get("basemaps").toJSONArray());
     }
 
-    
+
+  //**************************************************************************
+  //** getCoords
+  //**************************************************************************
+  /** Returns lat/lon coordinates for a node with an address
+   */
+    public ServiceResponse getCoords(ServiceRequest request, Database database)
+    throws ServletException {
+
+
+      //Parse params
+        String node = request.getParameter("node").toString();
+        if (node==null) return new ServiceResponse(400, "node is required");
+
+        String key = request.getParameter("key").toString();
+        if (key==null) return new ServiceResponse(400, "key is required");
+
+        String id = request.getParameter("id").toString();
+        if (id==null) return new ServiceResponse(400, "id is required");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Compile query
+        String query =
+        "MATCH (n:" + node + ")-[r:has]->(a:address)\n" +
+        "WHERE n." + key + " IN [" + id + "]\n" +
+        "RETURN\n" +
+        "n." + key + " as " + key + ",a.lat as lat, a.lon as lon";
+
+
+      //Execute query and return response
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            StringBuilder str = new StringBuilder();
+            str.append(key);
+            str.append(",lat,lon");
+
+            Result rs = session.run(query);
+            while (rs.hasNext()){
+                Record record = rs.next();
+                id = new Value(record.get(key)).toString();
+                if (id!=null && id.contains(",")) id = "\"" + id + "\"";
+                BigDecimal lat = new Value(record.get("lat")).toBigDecimal();
+                BigDecimal lon = new Value(record.get("lon")).toBigDecimal();
+
+                str.append("\r\n");
+                str.append(id);
+                str.append(",");
+                str.append(lat);
+                str.append(",");
+                str.append(lon);
+            }
+            session.close();
+
+            return new ServiceResponse(str.toString());
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
   //**************************************************************************
   //** getRoute
   //**************************************************************************
@@ -130,17 +206,17 @@ public class MapService extends WebService {
    */
     public ServiceResponse getRoute(ServiceRequest request, Database database)
         throws ServletException, IOException {
-        
+
       //Parse params
         String start = request.getParameter("start").toString();
         if (start==null) return new ServiceResponse(400, "start coordinate is required");
-        
+
         String end = request.getParameter("end").toString();
         if (end==null) return new ServiceResponse(400, "end coordinate is required");
-        
+
         String method = request.getParameter("method").toString();
         if (method==null) return new ServiceResponse(400, "method is required");
-        
+
 
       //Get script
         javaxt.io.File[] scripts = getScriptDir().getFiles("shipment_route.py", true);
@@ -152,8 +228,8 @@ public class MapService extends WebService {
         params.add("-o="+start);
         params.add("-d="+end);
         params.add("--entrymode="+method);
-        
- 
+
+
       //Execute script
         try{
             return new ServiceResponse(executeScript(scripts[0], params));
@@ -162,7 +238,7 @@ public class MapService extends WebService {
             return new ServiceResponse(e);
         }
     }
-    
+
 
   //**************************************************************************
   //** getPin
