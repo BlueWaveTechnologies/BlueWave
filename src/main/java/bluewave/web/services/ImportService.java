@@ -1,10 +1,12 @@
 package bluewave.web.services;
 import bluewave.graph.Neo4J;
+import bluewave.utils.Python;
+import bluewave.utils.Address;
 import static bluewave.graph.Utils.*;
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
-//import java.math.BigDecimal;
+import java.math.BigDecimal;
 
 import javaxt.express.ServiceRequest;
 import javaxt.express.ServiceResponse;
@@ -15,15 +17,12 @@ import javaxt.sql.Database;
 import javaxt.sql.Value;
 import javaxt.json.*;
 
-
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
 
-
 public class ImportService extends WebService {
-
 
   //**************************************************************************
   //** getSummary
@@ -79,7 +78,8 @@ public class ImportService extends WebService {
         String[] extraFields = new String[]{
         "num_lines", "quantity", "value",
         "manufacturer","shipper","importer","consignee","dii",
-        "num_exams", "num_field_exams","num_label_exams", "num_field_fails", "num_label_fails",
+        "num_exams", "num_field_exams","num_field_fails",
+        "num_label_exams","num_label_fails",
         "num_samples","num_bad_samples","num_hi_predict"
         };
 
@@ -378,6 +378,69 @@ public class ImportService extends WebService {
 
 
   //**************************************************************************
+  //** getShipments
+  //**************************************************************************
+  /** Returns imports by port of entry for a given establishment type and fei
+   */
+    public ServiceResponse getShipments(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Get parameters
+        String establishment = request.getParameter("establishment").toString();
+        if (establishment==null) establishment = "manufacturer";
+        else establishment = establishment.toLowerCase();
+
+        Long id = request.getParameter("id").toLong();
+        if (id==null) id = request.getParameter("fei").toLong();
+        if (id==null) return new ServiceResponse(400, "id or fei is required");
+
+
+      //Get sql
+        String sql = bluewave.queries.Index.getQuery("Imports_By_Port_Of_Entry");
+
+
+      //Update sql with additional keywords
+        sql = sql.replace("{establishment}", establishment);
+        sql = sql.replace("{fei}", id+"");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Execute query and generate response
+        String[] fields = new String[]{"port","method","lines","quantity","value"};
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            Result rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                str.append("\r\n");
+
+                for (int i=0; i<fields.length; i++){
+                    if (i>0) str.append(",");
+                    str.append(r.get(fields[i]).asObject());
+                }
+            }
+
+
+            session.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+        return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
   //** getHistory
   //**************************************************************************
     public ServiceResponse getHistory(ServiceRequest request, Database database)
@@ -423,7 +486,7 @@ public class ImportService extends WebService {
 
 
       //Execute query and generate response
-        String[] fields = new String[]{"date","entries","quantity","value"};
+        String[] fields = new String[]{"date","lines","quantity","value"};
         StringBuilder str = new StringBuilder(String.join(",", fields));
         Session session = null;
         try{
@@ -546,7 +609,6 @@ public class ImportService extends WebService {
             session.close();
         }
         catch(Exception e){
-            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
@@ -577,6 +639,134 @@ public class ImportService extends WebService {
     public ServiceResponse saveEstablishmentNames(ServiceRequest request, Database database)
     throws ServletException { return getEstablishmentNames(request, database); }
 
+
+  //**************************************************************************
+  //** getRoute
+  //**************************************************************************
+  /** Used to calculate the most probable route between a facility and a port
+   *  of entry
+   */
+    public ServiceResponse getRoute(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Parse params
+        Long fei = request.getParameter("facility").toLong();
+        Long portOfEntry = request.getParameter("portOfEntry").toLong();
+        String method = request.getParameter("method").toString();
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+        Session session = null;
+        try{
+            JSONObject route = null;
+
+          //Find route in the database
+            String node = "import_route";
+            session = graph.getSession();
+            StringBuilder query = new StringBuilder();
+            query.append("MATCH (n:" + node + ")\n");
+            query.append("WHERE n.fei="+fei);
+            query.append(" AND n.port="+portOfEntry);
+            query.append(" AND n.method='"+method+"'\n");
+            query.append("RETURN n.route as route");
+            Result rs = session.run(query.toString());
+            if (rs.hasNext()){
+                Record r = rs.next();
+                String s = new Value(r.get("route").asObject()).toString();
+                if (s!=null) route = new JSONObject(s);
+            }
+            session.close();
+
+
+          //Create new route as needed
+            if (route==null){
+
+              //Create route
+                route = getRoute(fei, portOfEntry, method, graph);
+
+              //Create key and indexes
+                session = graph.getSession();
+                try{ session.run("CREATE CONSTRAINT ON (n:" + node + ") ASSERT n.unique_key IS UNIQUE"); }
+                catch(Exception e){}
+                try{ session.run("CREATE INDEX idx_" + node + " IF NOT EXISTS FOR (n:" + node + ") ON (n.unique_key)"); }
+                catch(Exception e){}
+
+              //Set params
+                Map<String, Object> params = new LinkedHashMap<>();
+                params.put("fei",fei);
+                params.put("port",portOfEntry);
+                params.put("method",method);
+                params.put("route",route.toString());
+                params.put("unique_key",fei+"_"+portOfEntry+"_"+method);
+
+              //Compile query used to create nodes
+                query = new StringBuilder("CREATE (a:" + node + " {");
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String param = it.next();
+                    query.append(param);
+                    query.append(": $");
+                    query.append(param);
+                    if (it.hasNext()) query.append(" ,");
+                }
+                query.append("})");
+
+              //Create node
+                session.run(query.toString(), params);
+                session.close();
+            }
+
+          //Return route
+            return new ServiceResponse(route);
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+  //**************************************************************************
+  //** getRoute
+  //**************************************************************************
+    private JSONObject getRoute(long fei, long portOfEntry, String method, Neo4J graph) throws Exception {
+
+      //Get coordinates
+        BigDecimal[] start = Address.getCoords("import_establishment", "fei", fei+"", graph);
+        if (start==null) throw new Exception("Failed to find coordinates for fei " + fei);
+
+        BigDecimal[] end = Address.getCoords("port_of_entry", "id", portOfEntry+"", graph);
+        if (end==null) throw new Exception("Failed to find coordinates for portOfEntry " + portOfEntry);
+
+
+      //Get script
+        javaxt.io.File[] scripts = Python.getScriptDir().getFiles("shipment_route.py", true);
+        if (scripts.length==0) throw new Exception("Script not found");
+
+
+      //Compile command line options
+        ArrayList<String> params = new ArrayList<>();
+        params.add("-o="+start[0]+","+start[1]);
+        params.add("-d="+end[0]+","+end[1]);
+        params.add("--entrymode="+method);
+
+
+      //Execute script
+        JSONObject geoJSON = Python.executeScript(scripts[0], params);
+
+        if (geoJSON.get("features").toJSONArray().isEmpty()){
+            console.log(fei, portOfEntry, params);
+        }
+
+        return geoJSON;
+    }
+
+
+  //**************************************************************************
+  //** mergeList
+  //**************************************************************************
     private void mergeList(HashSet<Long> a, List b){
         for (int i=0; i<b.size(); i++){
             a.add(new Value(b.get(i)).toLong());
