@@ -30,23 +30,28 @@ public class Routing {
    */
     public static JSONObject getGreatCircleRoute(BigDecimal[] start, BigDecimal[] end, int numPoints) throws Exception {
 
+      //Create start/end points
         GlobalCoordinates c1 = new GlobalCoordinates(start[0].doubleValue(), start[1].doubleValue());
         GlobalCoordinates c2 = new GlobalCoordinates(end[0].doubleValue(), end[1].doubleValue());
 
+
+      //Calculate initial bearing and distance between the 2 points
         GeodeticCurve geoCurve = geoCalc.calculateGeodeticCurve(wgs84, c1, c2);
         double distance = geoCurve.getEllipsoidalDistance(); //meters
         double segmentLength = distance/(double) numPoints;
         double bearing = geoCurve.getAzimuth();
 
+
+      //Create properties
         JSONObject properties = new JSONObject();
         properties.set("distance", distance);
         properties.set("bearing", bearing);
 
+
+      //Generate coordinates
         ArrayList<Double[]> coords = new ArrayList<>();
         coords.add(new Double[]{c1.getLongitude(),c1.getLatitude()});
-
         GlobalCoordinates prevPoint = c1;
-
         for (int i=0; i<numPoints; i++){
 
             GlobalCoordinates c = geoCalc.calculateEndingGlobalCoordinates(wgs84, prevPoint, bearing, segmentLength);
@@ -56,9 +61,10 @@ public class Routing {
 
             coords.add(new Double[]{c.getLongitude(),c.getLatitude()});
         }
-
         coords.add(new Double[]{c2.getLongitude(),c2.getLatitude()});
 
+
+      //Create geometry
         JSONObject geometry = new JSONObject();
         geometry.set("type", "LineString");
         JSONArray coordinates = new JSONArray();
@@ -70,12 +76,20 @@ public class Routing {
             coordinates.add(coordinate);
         }
 
-        JSONObject geoJSON = new JSONObject();
 
-        geoJSON.set("geometry", geometry);
-        geoJSON.set("properties", properties);
+      //Create geoJson
+        JSONObject geoJson = new JSONObject();
+        geoJson.set("type", "FeatureCollection");
+        JSONArray features = new JSONArray();
+        geoJson.set("features", features);
 
-        return geoJSON;
+        JSONObject feature = new JSONObject();
+        feature.set("type","Feature");
+        feature.set("geometry", geometry);
+        feature.set("properties", properties);
+        features.add(feature);
+
+        return geoJson;
     }
 
 
