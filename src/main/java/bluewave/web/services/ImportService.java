@@ -378,6 +378,79 @@ public class ImportService extends WebService {
 
 
   //**************************************************************************
+  //** getProducts
+  //**************************************************************************
+  /** Returns a list of products and quantities for a given establishment
+   *  type and fei
+   */
+    public ServiceResponse getProducts(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Get parameters
+        String establishment = request.getParameter("establishment").toString();
+        if (establishment==null) establishment = "manufacturer";
+        else establishment = establishment.toLowerCase();
+
+        String id = request.getParameter("id").toString();
+        if (id==null) id = request.getParameter("fei").toString();
+        if (id==null) return new ServiceResponse(400, "id or fei is required");
+
+
+      //Get sql
+        String sql = bluewave.queries.Index.getQuery("Imports_By_Product");
+
+
+      //Update sql with additional keywords
+        sql = sql.replace("{establishment}", establishment);
+        sql = sql.replace("{fei}", id+"");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Execute query and generate response
+        String[] fields = new String[]{"fei","product_code","product_name","lines","quantity","value"};
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            Result rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                str.append("\r\n");
+
+                for (int i=0; i<fields.length; i++){
+                    if (i>0) str.append(",");
+                    Object val = r.get(fields[i]).asObject();
+                    if (fields[i].equals("product_name")){
+                        if (val!=null){
+                            String productName = (String) val;
+                            if (productName.contains(",")) productName = "\"" + productName + "\"";
+                            val = productName;
+                        }
+                    }
+
+                    str.append(val);
+                }
+            }
+
+
+            session.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+        return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
   //** getShipments
   //**************************************************************************
   /** Returns imports by port of entry for a given establishment type and fei
@@ -728,7 +801,7 @@ public class ImportService extends WebService {
         }
     }
 
-    
+
   //**************************************************************************
   //** getRoute
   //**************************************************************************
