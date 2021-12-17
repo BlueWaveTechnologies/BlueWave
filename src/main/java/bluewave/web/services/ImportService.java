@@ -1,6 +1,6 @@
 package bluewave.web.services;
 import bluewave.graph.Neo4J;
-import bluewave.utils.Python;
+import bluewave.utils.Routing;
 import bluewave.utils.Address;
 import static bluewave.graph.Utils.*;
 import static bluewave.utils.StringUtils.*;
@@ -728,6 +728,7 @@ public class ImportService extends WebService {
         }
     }
 
+    
   //**************************************************************************
   //** getRoute
   //**************************************************************************
@@ -740,25 +741,9 @@ public class ImportService extends WebService {
         BigDecimal[] end = Address.getCoords("port_of_entry", "id", portOfEntry+"", graph);
         if (end==null) throw new Exception("Failed to find coordinates for portOfEntry " + portOfEntry);
 
+        JSONObject geoJSON = Routing.getGreatCircleRoute(start, end, 50);
+        //JSONObject geoJSON = Routing.getShippingRoute(start, end, method);
 
-      //Get script
-        javaxt.io.File[] scripts = Python.getScriptDir().getFiles("shipment_route.py", true);
-        if (scripts.length==0) throw new Exception("Script not found");
-
-
-      //Compile command line options
-        ArrayList<String> params = new ArrayList<>();
-        params.add("-o="+start[0]+","+start[1]);
-        params.add("-d="+end[0]+","+end[1]);
-        params.add("--entrymode="+method);
-
-
-      //Execute script
-        JSONObject geoJSON = Python.executeScript(scripts[0], params);
-
-        if (geoJSON.get("features").toJSONArray().isEmpty()){
-            console.log(fei, portOfEntry, params);
-        }
 
         return geoJSON;
     }
