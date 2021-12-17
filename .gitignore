@@ -1,6 +1,7 @@
 target/
 temp/
 /data/
+__pycache__/
 
 web/branding/
 web/test/
@@ -9,6 +10,7 @@ web/images/thumbnails/
 [Cc]onfig.json
 nb-configuration.xml
 
+*.log
 *.DS_Store
 *.dll
 **/test.html*
