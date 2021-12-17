@@ -150,7 +150,6 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     };
 
 
-
   //**************************************************************************
   //** createBody
   //**************************************************************************
@@ -295,8 +294,10 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 row.set("Entry/DOC/Line", entry.entry+"/"+entry.doc+"/"+entry.line);
                 row.set("Date",entry.date);
                 row.set("CC",entry.country_of_origin);
-                row.set('Quantity', formatNumber(entry.quantity));
-                row.set('Value', "$"+formatNumber(entry.value));                
+                var quantity = parseFloat(entry.quantity);
+                if (!isNaN(quantity)) row.set('Quantity', formatNumber(Math.round(quantity)));                
+                var value = parseFloat(entry.value);
+                if (!isNaN(value)) row.set('Value', "$"+formatNumber(value));                                               
             }
         });
         
@@ -340,7 +341,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         map.addLayer(layer.localCache);
 
 
-        var points = map.createVectorLayer();
+        layer.routes = map.createVectorLayer();
+        layer.points = map.createVectorLayer();
         
         
         
@@ -368,7 +370,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
         map.update = function(){
             
-            establishment.establishments.forEach((d, i)=>{                                                      
+            var facilities = [];
+            establishment.establishments.forEach((d, i)=>{
                 var address = d.address;
                 var lat = parseFloat(address.lat);
                 var lon = parseFloat(address.lon);
@@ -384,24 +387,209 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                         geometry: geom
                     });
                     feature.setStyle(style);
-                    points.addFeature(feature);                
+                    layer.points.addFeature(feature);    
+                    
+                    facilities.push(d.fei);
                 }                
             });            
 
 
-            updateExtents(points);
-            map.setExtent(points.getExtent());                             
+            getShipments(facilities);
+            
+
+            updateExtents(layer.points);
+            map.setExtent(layer.points.getExtent());                             
         };
         
         
         map.clear = function(){
-            if (points.clear) points.clear();
+            if (layer.points.clear) layer.points.clear();
+            if (layer.routes.clear) layer.routes.clear();
         };
 
 
       //Resize map when ready
         onRender(parent, function(){
             map.resize();
+        });
+    };
+    
+    
+  //**************************************************************************
+  //** getShipments
+  //**************************************************************************    
+    var getShipments = function(facilities){
+        
+        var shipments = [];
+        
+        var getShipmentSummary = function(){
+
+            if (facilities.length===0){
+                getRoutes(shipments);
+                return;
+            }
+            
+            var fei = facilities.shift();
+            
+            get("import/shipments?fei=" + fei + "&establishment=" + establishment.type, {
+                success: function(csv){
+                    var rows = parseCSV(csv, ",");      
+                    var header = rows.shift();
+                    var createRecord = function(row){
+                        var r = {};                    
+                        header.forEach((field, i)=>{                                                      
+                            r[field] = row[i];
+                        });
+                        return r;
+                    };
+
+                    
+                    rows.forEach((row)=>{
+                        var r = createRecord(row);
+                        r.fei = fei;                     
+                        shipments.push(r);
+                    });
+                    
+                    getShipmentSummary();
+                },
+                failure: function(){
+                    getShipmentSummary();
+                }
+            });            
+            
+        };
+        getShipmentSummary();
+    };
+    
+    
+  //**************************************************************************
+  //** getRoutes
+  //**************************************************************************
+    var getRoutes = function(shipments){
+        
+        
+      //Generate list of unique routes
+        var routes = [];
+        var uniqueRoutes = {};
+        shipments.forEach((shipment)=>{
+            
+            var key = shipment.fei+"_"+shipment.port+"_"+shipment.method;
+            uniqueRoutes[key] = {
+                fei: shipment.fei,
+                port: shipment.port,
+                method: shipment.method
+            };
+        });        
+        for (var key in uniqueRoutes) {
+            if (uniqueRoutes.hasOwnProperty(key)){   
+                routes.push(uniqueRoutes[key]);
+            }
+        }
+        
+        var arr = [];
+        
+        var getRoute = function(){
+            if (routes.length===0){
+                renderRoutes(arr, shipments);
+                return;
+            }
+            
+            var route = routes.shift();
+                        
+            
+            get("import/route?facility=" + route.fei + "&portOfEntry=" + route.port + "&method=" + route.method, {
+                success: function(json){                    
+                    if (json.features.length>0){                    
+                        route.path = json.features;
+                        arr.push(route);                    
+                    }
+                    else{
+                        if (route.method==="land"){
+                            route.method = "sea";
+                            routes.push(route);
+                        }
+                        else if (route.method==="sea"){
+                            route.method = "air";
+                            routes.push(route);
+                        }
+                    }
+                    
+                    getRoute();
+                },
+                failure: function(){                    
+                    getRoute();
+                }
+            });              
+        };
+        getRoute();
+    };
+    
+    
+  //**************************************************************************
+  //** renderRoutes
+  //**************************************************************************
+    var renderRoutes = function(routes, shipments){
+        console.log(routes);  
+        
+        
+        routes.forEach((route)=>{            
+            var fei = route.fei;
+            var port = route.port;
+            var method = route.method;
+            route.path.forEach((path)=>{  
+                var feature = path.geometry;
+                var properties = path.properties;
+                
+
+                if (feature.type.toLowerCase()==="linestring"){
+                    
+                    var coords = [];
+                    var isFirstXPositive = feature.coordinates[0][0]>=0;
+                    var crossesDateLine=null;
+                    for (var i=0; i<feature.coordinates.length; i++){
+                        var coord = feature.coordinates[i];
+                        var x = coord[0];
+                        if (x<0 && isFirstXPositive){
+
+                            if (i>0 && crossesDateLine===null){
+                                crossesDateLine = feature.coordinates[i-1][0]>90;
+                            }
+
+                            if (crossesDateLine){
+                                coord[0] = 180 + (180+x);
+                            }
+                        }
+
+                        if (x>0 && !isFirstXPositive){
+
+                            if (i>0 && crossesDateLine===null){
+                                crossesDateLine = feature.coordinates[i-1][0]<-90;
+                            }
+
+                            if (crossesDateLine){
+                                coord[0] = -180 - (180-x);
+                            }
+                        }
+                        coords.push(coord);
+                    }
+                    
+                    
+                    var g = new ol.geom.LineString(coords);
+                    g.transform('EPSG:4326', 'EPSG:3857');
+                    layer.routes.addFeature(g);                      
+                }
+
+            });
+        });
+        
+        updateExtents(layer.routes);
+        
+        
+        shipments.forEach((shipment)=>{
+            console.log(shipment);
+            var fei = shipment.fei;
+            var port = shipment.port;
+            var method = shipment.method;
         });
     };
 
