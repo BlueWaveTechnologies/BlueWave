@@ -276,7 +276,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 {header: 'CC', width:'35'},
                 {header: 'Shipment Method', width:'75'},
                 {header: 'Product Code', width:'75'},
-                {header: 'Product Name', width:'75'},
+                {header: 'Product Name', width:'100%'},
                 {header: 'Quantity', width:'120', align:'right'},
                 {header: 'Value', width:'120', align:'right'},
 //                {header: 'Manufacturer', width:'75'},
@@ -319,11 +319,21 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
       //Create map
         map = new com.kartographia.Map(parent,{
             basemap: null,
+            center: [40, -100], //lat, lon (center of the US)
+            zoom: 0, //initial zoom
             maxZoom: 10,
             coordinateFormat: "DD"
         });
-        map.setCenter(30, 1, 3); //atlantic ocean
-
+        
+        
+      //Set min zoom level (not sure this does anything)
+        var v = map.getMap().getView();
+        v.setMinZoom(0);
+        
+        
+      //Create waitmask
+        map.waitmask = new javaxt.express.WaitMask(parent);
+        
 
         layer.basemap = new ol.layer.Tile({
             source: new ol.source.XYZ({
@@ -367,17 +377,32 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             stroke: stroke
         });        
         
+        
+
 
         map.update = function(){
             
+            var points = [];
             var facilities = [];
+            var easternFacilities = 0;
+            var westernFacilities = 0;
             establishment.establishments.forEach((d, i)=>{
                 var address = d.address;
                 var lat = parseFloat(address.lat);
                 var lon = parseFloat(address.lon);
                 
                 if (!isNaN(lat) && !isNaN(lon)){
+                    
+                    if (lon>90){
+                        easternFacilities++;
+                    }
+                    else{
+                        if (lon>0){
+                            westernFacilities++;
+                        }
+                    }
                 
+                    points.push([lon, lat]);
                     var geom = new ol.geom.Point([lon, lat]);
                     geom.transform('EPSG:4326', 'EPSG:3857');
 
@@ -394,11 +419,28 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             });            
 
 
-            getShipments(facilities);
+
+          //Update layer extents
+            updateExtents(layer.points);
             
 
-            updateExtents(layer.points);
-            map.setExtent(layer.points.getExtent());                             
+          //Set map extents to include all the facilities and the center of the US
+            points.push([-100, 40]);
+            var geom = new ol.geom.LineString(points);
+            geom.transform('EPSG:4326', 'EPSG:3857');
+            var extent = geom.getExtent(); 
+            map.setExtent(extent);  
+            
+            
+          //Adjust center point as needed
+            if (easternFacilities>0){
+                if (westernFacilities==0){
+                    map.setCenter(30,179);
+                }
+            }
+            
+            getShipments(facilities);
+            
         };
         
         
@@ -419,6 +461,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
   //** getShipments
   //**************************************************************************    
     var getShipments = function(facilities){
+        map.waitmask.show();
         
         var shipments = [];
         
@@ -466,7 +509,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
   //** getRoutes
   //**************************************************************************
     var getRoutes = function(shipments){
-        
+
         
       //Generate list of unique routes
         var routes = [];
@@ -529,8 +572,16 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
   //** renderRoutes
   //**************************************************************************
     var renderRoutes = function(routes, shipments){
-        console.log(routes);  
-        
+        map.waitmask.hide();
+
+
+        var key = "lines";
+        var maxVal = 0;
+        shipments.forEach((shipment)=>{
+            var val = parseFloat(shipment[key]);
+            if (!isNaN(val)) maxVal+=val;
+        });
+       
         
         routes.forEach((route)=>{            
             var fei = route.fei;
@@ -538,7 +589,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             var method = route.method;
             route.path.forEach((path)=>{  
                 var feature = path.geometry;
-                var properties = path.properties;
+                //var properties = path.properties;
                 
 
                 if (feature.type.toLowerCase()==="linestring"){
@@ -574,9 +625,29 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     }
                     
                     
-                    var g = new ol.geom.LineString(coords);
-                    g.transform('EPSG:4326', 'EPSG:3857');
-                    layer.routes.addFeature(g);                      
+
+                    var total = 0;
+                    shipments.forEach((shipment)=>{
+                        if (shipment.port===port){
+                            var val = parseFloat(shipment[key]);
+                            if (!isNaN(val)) total+=val;
+                        }
+                    });
+                    var d = total/maxVal;
+
+                    
+                    var geom = new ol.geom.LineString(coords);
+                    geom.transform('EPSG:4326', 'EPSG:3857');  
+                    layer.routes.addFeature(new ol.Feature({
+                        geometry: geom,
+                        style: new ol.style.Style({
+                            stroke: new ol.style.Stroke({
+                                width: 3*d,
+                                //color: "#3399cc", //blue
+                                color: "#FF3C38" //red
+                            })
+                        })
+                    }));
                 }
 
             });
@@ -585,12 +656,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         updateExtents(layer.routes);
         
         
-        shipments.forEach((shipment)=>{
-            console.log(shipment);
-            var fei = shipment.fei;
-            var port = shipment.port;
-            var method = shipment.method;
-        });
+
     };
 
 
