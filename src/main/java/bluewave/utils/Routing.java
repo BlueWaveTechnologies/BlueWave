@@ -24,6 +24,10 @@ public class Routing {
   //**************************************************************************
   //** getGreatCircleRoute
   //**************************************************************************
+  /** Used to compute a great-circle route between two points on the earth
+   *  @param numPoints Number of points in the route. The more points, the
+   *  smoother the line will be
+   */
     public static JSONObject getGreatCircleRoute(BigDecimal[] start, BigDecimal[] end, int numPoints) throws Exception {
 
         GlobalCoordinates c1 = new GlobalCoordinates(start[0].doubleValue(), start[1].doubleValue());
@@ -74,9 +78,13 @@ public class Routing {
         return geoJSON;
     }
 
+
   //**************************************************************************
   //** getShippingRoute
   //**************************************************************************
+  /** Used to compute a shipping route between two points on the earth
+   *  @param shippingMethod Mode of transport (land, sea, air)
+   */
     public static JSONObject getShippingRoute(BigDecimal[] start, BigDecimal[] end, String shippingMethod) throws Exception {
       //Get script
         javaxt.io.File[] scripts = Python.getScriptDir().getFiles("shipment_route.py", true);
@@ -90,12 +98,9 @@ public class Routing {
         params.add("--entrymode="+shippingMethod);
 
 
-      //Execute script
-        JSONObject geoJSON = Python.executeScript(scripts[0], params);
-
-
-
-        return geoJSON;
+      //Execute script and return results
+        JSONObject geoJson = Python.executeScript(scripts[0], params);
+        return geoJson;
     }
 
 }
