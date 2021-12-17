@@ -427,17 +427,29 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
         parent.appendChild(table);
         
-
+        var currEstablishment;
 
 
         return {
             clear: function(){
+                currEstablishment = null;
                 mainPanel.clear();
                 importsGrid.clear();  
                 if (map) map.clear(); 
             },
             update: function(panel){
-
+                
+                
+              //Check if we need to refresh the panel
+                if (currEstablishment){
+                    if (!isDirty(currEstablishment, establishment)){
+                        return;
+                    }
+                }
+                currEstablishment = establishment;
+                
+                
+                
 
               //Update the importsGrid
                 importsGrid.update();        
@@ -487,7 +499,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             update: function(panel){
                 console.log(panel);
                 
-                div.innerHTML = "Exams gor here!";
+                div.innerHTML = "Exams go here!";
             }
         };
 
@@ -500,21 +512,102 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     var createProductsPanel = function(parent){
 
 
+      //Create table
+        var table = createTable();
+        parent.appendChild(table);
+        var tbody = table.firstChild;
+        var tr, td;
+
+
+      //Create charts
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.width = "100%";
+        td.style.height = "100%";
+        tr.appendChild(td);
+        
+
+
+      //Create grid
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+        
         var div = document.createElement("div");
-        div.style.height = "100%";
-        //div.style.backgroundColor = "#FF8280";
+        div.style.width = "100%";
+        div.style.height = "250px";
+        div.style.position = "relative";
+        div.style.overflowX = "auto";
         parent.appendChild(div);
 
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        innerDiv.style.position = "absolute";
+        div.appendChild(innerDiv);
+        
+
+        var grid = new javaxt.dhtml.DataGrid(innerDiv, {
+            style: config.style.table,
+            columns: [
+                {header: 'Product Name', width:'100%'},
+                {header: 'Product Code', width:'75'},                
+                {header: 'Quantity', width:'120', align:'right'},
+                {header: 'Value', width:'120', align:'right'}
+            ],
+            update: function(row, entry){      
+                console.log(entry.product_name);
+                row.set("Product Name", entry.product_name);
+                row.set("Product Code", entry.product_code);
+                var quantity = parseFloat(entry.quantity);
+                if (!isNaN(quantity)) row.set('Quantity', formatNumber(Math.round(quantity)));                
+                var value = parseFloat(entry.value);
+                if (!isNaN(value)) row.set('Value', "$"+formatNumber(value));                                               
+            }
+        });
+                           
+        
+        
+        var currEstablishment;
         return {
             clear: function(){
-
+                grid.clear();
             },
             update: function(){
+                
+                
+              //Check if we need to refresh the panel
+                if (currEstablishment){
+                    if (!isDirty(currEstablishment, establishment)){
+                        return;
+                    }
+                }
+                currEstablishment = establishment;                
+                
+                
 
               //Get products associated with the establishmentIDs
+                grid.clear();
                 get("import/products?fei=" + establishment.fei.join(",") + "&establishment=" + establishment.type, {
                     success: function(csv){
-                        console.log(csv);
+                        var rows = parseCSV(csv, ",");      
+                        var header = rows.shift();
+                        var createRecord = function(row){
+                            var r = {};                    
+                            header.forEach((field, i)=>{                                                      
+                                r[field] = row[i];
+                            });
+                            return r;
+                        };
+                        
+                        var data = [];
+                        rows.forEach((row)=>{
+                            data.push(createRecord(row));
+                        });
+                        grid.load(data);
                     }
                 });
 
@@ -1134,6 +1227,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var isDirty = javaxt.dhtml.utils.isDirty;
     var createTable = javaxt.dhtml.utils.createTable;
     var onRender = javaxt.dhtml.utils.onRender;
     var getBasemap = bluewave.utils.getBasemap;
