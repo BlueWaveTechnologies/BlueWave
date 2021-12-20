@@ -101,6 +101,8 @@ bluewave.charts.LineChart = function(parent, config) {
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
         var stack = chartConfig.stack;
+        var ticks = chartConfig.ticks;
+        if (isNaN(ticks)) ticks = 10;
 
 
         var data1 = data[0];
@@ -151,7 +153,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
       //Render X/Y axis
-        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption);
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption, "lineChart", ticks);
         x = axes.x;
         y = axes.y;
 
@@ -179,18 +181,15 @@ bluewave.charts.LineChart = function(parent, config) {
             .key( (d) => d[xKey])
             .entries(mergedData)
 
-        console.log("data", mergedData)
-        console.log("groupedStackData", groupedStackData)
 
         let stackGroup=[];
         let stackLength = groupedStackData[0].values.length;
         for (let i=0; i<stackLength; i++){
             stackGroup.push(i);
         }
-            console.log(stackGroup)
-        // console.log(subgroups)
+
         var stackedData = d3.stack()
-            // .keys(subgroups) no idea why this doesn'r work
+            // .keys(subgroups) no idea why this doesn't work
             .keys(stackGroup)
             .value(function (d, key) {
 
@@ -199,7 +198,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
             })
             (groupedStackData)
-        console.log(stackedData)
+
 
         var colors = bluewave.utils.getColorPalette(true);
 

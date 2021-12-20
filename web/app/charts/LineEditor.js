@@ -441,6 +441,11 @@ bluewave.charts.LineEditor = function(parent, config) {
                                 }
 
                             ]
+                        },
+                        {
+                            name: "ticks",
+                            label: "Ticks",
+                            type: "text"
                         }
                     ]
                 },
@@ -512,6 +517,12 @@ bluewave.charts.LineEditor = function(parent, config) {
         var scale = chartConfig.scaleOption;
         scalingField.setValue(scale==="logarithmic" ? "logarithmic" : "linear");
 
+        createSlider("ticks", form, "", 0, 50, 1);
+        var ticks = chartConfig.ticks;
+        if (isNaN(ticks)) ticks = 10;
+        chartConfig.ticks = ticks;
+        form.findField("ticks").setValue(ticks);
+
 
       //Process onChange events
         form.onChange = function(){
@@ -542,6 +553,7 @@ bluewave.charts.LineEditor = function(parent, config) {
             chartConfig.yLabel = settings.yLabel;
             chartConfig.endTags = settings.endTags;
             chartConfig.stack = settings.stack;
+            chartConfig.ticks = settings.ticks;
             createLinePreview();
         };
 
