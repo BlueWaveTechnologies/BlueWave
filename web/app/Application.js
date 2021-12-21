@@ -310,10 +310,11 @@ bluewave.Application = function(parent, config) {
             backButton.hide();
             nextButton.hide();
         };
-
+        
 
         carousel.onChange = function(currPanel){
             if (currApp){
+    
 
               //Check if the currPanel is a clone created by the carousel.
               //If so, replace content with the currApp
@@ -326,7 +327,6 @@ bluewave.Application = function(parent, config) {
 
               //Update title
                 if (currApp.getTitle) me.setTitle(currApp.getTitle());
-
 
               //Update buttons
                 if (apps.length>1){
@@ -370,7 +370,6 @@ bluewave.Application = function(parent, config) {
         currUser = user;
         me.setTitle("");
         currDashboardItem = null;
-
 
       //If no user is supplied, then we are running in stand-alone mode
         if (!user){
@@ -469,7 +468,6 @@ bluewave.Application = function(parent, config) {
   /** Used to manage updates by other users
    */
     var onChange = function(op, model, id, userID){
-
 
       //Update currUser as needed
         if (model=="User" && (op=="update" || op=="delete")){
@@ -701,6 +699,7 @@ bluewave.Application = function(parent, config) {
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
             var panel = panels[i];
+
             var el = panel.div;
             if (panel.isVisible){
                 currPage = el;
@@ -766,7 +765,7 @@ bluewave.Application = function(parent, config) {
 
 
         if (app === currApp){
-            //console.log("Already in view!");
+            // console.log("Already in view!");
             me.setTitle(app.getTitle());
             return app;
         }
@@ -783,6 +782,7 @@ bluewave.Application = function(parent, config) {
             }
 
             currApp = app;
+
             return app;
         }
     };
@@ -1008,7 +1008,11 @@ bluewave.Application = function(parent, config) {
       //Show/hide menu items based on current app
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
-        var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
+        // get title of page
+        var pageTitle = document.getElementsByClassName("dashboard-title noselect")[0].innerHTML 
+        // compare page Title to sys admin title to determine if we are on the Sys Admin page
+        var isAdminVisible = (pageTitle === "System Administration")
+
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
 
@@ -1021,7 +1025,14 @@ bluewave.Application = function(parent, config) {
             if (menuItem.label==="Dashboard Home" && isHomepageVisible){
                 menuItem.hide();
             }
-
+            if (menuItem.label==="Create Dashboard"){
+                if (isExplorerVisible && pageTitle === "Create Dashboard"){
+                    menuItem.hide();
+                }
+                else menuItem.show();
+            }            
+            
+     
             if (menuItem.label==="Edit Dashboard"){
                 if (isExplorerVisible && explorerPanel.getView()==="Dashboard"){
                     menuItem.show();
@@ -1035,9 +1046,17 @@ bluewave.Application = function(parent, config) {
                 if (menuItem.label==="Dashboard Home"){
                     menuItem.show();
                 }
-                else{
+
+                else if (menuItem.label==="Create Dashboard"){
+                    menuItem.show();
+                }
+    
+                else if (menuItem.label==="System Admininstration"){
                     menuItem.hide();
                 }
+
+                else menuItem.hide();
+
             }
         }
 
