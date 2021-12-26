@@ -178,10 +178,12 @@ bluewave.charts.LineChart = function(parent, config) {
         if (stack){
         //Nest merged data object by X-axis value for stacked area
         var groupedStackData = d3.nest()
+            // .key( (d) => d[group ? group : xKey])
             .key( (d) => d[xKey])
             .entries(mergedData)
 
-
+console.log(groupedStackData)
+// console.log(mergedData)
         let stackGroup=[];
         let stackLength = groupedStackData[0].values.length;
         for (let i=0; i<stackLength; i++){
@@ -197,8 +199,8 @@ bluewave.charts.LineChart = function(parent, config) {
                 return v[yKey];
 
             })
-            (groupedStackData)
-
+            (groupedStackData);
+console.log(stackedData)
 
         var colors = bluewave.utils.getColorPalette(true);
 
@@ -278,6 +280,35 @@ bluewave.charts.LineChart = function(parent, config) {
             arr.push(sumData);
         }
 
+
+        var accumulate = true;
+        if(accumulate){
+        //Accumulate y-axis values if checked
+        
+        arr = accumulateValues(arr);
+
+        maxData = 
+
+                    //Right now axes are being set by "max" data set, so x-axis scale is being set by that object which could cause problems
+                    //Might need to overhaul how max/min are being established when the scale is set. 
+                    d3.max(arr)
+                    //actual max but needs an object
+                    // d3.max(arr, function(d){
+                    //     return d3.max(d, (d)=>d.value)
+                    // })
+                console.log(maxData)
+
+            axes.xAxis.remove();
+            axes.yAxis.remove();
+        axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption, "lineChart", ticks);
+        x = axes.x;
+        y = axes.y;
+
+        }
+      
+        // y.scale = d3.scaleLinear()
+        //     .domain([minVal, maxVal])
+        //     .range(axisRange);
 
 
       //Update chartConfig with line colors
@@ -694,6 +725,23 @@ bluewave.charts.LineChart = function(parent, config) {
         return x => Math.abs(x /= bandwidth) <= 1 ? 0.75 * (1 - x * x) / bandwidth : 0;
     };
 
+  //**************************************************************************
+  //** accumulateValues
+  //**************************************************************************
+    var accumulateValues = function(dataArray){
+
+        return dataArray.map(function(line){
+
+            let accVal = 0;
+            return line.map(function(d){
+
+                accVal += parseFloat(d.value);
+                return { key:d.key, value:accVal };       
+            })
+
+        });
+
+    };
 
   //**************************************************************************
   //** Utils
