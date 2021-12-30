@@ -23,7 +23,7 @@ bluewave.chart.Line = function(config) {
         },
         point: {
             color: "#6699CC",
-            radius: 3
+            radius: 0
         },
         label: "",
         smoothing: "none"
@@ -50,10 +50,9 @@ bluewave.chart.Line = function(config) {
         }
     };
     
-    
-    this.getConfig = function(){
-        return config;
-    };
+  //**************************************************************************
+  //** Setters
+  //**************************************************************************
     
     this.setColor = function(color){
         color = getColor(color);
@@ -135,7 +134,32 @@ bluewave.chart.Line = function(config) {
         }    
         config.smoothing = smoothing;
     };
+
+    this.setXAxis = function(xAxis){
+        config.xAxis = ""+xAxis;
+    }
+
+    this.setYAxis = function(yAxis){
+        config.yAxis = ""+yAxis;
+    }
+
+  //**************************************************************************
+  //** Getters
+  //**************************************************************************
+
+    this.getConfig = function () {
+        return config;
+    };
+
+    this.getColor = () => config.color;
+    this.getWidth = () => config.width;
+    this.getStyle = () => config.style;
+    this.getFill = () => config.fill;
+    this.getPoint = () => config.point;
+    this.getLabel = () => config.label;
+    this.getSmoothing = () => config.smoothing;
     
+  
     
     var getColor = function(color){
         //TODO: validate color

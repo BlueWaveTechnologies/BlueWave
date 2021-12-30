@@ -741,6 +741,8 @@ bluewave.charts.LineEditor = function(parent, config) {
         let n = parseInt(datasetID);
         if (!isNaN(n)){ //Single line edit case
 
+
+            //for these I think I'm gonna need to do chartConfig.layers[i].line.setThing()
             var colors = bluewave.utils.getColorPalette(true);
 
             if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = colors[n%colors.length];
@@ -781,6 +783,17 @@ bluewave.charts.LineEditor = function(parent, config) {
 
             form.onChange = function(){
                 let settings = form.getData();
+
+                // chartConfig["lineColor" + n] = settings.lineColor;
+                // chartConfig["lineStyle" + n] = settings.lineStyle;
+                // chartConfig["lineWidth" + n] = settings.lineThickness;
+                // chartConfig["opacity" + n] = settings.lineOpacity/100;
+
+                // chartConfig["startOpacity" + n] = settings.startOpacity/100;
+                // chartConfig["endOpacity" + n] = settings.endOpacity/100;
+
+                // chartConfig["pointColor" + n] = settings.pointColor;
+                // chartConfig["pointRadius" + n] = settings.pointRadius;
 
                 chartConfig["lineColor" + n] = settings.lineColor;
                 chartConfig["lineStyle" + n] = settings.lineStyle;

@@ -22,9 +22,10 @@ bluewave.charts.LineChart = function(parent, config) {
     };
     var svg, chart, plotArea;
     var x, y;
-    var dataSets;
     var scaleOption;
-
+    
+    var dataSets=[];
+    var layers=[];
 
   //**************************************************************************
   //** Constructor
@@ -54,13 +55,24 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
+        var parent = svg.node().parentNode;
+console.log("update", data)
 
         if (arguments.length===0){
+
             //renderChart
         }
-        else{
 
-            var parent = svg.node().parentNode;
+        if (arguments.length===1){
+            
+            //If data isn't in the arguments use layers data
+            var data = layers.map( d => d.data );
+            onRender(parent, function(){
+                renderChart(chartConfig, data, parent);
+            });
+        }
+        else{ 
+            layers = data.slice();
             onRender(parent, function(){
                 renderChart(chartConfig, data, parent);
             });
@@ -71,9 +83,21 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** addLine
   //**************************************************************************
-    this.addLine = function(line, data){
-        console.log(line.getConfig());
-        console.log(data);
+    this.addLine = function(line, data, chartConfig){
+        // console.log(line.getConfig());
+        // console.log(data);
+
+        //maybe data.foreach   if !line line = blah 
+
+        
+        layers.push(
+            {
+                line: line,
+                data: data
+            }
+        );
+//I think I have to push the data to a new data array
+        if(chartConfig) chartConfig.layers = layers;
     };
 
 
@@ -82,6 +106,34 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     var renderChart = function(chartConfig, data, parent){
         me.clear();
+
+        
+        // layers.forEach(function(line){
+        //     data.push(line.data)
+        // });
+
+      
+
+        var data1 = data[0].slice();
+        dataSets = data.slice();
+        data = data1;
+
+        //if layers is an array of data, convert to objects with line and data
+        for (let i = 0; i < layers.length; i++) {
+
+            if (!layers[i].hasOwnProperty("line")) {
+
+                let line = new bluewave.chart.Line();
+                layers[i] = { line: line, data: layers[i] }
+            }
+
+        };
+
+        chartConfig.layers = layers;
+        
+
+        //I can't push to layers here since renderChart gets called a million times
+
 
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
@@ -99,12 +151,19 @@ bluewave.charts.LineChart = function(parent, config) {
                 "translate(" + margin.left + "," + (margin.top) + ")"
             );
 
-
+console.log("chartconfig", chartConfig)
 
 
       //Check that axis exist and are populated
         var xKey = chartConfig.xAxis;
         var yKey = chartConfig.yAxis;
+
+        if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)){
+            //Use first line data just to set initial max/min/axes
+            xKey = layers[0].line.getConfig().xAxis;
+            yKey = layers[0].line.getConfig().yAxis;
+        }
+
         if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
 
@@ -118,12 +177,15 @@ bluewave.charts.LineChart = function(parent, config) {
         var stack = chartConfig.stack;
 
 
-        var data1 = data[0];
-        dataSets = data;
-        data = data1;
+        // var data1 = data[0];
+        // dataSets = data.slice();
+        // data = data1;
 
+console.log("dataSets", dataSets)
+console.log(data1)
         var globalxKeyType = getType(data1[0][xKey]);
 
+        // d3.merge(layers, dataSets);
         var mergedData = d3.merge(dataSets);
 
 
@@ -187,6 +249,17 @@ bluewave.charts.LineChart = function(parent, config) {
             dataSets = tempDataSets;
             var subgroups = groupData.map(function(d) { return d["key"]; });
         }
+
+
+
+        // dataSets.forEach(function(d){
+        //     if(typeof d !== object){
+
+        //     }
+
+        // });
+
+        //I think I want to merge dataSets and layers?
 
         if (stack){
         //Nest merged data object by X-axis value for stacked area
@@ -253,25 +326,45 @@ bluewave.charts.LineChart = function(parent, config) {
                 me.onClick(this, datasetID, d);
             });
 
-        }
+        };
 
 
 
       //Create dataset to render
         var arr = [];
-        for (let i=0; i<dataSets.length; i++){
+        // for (let i=0; i<dataSets.length; i++){
+            for (let i=0; i<layers.length; i++){
 
-            let xAxisN = chartConfig[`xAxis${i+1}`];
-            let yAxisN = chartConfig[`yAxis${i+1}`];
+            // let xAxisN = chartConfig[`xAxis${i+1}`];
+            // let yAxisN = chartConfig[`yAxis${i+1}`];
+            
 
+            var lineConfig = layers[i].line.getConfig();
+            
+            //test hack
+            // xAxisN = "x"
+            // yAxisN = "y"
+
+            let xAxisN = lineConfig.xAxis;
+            let yAxisN = lineConfig.yAxis;
+
+            //Temp hack until lineEditor is set
+            if(!xAxisN || !yAxisN){
+             xAxisN = chartConfig.xAxis;
+             yAxisN = chartConfig.yAxis;
+            }
+  
             //If axes not picked, skip pushing/rendering this dataset
             if ((!xAxisN || !yAxisN) && !group && i>0) continue;
 
-            if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
+            // if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
 
-                xKey = xAxisN;
-                yKey = yAxisN;
-            }
+            //     xKey = xAxisN;
+            //     yKey = yAxisN;
+            // }
+
+            xKey = xAxisN;
+            yKey = yAxisN;
 
             // if(!xKey || !yKey) continue;
 
@@ -281,20 +374,31 @@ bluewave.charts.LineChart = function(parent, config) {
                     return d3.sum(d,function(g){
                         return g[yKey];
                     });
-            }).entries(dataSets[i]);
+            // }).entries(dataSets[i]);
+            }).entries(layers[i].data);    
 
 
           //Smooth the data as needed
-            var smoothingType = chartConfig["smoothingType" + i];
+            // var smoothingType = chartConfig["smoothingType" + i];
+            var smoothingType = lineConfig.smoothing;
             if (smoothingType){
-                var smoothingValue = chartConfig["smoothingValue" + i];
+                // var smoothingValue = chartConfig["smoothingValue" + i];
+                var smoothingValue = lineConfig.smoothingValue;
                 applySmoothing(smoothingType, smoothingValue, sumData);
             }
 
-            arr.push(sumData);
+            arr.push( {lineConfig: lineConfig, sumData: sumData} );
+
+            //Make sure each push to layers is unique
+            // if (layers.length < dataSets.length) {
+            //     var line = new bluewave.chart.Line();
+            //     me.addLine(line, sumData, chartConfig);
+            // }
+
         }
 
-
+console.log("layers",layers)
+console.log("arr", arr)
 
       //Update chartConfig with line colors
         var colors = bluewave.utils.getColorPalette(true);
@@ -326,11 +430,17 @@ bluewave.charts.LineChart = function(parent, config) {
         for (let i=0; i<arr.length; i++){
 
             if(stack) break;
-            var sumData = arr[i];
+            var sumData = arr[i].sumData;
 
-            let lineColor = chartConfig["lineColor" + i];
-            let startOpacity = chartConfig["startOpacity" + i];
-            let endOpacity = chartConfig["endOpacity" + i];
+            let fillConfig = arr[i].lineConfig.fill;
+
+            let lineColor = fillConfig.color;
+            let startOpacity = fillConfig.startOpacity;
+            let endOpacity = fillConfig.endOpacity;
+            // let lineColor = chartConfig["lineColor" + i];
+            // let startOpacity = chartConfig["startOpacity" + i];
+            // let endOpacity = chartConfig["endOpacity" + i];
+           
             let keyType = getType(sumData[0].key);
 
             var getX = function(d){
@@ -380,23 +490,35 @@ bluewave.charts.LineChart = function(parent, config) {
         for (let i=0; i<arr.length; i++){
 
             if(stack) break;
-            var sumData = arr[i];
 
-            let lineColor = chartConfig["lineColor" + i];
-            let lineStyle = chartConfig["lineStyle" + i];
-            let lineWidth = chartConfig["lineWidth" + i];
-            let opacity = chartConfig["opacity" + i];
+            var sumData = arr[i].sumData;
+            let lineConfig = arr[i].lineConfig;
+            let pointConfig = lineConfig.point;
 
-            let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
-            if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
-            let pointColor = chartConfig["pointColor" + i];
+            let lineStyle = lineConfig.style;
+            let lineWidth = lineConfig.width;
+            let opacity = lineConfig.opacity;
+            // let lineColor = chartConfig["lineColor" + i];
+            // let lineColor = chartConfig.layers[i].line.getColor()
+            let lineColor = lineConfig.color;
+            // let lineStyle = chartConfig["lineStyle" + i];
+            // let lineWidth = chartConfig["lineWidth" + i];
+            // let opacity = chartConfig["opacity" + i];
+
+            // let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
+            // if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
+            // let pointColor = chartConfig["pointColor" + i];
+            
+            let pointRadius = pointConfig.radius;
+            let pointColor = pointConfig.color;
 
             if (lineWidth == null) lineWidth = 1;
             if (opacity == null) opacity = 1;
             if (lineStyle == null) lineStyle = "solid";
 
 
-            var smoothingType = chartConfig["smoothingType" + i];
+            // var smoothingType = chartConfig["smoothingType" + i];
+            var smoothingType = lineConfig.smoothing;
 
             var getLine = function(){
                 if (smoothingType && smoothingType==="spline"){
