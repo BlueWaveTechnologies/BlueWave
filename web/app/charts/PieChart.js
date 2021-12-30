@@ -245,7 +245,7 @@ bluewave.charts.PieChart = function(parent, config) {
                     else if (heightDiff > widthDiff) {
                         scale = height/box.height;
                         x = width/2;
-                        y = (box.height+box.y); //not quite right...
+                        y = (box.height); //not quite right...
                     }
 
 
@@ -256,12 +256,14 @@ bluewave.charts.PieChart = function(parent, config) {
                         "scale(" + scale + ")"
                     );
 
-
                   //Update position
-                    var d = javaxt.dhtml.utils.getRect(parent).y - javaxt.dhtml.utils.getRect(pieChart.node()).y;
+                    var dy = javaxt.dhtml.utils.getRect(parent).y - javaxt.dhtml.utils.getRect(pieChart.node()).y;
+                    var dx = javaxt.dhtml.utils.getRect(parent).x - javaxt.dhtml.utils.getRect(pieChart.node()).x;
+                    
                     pieChart
                       .attr("transform",
-                        "translate(" + x + "," + (y+d) + ") " +
+                        // "translate(" + (x) + "," + (y+dy) + ") " +
+                        "translate(" + (x+dx) + "," + (y+dy) + ") " +
                         "scale(" + scale + ")"
                     );
 
@@ -277,7 +279,7 @@ bluewave.charts.PieChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
-    var initChart = bluewave.utils.initChart;
+    var initChart = bluewave.chart.utils.initChart;
     var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
 
     init();

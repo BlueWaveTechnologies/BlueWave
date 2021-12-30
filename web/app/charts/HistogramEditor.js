@@ -2,7 +2,7 @@ if(!bluewave) var bluewave={};
 if(!bluewave.charts) bluewave.charts={};
 
 //******************************************************************************
-//**  BarEditor
+//**  HistogramEditor
 //******************************************************************************
 /**
  *   Panel used to create histograms
@@ -613,7 +613,7 @@ bluewave.charts.HistogramEditor = function(parent, config) {
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
-    var getStyleEditor = bluewave.charts.utils.getStyleEditor;
+    var getStyleEditor = bluewave.chart.utils.getStyleEditor;
 
     init();
 };

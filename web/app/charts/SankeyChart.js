@@ -217,7 +217,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-    var initChart = bluewave.utils.initChart;
+    var initChart = bluewave.chart.utils.initChart;
 
     init();
 };

@@ -351,6 +351,19 @@ bluewave.charts.BarEditor = function(parent, config) {
                                 }
 
                             ]
+                        },
+                        {
+                            name: "stack",
+                            label: "Stack Bars",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
                         }
                     ]
                 },
@@ -450,6 +463,10 @@ bluewave.charts.BarEditor = function(parent, config) {
         var yLabel = chartConfig.yLabel;
         yLabelField.setValue(yLabel===true ? true : false);
 
+        var stackField = form.findField("stack");
+        var stack = chartConfig.stack;
+        stackField.setValue(stack===true ? true : false);
+
 
       //Process onChange events
         form.onChange = function(){
@@ -471,6 +488,9 @@ bluewave.charts.BarEditor = function(parent, config) {
             if (settings.yLabel==="true") settings.yLabel = true;
             else settings.yLabel = false;
 
+            if (settings.stack==="true") settings.stack = true;
+            else settings.stack = false;
+
 
             chartConfig.barLayout = settings.layout;
             chartConfig.barLegend = settings.legend;
@@ -478,6 +498,7 @@ bluewave.charts.BarEditor = function(parent, config) {
             chartConfig.yGrid = settings.yGrid;
             chartConfig.xLabel = settings.xLabel;
             chartConfig.yLabel = settings.yLabel;
+            chartConfig.stack = settings.stack;
             createBarPreview();
         };
 
@@ -592,7 +613,7 @@ bluewave.charts.BarEditor = function(parent, config) {
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
-    var getStyleEditor = bluewave.charts.utils.getStyleEditor;
+    var getStyleEditor = bluewave.chart.utils.getStyleEditor;
 
     init();
 };
