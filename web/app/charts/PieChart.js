@@ -96,6 +96,34 @@ bluewave.charts.PieChart = function(parent, config) {
             var innerRadius = radius*cutout;
 
 
+            var tooltip = d3.select(parent)
+              .append("div")
+              .style("opacity", 0)
+              .attr("class", "tooltip")
+              
+            var mouseover = function (d) {
+              tooltip
+                .style("opacity", 1)
+                .style("display", "block");
+
+                d3.select(this).transition().duration(100).attr("opacity", "0.8")
+            };
+
+            var mousemove = function (d) {
+              tooltip
+                .html(d.value)
+                .style('top', (d3.event.layerY) + "px")
+			          .style('left', (d3.event.layerX + 20) + "px");
+            };
+
+            var mouseleave = function (d) {
+              tooltip
+                .style("opacity", 0)
+                .style("display", "none");
+
+                d3.select(this).transition().duration(100).attr("opacity", "1")
+            };
+
 
           //Render pie chart
             var pieGroup = pieChart.append("g");
@@ -112,7 +140,9 @@ bluewave.charts.PieChart = function(parent, config) {
                 })
                 .attr("stroke", "#777")
                 .style("stroke-width", "1px")
-                .style("opacity", 0.7);
+                .on("mouseover", mouseover)
+                .on("mousemove", mousemove)
+                .on("mouseleave", mouseleave);
 
 
 
