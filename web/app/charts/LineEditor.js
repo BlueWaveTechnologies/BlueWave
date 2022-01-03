@@ -342,6 +342,9 @@ bluewave.charts.LineEditor = function(parent, config) {
         lineChart.clear();
         lineChart.setConfig(chartConfig);
         //TODO: Add lines
+
+
+        // inputData.forEach((d)=>lineChart.addLine(line, d));
         lineChart.update();
     };
 

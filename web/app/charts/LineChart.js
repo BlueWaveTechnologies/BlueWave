@@ -237,6 +237,10 @@ console.log(data1)
                 for (let i=0; i<layers.length; i++){
                     var label;
                     if (group){
+
+                        let d = layers[i].data;
+                        label = d[group];
+                        if (!label) label = group + " " + i;
                         /*
                         let d = dataSets[i][0]; //Need help here!
                         label = d[group];
