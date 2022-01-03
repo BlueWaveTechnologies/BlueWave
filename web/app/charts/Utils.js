@@ -64,10 +64,10 @@ bluewave.chart.utils = {
 
       //Add X-axis label
         if(showX){
-            
+
             var y = height;
             if (margin) y+= margin.bottom - 2;
-            
+
             svg.append("text")
             .attr("x", width/2)
             .attr("y", y)
@@ -78,10 +78,10 @@ bluewave.chart.utils = {
 
       //Add Y-axis label
         if(showY){
-            
+
             var x = 0;
             if (margin) x = x - margin.left;
-            
+
             svg.append("text")
             .attr("transform", "rotate(-90)")
             .attr("x", 0 - (height/2))
@@ -149,7 +149,7 @@ bluewave.chart.utils = {
             });
             return boxes;
         };
-       
+
 
       //Render x-axis
         xAxis = plotArea
@@ -183,10 +183,10 @@ bluewave.chart.utils = {
             .style("text-anchor", "end");
         }
 
-        
-        
-        
-        
+
+
+
+
       //Render y-axis
         yAxis = plotArea
             .append("g")
@@ -197,13 +197,52 @@ bluewave.chart.utils = {
             );
 
 
+
+      //Calculate margins required to fit the labels
+        var xExtents = javaxt.dhtml.utils.getRect(xAxis.node());
+        var yExtents = javaxt.dhtml.utils.getRect(yAxis.node());
+
+        var left = Number.MAX_VALUE;
+        var right = 0;
+        var top = Number.MAX_VALUE;
+        var bottom = 0;
+        xAxis.selectAll("line").each(function(d, i) {
+            var box = javaxt.dhtml.utils.getRect(this);
+            left = Math.min(box.x, left);
+            right = Math.max(box.x+box.width, right);
+        });
+
+        yAxis.selectAll("line").each(function(d, i) {
+            var box = javaxt.dhtml.utils.getRect(this);
+            top = Math.min(box.y, top);
+            bottom = Math.max(box.y+box.height, bottom);
+        });
+
+
+        var marginLeft = Math.abs(xExtents.left-left); //extra space for the left-most x-axis label
+        var marginRight = (xExtents.right-left)-axisWidth; //extra space for the right-most x-axis label
+
+        marginLeft = Math.max(yExtents.width, marginLeft); //extra space for the y-axis labels
+
+        var marginTop = top-yExtents.top; //extra space for the top-most y-axis label
+        var marginBottom = xExtents.height;
+
+
+
+      //Return axis objects
         return {
-            xAxis: xAxis,
-            yAxis: yAxis,
+            xAxis: xAxis, //d3 svg selection
+            yAxis: yAxis, //d3 svg selection
             xBand: xBand,
             yBand: yBand,
             x: x,
-            y: y
+            y: y,
+            margin: {
+                top: marginTop,
+                right: marginRight,
+                bottom: marginBottom,
+                left: marginLeft
+            }
         };
     },
 

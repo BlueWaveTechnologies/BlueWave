@@ -18,7 +18,7 @@ bluewave.charts.LineChart = function(parent, config) {
     var svg, chart, plotArea;
     var x, y;
     var scaleOption;
-    
+
     var dataSets=[];
     var layers=[];
 
@@ -44,7 +44,7 @@ bluewave.charts.LineChart = function(parent, config) {
         if (!chartConfig) config = defaultConfig;
         else config = merge(chartConfig, defaultConfig);
     };
-    
+
 
   //**************************************************************************
   //** clear
@@ -61,8 +61,8 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         var parent = svg.node().parentNode;
-        onRender(parent, function(){ 
-            renderChart(parent); 
+        onRender(parent, function(){
+            renderChart(parent);
         });
     };
 
@@ -105,21 +105,6 @@ bluewave.charts.LineChart = function(parent, config) {
             .attr("width", width)
             .attr("height", height);
 
-/*
-        var margin = config.margin;
-        var axisHeight = height - margin.top - margin.bottom;
-        var axisWidth = width - margin.left - margin.right;
-        var plotHeight = height - margin.top - margin.bottom;
-        var plotWidth = width - margin.left - margin.right;
-        plotArea = chart.append("g");
-        plotArea
-            .attr("width", plotWidth)
-            .attr("height", plotHeight)
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + (margin.top) + ")"
-            );
- */
 
       //Check that axis exist and are populated
         var xKey = chartConfig.xAxis;
@@ -198,36 +183,14 @@ console.log(data1)
         var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption);
 
 
-      //Calculate margins and update X/Y axis as needed
-        var margin = null; //config.margin;
-        if (!margin){
-            var xExtents = javaxt.dhtml.utils.getRect(axes.xAxis.node());
-            var yExtents = javaxt.dhtml.utils.getRect(axes.yAxis.node());
+      //Update X/Y axis as needed
+        var margin = axes.margin;
+        if (margin){
 
-            var left = Number.MAX_VALUE;
-            var right = 0;
-            var top = Number.MAX_VALUE;
-            var bottom = 0;
-            axes.xAxis.selectAll("line").each(function(d, i) {
-                var box = javaxt.dhtml.utils.getRect(this);
-                left = Math.min(box.x, left);
-                right = Math.max(box.x+box.width, right);
-            });
-
-            axes.yAxis.selectAll("line").each(function(d, i) {
-                var box = javaxt.dhtml.utils.getRect(this);
-                top = Math.min(box.y, top);
-                bottom = Math.max(box.y+box.height, bottom);
-            });
-
-
-            var marginLeft = Math.abs(xExtents.left-left); //extra space for the left-most x-axis label
-            var marginRight = (xExtents.right-left)-axisWidth; //extra space for the right-most x-axis label
-
-            marginLeft = Math.max(yExtents.width, marginLeft); //extra space for the y-axis labels
-
-            var marginTop = top-yExtents.top; //extra space for the top-most y-axis label
-            var marginBottom = xExtents.height;
+            var marginLeft = margin.left;
+            var marginRight = margin.right;
+            var marginTop = margin.top;
+            var marginBottom = margin.bottom;
 
 
           //Update right margin as needed
@@ -237,15 +200,9 @@ console.log(data1)
                 for (let i=0; i<layers.length; i++){
                     var label;
                     if (group){
-
                         let d = layers[i].data;
                         label = d[group];
                         if (!label) label = group + " " + i;
-                        /*
-                        let d = dataSets[i][0]; //Need help here!
-                        label = d[group];
-                        if (!label) label = group + " " + i;
-                        */
                     }
                     else{
                         var labelKey = "label" + (i>0 ? i+1 : "");
@@ -294,8 +251,8 @@ console.log(data1)
                 left: marginLeft
             };
         }
-        
-        
+
+
       //Get x and y functions from the axes
         x = axes.x;
         y = axes.y;
@@ -405,10 +362,10 @@ console.log(data1)
 
             // let xAxisN = chartConfig[`xAxis${i+1}`];
             // let yAxisN = chartConfig[`yAxis${i+1}`];
-            
+
 
             var lineConfig = layers[i].line.getConfig();
-            
+
             //test hack
             // xAxisN = "x"
             // yAxisN = "y"
@@ -421,7 +378,7 @@ console.log(data1)
              xAxisN = chartConfig.xAxis;
              yAxisN = chartConfig.yAxis;
             }
-  
+
             //If axes not picked, skip pushing/rendering this dataset
             if ((!xAxisN || !yAxisN) && !group && i>0) continue;
 
@@ -443,7 +400,7 @@ console.log(data1)
                         return g[yKey];
                     });
             // }).entries(dataSets[i]);
-            }).entries(layers[i].data);    
+            }).entries(layers[i].data);
 
 
           //Smooth the data as needed
@@ -508,7 +465,7 @@ console.log("arr", arr)
             // let lineColor = chartConfig["lineColor" + i];
             // let startOpacity = chartConfig["startOpacity" + i];
             // let endOpacity = chartConfig["endOpacity" + i];
-           
+
             let keyType = getType(sumData[0].key);
 
             var getX = function(d){
@@ -576,7 +533,7 @@ console.log("arr", arr)
             // let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
             // if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
             // let pointColor = chartConfig["pointColor" + i];
-            
+
             let pointRadius = pointConfig.radius;
             let pointColor = pointConfig.color;
 
