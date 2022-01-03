@@ -335,14 +335,14 @@ bluewave.charts.LineEditor = function(parent, config) {
     };
 
 
-
   //**************************************************************************
   //** createLinePreview
   //**************************************************************************
     var createLinePreview = function(){
-        onRender(previewArea, function(){
-            lineChart.update(chartConfig, inputData);
-        });
+        lineChart.clear();
+        lineChart.setConfig(chartConfig);
+        //TODO: Add lines
+        lineChart.update();
     };
 
 
