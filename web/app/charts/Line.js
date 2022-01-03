@@ -28,49 +28,49 @@ bluewave.chart.Line = function(config) {
         label: "",
         smoothing: "none"
     };
-    
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
-        
+
         if (!config){
             config = defaultConfig;
             return;
         }
-        
+
         var chartConfig = config;
         config = defaultConfig;
-        
+
         for (var key in chartConfig) {
-            if (chartConfig.hasOwnProperty(key)){    
+            if (chartConfig.hasOwnProperty(key)){
                 var method = "set" + key.substring(0,1).toUpperCase() + key.substring(1);
                 if (me[method]) me[method].apply(me, [chartConfig[key]]);
             }
         }
     };
-    
+
   //**************************************************************************
   //** Setters
   //**************************************************************************
-    
+
     this.setColor = function(color){
         color = getColor(color);
         if (color) config.color = color;
     };
-    
+
     this.setOpacity = function(opacity){
         opacity = getOpacity(opacity);
         if (!isNaN(opacity)) config.opacity = opacity;
     };
-    
+
     this.setWidth = function(width){
         width = parseFloat(width);
         if (!isNaN(width)){
             if (width>0) config.width = width;
         }
     };
-    
+
     this.setStyle = function(style){
         if (!style) return;
         style = (style+"").toLowerCase();
@@ -78,7 +78,7 @@ bluewave.chart.Line = function(config) {
             config.style = style;
         }
     };
-    
+
     this.setFill = function(fill){
         if (!fill){
             delete config.fill;
@@ -92,7 +92,7 @@ bluewave.chart.Line = function(config) {
             if (!isNaN(opacity)) config.fill.endOpacity = opacity;
         }
     };
-    
+
     this.setPoint = function(point){
         if (!point){
             delete config.point;
@@ -106,15 +106,15 @@ bluewave.chart.Line = function(config) {
             }
         }
     };
-    
+
     this.setLabel = function(label){
         config.style.label = label;
     };
-    
+
     this.setSmoothing = function(smoothing){
         if (!smoothing) return;
         smoothing = (smoothing+"").toLowerCase();
-        
+
         switch (smoothing) {
             case "spline":
             case "simple spline":
@@ -131,17 +131,10 @@ bluewave.chart.Line = function(config) {
             default:
                 smoothing = "none";
                 break;
-        }    
+        }
         config.smoothing = smoothing;
     };
 
-    this.setXAxis = function(xAxis){
-        config.xAxis = ""+xAxis;
-    }
-
-    this.setYAxis = function(yAxis){
-        config.yAxis = ""+yAxis;
-    }
 
   //**************************************************************************
   //** Getters
@@ -158,20 +151,20 @@ bluewave.chart.Line = function(config) {
     this.getPoint = () => config.point;
     this.getLabel = () => config.label;
     this.getSmoothing = () => config.smoothing;
-    
-  
-    
+
+
+
     var getColor = function(color){
         //TODO: validate color
         return color;
     };
-    
+
     var getOpacity = function(opacity){
         opacity = parseFloat(opacity);
         if (isNaN(opacity)) return null;
         if (opacity<0 || opacity>1) return null;
         return opacity;
     };
-    
+
     init();
 };
