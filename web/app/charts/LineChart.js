@@ -13,12 +13,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: {
-            top: 25,
-            right: 75,
-            bottom: 65,
-            left: 82
-        }
+
     };
     var svg, chart, plotArea;
     var x, y;
@@ -55,7 +50,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (chart) chart.selectAll("*").remove();
+        clearChart();
         dataSets=[];
         layers=[];
     };
@@ -82,12 +77,15 @@ bluewave.charts.LineChart = function(parent, config) {
         });
     };
 
+    var clearChart = function(){
+        if (chart) chart.selectAll("*").remove();
+    };
 
   //**************************************************************************
   //** renderChart
   //**************************************************************************
     var renderChart = function(parent){
-        if (chart) chart.selectAll("*").remove();
+        clearChart();
 
         var chartConfig = config;
         var data = layers.map( d => d.data );
@@ -100,6 +98,14 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
+        var axisHeight = height;
+        var axisWidth = width;
+        plotArea = chart.append("g");
+        plotArea
+            .attr("width", width)
+            .attr("height", height);
+
+/*
         var margin = config.margin;
         var axisHeight = height - margin.top - margin.bottom;
         var axisWidth = width - margin.left - margin.right;
@@ -113,8 +119,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 "transform",
                 "translate(" + margin.left + "," + (margin.top) + ")"
             );
-
-
+ */
 
       //Check that axis exist and are populated
         var xKey = chartConfig.xAxis;
@@ -191,6 +196,103 @@ console.log(data1)
 
       //Render X/Y axis
         var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption);
+
+
+      //Calculate margins and update X/Y axis as needed
+        var margin = null; //config.margin;
+        if (!margin){
+            var xExtents = javaxt.dhtml.utils.getRect(axes.xAxis.node());
+            var yExtents = javaxt.dhtml.utils.getRect(axes.yAxis.node());
+
+            var left = Number.MAX_VALUE;
+            var right = 0;
+            var top = Number.MAX_VALUE;
+            var bottom = 0;
+            axes.xAxis.selectAll("line").each(function(d, i) {
+                var box = javaxt.dhtml.utils.getRect(this);
+                left = Math.min(box.x, left);
+                right = Math.max(box.x+box.width, right);
+            });
+
+            axes.yAxis.selectAll("line").each(function(d, i) {
+                var box = javaxt.dhtml.utils.getRect(this);
+                top = Math.min(box.y, top);
+                bottom = Math.max(box.y+box.height, bottom);
+            });
+
+
+            var marginLeft = Math.abs(xExtents.left-left); //extra space for the left-most x-axis label
+            var marginRight = (xExtents.right-left)-axisWidth; //extra space for the right-most x-axis label
+
+            marginLeft = Math.max(yExtents.width, marginLeft); //extra space for the y-axis labels
+
+            var marginTop = top-yExtents.top; //extra space for the top-most y-axis label
+            var marginBottom = xExtents.height;
+
+
+          //Update right margin as needed
+            if (showLabels){
+                var maxLabelWidth = 0;
+                var labelHeight = 0;
+                for (let i=0; i<layers.length; i++){
+                    var label;
+                    if (group){
+                        /*
+                        let d = dataSets[i][0]; //Need help here!
+                        label = d[group];
+                        if (!label) label = group + " " + i;
+                        */
+                    }
+                    else{
+                        var labelKey = "label" + (i>0 ? i+1 : "");
+                        label = chartConfig[labelKey];
+                        if (!label) label = "Series " + (i+1);
+                    }
+
+
+                    if (label){
+                        var temp = plotArea.append("text")
+                            .attr("dy", ".35em")
+                            .attr("text-anchor", "start")
+                            .text(label);
+                        var box = temp.node().getBBox();
+                        temp.remove();
+
+                        var w = Math.max(box.width+8, 60)+5;
+                        labelHeight = box.height;
+                        maxLabelWidth = Math.max(w, maxLabelWidth);
+                    }
+                }
+                marginRight+=maxLabelWidth;
+                if (labelHeight>0){
+                    marginTop = Math.max((labelHeight/2), marginTop);
+                }
+            }
+
+
+
+            if (marginTop>0 || marginBottom>0 || marginLeft>0 || marginRight>0){
+                axisHeight-=(marginTop+marginBottom);
+                axisWidth-=(marginLeft+marginRight);
+                plotArea.selectAll("*").remove();
+                plotArea
+                    .attr(
+                        "transform",
+                        "translate(" + marginLeft + "," + marginTop + ")"
+                    );
+
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption);
+            }
+            margin = {
+                top: marginTop,
+                right: marginRight,
+                bottom: marginBottom,
+                left: marginLeft
+            };
+        }
+        
+        
+      //Get x and y functions from the axes
         x = axes.x;
         y = axes.y;
 
@@ -225,35 +327,35 @@ console.log(data1)
 
         if (stack){
         //Nest merged data object by X-axis value for stacked area
-        var groupedStackData = d3.nest()
-            .key( (d) => d[xKey])
-            .entries(mergedData)
+            var groupedStackData = d3.nest()
+                .key( (d) => d[xKey])
+                .entries(mergedData)
 
-        console.log("data", mergedData)
-        console.log("groupedStackData", groupedStackData)
+            console.log("data", mergedData)
+            console.log("groupedStackData", groupedStackData)
 
-        let stackGroup=[];
-        let stackLength = groupedStackData[0].values.length;
-        for (let i=0; i<stackLength; i++){
-            stackGroup.push(i);
-        }
-            console.log(stackGroup)
-        // console.log(subgroups)
-        var stackedData = d3.stack()
-            // .keys(subgroups) no idea why this doesn'r work
-            .keys(stackGroup)
-            .value(function (d, key) {
+            let stackGroup=[];
+            let stackLength = groupedStackData[0].values.length;
+            for (let i=0; i<stackLength; i++){
+                stackGroup.push(i);
+            }
+                console.log(stackGroup)
+            // console.log(subgroups)
+            var stackedData = d3.stack()
+                // .keys(subgroups) no idea why this doesn'r work
+                .keys(stackGroup)
+                .value(function (d, key) {
 
-                let v = d.values[key];
-                return v[yKey];
+                    let v = d.values[key];
+                    return v[yKey];
 
-            })
-            (groupedStackData)
-        console.log(stackedData)
+                })
+                (groupedStackData)
+            console.log(stackedData)
 
-        var colors = bluewave.utils.getColorPalette(true);
+            var colors = bluewave.utils.getColorPalette(true);
 
-        plotArea
+            plotArea
             .selectAll("stacks")
             .data(stackedData)
             .enter()
@@ -295,7 +397,7 @@ console.log(data1)
       //Create dataset to render
         var arr = [];
         // for (let i=0; i<dataSets.length; i++){
-            for (let i=0; i<layers.length; i++){
+        for (let i=0; i<layers.length; i++){
 
             // let xAxisN = chartConfig[`xAxis${i+1}`];
             // let yAxisN = chartConfig[`yAxis${i+1}`];
@@ -436,7 +538,7 @@ console.log("arr", arr)
                 .attr(
                     "d", d3.area()
                     .x(getX)
-                    .y0(plotHeight)
+                    .y0(axisHeight)
                     .y1(getY)
                 );
 
