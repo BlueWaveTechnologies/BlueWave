@@ -18,7 +18,7 @@ bluewave.Explorer = function(parent, config) {
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
     var dbView, lineEditor, barEditor, sankeyEditor, layoutEditor, nameEditor,
-    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager,
+    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, calendarEditor, userManager,
     fileViewer, docComparer; //popup dialogs
     var windows = [];
     var zoom = 0;
@@ -983,7 +983,7 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
         createMenuButton("mapChart", "fas fa-globe-americas", "Map", menubar);
         //createMenuButton("treemapChart", "fas fa-border-all", "Treemap Chart", menubar);
-        //createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
+        createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("compareDocs", "fas fa-not-equal", "Document Analysis", menubar);
@@ -1342,6 +1342,8 @@ bluewave.Explorer = function(parent, config) {
   //** addEventListeners
   //**************************************************************************
     var addEventListeners = function(node){
+        console.log("printing node type , expecting calendar chart")
+        console.log(node.type)
         switch (node.type) {
             case "addData":
 
@@ -1473,7 +1475,26 @@ bluewave.Explorer = function(parent, config) {
                     editChart(this, barEditor);
                 };
                 break;
+            case "calendarChart" :
 
+                node.ondblclick = function(){
+                    console.log("got to here in our process")
+
+                    if (!calendarEditor){
+                        console.log('creating calendar editor')
+                        calendarEditor = createNodeEditor({
+                            title: "Edit Calendar Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.CalendarEditor
+                        });
+                    }
+                    console.log("this is our calendarEditor object.. should be identical to the others")
+
+                    editChart(this, calendarEditor);
+                };
+                break;
             case "histogramChart":
                 node.ondblclick = function(){
                     if (!histogramEditor){
@@ -1706,6 +1727,10 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editChart = function(node, editor){
 
+
+        console.log("our editor object printing is")
+        console.log(editor)
+
         editor.getNode = function(){
             return node;
         };
@@ -1724,6 +1749,8 @@ bluewave.Explorer = function(parent, config) {
       //Get config
         var chartConfig = {};
         merge(chartConfig, node.config);
+
+        console.log(`our config for this is ${node.type}`)
 
         chartConfig.chartType = node.type; //is this used for anything?
         editor.update(chartConfig, data);
@@ -2920,6 +2947,10 @@ bluewave.Explorer = function(parent, config) {
                         else if (node.type==="scatterChart"){
                             var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
                             scatterChart.update(chartConfig, data);
+                        }
+                        else if (node.type==="calendarChart"){
+                            var calendarChart = new bluewave.charts.CalendarChart(createChartContainer(),{});
+                            calendarChart.update(chartConfig, data);
                         }
                         else if (node.type==="mapChart"){
 
