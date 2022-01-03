@@ -127,6 +127,42 @@ bluewave.chart.utils = {
             return !(i % maxLabels);
         };
 
+        var getBoxes = function(axis){
+            var boxes = [];
+            axis.selectAll("text").each(function(d, i) {
+                var box = javaxt.dhtml.utils.getRect(this);
+                boxes.push({
+                    left: box.x,
+                    right: box.x+box.width,
+                    top: box.y,
+                    bottom: box.y+box.height
+                });
+            });
+            return boxes;
+        };
+       
+        var getExtents = function(boxes){
+            var minX = Number.MAX_VALUE;
+            var maxX = 0;
+            var minY = Number.MAX_VALUE;
+            var maxY = 0;
+            for (var i in boxes){
+                var rect = boxes[i];
+                minX = Math.min(rect.left, minX);
+                maxX = Math.max(rect.right, maxX);
+                minY = Math.min(rect.top, minY);
+                maxY = Math.max(rect.bottom, maxY);
+            }
+            return {
+                minX: minX,
+                minY: minY,
+                maxX: maxX,
+                maxY: maxY
+            };
+        };
+
+
+      //Render x-axis
         xAxis = plotArea
             .append("g")
             .attr("transform", "translate(0," + axisHeight + ")")
@@ -135,11 +171,36 @@ bluewave.chart.utils = {
                 .tickValues(widthCheck ? null : x.domain().filter(tickFilter))
             );
 
+
+      //Rotate labels as needed
+        var boxes = getBoxes(xAxis);
+        var foundIntersection = false;
+        for (var i=0; i<boxes.length; i++){
+            var box = boxes[i];
+            for (var j=0; j<boxes.length; j++){
+                if (j===i) continue;
+                var b = boxes[j];
+                if (javaxt.dhtml.utils.intersects(box, b)){
+                    foundIntersection = true;
+                    break;
+                }
+            }
+            if (foundIntersection) break;
+        }
+        if (foundIntersection){
             xAxis
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
+            boxes = getBoxes(xAxis);
+        }
+        var xExtents = getExtents(boxes);
+        
+        
+        
 
+        
+      //Render y-axis
         yAxis = plotArea
             .append("g")
             .call(scaleOption==="linear" ? d3.axisLeft(y) :
@@ -147,12 +208,16 @@ bluewave.chart.utils = {
                     .ticks(10, ",")
                     .tickFormat(d3.format("d"))
             );
+        var yExtents = getExtents(getBoxes(yAxis));
+
 
         return {
             xAxis: xAxis,
             yAxis: yAxis,
             xBand: xBand,
             yBand: yBand,
+            xExtents: xExtents,
+            yExtents: yExtents,
             x: x,
             y: y
         };
