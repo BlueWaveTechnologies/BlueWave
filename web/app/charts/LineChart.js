@@ -32,7 +32,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        config = merge(config, defaultConfig);
+        me.setConfig(config);
 
 
         initChart(parent, function(s, g){
@@ -43,96 +43,59 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** setConfig
+  //**************************************************************************
+    this.setConfig = function(chartConfig){
+        if (!chartConfig) config = defaultConfig;
+        else config = merge(chartConfig, defaultConfig);
+    };
+    
+
+  //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
         if (chart) chart.selectAll("*").remove();
+        dataSets=[];
+        layers=[];
     };
 
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(chartConfig, data){
-        me.clear();
+    this.update = function(){
         var parent = svg.node().parentNode;
-console.log("update", data)
-
-        if (arguments.length===0){
-
-            //renderChart
-        }
-
-        if (arguments.length===1){
-            
-            //If data isn't in the arguments use layers data
-            var data = layers.map( d => d.data );
-            onRender(parent, function(){
-                renderChart(chartConfig, data, parent);
-            });
-        }
-        else{ 
-            layers = data.slice();
-            onRender(parent, function(){
-                renderChart(chartConfig, data, parent);
-            });
-        }
+        onRender(parent, function(){ 
+            renderChart(parent); 
+        });
     };
 
 
   //**************************************************************************
   //** addLine
   //**************************************************************************
-    this.addLine = function(line, data, chartConfig){
-        // console.log(line.getConfig());
-        // console.log(data);
-
-        //maybe data.foreach   if !line line = blah 
-
-        
-        layers.push(
-            {
-                line: line,
-                data: data
-            }
-        );
-//I think I have to push the data to a new data array
-        if(chartConfig) chartConfig.layers = layers;
+    this.addLine = function(line, data){
+        layers.push({
+            line: line,
+            data: data
+        });
     };
 
 
   //**************************************************************************
   //** renderChart
   //**************************************************************************
-    var renderChart = function(chartConfig, data, parent){
-        me.clear();
+    var renderChart = function(parent){
+        if (chart) chart.selectAll("*").remove();
 
-        
-        // layers.forEach(function(line){
-        //     data.push(line.data)
-        // });
+        var chartConfig = config;
+        var data = layers.map( d => d.data );
 
-      
 
         var data1 = data[0].slice();
         dataSets = data.slice();
         data = data1;
-
-        //if layers is an array of data, convert to objects with line and data
-        for (let i = 0; i < layers.length; i++) {
-
-            if (!layers[i].hasOwnProperty("line")) {
-
-                let line = new bluewave.chart.Line();
-                layers[i] = { line: line, data: layers[i] }
-            }
-
-        };
-
-        chartConfig.layers = layers;
-        
-
-        //I can't push to layers here since renderChart gets called a million times
 
 
         var width = parent.offsetWidth;
@@ -151,7 +114,6 @@ console.log("update", data)
                 "translate(" + margin.left + "," + (margin.top) + ")"
             );
 
-console.log("chartconfig", chartConfig)
 
 
       //Check that axis exist and are populated
