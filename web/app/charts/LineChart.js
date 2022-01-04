@@ -54,8 +54,21 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** setScaling
   //**************************************************************************
+  /** Used to set the horizontal scaling option. Options include "logarithmic"
+   *  and "linear" (default)
+   */
     this.setScaling = function(scale){
         config.scaling = scale==="logarithmic" ? "logarithmic" : "linear";
+    };
+    
+    
+  //**************************************************************************
+  //** displayEndTags
+  //**************************************************************************
+  /** Used to specify whether to display tags at the end of the lines
+   */
+    this.displayEndTags = function(b){
+        config.endTags = b===true ? true : false;
     };
 
 
@@ -249,7 +262,8 @@ bluewave.charts.LineChart = function(parent, config) {
             if (showLabels){
                 var maxLabelWidth = 0;
                 var labelHeight = 0;
-                for (let i=0; i<layers.length; i++){
+                layers.forEach(function(layer, i){
+                    if (!layer.line) return;
                     var label;
                     if (group){
                         let d = layers[i].data;
@@ -257,8 +271,7 @@ bluewave.charts.LineChart = function(parent, config) {
                         if (!label) label = group + " " + i;
                     }
                     else{
-                        var labelKey = "label" + (i>0 ? i+1 : "");
-                        label = chartConfig[labelKey];
+                        label = layer.line.getLabel();
                         if (!label) label = "Series " + (i+1);
                     }
 
@@ -275,7 +288,7 @@ bluewave.charts.LineChart = function(parent, config) {
                         labelHeight = box.height;
                         maxLabelWidth = Math.max(w, maxLabelWidth);
                     }
-                }
+                });
                 marginRight+=maxLabelWidth;
                 if (labelHeight>0){
                     marginTop = Math.max((labelHeight/2), marginTop);
@@ -643,7 +656,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 }
                 else{
                     var labelKey = "label" + (i>0 ? i+1 : "");
-                    label = chartConfig[labelKey];
+                    label = lineConfig.label;
                     if (!label) label = "Series " + (i+1);
                 }
                 var line = chartElements[i].line2;
