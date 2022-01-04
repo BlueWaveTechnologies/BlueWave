@@ -26,7 +26,8 @@ bluewave.chart.Line = function(config) {
             radius: 0
         },
         label: "",
-        smoothing: "none"
+        smoothing: "none",
+        smoothingValue: 0
     };
 
   //**************************************************************************
@@ -108,7 +109,7 @@ bluewave.chart.Line = function(config) {
     };
 
     this.setLabel = function(label){
-        config.style.label = label;
+        config.label = label;
     };
 
     this.setSmoothing = function(smoothing){
@@ -134,16 +135,27 @@ bluewave.chart.Line = function(config) {
         }
         config.smoothing = smoothing;
     };
+    
+    this.setSmoothingValue = function(smoothingValue){
+        smoothingValue = parseFloat(smoothingValue);
+        if (isNaN(smoothingValue) || smoothingValue<0) {}
+        else config.smoothingValue = smoothingValue;
+    };
+
+
+  //**************************************************************************
+  //** getConfig
+  //**************************************************************************
+  /** Returns the line properties
+   */
+    this.getConfig = function () {
+        return config;
+    };
 
 
   //**************************************************************************
   //** Getters
   //**************************************************************************
-
-    this.getConfig = function () {
-        return config;
-    };
-
     this.getColor = () => config.color;
     this.getWidth = () => config.width;
     this.getStyle = () => config.style;
@@ -151,7 +163,17 @@ bluewave.chart.Line = function(config) {
     this.getPoint = () => config.point;
     this.getLabel = () => config.label;
     this.getSmoothing = () => config.smoothing;
+    this.getSmoothingValue = () => config.smoothingValue;
 
+
+  //**************************************************************************
+  //** clone
+  //**************************************************************************
+  /** Returns a copy of this line*/
+    this.clone = function(){
+        let copy = Object.assign({},config);
+        return new bluewave.chart.Line(copy);
+    };
 
 
     var getColor = function(color){
