@@ -100,9 +100,9 @@ bluewave.chart.utils = {
   //**************************************************************************
   /** Used to render x/y axis on the plotArea
    */
-    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey, chartData, minData, scaleOption, chartType){
-        if (!scaleOption) scaleOption = "linear";
-
+    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey, 
+        chartData, minData, chartConfig, chartType){
+        
         var getType = bluewave.chart.utils.getType;
         var getScale = bluewave.chart.utils.getScale;
 
@@ -117,6 +117,7 @@ bluewave.chart.utils = {
 
         let yType = getType(chartData[0][yKey]);
         if (chartType=="barChart" && yType == "date") yType = "string";
+        var scaleOption = chartConfig.scaling==="logarithmic" ? "logarithmic" : "linear";
         sb = getScale(yKey,yType,[axisHeight,0],chartData,minData,scaleOption);
         y = sb.scale;
         yBand = sb.band;
@@ -226,6 +227,42 @@ bluewave.chart.utils = {
 
         var marginTop = top-yExtents.top; //extra space for the top-most y-axis label
         var marginBottom = xExtents.height;
+
+
+        var labelOffset = 16;
+
+      //Add x-axis label as needed
+        var xLabel = chartConfig.xLabel;
+        if (xLabel){
+
+            
+            var t = xAxis.append("text")
+            .attr("x", (right-left)/2)
+            .attr("y", marginBottom+labelOffset)
+            .attr("class", "chart-axis-label")
+            .style("text-anchor", "middle")
+            .text(xLabel);            
+
+            var r = javaxt.dhtml.utils.getRect(t.node());
+            marginBottom+=(r.height+labelOffset);
+        }
+
+
+      //Add y-axis label as needed
+        var yLabel = chartConfig.yLabel;
+        if (yLabel){
+    
+            var t = yAxis.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -(yExtents.height/2)) //set vertical position
+            .attr("y", -(yExtents.width+labelOffset)) //set horizontal position
+            .attr("class", "chart-axis-label")
+            .style("text-anchor", "middle")
+            .text(yLabel);
+
+            var r = javaxt.dhtml.utils.getRect(t.node());
+            marginLeft = Math.max(marginLeft+(r.width+labelOffset), marginLeft);
+        }
 
 
 
