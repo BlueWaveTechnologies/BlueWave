@@ -245,7 +245,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
       //Render X/Y axis
-        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config.scaling);
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config);
 
 
       //Update X/Y axis as needed
@@ -307,7 +307,7 @@ bluewave.charts.LineChart = function(parent, config) {
                         "translate(" + marginLeft + "," + marginTop + ")"
                     );
 
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config.scaling);
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config);
             }
             margin = {
                 top: marginTop,
@@ -669,12 +669,6 @@ bluewave.charts.LineChart = function(parent, config) {
       //Draw grid lines if option is checked
         if (chartConfig.xGrid || chartConfig.yGrid){
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
-        }
-
-      //Draw labels if checked
-        if (chartConfig.xLabel || chartConfig.yLabel){
-            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
         }
     };
 
