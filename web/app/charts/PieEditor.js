@@ -333,6 +333,8 @@ bluewave.charts.PieEditor = function(parent, config) {
 
         onRender(previewArea, function(){
             var data = inputData[0];
+            
+            
             if (data.hasOwnProperty("links")) {
                 data = linksAndQuantity.slice();
                 data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
@@ -353,56 +355,10 @@ bluewave.charts.PieEditor = function(parent, config) {
                     scData.push(scEntry);
                 });
                 data = scData;
-
-
-            }
-
-            if (chartConfig.pieSort === "Key") {
-                data.sort(function(a, b){
-                    return sort(a[chartConfig.pieKey],b[chartConfig.pieKey]);
-                });
-            }
-            else if(chartConfig.pieSort === "Value") {
-                data = data.sort(function(a,b){
-                    a = parseFloat(a[chartConfig.pieValue]);
-                    b = parseFloat(b[chartConfig.pieValue]);
-                    return sort(a,b);
-                });
-            }
-
-            if(chartConfig.maximumSlices !== 0 && chartConfig.maximumSlices !==null) {
-
-                if (chartConfig.showOther == true && chartConfig.maximumSlices < data.length) {
-                    //Show Others
-                    var otherSlicesValue = data.slice(chartConfig.maximumSlices).map(entry => entry[chartConfig.pieValue]).reduce((prev, next) => parseFloat(prev) + parseFloat(next));
-                    var otherSlicesEntry = {[chartConfig.pieKey]: "Other", [chartConfig.pieValue]: otherSlicesValue};
-                    data = data.slice(0, chartConfig.maximumSlices).concat(otherSlicesEntry);
-                } else {
-                    //Truncate after max slice
-                    data = data.slice(0, chartConfig.maximumSlices);
-                }
             }
 
             pieChart.update(chartConfig, data);
         });
-    };
-
-
-  //**************************************************************************
-  //** sort
-  //**************************************************************************
-    var sort = function(x,y){
-
-        var compareStrings = (typeof x === "string" && typeof y === "string");
-
-        if (chartConfig.pieSortDir === "Descending") {
-            if (compareStrings) return y.localeCompare(x);
-            else return y-x;
-        }
-        else{
-            if (compareStrings) return x.localeCompare(y);
-            else return x-y;
-        }
     };
 
 

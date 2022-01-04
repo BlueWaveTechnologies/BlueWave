@@ -13,6 +13,11 @@ bluewave.charts.PieChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
+        pieKey: "key",
+        pieValue: "value",
+        pieLabels: true,
+        pieCutout: 0.65,
+        labelOffset: 100        
     };
     var svg, pieArea;
 
@@ -53,6 +58,47 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
             if (isArray(data) && isArray(data[0])) data = data[0];
+
+
+          //Sort values as needed
+            var pieSort = chartConfig.pieSort;
+            pieSort = (pieSort+"").toLowerCase();
+            if (pieSort === "key") {
+                data.sort(function(a, b){
+                    return sort(a[chartConfig.pieKey],b[chartConfig.pieKey],chartConfig.pieSortDir);
+                });
+            }
+            else if(pieSort === "value") {
+                data = data.sort(function(a,b){
+                    a = parseFloat(a[chartConfig.pieValue]);
+                    b = parseFloat(b[chartConfig.pieValue]);
+                    return sort(a,b,chartConfig.pieSortDir);
+                });
+            }
+
+
+            
+          //Truncate data as needed
+            var maxSlices = parseFloat(chartConfig.maximumSlices);
+            if (!isNaN(maxSlices) && maxSlices>0) {
+                
+
+                var numSlices = data.length;
+                if (maxSlices<numSlices){
+                
+                    if (chartConfig.showOther === true) {
+                        //Show Others
+                        var otherSlicesValue = data.slice(maxSlices).map(entry => entry[chartConfig.pieValue]).reduce((prev, next) => parseFloat(prev) + parseFloat(next));
+                        var otherSlicesEntry = {[chartConfig.pieKey]: "Other", [chartConfig.pieValue]: otherSlicesValue};
+                        data = data.slice(0, maxSlices).concat(otherSlicesEntry);
+                    } else {
+                        //Truncate after max slice
+                        data = data.slice(0, maxSlices);
+                    }
+                }
+            }
+
+
 
 
             let pieData = data.reduce((acc,curVal)=>{
@@ -118,6 +164,9 @@ bluewave.charts.PieChart = function(parent, config) {
 
             if (chartConfig.pieLabels===null) chartConfig.pieLabels = true;
             if (chartConfig.pieLabels===true && pieData[0].data.key !== "undefined" && !isNaN(pieData[0].value)){
+
+                chartConfig.labelOffset = parseFloat(chartConfig.labelOffset);
+                if (isNaN(chartConfig.labelOffset) || chartConfig.labelOffset<0) chartConfig.labelOffset = 100;
 
 
                 var labelStart = radius - ((radius-innerRadius)*0.1);
@@ -270,6 +319,25 @@ bluewave.charts.PieChart = function(parent, config) {
                 }
             }
         });
+    };
+
+
+  //**************************************************************************
+  //** sort
+  //**************************************************************************
+    var sort = function(x, y, sortDir){
+
+        var compareStrings = (typeof x === "string" && typeof y === "string");
+
+        sortDir = (sortDir+"").toLowerCase();
+        if (sortDir === "descending") {
+            if (compareStrings) return y.localeCompare(x);
+            else return y-x;
+        }
+        else{
+            if (compareStrings) return x.localeCompare(y);
+            else return x-y;
+        }
     };
 
 
