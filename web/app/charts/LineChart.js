@@ -148,7 +148,7 @@ bluewave.charts.LineChart = function(parent, config) {
         var showLabels = chartConfig.endTags;
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
-        var stack = chartConfig.stack;
+        var stack = chartConfig.stackValues;
 
 
       //Generate unque list of x-values across all layers
@@ -329,20 +329,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-        // dataSets.forEach(function(d){
-        //     if(typeof d !== object){
-
-        //     }
-
-        // });
-
-        //I think I want to merge dataSets and layers?
-
         if (stack){
         //Nest merged data object by X-axis value for stacked area
             var mergedData = d3.merge(dataSets);
             var groupedStackData = d3.nest()
-                .key( (d) => d[xKey])
+                // .key( (d) => d[xKey])
+                .key( (d) => d[layers[0].xAxis]) //not right yet
                 .entries(mergedData)
 
             console.log("data", mergedData)
@@ -361,14 +353,16 @@ bluewave.charts.LineChart = function(parent, config) {
                 .value(function (d, key) {
 
                     let v = d.values[key];
-                    return v[yKey];
+                    // return v[yKey];
+                    return v[layers[0].yAxis];  //not right yet
 
                 })
                 (groupedStackData)
             console.log(stackedData)
 
             var colors = bluewave.utils.getColorPalette(true);
-            var globalxKeyType = getType(data1[0][xKey]);
+            // var globalxKeyType = getType(data1[0][xKey]);
+            var globalxKeyType = getType(layers[0].xAxis);
 
             plotArea
             .selectAll("stacks")
@@ -642,7 +636,8 @@ bluewave.charts.LineChart = function(parent, config) {
             if (showLabels){
                 var label;
                 if (group){
-                    let d = dataSets[i][0];
+                    // let d = dataSets[i][0];
+                    let d = layers[i].data;
                     label = d[group];
                     if (!label) label = group + " " + i;
                 }
