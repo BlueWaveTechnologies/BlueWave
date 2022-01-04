@@ -13,11 +13,14 @@ bluewave.charts.LineChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-
+        xGrid: false,
+        yGrid: false,
+        scaling: "linear", //"logarithmic"
+        stackValues: false,
+        endTags: false
     };
     var svg, chart, plotArea;
     var x, y;
-    var scaleOption;
 
     var dataSets=[];
     var layers=[];
@@ -43,6 +46,16 @@ bluewave.charts.LineChart = function(parent, config) {
     this.setConfig = function(chartConfig){
         if (!chartConfig) config = defaultConfig;
         else config = merge(chartConfig, defaultConfig);
+
+        me.setScaling(config.scaling);
+    };
+
+
+  //**************************************************************************
+  //** setScaling
+  //**************************************************************************
+    this.setScaling = function(scale){
+        config.scaling = scale==="logarithmic" ? "logarithmic" : "linear";
     };
 
 
@@ -70,16 +83,39 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
   //** addLine
   //**************************************************************************
-    this.addLine = function(line, data){
+    this.addLine = function(line, data, xAxis, yAxis){
         layers.push({
             line: line,
-            data: data
+            data: data,
+            xAxis: xAxis+"",
+            yAxis: yAxis+""
         });
     };
 
+
+  //**************************************************************************
+  //** getLayers
+  //**************************************************************************
+    this.getLayers = function(){
+        return layers;
+    };
+
+
+  //**************************************************************************
+  //** setLayers
+  //**************************************************************************
+    this.setLayers = function(arr){
+        layers = arr;
+    };
+
+
+  //**************************************************************************
+  //** clearChart
+  //**************************************************************************
     var clearChart = function(){
         if (chart) chart.selectAll("*").remove();
     };
+
 
   //**************************************************************************
   //** renderChart
@@ -106,22 +142,8 @@ bluewave.charts.LineChart = function(parent, config) {
             .attr("height", height);
 
 
-      //Check that axis exist and are populated
-        var xKey = chartConfig.xAxis;
-        var yKey = chartConfig.yAxis;
-
-        if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)){
-            //Use first line data just to set initial max/min/axes
-            xKey = layers[0].line.getConfig().xAxis;
-            yKey = layers[0].line.getConfig().yAxis;
-        }
-
-        if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
-
 
       //Get chart options
-        scaleOption = chartConfig.scaleOption;
-        if (!scaleOption) scaleOption = "linear";
         var group = chartConfig.group;
         var showLabels = chartConfig.endTags;
         if (showLabels===true || showLabels===false){}
@@ -129,58 +151,88 @@ bluewave.charts.LineChart = function(parent, config) {
         var stack = chartConfig.stack;
 
 
-        // var data1 = data[0];
-        // dataSets = data.slice();
-        // data = data1;
-
-console.log("dataSets", dataSets)
-console.log(data1)
-        var globalxKeyType = getType(data1[0][xKey]);
-
-        // d3.merge(layers, dataSets);
-        var mergedData = d3.merge(dataSets);
-
-
-            //Get max line
-        //     var maxData = d3.nest()
-        //         .key(function (d) { return d[xKey]; })
-        //         .rollup(function (d) {
-        //             return d3.max(d, function (g) {
-        //                 return parseFloat(g[yKey]);
-        //             });
-        //         }).entries(mergedData);
-        // }
-
-        //Consolidate all this into max/sum/min function
-        //Get max line or sum of lines for stack
-        var maxData = d3.nest()
-            .key(function (d) { return d[xKey]; })
-            .rollup(function (d) {
-
-                if (stack) {
-                    return d3.sum(d, function (g) {
-                        return parseFloat(g[yKey]);
-                    });
-                } else {
-                    return d3.max(d, function (g) {
-                        return parseFloat(g[yKey]);
-                    });
+      //Generate unque list of x-values across all layers
+        var xKeys = [];
+        layers.forEach(function(layer){
+            if (!layer.data) return;
+            layer.data.forEach(function(d){
+                var xKey = d[layer.xAxis];
+                var addKey = true;
+                for (var i=0; i<xKeys.length; i++){
+                    if (xKeys[i]==xKey){
+                        addKey = false;
+                        break;
+                    }
                 }
+                if (addKey) xKeys.push(xKey);
+            });
+        });
 
-            }).entries(mergedData);
+        //TODO: sort keys
 
-        //Get minimum line
-        var minData = d3.nest()
-            .key(function (d) { return d[xKey]; })
-            .rollup(function (d) {
-                return d3.min(d, function (g) {
-                    return parseFloat(g[yKey]);
-                });
-            }).entries(mergedData);
+
+
+      //Generate min/max datasets
+        var minData = [];
+        var maxData = [];
+        layers.forEach(function(layer){
+            if (!layer.data) return;
+            xKeys.forEach(function(key){
+
+                for (var i=0; i<layer.data.length; i++){
+                    var d = layer.data[i];
+                    var xKey = d[layer.xAxis];
+                    if (xKey===key){
+                        var val = parseFloat(d[layer.yAxis]);
+
+                      //Update minData array
+                        var foundMatch = false;
+                        for (var j=0; j<minData.length; j++){
+                            var entry = minData[j];
+                            if (entry.key==key){
+                                foundMatch = true;
+                                entry.value = Math.min(entry.value, val);
+                            }
+                        }
+                        if (!foundMatch){
+                            minData.push({
+                                key: key,
+                                value: val
+                            });
+                        }
+
+                      //Update maxData array
+                        var foundMatch = false;
+                        for (var j=0; j<maxData.length; j++){
+                            var entry = maxData[j];
+                            if (entry.key==key){
+                                foundMatch = true;
+                                if (stack) {
+                                    entry.value += val;
+                                }
+                                else{
+                                    entry.value = Math.max(entry.value, val);
+                                }
+                            }
+                        }
+                        if (!foundMatch){
+                            maxData.push({
+                                key: key,
+                                value: val
+                            });
+                        }
+
+                    }
+                }
+            });
+        });
+
+
+
 
 
       //Render X/Y axis
-        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption);
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config.scaling);
 
 
       //Update X/Y axis as needed
@@ -242,7 +294,7 @@ console.log(data1)
                         "translate(" + marginLeft + "," + marginTop + ")"
                     );
 
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption);
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config.scaling);
             }
             margin = {
                 top: marginTop,
@@ -288,6 +340,7 @@ console.log(data1)
 
         if (stack){
         //Nest merged data object by X-axis value for stacked area
+            var mergedData = d3.merge(dataSets);
             var groupedStackData = d3.nest()
                 .key( (d) => d[xKey])
                 .entries(mergedData)
@@ -315,6 +368,7 @@ console.log(data1)
             console.log(stackedData)
 
             var colors = bluewave.utils.getColorPalette(true);
+            var globalxKeyType = getType(data1[0][xKey]);
 
             plotArea
             .selectAll("stacks")
@@ -357,41 +411,17 @@ console.log(data1)
 
       //Create dataset to render
         var arr = [];
-        // for (let i=0; i<dataSets.length; i++){
         for (let i=0; i<layers.length; i++){
-
-            // let xAxisN = chartConfig[`xAxis${i+1}`];
-            // let yAxisN = chartConfig[`yAxis${i+1}`];
+            if (!layers[i].line) continue;
 
 
-            var lineConfig = layers[i].line.getConfig();
+            let xKey = layers[i].xAxis;
+            let yKey = layers[i].yAxis;
 
-            //test hack
-            // xAxisN = "x"
-            // yAxisN = "y"
-
-            let xAxisN = lineConfig.xAxis;
-            let yAxisN = lineConfig.yAxis;
-
-            //Temp hack until lineEditor is set
-            if(!xAxisN || !yAxisN){
-             xAxisN = chartConfig.xAxis;
-             yAxisN = chartConfig.yAxis;
-            }
 
             //If axes not picked, skip pushing/rendering this dataset
-            if ((!xAxisN || !yAxisN) && !group && i>0) continue;
+            if ((!xKey || !yKey) && !group && i>0) continue;
 
-            // if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
-
-            //     xKey = xAxisN;
-            //     yKey = yAxisN;
-            // }
-
-            xKey = xAxisN;
-            yKey = yAxisN;
-
-            // if(!xKey || !yKey) continue;
 
             var sumData = d3.nest()
                 .key(function(d){return d[xKey];})
@@ -404,7 +434,7 @@ console.log(data1)
 
 
           //Smooth the data as needed
-            // var smoothingType = chartConfig["smoothingType" + i];
+            var lineConfig = layers[i].line.getConfig();
             var smoothingType = lineConfig.smoothing;
             if (smoothingType){
                 // var smoothingValue = chartConfig["smoothingValue" + i];
@@ -419,11 +449,9 @@ console.log(data1)
             //     var line = new bluewave.chart.Line();
             //     me.addLine(line, sumData, chartConfig);
             // }
-
         }
 
-console.log("layers",layers)
-console.log("arr", arr)
+
 
       //Update chartConfig with line colors
         var colors = bluewave.utils.getColorPalette(true);
@@ -479,7 +507,7 @@ console.log("arr", arr)
 // Why are we adding 1 here if I forget to ask? to avoid log(0)=-inf?
             var getY = function(d){
                 var v = parseFloat(d["value"]);
-                return (scaleOption === "logarithmic") ? y(v+1):y(v);
+                return (config.scaling === "logarithmic") ? y(v+1):y(v);
             };
 
           //Don't render area if the start and end opacity is 0
@@ -666,7 +694,7 @@ console.log("arr", arr)
             var tx = x(lastKey)
         }
 
-        var ty = (scaleOption==="logarithmic") ? y(lastVal+1) : y(lastVal);
+        var ty = (config.scaling==="logarithmic") ? y(lastVal+1) : y(lastVal);
 
         var temp = plotArea.append("text")
             .attr("dy", ".35em")
