@@ -17,7 +17,7 @@ bluewave.charts.PieChart = function(parent, config) {
         pieValue: "value",
         pieLabels: true,
         pieCutout: 0.65,
-        labelOffset: 100        
+        labelOffset: 100
     };
     var svg, pieArea;
 
@@ -37,6 +37,14 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** getTooltipLabel
+  //**************************************************************************
+    this.getTooltipLabel = function(d){
+        return d.key + "<br/>" + d.value;
+    };
+
+
+  //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
@@ -52,7 +60,7 @@ bluewave.charts.PieChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
-
+        
         var parent = svg.node().parentNode;
         onRender(parent, function(){
 
@@ -142,32 +150,39 @@ bluewave.charts.PieChart = function(parent, config) {
             var innerRadius = radius*cutout;
 
 
-            var tooltip = d3.select(parent)
+            var tooltip = d3.select(document.body)
               .append("div")
               .style("opacity", 0)
               .attr("class", "tooltip")
               
-            var mouseover = function (d) {
-              tooltip
-                .style("opacity", 1)
-                .style("display", "block");
 
-                d3.select(this).transition().duration(100).attr("opacity", "0.8")
+            var mouseover = function(d) {
+                if (chartConfig.showTooltip===true){
+                    var label = me.getTooltipLabel(d.data);
+                    tooltip
+                    .html(label)
+                    .style("opacity", 1)
+                    .style("display", "block")
+                    .style("z-index", javaxt.dhtml.utils.getNextHighestZindex());
+                }
+                d3.select(this).transition().duration(100).attr("opacity", "0.8");
             };
 
-            var mousemove = function (d) {
-              tooltip
-                .html(d.value)
-                .style('top', (d3.event.layerY) + "px")
-			          .style('left', (d3.event.layerX + 20) + "px");
+            var mousemove = function() {
+                if (chartConfig.showTooltip!==true) return;
+                var e = d3.event;
+                tooltip
+                .style('top', (e.clientY) + "px")
+                .style('left', (e.clientX + 20) + "px");
             };
 
-            var mouseleave = function (d) {
-              tooltip
-                .style("opacity", 0)
-                .style("display", "none");
-
-                d3.select(this).transition().duration(100).attr("opacity", "1")
+            var mouseleave = function() {
+                if (chartConfig.showTooltip===true){
+                    tooltip
+                    .style("opacity", 0)
+                    .style("display", "none");
+                }
+                d3.select(this).transition().duration(100).attr("opacity", "1");
             };
 
 
