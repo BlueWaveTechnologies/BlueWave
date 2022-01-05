@@ -77,7 +77,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         createPanel("Imports", createImportsPanel);
         createPanel("Products", createProductsPanel);        
         createPanel("Exams", createExamsPanel);
-        createPanel("Premier", createPremierPanel);
+        createPanel("Sales", createSalesPanel);
 
 
         onRender(table, function(){
@@ -682,6 +682,17 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     };
 
 
+    var createDashboardItem = function(parent, title){
+        var dashboardItem = bluewave.utils.createDashboardItem(parent,{
+            title: title,
+            width: "100%",
+            height: "100%"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.innerDiv.style.textAlign = "center";
+        return dashboardItem;
+    };
+
   //**************************************************************************
   //** createProductCharts
   //**************************************************************************
@@ -701,24 +712,30 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         td = document.createElement("td");
         td.style.width = "33%";
         td.style.height = "100%";
+        td.style.padding = "10px 0px";
         tr.appendChild(td);
-        var facilityChart = new bluewave.charts.PieChart(td, {});
+        var facilityPanel = createDashboardItem(td, "Facilities");
+        var facilityChart = new bluewave.charts.PieChart(facilityPanel.innerDiv, {});
 
         
       //Product codes chart
         td = document.createElement("td");
-        td.style.width = "34%";
+        td.style.width = "33%";
         td.style.height = "100%";
+        td.style.padding = "10px 10px";
         tr.appendChild(td);
-        var procodeChart = new bluewave.charts.PieChart(td, {});
+        var procodePanel = createDashboardItem(td, "Product Codes");
+        var procodeChart = new bluewave.charts.PieChart(procodePanel.innerDiv, {});
         
         
       //Products pie chart
         td = document.createElement("td");
         td.style.width = "33%";
         td.style.height = "100%";
+        td.style.padding = "10px 0px";
         tr.appendChild(td);   
-        var productChart = new bluewave.charts.PieChart(td, {});
+        var productPanel = createDashboardItem(td, "Products");
+        var productChart = new bluewave.charts.PieChart(productPanel.innerDiv, {});
         
         
         var groupData = function(data, groupBy, type){
@@ -756,7 +773,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             pieLabels: false,
             labelOffset: 120,
             maximumSlices: 8,
-            showOther: true
+            showOther: true,
+            showTooltip: true
         };        
         
         return {
@@ -766,13 +784,25 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 productChart.clear();
             },
             update: function(data, key){
-                console.log(key);
                 
+                var isCurrency = key === "value";
+
                 var facilityData = groupData(data, key, "fei");
                 facilityChart.update(chartConfig, toArray(facilityData));
+                facilityChart.getTooltipLabel = function(d){
+                    var procode = d.key;
+                    var value = (isCurrency? "$" : "") + formatNumber(d.value);
+                    return procode + ": " + value;
+                };
+                
                 
                 var procodeData = groupData(data, key, "product_code");
                 procodeChart.update(chartConfig, toArray(procodeData));
+                procodeChart.getTooltipLabel = function(d){
+                    var procode = d.key;
+                    var value = (isCurrency? "$" : "") + formatNumber(d.value);
+                    return procode + ": " + value;
+                };
                 
                 var arr = [];                
                 data.forEach((d)=>{                    
@@ -786,16 +816,27 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     arr.push(entry);
                 });                
                 var productData = groupData(arr, key, "key");
-                productChart.update(chartConfig, toArray(productData));                
+                productChart.update(chartConfig, toArray(productData));   
+                productChart.getTooltipLabel = function(d){
+                    var product = d.key;
+                    var idx = product.indexOf(":");
+                    var productName = product.substring(idx+1).trim();
+                    var productCode = product.substring(0,idx).trim();
+                    var value = (isCurrency? "$" : "") + formatNumber(d.value);
+                    var label = productName;
+                    if (productCode.length>0) label+= "<br/>" + productCode;
+                    label += "<br/>" + value;
+                    return label;
+                };                
             }
         };
     };
 
 
   //**************************************************************************
-  //** createPremierPanel
+  //** createSalesPanel
   //**************************************************************************
-    var createPremierPanel = function(parent){
+    var createSalesPanel = function(parent){
 
 
         var div = document.createElement("div");
@@ -1402,18 +1443,6 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     
     
   //**************************************************************************
-  //** numberWithCommas
-  //**************************************************************************
-    const formatNumber = (x) => {
-        if (x==null) return "";
-        if (typeof x !== "string") x+="";
-        var parts = x.toString().split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return parts.join(".");
-    };    
-    
-
-  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
@@ -1424,6 +1453,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     var updateExtents = bluewave.utils.updateExtents;
     var get = bluewave.utils.get;
     var parseCSV = bluewave.utils.parseCSV;
+    var formatNumber = bluewave.utils.formatNumber;
 
     init();
 };
