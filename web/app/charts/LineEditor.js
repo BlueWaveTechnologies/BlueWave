@@ -114,6 +114,12 @@ bluewave.charts.LineEditor = function(parent, config) {
 
         if (config) chartConfig = config;
 
+        chartConfig.layers = [];
+        for (var i=0; i<inputs.length; i++){
+            chartConfig.layers.push({});
+        }
+
+
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
@@ -240,6 +246,8 @@ bluewave.charts.LineEditor = function(parent, config) {
             items: items
         });
 
+        var formGroups = form.getGroups();
+
 
       //Update plotInputs with label field(s)
         for (var i=0; i<inputData.length; i++){
@@ -249,10 +257,41 @@ bluewave.charts.LineEditor = function(parent, config) {
         }
 
 
+      //Watch for form change events
         form.onChange = function(input, value){
+
+          //Get dataset ID associated with the input
+            var datasetID;
+            var foundGroup = false;
+            formGroups.every(function(group){
+                group.getRows().every(function(row){
+                    if (row===input.row){
+                        foundGroup = true;
+                        var groupName = group.name;
+                        var groupID = parseInt(groupName.substring(groupName.lastIndexOf(" ")));
+                        datasetID = groupID-1;
+                    }
+                    return !foundGroup;
+                });
+                return !foundGroup;
+            });
+
+
+          //Get layer associated with the dataset ID
+            var layer = chartConfig.layers[datasetID];
             var key = input.name;
+            ["xAxis","yAxis","group","label"].forEach(function(label){
+                var idx = key.indexOf(label);
+                if (idx>-1){
+                    key = key.substring(0, idx);
+                }
+            });
+            layer[key] = value;
+
+
 
           //Special case for "Separate By" option. Show/Hide the label field.
+            var key = input.name;
             var idx = key.indexOf("group");
             if (idx>-1){
                 var id = key.substring("group".length);
@@ -275,19 +314,8 @@ bluewave.charts.LineEditor = function(parent, config) {
 
                 form.resize();
             }
-//Gonna need to change this 
-            if(key == "xAxis" || key == "yAxis"){
-                chartConfig.layers[0][key] = value;
-            }
-            if(key.slice(0, -1) == "xAxis" || key.slice(0, -1) == "yAxis"){
-                let n = key.slice(-1);
-                chartConfig.layers[n][key] = value;
-            
-            }else {
-                chartConfig[key] = value;
-            }
-            
-        
+
+
             createLinePreview();
         };
     };
@@ -367,11 +395,11 @@ console.log(chartConfig)
             let layer = layers[i];
             let line = new bluewave.chart.Line(layer);
             lineChart.addLine(line, d, layer.xAxis, layer.yAxis)
-        
+
         });
         lineChart.update();
 
-        
+
     }
     };
 
@@ -807,7 +835,7 @@ console.log(chartConfig)
             form.findField("lineOpacity").setValue(lineConfig.opacity*100);
             form.findField("startOpacity").setValue(lineConfig.fill.startOpacity*100);
             form.findField("endOpacity").setValue(lineConfig.fill.endOpacity*100);
-            
+
 
 
             // var smoothingType = chartConfig["smoothingType" + n];
