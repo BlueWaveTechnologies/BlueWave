@@ -18,7 +18,9 @@ bluewave.charts.LineEditor = function(parent, config) {
     var lineChart, barChart;
     var optionsDiv;
     var plotInputs = {};
-    var chartConfig = {};
+    var chartConfig = {
+        layers: []
+    };
     var colorPicker;
 
 
@@ -273,8 +275,18 @@ bluewave.charts.LineEditor = function(parent, config) {
 
                 form.resize();
             }
-
+//Gonna need to change this 
+            if(key == "xAxis" || key == "yAxis"){
+                chartConfig.layers[0][key] = value;
+            }
+            if(key.slice(0, -1) == "xAxis" || key.slice(0, -1) == "yAxis"){
+                let n = key.slice(-1);
+                chartConfig.layers[n][key] = value;
+            }
+            
             chartConfig[key] = value;
+
+        
             createLinePreview();
         };
     };
@@ -339,13 +351,27 @@ bluewave.charts.LineEditor = function(parent, config) {
   //** createLinePreview
   //**************************************************************************
     var createLinePreview = function(){
+
+
+        //Why is lineChart undefined? I though it got initialized in initChartSpace?
+        if(lineChart){
         lineChart.clear();
         lineChart.setConfig(chartConfig);
         //TODO: Add lines
+console.log(chartConfig)
 
+        var layers = chartConfig.layers;
+        inputData.forEach(function(d, i){
 
-        // inputData.forEach((d)=>lineChart.addLine(line, d));
+            let layer = layers[i];
+            let line = new bluewave.chart.Line(layer);
+            lineChart.addLine(line, d, layer.xAxis, layer.yAxis)
+        
+        });
         lineChart.update();
+
+        
+    }
     };
 
 
@@ -748,32 +774,48 @@ bluewave.charts.LineEditor = function(parent, config) {
             //for these I think I'm gonna need to do chartConfig.layers[i].line.setThing()
             var colors = bluewave.utils.getColorPalette(true);
 
-            if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = colors[n%colors.length];
-            if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
-            if( !chartConfig["lineStyle" + n] ) chartConfig["lineStyle" + n] = "solid";
-            if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;
-            if( isNaN(chartConfig["opacity" + n]) ) chartConfig["opacity" + n] = 1;
-            if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
-            if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
-            if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 0;
+            //I think default config makes these redundant
+            // if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = colors[n%colors.length];
+            // if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
+            // if( !chartConfig["lineStyle" + n] ) chartConfig["lineStyle" + n] = "solid";
+            // if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;
+            // if( isNaN(chartConfig["opacity" + n]) ) chartConfig["opacity" + n] = 1;
+            // if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
+            // if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
+            // if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 0;
+            var layers = lineChart.getLayers();
+            var lineConfig = layers[n].line.getConfig();
 
 
 
-            form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
-            form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
-            form.findField("lineStyle").setValue(chartConfig["lineStyle" + n]);
-            form.findField("lineThickness").setValue(chartConfig["lineWidth" + n]);
-            form.findField("lineOpacity").setValue(chartConfig["opacity" + n]*100);
-            form.findField("startOpacity").setValue(chartConfig["startOpacity" + n]*100);
-            form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
-            form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
+            // form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
+            // form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
+            // form.findField("lineStyle").setValue(chartConfig["lineStyle" + n]);
+            // form.findField("lineThickness").setValue(chartConfig["lineWidth" + n]);
+            // form.findField("lineOpacity").setValue(chartConfig["opacity" + n]*100);
+            // form.findField("startOpacity").setValue(chartConfig["startOpacity" + n]*100);
+            // form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
+            // form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
 
 
-            var smoothingType = chartConfig["smoothingType" + n];
+            form.findField("lineColor").setValue(lineConfig.color);
+            form.findField("pointColor").setValue(lineConfig.point.color);
+            form.findField("pointRadius").setValue(lineConfig.point.radius);
+            form.findField("lineStyle").setValue(lineConfig.style);
+            form.findField("lineThickness").setValue(lineConfig.width);
+            form.findField("lineOpacity").setValue(lineConfig.opacity*100);
+            form.findField("startOpacity").setValue(lineConfig.fill.startOpacity*100);
+            form.findField("endOpacity").setValue(lineConfig.fill.endOpacity*100);
+            
+
+
+            // var smoothingType = chartConfig["smoothingType" + n];
+            var smoothingType = lineConfig.smoothing;
             if (smoothingType){
                 form.findField("smoothingType").setValue(smoothingType);
 
-                var smoothingValue = chartConfig["smoothingValue" + n];
+                // var smoothingValue = chartConfig["smoothingValue" + n];
+                var smoothingValue = lineConfig.smoothingValue;
                 if (isNaN(smoothingValue)) smoothingValue = 0;
                 smoothingField.setValue(smoothingValue);
             }
@@ -798,16 +840,18 @@ bluewave.charts.LineEditor = function(parent, config) {
                 // chartConfig["pointColor" + n] = settings.pointColor;
                 // chartConfig["pointRadius" + n] = settings.pointRadius;
 
-                chartConfig["lineColor" + n] = settings.lineColor;
-                chartConfig["lineStyle" + n] = settings.lineStyle;
-                chartConfig["lineWidth" + n] = settings.lineThickness;
-                chartConfig["opacity" + n] = settings.lineOpacity/100;
+                chartConfig.layers = layers.line;
 
-                chartConfig["startOpacity" + n] = settings.startOpacity/100;
-                chartConfig["endOpacity" + n] = settings.endOpacity/100;
+                chartConfig.layers[n].color = settings.lineColor;
+                chartConfig.layers[n].style = settings.lineStyle;
+                chartConfig.layers[n].width = settings.lineThickness;
+                chartConfig.layers[n].opacity = settings.lineOpacity/100;
 
-                chartConfig["pointColor" + n] = settings.pointColor;
-                chartConfig["pointRadius" + n] = settings.pointRadius;
+                chartConfig.layers[n].fill.startOpacity = settings.startOpacity/100;
+                chartConfig.layers[n].fill.endOpacity = settings.endOpacity/100;
+
+                chartConfig.layers[n].point.color = settings.pointColor;
+                chartConfig.layers[n].point.radius = settings.pointRadius;
 
                 var smoothingType = settings.smoothingType;
                 if (smoothingType==="none"){

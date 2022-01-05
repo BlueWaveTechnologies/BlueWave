@@ -350,7 +350,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 .key( (d) => d[layers[0].xAxis]) //not right yet
                 .entries(mergedData)
 
-            console.log("data", mergedData)
+            console.log("mergeddata", mergedData)
             console.log("groupedStackData", groupedStackData)
 
             let stackGroup=[];
