@@ -282,10 +282,11 @@ bluewave.charts.LineEditor = function(parent, config) {
             if(key.slice(0, -1) == "xAxis" || key.slice(0, -1) == "yAxis"){
                 let n = key.slice(-1);
                 chartConfig.layers[n][key] = value;
+            
+            }else {
+                chartConfig[key] = value;
             }
             
-            chartConfig[key] = value;
-
         
             createLinePreview();
         };
@@ -840,7 +841,7 @@ console.log(chartConfig)
                 // chartConfig["pointColor" + n] = settings.pointColor;
                 // chartConfig["pointRadius" + n] = settings.pointRadius;
 
-                chartConfig.layers = layers.line;
+                chartConfig.layers = layers.map((l)=>l.line);
 
                 chartConfig.layers[n].color = settings.lineColor;
                 chartConfig.layers[n].style = settings.lineStyle;
