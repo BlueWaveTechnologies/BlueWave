@@ -12,11 +12,22 @@ if(!bluewave.charts) bluewave.charts={};
 bluewave.charts.PieEditor = function(parent, config) {
     var me = this;
     var defaultConfig = {
-        pieCutout: 0.65,
-        piePadding: 0,
-        maximumSlices: 8,
-        labelOffset: 120,
-        showOther: true
+        panel: {
+
+        },
+        colors: {
+            blue: ["#6699cc","#f8f8f8"],
+            orange: ["#FF8C42","#f8f8f8"],
+            purple: ["#933ed5","#f8f8f8"],
+            mixed: bluewave.utils.getColorPalette()
+        },
+        chart: {
+            pieCutout: 0.65,
+            piePadding: 0,
+            maximumSlices: 8,
+            labelOffset: 120,
+            showOther: true
+        }
     };
 
     var panel;
@@ -25,13 +36,7 @@ bluewave.charts.PieEditor = function(parent, config) {
     var previewArea;
     var pieChart;
     var optionsDiv;
-    var pieInputs={
-        key:"",
-        value:"",
-        direction:"",
-        sort:"",
-        sortDir:""
-    };
+    var pieInputs = {};
     var chartConfig = {};
     var styleEditor;
 
@@ -40,6 +45,10 @@ bluewave.charts.PieEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
+
+        if (!config) config = {};
+        config = merge(config, defaultConfig);
+        chartConfig = config.chart;
 
 
         let table = createTable();
@@ -109,11 +118,8 @@ bluewave.charts.PieEditor = function(parent, config) {
         inputData = inputs;
 
 
-        if (pieConfig) chartConfig = pieConfig;
-        merge(chartConfig, defaultConfig);
+        chartConfig = merge(pieConfig, config.chart);
 
-        var numSlices = inputData[0].length;
-        chartConfig.maximumSlices = numSlices<9 ? numSlices : 8;
 
 
         if (chartConfig.chartTitle){
@@ -333,8 +339,8 @@ bluewave.charts.PieEditor = function(parent, config) {
 
         onRender(previewArea, function(){
             var data = inputData[0];
-            
-            
+
+
             if (data.hasOwnProperty("links")) {
                 data = linksAndQuantity.slice();
                 data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
@@ -384,6 +390,16 @@ bluewave.charts.PieEditor = function(parent, config) {
         var body = styleEditor.getBody();
         body.innerHTML = "";
 
+
+        var colorField = new javaxt.dhtml.ComboBox(
+            document.createElement("div"),
+            {
+                style: config.style.combobox
+            }
+        );
+
+
+
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
             items: [
@@ -393,18 +409,13 @@ bluewave.charts.PieEditor = function(parent, config) {
                         {
                             name: "color",
                             label: "Color",
-                            type: new javaxt.dhtml.ComboBox(
-                                document.createElement("div"),
-                                {
-                                    style: config.style.combobox
-                                }
-                            )
+                            type: colorField
                         },
                         {
                             name: "cutout",
                             label: "Cutout",
                             type: "text"
-                        },
+                        }
                     ]
                 },
                 {
@@ -468,6 +479,15 @@ bluewave.charts.PieEditor = function(parent, config) {
         });
 
 
+      //Add color options
+        for (var key in config.colors) {
+            if (config.colors.hasOwnProperty(key)){
+                colorField.add(key, key);
+            }
+        }
+        //colorField.setValue(chartConfig.colors+"");
+
+
       //Update cutout field (add slider) and set initial value
         createSlider("cutout", form, "%");
         var cutout = Math.round(chartConfig.pieCutout*100.0);
@@ -528,6 +548,11 @@ bluewave.charts.PieEditor = function(parent, config) {
             if (settings.showOther==="true") settings.showOther = true;
             else if (settings.showOther==="false") settings.showOther = false;
             chartConfig.showOther = settings.showOther;
+
+            chartConfig.colors = config.colors[settings.color];
+            if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
+            else chartConfig.colorScaling = "linear";
+
             createPreview();
         };
 
