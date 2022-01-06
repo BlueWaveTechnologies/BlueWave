@@ -87,11 +87,12 @@ bluewave.charts.PieChart = function(parent, config) {
 
             
           //Truncate data as needed
+            var numSlices = data.length;
             var maxSlices = parseFloat(chartConfig.maximumSlices);
             if (!isNaN(maxSlices) && maxSlices>0) {
                 
 
-                var numSlices = data.length;
+                
                 if (maxSlices<numSlices){
                 
                     if (chartConfig.showOther === true) {
@@ -103,6 +104,7 @@ bluewave.charts.PieChart = function(parent, config) {
                         //Truncate after max slice
                         data = data.slice(0, maxSlices);
                     }
+                    numSlices = data.length;
                 }
             }
 
@@ -150,40 +152,82 @@ bluewave.charts.PieChart = function(parent, config) {
             var innerRadius = radius*cutout;
 
 
-            var tooltip = d3.select(document.body)
-              .append("div")
-              .style("opacity", 0)
-              .attr("class", "tooltip")
-              
+            var tooltip;
+            if (chartConfig.showTooltip===true){
+                tooltip = bluewave.charts.PieChart.Tooltip;
+                if (!tooltip){
+                    tooltip = bluewave.charts.PieChart.Tooltip =
+                    d3.select(document.body)
+                    .append("div")
+                    .style("opacity", 0)
+                    .attr("class", "tooltip");
+                }
+            }
+
 
             var mouseover = function(d) {
-                if (chartConfig.showTooltip===true){
+                if (tooltip){
+                    
+                  //Get label
                     var label = me.getTooltipLabel(d.data);
+                    
+                  //Get zIndex
+                    var highestElements = getHighestElements();
+                    var zIndex = highestElements.zIndex;
+                    if (!highestElements.contains(tooltip.node())) zIndex++;
+                    
+                  //Update tooltip
                     tooltip
                     .html(label)
                     .style("opacity", 1)
                     .style("display", "block")
-                    .style("z-index", javaxt.dhtml.utils.getNextHighestZindex());
+                    .style("z-index", zIndex);
                 }
+                
                 d3.select(this).transition().duration(100).attr("opacity", "0.8");
             };
 
             var mousemove = function() {
-                if (chartConfig.showTooltip!==true) return;
                 var e = d3.event;
-                tooltip
+                if (tooltip) tooltip
                 .style('top', (e.clientY) + "px")
                 .style('left', (e.clientX + 20) + "px");
             };
 
             var mouseleave = function() {
-                if (chartConfig.showTooltip===true){
-                    tooltip
-                    .style("opacity", 0)
-                    .style("display", "none");
-                }
+                if (tooltip) tooltip
+                .style("opacity", 0)
+                .style("display", "none");
+                
                 d3.select(this).transition().duration(100).attr("opacity", "1");
             };
+
+
+          //Create function to create fill colors
+            var getColor;
+            var colors = chartConfig.colors;
+            var colorScaling = chartConfig.colorScaling;
+            if (!colors){ 
+                colors = bluewave.utils.getColorPalette();
+                colorScaling = "ordinal";
+            }
+            else{
+                if (colors.length===1){
+                    var endColor = d3.color(colors[0]).brighter(5); 
+                    colors.push(endColor.formatHex());
+                }
+            }
+            if (!colorScaling) colorScaling = "linear";
+            
+            
+            if (colorScaling==="linear"){
+                getColor = d3.scaleLinear().domain([0,numSlices]).range(colors);
+            }
+            else if (colorScaling==="ordinal"){
+                getColor = d3.scaleOrdinal(colors);
+            }
+
+
 
 
           //Render pie chart
@@ -196,8 +240,9 @@ bluewave.charts.PieChart = function(parent, config) {
                 .attr("d", d3.arc()
                     .innerRadius(innerRadius)
                     .outerRadius(radius))
-                .attr("fill", function (d) {
-                    return getColor(d.data.key);
+                .attr("fill", function (d,i) {
+                    
+                    return getColor(i);
                 })
                 .attr("stroke", "#777")
                 .style("stroke-width", "1px")
@@ -384,7 +429,7 @@ bluewave.charts.PieChart = function(parent, config) {
             else return x-y;
         }
     };
-
+    
 
   //**************************************************************************
   //** Utils
@@ -393,7 +438,7 @@ bluewave.charts.PieChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var initChart = bluewave.chart.utils.initChart;
-    var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
+    var getHighestElements = javaxt.dhtml.utils.getHighestElements;
 
     init();
 };
