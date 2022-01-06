@@ -142,7 +142,15 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
         var parent = svg.node().parentNode;
 
+        svg
+            .attr("width", width)
+            .attr("height", height * years.length)
+            .attr("viewBox", [0, 0, width, height * years.length])
+            .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10);
 
+            
         onRender(parent, function(){
 
             // var width = parent.offsetWidth;
