@@ -120,12 +120,13 @@ bluewave.charts.CalendarChart = function(parent, config) {
             const T = d3.map(data, title);
             title = i => T[i];
         };
-        
+
         console.log(`resulting title is ${title}`);
         console.log(`X value is ${X}`);
     
         console.log("---------");
 
+        const years = d3.groups(I, i => X[i].getUTCFullYear()).reverse();
 
 
         var parent = svg.node().parentNode;
