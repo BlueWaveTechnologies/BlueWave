@@ -39,7 +39,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
         initChart(parent, function(s, g){
             svg = s;
-            chart = g;
+            calendarArea = g;
         });
     };
 
@@ -48,7 +48,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (chart) chart.selectAll("*").remove();
+        if (calendarArea) calendarArea.selectAll("*").remove();
     };
 
 
