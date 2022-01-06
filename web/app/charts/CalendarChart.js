@@ -129,6 +129,17 @@ bluewave.charts.CalendarChart = function(parent, config) {
         const years = d3.groups(I, i => X[i].getUTCFullYear()).reverse();
 
 
+
+        var pathMonth = function(t){
+            var d = Math.max(0, Math.min(weekDays, countDay(t.getUTCDay())));
+            var w = timeWeek.count(d3.utcYear(t), t);
+
+            return `${d === 0 ? `M${w * cellSize},0`
+            : d === weekDays ? `M${(w + 1) * cellSize},0`
+            : `M${(w + 1) * cellSize},0V${d * cellSize}H${w * cellSize}`}V${weekDays * cellSize}`;
+
+        }
+
         var parent = svg.node().parentNode;
 
 
@@ -258,12 +269,12 @@ bluewave.charts.CalendarChart = function(parent, config) {
     };
 
 
-  //**************************************************************************
-  //** Utils
 //   **************************************************************************
-    // var merge = javaxt.dhtml.utils.merge;
-    // var onRender = javaxt.dhtml.utils.onRender;
-    // var initChart = bluewave.utils.initChart;
+//   ** Utils
+//   **************************************************************************
+    var merge = javaxt.dhtml.utils.merge;
+    var onRender = javaxt.dhtml.utils.onRender;
+    var initChart = bluewave.utils.initChart;
 
     init();
 
