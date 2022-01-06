@@ -17,7 +17,10 @@ bluewave.charts.PieChart = function(parent, config) {
         pieValue: "value",
         pieLabels: true,
         pieCutout: 0.65,
-        labelOffset: 100
+        labelOffset: 100,
+        colors: ["#6699cc","#fff"], //start->end
+        colorScaling: "linear",
+        otherColor: "#b8b8b8"
     };
     var svg, pieArea;
 
@@ -60,7 +63,7 @@ bluewave.charts.PieChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
-        
+
         var parent = svg.node().parentNode;
         onRender(parent, function(){
 
@@ -85,29 +88,39 @@ bluewave.charts.PieChart = function(parent, config) {
             }
 
 
-            
+
           //Truncate data as needed
             var numSlices = data.length;
             var maxSlices = parseFloat(chartConfig.maximumSlices);
+            var hasOther = false;
             if (!isNaN(maxSlices) && maxSlices>0) {
-                
-
-                
                 if (maxSlices<numSlices){
-                
-                    if (chartConfig.showOther === true) {
-                        //Show Others
-                        var otherSlicesValue = data.slice(maxSlices).map(entry => entry[chartConfig.pieValue]).reduce((prev, next) => parseFloat(prev) + parseFloat(next));
-                        var otherSlicesEntry = {[chartConfig.pieKey]: "Other", [chartConfig.pieValue]: otherSlicesValue};
-                        data = data.slice(0, maxSlices).concat(otherSlicesEntry);
-                    } else {
-                        //Truncate after max slice
+
+                    var otherSlices;
+                    if (chartConfig.pieSortDir==="descending"){
+                        otherSlices = data.slice(maxSlices);
                         data = data.slice(0, maxSlices);
                     }
+                    else{
+                        otherSlices = data.slice(0, numSlices-maxSlices);
+                        data = data.slice(numSlices-maxSlices, numSlices);
+                    }
+
+                    if (chartConfig.showOther===true){
+
+                        var otherSlicesValue = 0;
+                        otherSlices.forEach(function(d){
+                            var val = parseFloat(d[chartConfig.pieValue]);
+                            if (!isNaN(val)) otherSlicesValue+=val;
+                        });
+
+                        data.push({[chartConfig.pieKey]: "Other", [chartConfig.pieValue]: otherSlicesValue});
+                        hasOther = true;
+                    }
+
                     numSlices = data.length;
                 }
             }
-
 
 
 
@@ -167,15 +180,15 @@ bluewave.charts.PieChart = function(parent, config) {
 
             var mouseover = function(d) {
                 if (tooltip){
-                    
+
                   //Get label
                     var label = me.getTooltipLabel(d.data);
-                    
+
                   //Get zIndex
                     var highestElements = getHighestElements();
                     var zIndex = highestElements.zIndex;
                     if (!highestElements.contains(tooltip.node())) zIndex++;
-                    
+
                   //Update tooltip
                     tooltip
                     .html(label)
@@ -183,7 +196,7 @@ bluewave.charts.PieChart = function(parent, config) {
                     .style("display", "block")
                     .style("z-index", zIndex);
                 }
-                
+
                 d3.select(this).transition().duration(100).attr("opacity", "0.8");
             };
 
@@ -198,35 +211,30 @@ bluewave.charts.PieChart = function(parent, config) {
                 if (tooltip) tooltip
                 .style("opacity", 0)
                 .style("display", "none");
-                
+
                 d3.select(this).transition().duration(100).attr("opacity", "1");
             };
 
 
+
+          //Get color config
+            var colors = chartConfig.colors;
+            if (!colors) colors = ["#6699cc","#f8f8f8"];
+            var colorScaling = chartConfig.colorScaling;
+            if (!colorScaling) colorScaling = "linear";
+            var otherColor = chartConfig.otherColor;
+            if (!otherColor) otherColor = "#b8b8b8";
+
+
           //Create function to create fill colors
             var getColor;
-            var colors = chartConfig.colors;
-            var colorScaling = chartConfig.colorScaling;
-            if (!colors){ 
-                colors = bluewave.utils.getColorPalette();
-                colorScaling = "ordinal";
-            }
-            else{
-                if (colors.length===1){
-                    var endColor = d3.color(colors[0]).brighter(5); 
-                    colors.push(endColor.formatHex());
-                }
-            }
-            if (!colorScaling) colorScaling = "linear";
-            
-            
             if (colorScaling==="linear"){
-                getColor = d3.scaleLinear().domain([0,numSlices]).range(colors);
+                var maxColors = numSlices-(hasOther?2:1);
+                getColor = d3.scaleLinear().domain([0,maxColors]).range(colors);
             }
             else if (colorScaling==="ordinal"){
                 getColor = d3.scaleOrdinal(colors);
             }
-
 
 
 
@@ -241,7 +249,9 @@ bluewave.charts.PieChart = function(parent, config) {
                     .innerRadius(innerRadius)
                     .outerRadius(radius))
                 .attr("fill", function (d,i) {
-                    
+                    if (hasOther && i==numSlices-1){
+                        return otherColor;
+                    }
                     return getColor(i);
                 })
                 .attr("stroke", "#777")
@@ -398,7 +408,7 @@ bluewave.charts.PieChart = function(parent, config) {
                   //Update position
                     var dy = javaxt.dhtml.utils.getRect(parent).y - javaxt.dhtml.utils.getRect(pieChart.node()).y;
                     var dx = javaxt.dhtml.utils.getRect(parent).x - javaxt.dhtml.utils.getRect(pieChart.node()).x;
-                    
+
                     pieChart
                       .attr("transform",
                         // "translate(" + (x) + "," + (y+dy) + ") " +
@@ -429,7 +439,7 @@ bluewave.charts.PieChart = function(parent, config) {
             else return x-y;
         }
     };
-    
+
 
   //**************************************************************************
   //** Utils
