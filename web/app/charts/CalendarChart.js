@@ -100,6 +100,33 @@ bluewave.charts.CalendarChart = function(parent, config) {
         console.log(max);
         const color = d3.scaleSequential([-max, +max], colors).unknown("none");
         
+        // for computing titles
+        formatMonth = d3.utcFormat(formatMonth);
+        console.log(formatMonth());
+
+        if (title === undefined) {
+            console.log("computing another title")
+            console.log(typeof(title))
+            const formatDate = d3.utcFormat("%B %-d, %Y");
+            
+            console.log(formatDate());
+            
+            const formatValue = color.tickFormat(100, yFormat);
+            title = i => `${formatDate(X[i])}\n${formatValue(Y[i])}`;
+            console.log(title())
+        }
+        else if (title !== null) {
+            console.log("title was not null")
+            const T = d3.map(data, title);
+            title = i => T[i];
+        };
+        
+        console.log(`resulting title is ${title}`);
+        console.log(`X value is ${X}`);
+    
+        console.log("---------");
+
+
 
         var parent = svg.node().parentNode;
 
