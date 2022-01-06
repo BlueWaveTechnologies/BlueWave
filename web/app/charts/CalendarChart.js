@@ -55,7 +55,19 @@ bluewave.charts.CalendarChart = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(chartConfig, data){
+    this.update = function(chartConfig, data, {
+            x = ([x]) => x, // given d in data, returns the (temporal) x-value
+            y = ([, y]) => y, // given d in data, returns the (quantitative) y-value
+            title, // given d in data, returns the title text
+            width = 928, // width of the chart, in pixels
+            cellSize = 17, // width and height of an individual day, in pixels
+            weekday = "monday", // either: weekday, sunday, or monday
+            formatDay = i => "SMTWTFS"[i], // given a day number in [0, 6], the day-of-week label
+            formatMonth = "%b", // format specifier string for months (above the chart)
+            yFormat, // format specifier string for values (in the title)
+            colors = d3.interpolatePiYG
+        } = {})
+        {
         me.clear();
 
         var parent = svg.node().parentNode;
