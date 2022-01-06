@@ -155,7 +155,13 @@ bluewave.charts.CalendarChart = function(parent, config) {
         .join("g")
             .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
     
-
+        year.append("text")
+            .attr("x", -5)
+            .attr("y", -5)
+            .attr("font-weight", "bold")
+            .attr("text-anchor", "end")
+            .text(([key]) => key);
+            
         onRender(parent, function(){
 
             // var width = parent.offsetWidth;
