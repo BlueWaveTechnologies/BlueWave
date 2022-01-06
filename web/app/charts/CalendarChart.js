@@ -11,6 +11,8 @@ if(!bluewave.charts) bluewave.charts={};
 
 bluewave.charts.CalendarChart = function(parent, config) {
 
+    console.log("initialized calendarChart")
+    
     var me = this;
     var defaultConfig = {
         margin: {
@@ -20,7 +22,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
             left: 82
         }
     };
-    // var svg, chart, calendarArea, line, regression;
+    // var svg, calendarArea;
     var xAxis, yAxis;
     var axisWidth, axisHeight;
     var x, y, xBand, yBand;
@@ -61,53 +63,53 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
         onRender(parent, function(){
 
-            var width = parent.offsetWidth;
-            var height = parent.offsetHeight;
-            var margin = config.margin;
-            axisHeight = height - margin.top - margin.bottom;
-            axisWidth = width - margin.left - margin.right;
-            var plotHeight = height - margin.top - margin.bottom;
-            var plotWidth = width - margin.left - margin.right;
-            calendarArea = chart.append("g");
-            calendarArea
-                .attr("width", plotWidth)
-                .attr("height", plotHeight)
-                .attr(
-                    "transform",
-                    "translate(" + margin.left + "," + (margin.top) + ")"
-                );
+            // var width = parent.offsetWidth;
+            // var height = parent.offsetHeight;
+            // var margin = config.margin;
+            // axisHeight = height - margin.top - margin.bottom;
+            // axisWidth = width - margin.left - margin.right;
+            // var plotHeight = height - margin.top - margin.bottom;
+            // var plotWidth = width - margin.left - margin.right;
+            // calendarArea = chart.append("g");
+            // calendarArea
+            //     .attr("width", plotWidth)
+            //     .attr("height", plotHeight)
+            //     .attr(
+            //         "transform",
+            //         "translate(" + margin.left + "," + (margin.top) + ")"
+            //     );
 
-             // Setup:
-            // Check that axis exist and are populated
-            let xKey;
-            let yKey;
-            let xKey2;
-            let yKey2;
-            let group;
+            //  // Setup:
+            // // Check that axis exist and are populated
+            // let xKey;
+            // let yKey;
+            // let xKey2;
+            // let yKey2;
+            // let group;
 
-            if(chartConfig.xAxis===null || chartConfig.yAxis===null){
-                return;
-            }else{
-                xKey = chartConfig.xAxis;
-                yKey = chartConfig.yAxis;
-                group = chartConfig.group;
-            }
+            // if(chartConfig.xAxis===null || chartConfig.yAxis===null){
+            //     return;
+            // }else{
+            //     xKey = chartConfig.xAxis;
+            //     yKey = chartConfig.yAxis;
+            //     group = chartConfig.group;
+            // }
 
-            if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-                xKey2 = chartConfig.xAxis2;
-                yKey2 = chartConfig.yAxis2;
-            }
+            // if(chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
+            //     xKey2 = chartConfig.xAxis2;
+            //     yKey2 = chartConfig.yAxis2;
+            // }
 
-            var data1 = data[0];
-            var data2 = data[1];
-            data = data1;
+            // var data1 = data[0];
+            // var data2 = data[1];
+            // data = data1;
 
-            if (data2!==null && data2!==undefined && xKey2 && yKey2){
-                data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
-            }
-               let xType = typeOfAxisValue();
+            // if (data2!==null && data2!==undefined && xKey2 && yKey2){
+            //     data = mergeToAxis(data1,data2,xKey,xKey2,xKey,yKey,yKey2,yKey);
+            // }
+            //    let xType = typeOfAxisValue();
 
-               displayAxis(xKey, yKey, data);
+            //    displayAxis(xKey, yKey, data);
 
                var tooltip = d3.select(parent)
                  .append("div")
@@ -161,14 +163,14 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
 
 
-            let xTemps = createAxisScale(xKey, 'x', data);
-            let xScale = xTemps.scale;
-            let yTemps = createAxisScale(yKey, 'y', data);
-            let yScale = yTemps.scale;
+            // let xTemps = createAxisScale(xKey, 'x', data);
+            // let xScale = xTemps.scale;
+            // let yTemps = createAxisScale(yKey, 'y', data);
+            // let yScale = yTemps.scale;
 
-            line = d3.line()
-            .x(function(d) { return xScale(d[0])})
-            .y(function(d) { return yScale(d[1])});
+            // line = d3.line()
+            // .x(function(d) { return xScale(d[0])})
+            // .y(function(d) { return yScale(d[1])});
 
             // if (chartConfig.showRegLine) {
             // 	 calendarArea.append("path")
