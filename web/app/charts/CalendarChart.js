@@ -150,7 +150,12 @@ bluewave.charts.CalendarChart = function(parent, config) {
             .attr("font-family", "sans-serif")
             .attr("font-size", 10);
 
-            
+        const year = svg.selectAll("g")
+        .data(years)
+        .join("g")
+            .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
+    
+
         onRender(parent, function(){
 
             // var width = parent.offsetWidth;
