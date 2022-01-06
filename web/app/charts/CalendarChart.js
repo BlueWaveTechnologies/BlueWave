@@ -22,11 +22,11 @@ bluewave.charts.CalendarChart = function(parent, config) {
             left: 82
         }
     };
-    // var svg, calendarArea;
-    var xAxis, yAxis;
-    var axisWidth, axisHeight;
-    var x, y, xBand, yBand;
-    var timeAxis;
+    var svg, calendarArea;
+    // var xAxis, yAxis;
+    // var axisWidth, axisHeight;
+    // var x, y, xBand, yBand;
+    // var timeAxis;
 
 
   //**************************************************************************
