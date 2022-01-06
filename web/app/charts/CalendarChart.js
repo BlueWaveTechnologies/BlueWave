@@ -70,6 +70,24 @@ bluewave.charts.CalendarChart = function(parent, config) {
         {
         me.clear();
 
+        console.log("datap preset");
+        console.log(data)
+
+        // FIX THE FORMAT OF THE DATE IF ITS NOT already in proper date format
+        for (i in data){
+        data[i]["date"] = new Date(data[i]["date"])
+        }
+        
+
+        var X = d3.map(data, x);
+        console.log(X);
+
+        var Y = d3.map(data, y);
+        var I = d3.range(X.length);
+
+
+
+
         var parent = svg.node().parentNode;
 
 
