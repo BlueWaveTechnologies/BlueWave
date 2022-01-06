@@ -70,6 +70,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
         {
         me.clear();
 
+
+        const height = cellSize * (weekDays + 2);
+
+
         console.log("datap preset");
         console.log(data)
 
