@@ -161,6 +161,17 @@ bluewave.charts.CalendarChart = function(parent, config) {
             .attr("font-weight", "bold")
             .attr("text-anchor", "end")
             .text(([key]) => key);
+
+
+        year.append("g")
+            .attr("text-anchor", "end")
+            .selectAll("text")
+            .data(weekday === "weekday" ? d3.range(1, 6) : d3.range(7))
+            .join("text")
+            .attr("x", -5)
+            .attr("y", i => (countDay(i) + 0.5) * cellSize)
+            .attr("dy", "0.31em")
+            .text(formatDay);
             
         onRender(parent, function(){
 
