@@ -18,7 +18,7 @@ bluewave.charts.PieChart = function(parent, config) {
         pieLabels: true,
         pieCutout: 0.65,
         labelOffset: 100,
-        colors: ["#6699cc","#fff"], //start->end
+        colors: ["#6699cc","#f8f8f8"], //start->end
         colorScaling: "linear",
         otherColor: "#b8b8b8"
     };
@@ -74,16 +74,17 @@ bluewave.charts.PieChart = function(parent, config) {
           //Sort values as needed
             var pieSort = chartConfig.pieSort;
             pieSort = (pieSort+"").toLowerCase();
+            var sortDir = (chartConfig.pieSortDir+"").toLowerCase();
             if (pieSort === "key") {
                 data.sort(function(a, b){
-                    return sort(a[chartConfig.pieKey],b[chartConfig.pieKey],chartConfig.pieSortDir);
+                    return sort(a[chartConfig.pieKey],b[chartConfig.pieKey],sortDir);
                 });
             }
             else if(pieSort === "value") {
                 data = data.sort(function(a,b){
                     a = parseFloat(a[chartConfig.pieValue]);
                     b = parseFloat(b[chartConfig.pieValue]);
-                    return sort(a,b,chartConfig.pieSortDir);
+                    return sort(a,b,sortDir);
                 });
             }
 
@@ -97,7 +98,7 @@ bluewave.charts.PieChart = function(parent, config) {
                 if (maxSlices<numSlices){
 
                     var otherSlices;
-                    if (chartConfig.pieSortDir==="descending"){
+                    if (sortDir==="descending"){
                         otherSlices = data.slice(maxSlices);
                         data = data.slice(0, maxSlices);
                     }
