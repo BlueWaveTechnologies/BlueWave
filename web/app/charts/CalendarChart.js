@@ -85,7 +85,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
         var Y = d3.map(data, y);
         var I = d3.range(X.length);
 
-
+        var countDay = weekday === "sunday" ? i => i : i => (i + 6) % 7;
+        var weekday = "monday";
+        var timeWeek = weekday === "sunday" ? d3.utcSunday : d3.utcMonday;
+        var weekDays = weekday === "weekday" ? 5 : 7;
 
 
         var parent = svg.node().parentNode;
