@@ -95,6 +95,12 @@ bluewave.charts.CalendarChart = function(parent, config) {
         var weekDays = weekday === "weekday" ? 5 : 7;
 
 
+
+        const max = d3.quantile(Y, 0.9975, Math.abs);
+        console.log(max);
+        const color = d3.scaleSequential([-max, +max], colors).unknown("none");
+        
+
         var parent = svg.node().parentNode;
 
 
