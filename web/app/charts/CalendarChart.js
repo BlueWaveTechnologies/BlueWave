@@ -172,7 +172,20 @@ bluewave.charts.CalendarChart = function(parent, config) {
             .attr("y", i => (countDay(i) + 0.5) * cellSize)
             .attr("dy", "0.31em")
             .text(formatDay);
-            
+    
+
+        var cell = year.append("g")
+            .selectAll("rect")
+            .data(weekday === "weekday"
+                ? ([, I]) => I.filter(i => ![0, 6].includes(X[i].getUTCDay()))
+                : ([, I]) => I)
+            .join("rect")
+                .attr("width", cellSize - 1)
+                .attr("height", cellSize - 1)
+                .attr("x", i => timeWeek.count(d3.utcYear(X[i]), X[i]) * cellSize + 0.5)
+                .attr("y", i => countDay(X[i].getUTCDay()) * cellSize + 0.5)
+                .attr("fill", i => color(Y[i]));
+        
         onRender(parent, function(){
 
             // var width = parent.offsetWidth;
