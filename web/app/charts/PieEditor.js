@@ -495,7 +495,7 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
         var labelField = form.findField("labels");
-        var labels = chartConfig.pieLabels;
+        var labels = chartConfig.showLabels;
         labelField.setValue(labels===true ? true : false);
 
 
@@ -541,7 +541,7 @@ bluewave.charts.PieEditor = function(parent, config) {
                 settings.labels = false;
                 form.disableField("labelOffset");
             }
-            chartConfig.pieLabels = settings.labels;
+            chartConfig.showLabels = settings.labels;
 
             chartConfig.labelOffset = settings.labelOffset;
 
