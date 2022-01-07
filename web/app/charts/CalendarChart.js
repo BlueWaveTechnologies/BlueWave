@@ -185,7 +185,9 @@ bluewave.charts.CalendarChart = function(parent, config) {
                 .attr("x", i => timeWeek.count(d3.utcYear(X[i]), X[i]) * cellSize + 0.5)
                 .attr("y", i => countDay(X[i].getUTCDay()) * cellSize + 0.5)
                 .attr("fill", i => color(Y[i]));
-        
+       
+        if (title) cell.append("title")
+            .text(title);
         onRender(parent, function(){
 
             // var width = parent.offsetWidth;
