@@ -237,7 +237,58 @@ bluewave.Homepage = function(parent, config) {
         img.style.cursor = "pointer";
         img.onload = function() {
             dashboardItem.innerDiv.innerHTML = "";
+            var rect = javaxt.dhtml.utils.getRect(dashboardItem.innerDiv);            
             dashboardItem.innerDiv.appendChild(this);
+            this.style.border = "1px solid #ececec"; //this should be in the css
+            
+            
+            var maxWidth = rect.width;
+            var maxHeight = rect.height;
+            var width = 0;
+            var height = 0;
+
+            var setWidth = function(){
+                var ratio = maxWidth/width;
+                width = width*ratio;
+                height = height*ratio;
+            };
+
+            var setHeight = function(){
+                var ratio = maxHeight/height;
+                width = width*ratio;
+                height = height*ratio;
+            };
+
+
+            var resize = function(img){
+                width = img.width;
+                height = img.height;
+
+                if (maxHeight<maxWidth){
+
+                    setHeight();
+                    if (width>maxWidth) setWidth();
+                }
+                else{
+                    setWidth();
+                    if (height>maxHeight) setHeight();
+                }
+
+                if (width===0 || height===0) return;
+                
+                
+                img.width = width;
+                img.height = height;
+                
+                //TODO: Insert image into a canvas and do a proper resize
+                //ctx.putImageData(img, 0, 0);
+                //resizeCanvas(canvas, width, height, true);
+                //var base64image = canvas.toDataURL("image/png");
+
+            };
+
+            resize(this);
+            
         };
         img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
     };

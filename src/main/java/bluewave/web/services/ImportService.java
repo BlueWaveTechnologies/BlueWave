@@ -514,6 +514,90 @@ public class ImportService extends WebService {
 
 
   //**************************************************************************
+  //** getExams
+  //**************************************************************************
+  /** Returns exams for a given establishment type and fei
+   */
+    public ServiceResponse getExams(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Get parameters
+        String establishment = request.getParameter("establishment").toString();
+        if (establishment==null) establishment = "manufacturer";
+        else establishment = establishment.toLowerCase();
+
+        String id = request.getParameter("id").toString();
+        if (id==null) id = request.getParameter("fei").toString();
+        if (id==null) return new ServiceResponse(400, "id or fei is required");
+
+
+      //Get sql
+        String sql = bluewave.queries.Index.getQuery("Imports_Exams");
+
+
+      //Update sql with additional keywords
+        sql = sql.replace("{establishment}", establishment);
+        sql = sql.replace("{fei}", id+"");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+
+      //Execute query and generate response
+        ArrayList<String> fields = new ArrayList<>();
+        StringBuilder str = new StringBuilder();
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            Result rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+
+                if (fields.isEmpty()){
+                    Iterator<String> it = r.keys().iterator();
+                    while (it.hasNext()){
+                        String key = it.next();
+                        fields.add(key);
+
+
+                        str.append(key.substring(2));
+                        if (it.hasNext()) str.append(",");
+                    }
+                }
+
+                str.append("\r\n");
+
+                for (int i=0; i<fields.size(); i++){
+                    if (i>0) str.append(",");
+                    org.neo4j.driver.Value v = r.get(fields.get(i));
+                    if (!v.isNull()){
+
+                        String val = v.asString().replace("\n", " ");
+                        if (val.contains(",")) str.append("\"");
+                        str.append(val);
+                        if (val.contains(",")) str.append("\"");
+                    }
+                }
+            }
+
+
+            session.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+        return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
   //** getHistory
   //**************************************************************************
     public ServiceResponse getHistory(ServiceRequest request, Database database)

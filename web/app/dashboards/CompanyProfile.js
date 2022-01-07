@@ -18,6 +18,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     var layer = {};
     var importsGrid, productGrid;
     var establishment = {};
+    
+    var waitmask;
         
     var charts = [];
     var nav, carousel, sliding;
@@ -50,6 +52,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         var tbody = table.firstChild;
         var tr, td;
 
+        waitmask = new javaxt.express.WaitMask(table);
+
 
         tr = document.createElement("tr");
         tbody.appendChild(tr);
@@ -73,7 +77,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         createPanel("Imports", createImportsPanel);
         createPanel("Products", createProductsPanel);        
         createPanel("Exams", createExamsPanel);
-        createPanel("Premier", createPremierPanel);
+        createPanel("Sales", createSalesPanel);
 
 
         onRender(table, function(){
@@ -439,6 +443,11 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             },
             update: function(panel){
                 
+              //Reparent table into panel as needed
+                if (table.parentNode!==panel){
+                    reparent(table, panel);
+                }                
+                
                 
               //Check if we need to refresh the panel
                 if (currEstablishment){
@@ -497,9 +506,9 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 div.innerHTML = "";
             },
             update: function(panel){
-                console.log(panel);
                 
-                div.innerHTML = "Exams go here!";
+
+
             }
         };
 
@@ -526,7 +535,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        
+        var productCharts = createProductCharts(td);
 
 
       //Create grid
@@ -541,7 +550,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         div.style.height = "250px";
         div.style.position = "relative";
         div.style.overflowX = "auto";
-        parent.appendChild(div);
+        td.appendChild(div);
 
         var innerDiv = document.createElement("div");
         innerDiv.style.width = "100%";
@@ -552,33 +561,75 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
         var grid = new javaxt.dhtml.DataGrid(innerDiv, {
             style: config.style.table,
+            localSort: true,
             columns: [
-                {header: 'Product Name', width:'100%'},
-                {header: 'Product Code', width:'75'},                
-                {header: 'Quantity', width:'120', align:'right'},
-                {header: 'Value', width:'120', align:'right'}
+                {header: 'Facility', width:'115', sortable: true}, 
+                {header: 'Code', width:'60', sortable: true}, 
+                {header: 'Product Name', width:'100%', sortable: true},
+                {header: 'Total Lines', width:'115', align:'right', sortable: true},
+                {header: 'Reported Quantity', width:'155', align:'right', sortable: true},
+                {header: 'Reported Value', width:'140', align:'right', sortable: true}
             ],
-            update: function(row, entry){      
-                console.log(entry.product_name);
+            update: function(row, entry){  
+                row.set("Facility", entry.fei);
+                row.set("Code", entry.product_code);
                 row.set("Product Name", entry.product_name);
-                row.set("Product Code", entry.product_code);
+                
+                var lines = parseFloat(entry.lines);
+                if (!isNaN(lines)) row.set('Total Lines', formatNumber(Math.round(lines)));                   
+                
                 var quantity = parseFloat(entry.quantity);
-                if (!isNaN(quantity)) row.set('Quantity', formatNumber(Math.round(quantity)));                
+                if (!isNaN(quantity)) row.set('Reported Quantity', formatNumber(Math.round(quantity)));                
                 var value = parseFloat(entry.value);
-                if (!isNaN(value)) row.set('Value', "$"+formatNumber(value));                                               
+                if (!isNaN(value)) row.set('Reported Value', "$"+formatNumber(value));                                               
             }
         });
-                           
+        
+        var data = [];
+        var currKey;
+
+        
+        grid.setSortIndicator(3, "DESC");
+        grid.onSort = function(idx, sortDirection){
+            
+            var key;
+            switch (idx) {
+                case 4:
+                    key = "quantity";
+                    break;
+                case 5:
+                    key = "value";
+                    break;
+                case 3:
+                    key = "lines";
+                    break;
+                default:
+                    break;
+            }            
+            
+            if (key && key!==currKey){
+                currKey = key;
+                productCharts.update(data, currKey);
+            }
+        };         
         
         
         var currEstablishment;
         return {
             clear: function(){
+                data = [];
+                productCharts.clear();
                 grid.clear();
             },
-            update: function(){
+            update: function(panel){
                 
                 
+              //Reparent table into panel as needed
+                if (table.parentNode!==panel){
+                    reparent(table, panel);
+                }                
+                
+
               //Check if we need to refresh the panel
                 if (currEstablishment){
                     if (!isDirty(currEstablishment, establishment)){
@@ -590,24 +641,39 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 
 
               //Get products associated with the establishmentIDs
-                grid.clear();
+                this.clear();
+                waitmask.show();
                 get("import/products?fei=" + establishment.fei.join(",") + "&establishment=" + establishment.type, {
                     success: function(csv){
                         var rows = parseCSV(csv, ",");      
                         var header = rows.shift();
                         var createRecord = function(row){
                             var r = {};                    
-                            header.forEach((field, i)=>{                                                      
-                                r[field] = row[i];
+                            header.forEach((field, i)=>{
+                                var val = row[i];
+                                if (field.indexOf("product_")!=0) val = parseFloat(val);
+                                r[field] = val;
                             });
                             return r;
                         };
                         
-                        var data = [];
                         rows.forEach((row)=>{
                             data.push(createRecord(row));
                         });
-                        grid.load(data);
+                        
+                        
+                        waitmask.hide();
+                        
+                        
+                        grid.load(data);                        
+                        grid.setSortIndicator(3, "DESC");
+                        currKey = "lines";
+                        productCharts.update(data, currKey);
+                        
+                    },
+                    failure: function(request){
+                        alert(request);
+                        waitmask.hide();
                     }
                 });
 
@@ -616,10 +682,161 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     };
 
 
+    var createDashboardItem = function(parent, title){
+        var dashboardItem = bluewave.utils.createDashboardItem(parent,{
+            title: title,
+            width: "100%",
+            height: "100%"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.innerDiv.style.textAlign = "center";
+        return dashboardItem;
+    };
+
   //**************************************************************************
-  //** createPremierPanel
+  //** createProductCharts
   //**************************************************************************
-    var createPremierPanel = function(parent){
+    var createProductCharts = function(parent){
+
+
+      //Create table
+        var table = createTable();
+        parent.appendChild(table);
+        var tbody = table.firstChild;
+        var tr, td;
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+
+      //Facility pie chart
+        td = document.createElement("td");
+        td.style.width = "33%";
+        td.style.height = "100%";
+        td.style.padding = "10px 0px";
+        tr.appendChild(td);
+        var facilityPanel = createDashboardItem(td, "Facilities");
+        var facilityChart = new bluewave.charts.PieChart(facilityPanel.innerDiv, {});
+
+        
+      //Product codes chart
+        td = document.createElement("td");
+        td.style.width = "33%";
+        td.style.height = "100%";
+        td.style.padding = "10px 10px";
+        tr.appendChild(td);
+        var procodePanel = createDashboardItem(td, "Product Codes");
+        var procodeChart = new bluewave.charts.PieChart(procodePanel.innerDiv, {});
+        
+        
+      //Products pie chart
+        td = document.createElement("td");
+        td.style.width = "33%";
+        td.style.height = "100%";
+        td.style.padding = "10px 0px";
+        tr.appendChild(td);   
+        var productPanel = createDashboardItem(td, "Products");
+        var productChart = new bluewave.charts.PieChart(productPanel.innerDiv, {});
+        
+        
+        var groupData = function(data, groupBy, type){
+            var ret = {};
+            data.forEach((d)=>{
+                var key = d[type+""];
+                var val = d[groupBy];
+                var currVal = ret[key];
+                if (isNaN(currVal)) currVal = 0;
+                ret[key] = currVal+val;
+            });
+            return ret;   
+        };
+        
+        var toArray = function(rawData){
+            var arr = [];
+            for (var key in rawData){
+                if (rawData.hasOwnProperty(key)){
+                    var val = rawData[key];
+                    arr.push({
+                        key: key,
+                        value: val
+                    });
+                }
+            }
+            return arr;
+        };        
+        
+        
+        var chartConfig = {
+            pieKey: "key",
+            pieValue: "value",
+            pieSort: "value",
+            pieSortDir: "descending",            
+            pieLabels: false,
+            labelOffset: 120,
+            maximumSlices: 8,
+            showOther: true,
+            showTooltip: true
+        };        
+        
+        return {
+            clear: function(){
+                facilityChart.clear();
+                procodeChart.clear();
+                productChart.clear();
+            },
+            update: function(data, key){
+                
+                var isCurrency = key === "value";
+
+                var facilityData = groupData(data, key, "fei");
+                facilityChart.update(chartConfig, toArray(facilityData));
+                facilityChart.getTooltipLabel = function(d){
+                    var procode = d.key;
+                    var value = (isCurrency? "$" : "") + formatNumber(d.value);
+                    return procode + ": " + value;
+                };
+                
+                
+                var procodeData = groupData(data, key, "product_code");
+                procodeChart.update(chartConfig, toArray(procodeData));
+                procodeChart.getTooltipLabel = function(d){
+                    var procode = d.key;
+                    var value = (isCurrency? "$" : "") + formatNumber(d.value);
+                    return procode + ": " + value;
+                };
+                
+                var arr = [];                
+                data.forEach((d)=>{                    
+                    var val = d[key];
+                    var productCode = d.product_code;
+                    var productName = d.product_name;
+                    var entry = {
+                        key: productCode + ": " + productName                        
+                    };
+                    entry[key] = val;
+                    arr.push(entry);
+                });                
+                var productData = groupData(arr, key, "key");
+                productChart.update(chartConfig, toArray(productData));   
+                productChart.getTooltipLabel = function(d){
+                    var product = d.key;
+                    var idx = product.indexOf(":");
+                    var productName = product.substring(idx+1).trim();
+                    var productCode = product.substring(0,idx).trim();
+                    var value = (isCurrency? "$" : "") + formatNumber(d.value);
+                    var label = productName;
+                    if (productCode.length>0) label+= "<br/>" + productCode;
+                    label += "<br/>" + value;
+                    return label;
+                };                
+            }
+        };
+    };
+
+
+  //**************************************************************************
+  //** createSalesPanel
+  //**************************************************************************
+    var createSalesPanel = function(parent){
 
 
         var div = document.createElement("div");
@@ -1212,17 +1429,19 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     
     
   //**************************************************************************
-  //** numberWithCommas
+  //** reparent
   //**************************************************************************
-    const formatNumber = (x) => {
-        if (x==null) return "";
-        if (typeof x !== "string") x+="";
-        var parts = x.toString().split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return parts.join(".");
-    };    
+  /** Used to replace panel content with a given element
+   */
+    var reparent = function(el, panel){
+        if (!panel) return;
+        var parent = el.parentNode;
+        parent.removeChild(el);
+        panel.innerHTML = "";
+        panel.appendChild(el);        
+    };
     
-
+    
   //**************************************************************************
   //** Utils
   //**************************************************************************
@@ -1234,6 +1453,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     var updateExtents = bluewave.utils.updateExtents;
     var get = bluewave.utils.get;
     var parseCSV = bluewave.utils.parseCSV;
+    var formatNumber = bluewave.utils.formatNumber;
 
     init();
 };
