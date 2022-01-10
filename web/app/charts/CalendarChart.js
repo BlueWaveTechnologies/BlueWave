@@ -188,6 +188,25 @@ bluewave.charts.CalendarChart = function(parent, config) {
        
         if (title) cell.append("title")
             .text(title);
+
+    
+        var month = year.append("g")
+            .selectAll("g")
+            .data(([, I]) => d3.utcMonths(d3.utcMonth(X[I[0]]), X[I[I.length - 1]]))
+            .join("g");
+    
+        month.filter((d, i) => i).append("path")
+            .attr("fill", "none")
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 3)
+            .attr("d", pathMonth);
+    
+        month.append("text")
+            .attr("x", d => timeWeek.count(d3.utcYear(d), timeWeek.ceil(d)) * cellSize + 2)
+            .attr("y", -5)
+            .text(formatMonth);
+
+        
         onRender(parent, function(){
 
             // var width = parent.offsetWidth;
