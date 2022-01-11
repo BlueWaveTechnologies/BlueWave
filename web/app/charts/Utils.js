@@ -100,9 +100,9 @@ bluewave.chart.utils = {
   //**************************************************************************
   /** Used to render x/y axis on the plotArea
    */
-    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey, 
+    drawAxes: function(plotArea, axisWidth, axisHeight, xKey, yKey,
         chartData, minData, chartConfig, chartType){
-        
+
         var getType = bluewave.chart.utils.getType;
         var getScale = bluewave.chart.utils.getScale;
 
@@ -137,6 +137,18 @@ bluewave.chart.utils = {
             return !(i % maxLabels);
         };
 
+        var getTickFormat = function(type){
+            var format;
+            if (type === "date"){
+                format = d3.timeFormat("%m/%d");
+            }
+            else if (type === "number") {
+                var numDecimals = 1;
+                format = d3.format("." + numDecimals + "f");
+            }
+            return format;
+        };
+
         var getBoxes = function(axis){
             var boxes = [];
             axis.selectAll("text").each(function(d, i) {
@@ -159,6 +171,7 @@ bluewave.chart.utils = {
             .call(
                 d3.axisBottom(x)
                 .tickValues(widthCheck ? null : x.domain().filter(tickFilter))
+                .tickFormat(getTickFormat(xType))
             );
 
 
@@ -191,10 +204,12 @@ bluewave.chart.utils = {
       //Render y-axis
         yAxis = plotArea
             .append("g")
-            .call(scaleOption==="linear" ? d3.axisLeft(y) :
-                    d3.axisLeft(y)
+            .call(scaleOption==="linear" ?
+                d3.axisLeft(y).tickFormat(getTickFormat(yType))
+                :
+                d3.axisLeft(y)
                     .ticks(10, ",")
-                    .tickFormat(d3.format("d"))
+                    .tickFormat(getTickFormat(yType))
             );
 
 
@@ -220,8 +235,12 @@ bluewave.chart.utils = {
         });
 
 
-        var marginLeft = Math.abs(xExtents.left-left); //extra space for the left-most x-axis label
+        var marginLeft = xExtents.left-left; //extra space for the left-most x-axis label
+        if (marginLeft<0) marginLeft = 0;
+
         var marginRight = (xExtents.right-left)-axisWidth; //extra space for the right-most x-axis label
+        if (marginRight<0) marginRight = 0;
+
 
         marginLeft = Math.max(yExtents.width, marginLeft); //extra space for the y-axis labels
 
@@ -241,7 +260,7 @@ bluewave.chart.utils = {
             .attr("y", marginBottom+labelOffset)
             .attr("class", "chart-axis-label")
             .style("text-anchor", "middle")
-            .text(xLabel);            
+            .text(xLabel);
 
             var r = javaxt.dhtml.utils.getRect(t.node());
             marginBottom+=(r.height+labelOffset);
@@ -251,7 +270,7 @@ bluewave.chart.utils = {
       //Add y-axis label as needed
         var yLabel = chartConfig.yLabel;
         if (yLabel){
-            
+
             if (yLabel === true) yLabel = chartConfig.layers[0].yAxis;
             var t = yAxis.append("text")
             .attr("transform", "rotate(-90)")
