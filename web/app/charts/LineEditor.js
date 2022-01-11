@@ -369,26 +369,6 @@ bluewave.charts.LineEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** initializeChartSpace
-  //**************************************************************************
-    var initializeChartSpace = function(){
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
-
-        svg = d3.select(previewArea).append("svg");
-        svg.attr("width", width);
-        svg.attr("height", height);
-
-
-        lineChart = new bluewave.charts.LineChart(svg, {});
-        lineChart.onClick = function(line, datasetID){
-            editLine(datasetID);
-        };
-
-    };
-
-
-  //**************************************************************************
   //** createLinePreview
   //**************************************************************************
     var createLinePreview = function(){
