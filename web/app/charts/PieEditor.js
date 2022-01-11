@@ -96,10 +96,8 @@ bluewave.charts.PieEditor = function(parent, config) {
         };
 
 
-      //Initialize chart area when ready
-        onRender(previewArea, function(){
-            pieChart = new bluewave.charts.PieChart(previewArea, {});
-        });
+      //Initialize chart
+        pieChart = new bluewave.charts.PieChart(previewArea, {});
     };
 
 
@@ -447,7 +445,7 @@ bluewave.charts.PieEditor = function(parent, config) {
                 },
                 {
                     group: "Labels",
-                    items: [                       
+                    items: [
                         {
                             name: "labels",
                             label: "Show Labels",

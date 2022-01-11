@@ -90,10 +90,12 @@ bluewave.charts.BarEditor = function(parent, config) {
         };
 
 
-      //Initialize chart area when ready
-        onRender(previewArea, function(){
-            initializeChartSpace();
-        });
+      //Initialize chart
+        barChart = new bluewave.charts.BarChart(previewArea, {});
+        barChart.onClick = function(bar, barID){
+            // chartConfig.barColor = d3.select(bar).attr("fill");
+            editBar(barID);
+        };
     };
 
 
@@ -269,27 +271,6 @@ bluewave.charts.BarEditor = function(parent, config) {
             name: inputType,
             label: "",
             type: input[inputType]
-        };
-    };
-
-
-  //**************************************************************************
-  //** initializeChartSpace
-  //**************************************************************************
-    var initializeChartSpace = function(){
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
-
-        svg = d3.select(previewArea).append("svg");
-        svg.attr("width", width);
-        svg.attr("height", height);
-
-
-        barChart = new bluewave.charts.BarChart(svg, {});
-        barChart.onClick = function(bar, barID){
-            // chartConfig.barColor = d3.select(bar).attr("fill");
-            editBar(barID);
-
         };
     };
 
