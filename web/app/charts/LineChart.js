@@ -139,9 +139,8 @@ bluewave.charts.LineChart = function(parent, config) {
         var chartConfig = config;
         var data = layers.map( d => d.data );
 
-console.log("render config", chartConfig)
-console.log("render layersConfig", layers[0].line.getConfig())
-console.log("render layers", layers)
+        if(data.length === 0) return;
+        
         var data1 = data[0].slice();
         dataSets = data.slice();
 
@@ -351,16 +350,13 @@ console.log("render layers", layers)
                 .key( (d) => d[layers[0].xAxis]) //not right yet
                 .entries(mergedData)
 
-            console.log("mergeddata", mergedData)
-            console.log("groupedStackData", groupedStackData)
 
             let stackGroup=[];
             let stackLength = groupedStackData[0].values.length;
             for (let i=0; i<stackLength; i++){
                 stackGroup.push(i);
             }
-                console.log(stackGroup)
-            // console.log(subgroups)
+
             var stackedData = d3.stack()
                 // .keys(subgroups) no idea why this doesn'r work
                 .keys(stackGroup)
@@ -372,7 +368,7 @@ console.log("render layers", layers)
 
                 })
                 (groupedStackData)
-            console.log(stackedData)
+
 
             var colors = bluewave.utils.getColorPalette(true);
             // var globalxKeyType = getType(data1[0][xKey]);
@@ -452,19 +448,8 @@ console.log("render layers", layers)
 
             arr.push( {lineConfig: lineConfig, sumData: sumData} );
 
-        }
+        };
 
-
-
-      //Update chartConfig with line colors
-        var colors = bluewave.utils.getColorPalette(true);
-        for (let i=0; i<arr.length; i++){
-            var lineColor = chartConfig.layers[i].color;
-            if (!lineColor){
-                lineColor = colors[i%colors.length];
-                chartConfig.layers[i].color = lineColor;
-            }
-        }
 
 
         var chartElements = [];

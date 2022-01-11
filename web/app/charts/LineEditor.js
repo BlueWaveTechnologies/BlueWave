@@ -182,11 +182,6 @@ bluewave.charts.LineEditor = function(parent, config) {
             let groupN = `group${n}`;
             let labelN = `label${n}`;
 
-            // let xAxisN = "xAxis";
-            // let yAxisN = "yAxis";
-            // let groupN = "group";
-            // let labelN = "label";
-
             plotInputs[groupN].add("", "");
 
             let dataOptions = Object.keys(inputData[i][0]);
@@ -196,8 +191,6 @@ bluewave.charts.LineEditor = function(parent, config) {
                 plotInputs[groupN].add(val, val);
             });
 
-            // plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
-            // plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
 
             plotInputs[xAxisN].setValue(chartConfig.layers[i].xAxis, true);
             plotInputs[yAxisN].setValue(chartConfig.layers[i].yAxis, true);
@@ -387,7 +380,22 @@ bluewave.charts.LineEditor = function(parent, config) {
 
     };
 
+  //**************************************************************************
+  //** setDefaultColors
+  //**************************************************************************
+    //Update chartConfig with line colors
+    var setDefaultColors = function(){
+        var colors = bluewave.utils.getColorPalette(true);
+        for (let i = 0; i < inputData.length; i++){
+            var lineColor = chartConfig.layers[i].color;
+            if (!lineColor){
+                lineColor = colors[i % colors.length];
+                chartConfig.layers[i].color = lineColor;
+            }
+        }
 
+    };
+    
   //**************************************************************************
   //** createLinePreview
   //**************************************************************************
@@ -395,7 +403,7 @@ bluewave.charts.LineEditor = function(parent, config) {
 
         lineChart.clear();
         lineChart.setConfig(chartConfig);
-
+        setDefaultColors();
         //Add lines
         var layers = chartConfig.layers;
         inputData.forEach(function (d, i){
@@ -874,7 +882,7 @@ bluewave.charts.LineEditor = function(parent, config) {
                     smoothingSlider.disabled = false;
                 }
                 smoothingSlider.focus();
-console.log("chartconfig onchange", chartConfig)
+
                 createLinePreview();
             };
 
