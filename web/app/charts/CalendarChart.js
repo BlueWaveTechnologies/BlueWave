@@ -33,7 +33,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-
+        // console.log("init function called")
         config = merge(config, defaultConfig);
 
 
@@ -68,6 +68,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
             colors = d3.interpolatePiYG
         } = {})
         {
+        console.log("udpate function called")
         me.clear();
 
 
@@ -130,21 +131,14 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
 
 
-        var pathMonth = function(t){
-            var d = Math.max(0, Math.min(weekDays, countDay(t.getUTCDay())));
-            var w = timeWeek.count(d3.utcYear(t), t);
 
-            return `${d === 0 ? `M${w * cellSize},0`
-            : d === weekDays ? `M${(w + 1) * cellSize},0`
-            : `M${(w + 1) * cellSize},0V${d * cellSize}H${w * cellSize}`}V${weekDays * cellSize}`;
-
-        }
 
         var parent = svg.node().parentNode;
 
 
         
         onRender(parent, function(){
+            console.log("onRender called")
             renderChart(data,parent)
             // var width = parent.offsetWidth;
             // var height = parent.offsetHeight;
@@ -267,83 +261,105 @@ bluewave.charts.CalendarChart = function(parent, config) {
             // }
 
         });
-      //**************************************************************************
-      //** renderChart
-      //**************************************************************************
-        var renderChart = function(data, parent){
-            svg
-            .attr("width", width)
-            .attr("height", height * years.length)
-            .attr("viewBox", [0, 0, width, height * years.length])
-            .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
-            .attr("font-family", "sans-serif")
-            .attr("font-size", 10);
+    };
+    //**************************************************************************
+    //** renderChart
+    //**************************************************************************
+    var renderChart = function(data, parent){
+        console.log("parent object passed in is")
+        console.log(parent)
+        console.log("data object passed in is")
+        console.log(data)
+        svg
+        .attr("width", width)
+        .attr("height", height * years.length)
+        .attr("viewBox", [0, 0, width, height * years.length])
+        .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
+        .attr("font-family", "sans-serif")
+        .attr("font-size", 10);
 
-            var year = svg.selectAll("g")
-            .data(years)
-            .join("g")
-                .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
-        
-            year.append("text")
-                .attr("x", -5)
-                .attr("y", -5)
-                .attr("font-weight", "bold")
-                .attr("text-anchor", "end")
-                .text(([key]) => key);
+        var year = svg.selectAll("g")
+        .data(years)
+        .join("g")
+            .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
+    
+        year.append("text")
+            .attr("x", -5)
+            .attr("y", -5)
+            .attr("font-weight", "bold")
+            .attr("text-anchor", "end")
+            .text(([key]) => key);
 
 
-            year.append("g")
-                .attr("text-anchor", "end")
-                .selectAll("text")
-                .data(weekday === "weekday" ? d3.range(1, 6) : d3.range(7))
-                .join("text")
-                .attr("x", -5)
-                .attr("y", i => (countDay(i) + 0.5) * cellSize)
-                .attr("dy", "0.31em")
-                .text(formatDay);
-        
+        year.append("g")
+            .attr("text-anchor", "end")
+            .selectAll("text")
+            .data(weekday === "weekday" ? d3.range(1, 6) : d3.range(7))
+            .join("text")
+            .attr("x", -5)
+            .attr("y", i => (countDay(i) + 0.5) * cellSize)
+            .attr("dy", "0.31em")
+            .text(formatDay);
+    
 
-            var cell = year.append("g")
-                .selectAll("rect")
-                .data(weekday === "weekday"
-                    ? ([, I]) => I.filter(i => ![0, 6].includes(X[i].getUTCDay()))
-                    : ([, I]) => I)
-                .join("rect")
-                    .attr("width", cellSize - 1)
-                    .attr("height", cellSize - 1)
-                    .attr("x", i => timeWeek.count(d3.utcYear(X[i]), X[i]) * cellSize + 0.5)
-                    .attr("y", i => countDay(X[i].getUTCDay()) * cellSize + 0.5)
-                    .attr("fill", i => color(Y[i]));
-        
-            if (title) cell.append("title")
-                .text(title);
+        var cell = year.append("g")
+            .selectAll("rect")
+            .data(weekday === "weekday"
+                ? ([, I]) => I.filter(i => ![0, 6].includes(X[i].getUTCDay()))
+                : ([, I]) => I)
+            .join("rect")
+                .attr("width", cellSize - 1)
+                .attr("height", cellSize - 1)
+                .attr("x", i => timeWeek.count(d3.utcYear(X[i]), X[i]) * cellSize + 0.5)
+                .attr("y", i => countDay(X[i].getUTCDay()) * cellSize + 0.5)
+                .attr("fill", i => color(Y[i]));
+    
+        if (title) cell.append("title")
+            .text(title);
 
-        
-            var month = year.append("g")
-                .selectAll("g")
-                .data(([, I]) => d3.utcMonths(d3.utcMonth(X[I[0]]), X[I[I.length - 1]]))
-                .join("g");
-        
-            month.filter((d, i) => i).append("path")
-                .attr("fill", "none")
-                .attr("stroke", "#fff")
-                .attr("stroke-width", 3)
-                .attr("d", pathMonth);
-        
-            month.append("text")
-                .attr("x", d => timeWeek.count(d3.utcYear(d), timeWeek.ceil(d)) * cellSize + 2)
-                .attr("y", -5)
-                .text(formatMonth);
+    
+        var month = year.append("g")
+            .selectAll("g")
+            .data(([, I]) => d3.utcMonths(d3.utcMonth(X[I[0]]), X[I[I.length - 1]]))
+            .join("g");
+    
+        month.filter((d, i) => i).append("path")
+            .attr("fill", "none")
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 3)
+            .attr("d", pathMonth);
+    
+        month.append("text")
+            .attr("x", d => timeWeek.count(d3.utcYear(d), timeWeek.ceil(d)) * cellSize + 2)
+            .attr("y", -5)
+            .text(formatMonth);
 
-        };
+    };
+   //**************************************************************************
+   //** pathMonth
+   //**************************************************************************
+    
+    var pathMonth = function(t){
+        var d = Math.max(0, Math.min(weekDays, countDay(t.getUTCDay())));
+        var w = timeWeek.count(d3.utcYear(t), t);
 
+        return `${d === 0 ? `M${w * cellSize},0`
+        : d === weekDays ? `M${(w + 1) * cellSize},0`
+        : `M${(w + 1) * cellSize},0V${d * cellSize}H${w * cellSize}`}V${weekDays * cellSize}`;
+
+    }
 
 //   **************************************************************************
 //   ** Utils
 //   **************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-    var initChart = bluewave.utils.initChart;
+    // var initChart = bluewave.utils.initChart;
+    var initChart = bluewave.chart.utils.initChart;
+
+    // console.log("initChart declared")
+    // console.log("printing initchart")
+    // console.log(initChart)
 
     init();
 
