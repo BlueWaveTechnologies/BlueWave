@@ -55,82 +55,13 @@ bluewave.charts.CalendarChart = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(chartConfig, data, {
-            x = ([x]) => x, // given d in data, returns the (temporal) x-value
-            y = ([, y]) => y, // given d in data, returns the (quantitative) y-value
-            title, // given d in data, returns the title text
-            width = 928, // width of the chart, in pixels
-            cellSize = 17, // width and height of an individual day, in pixels
-            weekday = "monday", // either: weekday, sunday, or monday
-            formatDay = i => "SMTWTFS"[i], // given a day number in [0, 6], the day-of-week label
-            formatMonth = "%b", // format specifier string for months (above the chart)
-            yFormat, // format specifier string for values (in the title)
-            colors = d3.interpolatePiYG
-        } = {})
-        {
+    this.update = function(chartConfig, data){
         console.log("udpate function called")
         me.clear();
+        // console.log(passedConfig)
+        // console.log(passedConfig.cellSize)
 
-
-        const height = cellSize * (weekDays + 2);
-
-
-        console.log("datap preset");
-        console.log(data)
-
-        // FIX THE FORMAT OF THE DATE IF ITS NOT already in proper date format
-        for (i in data){
-        data[i]["date"] = new Date(data[i]["date"])
-        }
         
-
-        var X = d3.map(data, x);
-        console.log(X);
-
-        var Y = d3.map(data, y);
-        var I = d3.range(X.length);
-
-        var countDay = weekday === "sunday" ? i => i : i => (i + 6) % 7;
-        var weekday = "monday";
-        var timeWeek = weekday === "sunday" ? d3.utcSunday : d3.utcMonday;
-        var weekDays = weekday === "weekday" ? 5 : 7;
-
-
-
-        const max = d3.quantile(Y, 0.9975, Math.abs);
-        console.log(max);
-        const color = d3.scaleSequential([-max, +max], colors).unknown("none");
-        
-        // for computing titles
-        formatMonth = d3.utcFormat(formatMonth);
-        console.log(formatMonth());
-
-        if (title === undefined) {
-            console.log("computing another title")
-            console.log(typeof(title))
-            const formatDate = d3.utcFormat("%B %-d, %Y");
-            
-            console.log(formatDate());
-            
-            const formatValue = color.tickFormat(100, yFormat);
-            title = i => `${formatDate(X[i])}\n${formatValue(Y[i])}`;
-            console.log(title())
-        }
-        else if (title !== null) {
-            console.log("title was not null")
-            const T = d3.map(data, title);
-            title = i => T[i];
-        };
-
-        console.log(`resulting title is ${title}`);
-        console.log(`X value is ${X}`);
-    
-        console.log("---------");
-
-        const years = d3.groups(I, i => X[i].getUTCFullYear()).reverse();
-
-
-
 
 
         var parent = svg.node().parentNode;
@@ -266,10 +197,90 @@ bluewave.charts.CalendarChart = function(parent, config) {
     //** renderChart
     //**************************************************************************
     var renderChart = function(data, parent){
+        var x = ([x]) => x // given d in data, returns the (temporal) x-value
+        var y = ([, y]) => y // given d in data, returns the (quantitative) y-value
+        var title // given d in data, returns the title text
+        var width = 928 // width of the chart, in pixels
+        var cellSize = 17 // width and height of an individual day, in pixels
+        var weekday = "monday" // either: weekday, sunday, or monday
+        var formatDay = i => "SMTWTFS"[i] // given a day number in [0, 6], the day-of-week label
+        formatMonth = "%b" // format specifier string for months (above the chart)
+        var yFormat // format specifier string for values (in the title)
+        var colors = d3.interpolatePiYG
+
+
+
+
         console.log("parent object passed in is")
         console.log(parent)
         console.log("data object passed in is")
         console.log(data)
+
+        // console.log("passed config is this ")
+        // console.log(passedConfig)
+
+
+        var height = cellSize * (weekDays + 2);
+
+
+        console.log("datap preset");
+        console.log(data)
+
+        // FIX THE FORMAT OF THE DATE IF ITS NOT already in proper date format
+        for (i in data){
+        data[i]["date"] = new Date(data[i]["date"])
+        }
+        console.log(data)
+
+        var X = d3.map(data, x);
+        console.log(X);
+
+        var Y = d3.map(data, y);
+        var I = d3.range(X.length);
+
+        var countDay = weekday === "sunday" ? i => i : i => (i + 6) % 7;
+        var weekday = "monday";
+        var timeWeek = weekday === "sunday" ? d3.utcSunday : d3.utcMonday;
+        var weekDays = weekday === "weekday" ? 5 : 7;
+
+
+
+        const max = d3.quantile(Y, 0.9975, Math.abs);
+        console.log(max);
+        const color = d3.scaleSequential([-max, +max], colors).unknown("none");
+        
+        // for computing titles
+        formatMonth = d3.utcFormat(formatMonth);
+        console.log(formatMonth());
+
+        if (title === undefined) {
+            console.log("computing another title")
+            console.log(typeof(title))
+            const formatDate = d3.utcFormat("%B %-d, %Y");
+            
+            console.log(formatDate());
+            
+            const formatValue = color.tickFormat(100, yFormat);
+            title = i => `${formatDate(X[i])}\n${formatValue(Y[i])}`;
+            console.log(title())
+        }
+        else if (title !== null) {
+            console.log("title was not null")
+            const T = d3.map(data, title);
+            title = i => T[i];
+        };
+
+        console.log(`resulting title is ${title}`);
+        console.log(`X value is ${X}`);
+    
+        console.log("---------");
+
+        const years = d3.groups(I, i => X[i].getUTCFullYear()).reverse();
+
+
+
+
+
         svg
         .attr("width", width)
         .attr("height", height * years.length)
