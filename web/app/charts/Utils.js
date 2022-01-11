@@ -105,6 +105,7 @@ bluewave.chart.utils = {
 
         var getType = bluewave.chart.utils.getType;
         var getScale = bluewave.chart.utils.getScale;
+        var getDateFormat = bluewave.chart.utils.getDateFormat;
 
         var xAxis, yAxis, xBand, yBand, x, y;
         var sb;
@@ -137,10 +138,10 @@ bluewave.chart.utils = {
             return !(i % maxLabels);
         };
 
-        var getTickFormat = function(type){
+        var getTickFormat = function(type, pattern){
             var format;
             if (type === "date"){
-                format = d3.timeFormat("%m/%d");
+                format = d3.timeFormat(getDateFormat(pattern));
             }
             else if (type === "number") {
                 var numDecimals = 1;
@@ -165,13 +166,14 @@ bluewave.chart.utils = {
 
 
       //Render x-axis
+        var xFormat = getTickFormat(xType, chartConfig.xFormat);
         xAxis = plotArea
             .append("g")
             .attr("transform", "translate(0," + axisHeight + ")")
             .call(
                 d3.axisBottom(x)
                 .tickValues(widthCheck ? null : x.domain().filter(tickFilter))
-                .tickFormat(getTickFormat(xType))
+                .tickFormat(xFormat)
             );
 
 
@@ -202,14 +204,15 @@ bluewave.chart.utils = {
 
 
       //Render y-axis
+        var yFormat = getTickFormat(yType, chartConfig.yFormat);
         yAxis = plotArea
             .append("g")
             .call(scaleOption==="linear" ?
-                d3.axisLeft(y).tickFormat(getTickFormat(yType))
+                d3.axisLeft(y).tickFormat(yFormat)
                 :
                 d3.axisLeft(y)
                     .ticks(10, ",")
-                    .tickFormat(getTickFormat(yType))
+                    .tickFormat(yFormat)
             );
 
 
@@ -421,6 +424,34 @@ bluewave.chart.utils = {
                 break;
         }
         return dataType;
+    },
+
+
+  //**************************************************************************
+  //** getDateFormat
+  //**************************************************************************
+  /** Used to convert common date formatting pattern to D3 pattern
+   *  @param pattern Date pattern like "YYYY-MM-DD" or "m/d/yy" or "dddd, MMMM D h:mm:ss A"
+   */
+    getDateFormat: function(pattern){
+        var dateFormat = "%m/%d";
+        if (pattern){
+            dateFormat = pattern;
+            dateFormat = dateFormat.replace("YYYY", "%Y");
+            dateFormat = dateFormat.replace("YY", "%y");
+            dateFormat = dateFormat.replace("MMMM", "%B");
+            dateFormat = dateFormat.replace("MM", "%m");
+            dateFormat = dateFormat.replace("M", "%m"); //TODO: replace leading digit
+            dateFormat = dateFormat.replace("DD", "%d");
+            dateFormat = dateFormat.replace("D", "%d"); //TODO: replace leading digit
+            dateFormat = dateFormat.replace("A", "%p");
+            dateFormat = dateFormat.replace("dddd", "%A");
+            dateFormat = dateFormat.replace("HH", "%H");
+            dateFormat = dateFormat.replace("h", "%I");
+            dateFormat = dateFormat.replace("mm", "%M");
+            dateFormat = dateFormat.replace("ss", "%S");
+        }
+        return dateFormat;
     },
 
 
