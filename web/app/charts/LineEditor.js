@@ -114,9 +114,12 @@ bluewave.charts.LineEditor = function(parent, config) {
 
         if (config) chartConfig = config;
 
-        chartConfig.layers = [];
-        for (var i=0; i<inputs.length; i++){
-            chartConfig.layers.push({fill:{}, point:{}});
+
+        if (!chartConfig.layers){
+            chartConfig.layers = [];
+            for (var i=0; i<inputs.length; i++){
+                chartConfig.layers.push({fill:{}, point:{}});
+            }
         }
 
 
@@ -154,8 +157,7 @@ bluewave.charts.LineEditor = function(parent, config) {
   /** Return chart configuration file
    */
     this.getConfig = function(){
-        let copy = Object.assign({},chartConfig);
-        return copy;
+        return chartConfig;
     };
 
 
@@ -178,7 +180,7 @@ bluewave.charts.LineEditor = function(parent, config) {
             let yAxisN = `yAxis${n}`;
             let groupN = `group${n}`;
             let labelN = `label${n}`;
-           
+
             // let xAxisN = "xAxis";
             // let yAxisN = "yAxis";
             // let groupN = "group";
@@ -295,7 +297,7 @@ bluewave.charts.LineEditor = function(parent, config) {
                     layer[label] = value;
                 }
             });
-            
+
 
 
 
@@ -880,7 +882,7 @@ console.log("chartconfig onchange", chartConfig)
             };
 
         }
-  
+
 
       //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);
