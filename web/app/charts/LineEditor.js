@@ -548,12 +548,12 @@ bluewave.charts.LineEditor = function(parent, config) {
         //Set intial value for xLabel
         var xLabelField = form.findField("xLabel");
         var xLabel = chartConfig.xLabel;
-        xLabelField.setValue(xLabel===true ? true : false);
+        xLabelField.setValue(xLabel ? true : false);
 
         //Set intial value for yLabel
         var yLabelField = form.findField("yLabel");
         var yLabel = chartConfig.yLabel;
-        yLabelField.setValue(yLabel===true ? true : false);
+        yLabelField.setValue(yLabel ? true : false);
 
         var tagField = form.findField("endTags");
         var endTags = chartConfig.endTags;
@@ -578,10 +578,10 @@ bluewave.charts.LineEditor = function(parent, config) {
             if (settings.yGrid==="true") settings.yGrid = true;
             else settings.yGrid = false;
 
-            if (settings.xLabel==="true") settings.xLabel = true;
+            if (settings.xLabel) settings.xLabel = true;
             else settings.xLabel = false;
 
-            if (settings.yLabel==="true") settings.yLabel = true;
+            if (settings.yLabel) settings.yLabel = true;
             else settings.yLabel = false;
 
             if (settings.endTags==="true") settings.endTags = true;
@@ -597,6 +597,8 @@ bluewave.charts.LineEditor = function(parent, config) {
             chartConfig.yLabel = settings.yLabel;
             chartConfig.endTags = settings.endTags;
             chartConfig.stackValues = settings.stack;
+            if (chartConfig.xLabel) chartConfig.xLabel = chartConfig.layers[0].xAxis;
+            if (chartConfig.yLabel) chartConfig.yLabel = chartConfig.layers[0].yAxis;
             createLinePreview();
         };
 
