@@ -235,7 +235,7 @@ bluewave.chart.utils = {
         var xLabel = chartConfig.xLabel;
         if (xLabel){
 
-            
+            if (xLabel === true) xLabel = chartConfig.layers[0].xAxis;
             var t = xAxis.append("text")
             .attr("x", (right-left)/2)
             .attr("y", marginBottom+labelOffset)
@@ -251,7 +251,8 @@ bluewave.chart.utils = {
       //Add y-axis label as needed
         var yLabel = chartConfig.yLabel;
         if (yLabel){
-    
+            
+            if (yLabel === true) yLabel = chartConfig.layers[0].yAxis;
             var t = yAxis.append("text")
             .attr("transform", "rotate(-90)")
             .attr("x", -(yExtents.height/2)) //set vertical position

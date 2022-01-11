@@ -116,7 +116,7 @@ bluewave.charts.LineEditor = function(parent, config) {
 
         chartConfig.layers = [];
         for (var i=0; i<inputs.length; i++){
-            chartConfig.layers.push({});
+            chartConfig.layers.push({fill:{}, point:{}});
         }
 
 
@@ -178,6 +178,11 @@ bluewave.charts.LineEditor = function(parent, config) {
             let yAxisN = `yAxis${n}`;
             let groupN = `group${n}`;
             let labelN = `label${n}`;
+           
+            // let xAxisN = "xAxis";
+            // let yAxisN = "yAxis";
+            // let groupN = "group";
+            // let labelN = "label";
 
             plotInputs[groupN].add("", "");
 
@@ -188,8 +193,11 @@ bluewave.charts.LineEditor = function(parent, config) {
                 plotInputs[groupN].add(val, val);
             });
 
-            plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
-            plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+            // plotInputs[xAxisN].setValue(chartConfig[xAxisN], true);
+            // plotInputs[yAxisN].setValue(chartConfig[yAxisN], true);
+
+            plotInputs[xAxisN].setValue(chartConfig.layers[i].xAxis, true);
+            plotInputs[yAxisN].setValue(chartConfig.layers[i].yAxis, true);
 
             if (chartConfig[groupN]){
                 plotInputs[groupN].setValue(chartConfig[groupN], false); //<--firing the onChange event is a hack to show/hide labels
@@ -282,11 +290,12 @@ bluewave.charts.LineEditor = function(parent, config) {
             var key = input.name;
             ["xAxis","yAxis","group","label"].forEach(function(label){
                 var idx = key.indexOf(label);
-                if (idx>-1){
-                    key = key.substring(0, idx);
+
+                if (key.includes(label)){
+                    layer[label] = value;
                 }
             });
-            layer[key] = value;
+            
 
 
 
@@ -384,23 +393,22 @@ bluewave.charts.LineEditor = function(parent, config) {
 
         //Why is lineChart undefined? I though it got initialized in initChartSpace?
         if(lineChart){
-        lineChart.clear();
-        lineChart.setConfig(chartConfig);
-        //TODO: Add lines
-console.log(chartConfig)
+            lineChart.clear();
+            lineChart.setConfig(chartConfig);
 
-        var layers = chartConfig.layers;
-        inputData.forEach(function(d, i){
+            //Add lines
+            var layers = chartConfig.layers;
+            inputData.forEach(function (d, i){
 
-            let layer = layers[i];
-            let line = new bluewave.chart.Line(layer);
-            lineChart.addLine(line, d, layer.xAxis, layer.yAxis)
+                let layer = layers[i];
+                let line = new bluewave.chart.Line(layer);
+                lineChart.addLine(line, d, layer.xAxis, layer.yAxis);
 
-        });
-        lineChart.update();
+            });
 
+            lineChart.update();
+        }
 
-    }
     };
 
 
@@ -563,11 +571,11 @@ console.log(chartConfig)
         tagField.setValue(endTags===true ? true : false);
 
         var stackField = form.findField("stack");
-        var stack = chartConfig.stack;
+        var stack = chartConfig.stackValues;
         stackField.setValue(stack===true ? true : false);
 
         var scalingField = form.findField("scaleOptions");
-        var scale = chartConfig.scaleOption;
+        var scale = chartConfig.scaling;
         scalingField.setValue(scale==="logarithmic" ? "logarithmic" : "linear");
 
 
@@ -593,13 +601,13 @@ console.log(chartConfig)
             if (settings.stack==="true") settings.stack = true;
             else settings.stack = false;
 
-            chartConfig.scaleOption = settings.scaleOptions;
+            chartConfig.scaling = settings.scaleOptions;
             chartConfig.xGrid = settings.xGrid;
             chartConfig.yGrid = settings.yGrid;
             chartConfig.xLabel = settings.xLabel;
             chartConfig.yLabel = settings.yLabel;
             chartConfig.endTags = settings.endTags;
-            chartConfig.stack = settings.stack;
+            chartConfig.stackValues = settings.stack;
             createLinePreview();
         };
 
@@ -751,46 +759,46 @@ console.log(chartConfig)
 
       //Update lineWidth field (add slider) and set initial value
         createSlider("lineThickness", form, "px", 1, 10, 1);
-        var thickness = chartConfig.lineWidth;
+        var thickness = chartConfig.layers[datasetID].width;
         if (isNaN(thickness)) thickness = 1;
-        chartConfig.lineWidth = thickness;
+        chartConfig.layers[datasetID].width = thickness;
         form.findField("lineThickness").setValue(thickness);
 
 
       //Add opacity sliders
         createSlider("lineOpacity", form, "%");
-        var opacity = chartConfig.opacity;
+        var opacity = chartConfig.layers[datasetID].opacity;
         if (isNaN(opacity)) opacity = 1;
-        chartConfig.opacity = opacity;
+        chartConfig.layers[datasetID].opacity = opacity;
         form.findField("lineOpacity").setValue(opacity*100);
 
 
         createSlider("startOpacity", form, "%");
-        var startOpacity = chartConfig.startOpacity;
+        var startOpacity = chartConfig.layers[datasetID].fill.startOpacity;
         if (isNaN(startOpacity)) startOpacity = 0;
-        chartConfig.startOpacity = startOpacity;
+        chartConfig.layers[datasetID].fill.startOpacity = startOpacity;
         form.findField("startOpacity").setValue(startOpacity*100);
 
 
         createSlider("endOpacity", form, "%");
-        var endOpacity = chartConfig.endOpacity;
+        var endOpacity = chartConfig.layers[datasetID].fill.endOpacity;
         if (isNaN(endOpacity)) endOpacity = 0;
-        chartConfig.endOpacity = endOpacity;
+        chartConfig.layers[datasetID].fill.endOpacity = endOpacity;
         form.findField("endOpacity").setValue(endOpacity*100);
 
 
       //Add radius slider
         createSlider("pointRadius", form, "px", 0, 10, 1);
-        var pointRadius = chartConfig.pointRadius;
+        var pointRadius = chartConfig.layers[datasetID].point.radius;
         if (isNaN(pointRadius)) pointRadius = 0;
-        chartConfig.pointRadius = pointRadius;
+        chartConfig.layers[datasetID].point.radius = pointRadius;
         form.findField("pointRadius").setValue(pointRadius);
 
 
       //Add smoothing slider
         var smoothingField = form.findField("smoothingValue");
         var smoothingSlider = createSlider("smoothingValue", form, "", 0, 100, 1);
-        var smoothingValue = chartConfig.smoothingValue;
+        var smoothingValue = chartConfig.layers[datasetID].smoothingValue;
         if (isNaN(smoothingValue)) smoothingValue = 0;
         smoothingField.setValue(smoothingValue);
 
@@ -800,31 +808,8 @@ console.log(chartConfig)
         if (!isNaN(n)){ //Single line edit case
 
 
-            //for these I think I'm gonna need to do chartConfig.layers[i].line.setThing()
-            var colors = bluewave.utils.getColorPalette(true);
-
-            //I think default config makes these redundant
-            // if( !chartConfig["lineColor" + n] ) chartConfig["lineColor" + n] = colors[n%colors.length];
-            // if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = chartConfig["lineColor" + n];
-            // if( !chartConfig["lineStyle" + n] ) chartConfig["lineStyle" + n] = "solid";
-            // if( isNaN(chartConfig["lineWidth" + n]) ) chartConfig["lineWidth" + n] = 1;
-            // if( isNaN(chartConfig["opacity" + n]) ) chartConfig["opacity" + n] = 1;
-            // if( isNaN(chartConfig["startOpacity" + n]) ) chartConfig["startOpacity" + n] = 0;
-            // if( isNaN(chartConfig["endOpacity" + n]) ) chartConfig["endOpacity" + n] = 0;
-            // if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 0;
             var layers = lineChart.getLayers();
-            var lineConfig = layers[n].line.getConfig();
-
-
-
-            // form.findField("lineColor").setValue(chartConfig["lineColor" + n]);
-            // form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
-            // form.findField("lineStyle").setValue(chartConfig["lineStyle" + n]);
-            // form.findField("lineThickness").setValue(chartConfig["lineWidth" + n]);
-            // form.findField("lineOpacity").setValue(chartConfig["opacity" + n]*100);
-            // form.findField("startOpacity").setValue(chartConfig["startOpacity" + n]*100);
-            // form.findField("endOpacity").setValue(chartConfig["endOpacity" + n]*100);
-            // form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
+            var lineConfig = layers[datasetID].line.getConfig();
 
 
             form.findField("lineColor").setValue(lineConfig.color);
@@ -844,8 +829,8 @@ console.log(chartConfig)
                 form.findField("smoothingType").setValue(smoothingType);
 
                 // var smoothingValue = chartConfig["smoothingValue" + n];
-                var smoothingValue = lineConfig.smoothingValue;
-                if (isNaN(smoothingValue)) smoothingValue = 0;
+            var smoothingValue = lineConfig.smoothingValue;
+            if (isNaN(smoothingValue)) smoothingValue = 0;
                 smoothingField.setValue(smoothingValue);
             }
             else{
@@ -858,24 +843,12 @@ console.log(chartConfig)
             form.onChange = function(){
                 let settings = form.getData();
 
-                // chartConfig["lineColor" + n] = settings.lineColor;
-                // chartConfig["lineStyle" + n] = settings.lineStyle;
-                // chartConfig["lineWidth" + n] = settings.lineThickness;
-                // chartConfig["opacity" + n] = settings.lineOpacity/100;
-
-                // chartConfig["startOpacity" + n] = settings.startOpacity/100;
-                // chartConfig["endOpacity" + n] = settings.endOpacity/100;
-
-                // chartConfig["pointColor" + n] = settings.pointColor;
-                // chartConfig["pointRadius" + n] = settings.pointRadius;
-
-                chartConfig.layers = layers.map((l)=>l.line);
-
                 chartConfig.layers[n].color = settings.lineColor;
                 chartConfig.layers[n].style = settings.lineStyle;
                 chartConfig.layers[n].width = settings.lineThickness;
                 chartConfig.layers[n].opacity = settings.lineOpacity/100;
 
+                chartConfig.layers[n].fill.color = settings.lineColor;
                 chartConfig.layers[n].fill.startOpacity = settings.startOpacity/100;
                 chartConfig.layers[n].fill.endOpacity = settings.endOpacity/100;
 
@@ -884,46 +857,30 @@ console.log(chartConfig)
 
                 var smoothingType = settings.smoothingType;
                 if (smoothingType==="none"){
-                    delete chartConfig["smoothingType" + n];
-                    delete chartConfig["smoothingValue" + n];
+                    delete chartConfig.layers[n].smoothing;
+                    delete chartConfig.layers[n].smoothingValue;
                     form.disableField("smoothingValue");
                     smoothingSlider.disabled = true;
                 }
                 else if (smoothingType==="spline"){
-                    chartConfig["smoothingType" + n] = smoothingType;
-                    delete chartConfig["smoothingValue" + n];
+                    chartConfig.layers[n].smoothing = smoothingType;
+                    delete chartConfig.layers[n].smoothingValue;
                     form.disableField("smoothingValue");
                     smoothingSlider.disabled = true;
                 }
                 else {
-                    chartConfig["smoothingType" + n] = smoothingType;
-                    chartConfig["smoothingValue" + n] = settings.smoothingValue;
+                    chartConfig.layers[n].smoothing = smoothingType;
+                    chartConfig.layers[n].smoothingValue = settings.smoothingValue;
                     form.enableField("smoothingValue");
                     smoothingSlider.disabled = false;
                 }
                 smoothingSlider.focus();
-
-
+console.log("chartconfig onchange", chartConfig)
                 createLinePreview();
             };
 
         }
-        else{
-
-          //Process onChange events
-            form.onChange = function(){
-                let settings = form.getData();
-                chartConfig.lineColor = settings.lineColor;
-                chartConfig.lineWidth = settings.lineThickness;
-                chartConfig.opacity = settings.lineOpacity/100;
-                chartConfig.startOpacity = settings.startOpacity/100;
-                chartConfig.endOpacity = settings.endOpacity/100;
-                createLinePreview();
-            };
-        }
-
-
-
+  
 
       //Render the styleEditor popup and resize the form
         styleEditor.showAt(108,57);

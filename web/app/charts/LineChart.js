@@ -139,10 +139,11 @@ bluewave.charts.LineChart = function(parent, config) {
         var chartConfig = config;
         var data = layers.map( d => d.data );
 
-
+console.log("render config", chartConfig)
+console.log("render layersConfig", layers[0].line.getConfig())
+console.log("render layers", layers)
         var data1 = data[0].slice();
         dataSets = data.slice();
-        data = data1;
 
 
         var width = parent.offsetWidth;
@@ -451,11 +452,6 @@ bluewave.charts.LineChart = function(parent, config) {
 
             arr.push( {lineConfig: lineConfig, sumData: sumData} );
 
-            //Make sure each push to layers is unique
-            // if (layers.length < dataSets.length) {
-            //     var line = new bluewave.chart.Line();
-            //     me.addLine(line, sumData, chartConfig);
-            // }
         }
 
 
@@ -497,9 +493,6 @@ bluewave.charts.LineChart = function(parent, config) {
             let lineColor = fillConfig.color;
             let startOpacity = fillConfig.startOpacity;
             let endOpacity = fillConfig.endOpacity;
-            // let lineColor = chartConfig["lineColor" + i];
-            // let startOpacity = chartConfig["startOpacity" + i];
-            // let endOpacity = chartConfig["endOpacity" + i];
 
             let keyType = getType(sumData[0].key);
 
@@ -555,29 +548,14 @@ bluewave.charts.LineChart = function(parent, config) {
             let lineConfig = arr[i].lineConfig;
             let pointConfig = lineConfig.point;
 
+            let lineColor = lineConfig.color;
             let lineStyle = lineConfig.style;
             let lineWidth = lineConfig.width;
             let opacity = lineConfig.opacity;
-            // let lineColor = chartConfig["lineColor" + i];
-            // let lineColor = chartConfig.layers[i].line.getColor()
-            let lineColor = lineConfig.color;
-            // let lineStyle = chartConfig["lineStyle" + i];
-            // let lineWidth = chartConfig["lineWidth" + i];
-            // let opacity = chartConfig["opacity" + i];
-
-            // let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
-            // if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
-            // let pointColor = chartConfig["pointColor" + i];
 
             let pointRadius = pointConfig.radius;
             let pointColor = pointConfig.color;
 
-            if (lineWidth == null) lineWidth = 1;
-            if (opacity == null) opacity = 1;
-            if (lineStyle == null) lineStyle = "solid";
-
-
-            // var smoothingType = chartConfig["smoothingType" + i];
             var smoothingType = lineConfig.smoothing;
 
             var getLine = function(){
