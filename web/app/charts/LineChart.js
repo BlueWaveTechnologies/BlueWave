@@ -459,10 +459,10 @@ console.log("render layers", layers)
       //Update chartConfig with line colors
         var colors = bluewave.utils.getColorPalette(true);
         for (let i=0; i<arr.length; i++){
-            var lineColor = chartConfig["lineColor" + i];
+            var lineColor = chartConfig.layers[i].color;
             if (!lineColor){
                 lineColor = colors[i%colors.length];
-                chartConfig["lineColor" + i] = lineColor;
+                chartConfig.layers[i].color = lineColor;
             }
         }
 
