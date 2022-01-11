@@ -92,10 +92,11 @@ bluewave.charts.LineEditor = function(parent, config) {
         };
 
 
-      //Initialize chart area when ready
-        onRender(previewArea, function(){
-            initializeChartSpace();
-        });
+      //Initialize chart
+        lineChart = new bluewave.charts.LineChart(previewArea, {});
+        lineChart.onClick = function(line, datasetID){
+            editLine(datasetID);
+        };
     };
 
 
@@ -392,25 +393,21 @@ bluewave.charts.LineEditor = function(parent, config) {
   //**************************************************************************
     var createLinePreview = function(){
 
+        lineChart.clear();
+        lineChart.setConfig(chartConfig);
 
-        //Why is lineChart undefined? I though it got initialized in initChartSpace?
-        if(lineChart){
-            lineChart.clear();
-            lineChart.setConfig(chartConfig);
+        //Add lines
+        var layers = chartConfig.layers;
+        inputData.forEach(function (d, i){
 
-            //Add lines
-            var layers = chartConfig.layers;
-            inputData.forEach(function (d, i){
-
-                let layer = layers[i];
+            let layer = layers[i];
+            if (layer.xAxis && layer.yAxis){
                 let line = new bluewave.chart.Line(layer);
                 lineChart.addLine(line, d, layer.xAxis, layer.yAxis);
+            }
+        });
 
-            });
-
-            lineChart.update();
-        }
-
+        lineChart.update();
     };
 
 
