@@ -425,12 +425,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
         };
 
-        var accumulate = true;
-        if(accumulate){
-        //Accumulate y-axis values if checked
-        
-        arr = accumulateValues(arr);
+        var accumulate = chartConfig.accumulateValues;
+        if (accumulate){
+            //Accumulate y-axis values if checked
 
+            arr = accumulateValues(arr);
+        }
 
         var chartElements = [];
         for (let i=0; i<arr.length; i++){
@@ -831,7 +831,7 @@ bluewave.charts.LineChart = function(parent, config) {
             return line.map(function(d){
 
                 accVal += parseFloat(d.value);
-                return { key:d.key, value:accVal };       
+                return { key:d.key, value:accVal };
             })
 
         });
