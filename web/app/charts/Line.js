@@ -23,55 +23,55 @@ bluewave.chart.Line = function(config) {
         },
         point: {
             color: "#6699CC",
-            radius: 3
+            radius: 0
         },
         label: "",
-        smoothing: "none"
+        smoothing: "none",
+        smoothingValue: 0
     };
-    
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
-        
+
         if (!config){
             config = defaultConfig;
             return;
         }
-        
+
         var chartConfig = config;
         config = defaultConfig;
-        
+
         for (var key in chartConfig) {
-            if (chartConfig.hasOwnProperty(key)){    
+            if (chartConfig.hasOwnProperty(key)){
                 var method = "set" + key.substring(0,1).toUpperCase() + key.substring(1);
                 if (me[method]) me[method].apply(me, [chartConfig[key]]);
             }
         }
     };
-    
-    
-    this.getConfig = function(){
-        return config;
-    };
-    
+
+  //**************************************************************************
+  //** Setters
+  //**************************************************************************
+
     this.setColor = function(color){
         color = getColor(color);
         if (color) config.color = color;
     };
-    
+
     this.setOpacity = function(opacity){
         opacity = getOpacity(opacity);
         if (!isNaN(opacity)) config.opacity = opacity;
     };
-    
+
     this.setWidth = function(width){
         width = parseFloat(width);
         if (!isNaN(width)){
             if (width>0) config.width = width;
         }
     };
-    
+
     this.setStyle = function(style){
         if (!style) return;
         style = (style+"").toLowerCase();
@@ -79,7 +79,7 @@ bluewave.chart.Line = function(config) {
             config.style = style;
         }
     };
-    
+
     this.setFill = function(fill){
         if (!fill){
             delete config.fill;
@@ -93,7 +93,7 @@ bluewave.chart.Line = function(config) {
             if (!isNaN(opacity)) config.fill.endOpacity = opacity;
         }
     };
-    
+
     this.setPoint = function(point){
         if (!point){
             delete config.point;
@@ -107,15 +107,15 @@ bluewave.chart.Line = function(config) {
             }
         }
     };
-    
+
     this.setLabel = function(label){
-        config.style.label = label;
+        config.label = label;
     };
-    
+
     this.setSmoothing = function(smoothing){
         if (!smoothing) return;
         smoothing = (smoothing+"").toLowerCase();
-        
+
         switch (smoothing) {
             case "spline":
             case "simple spline":
@@ -132,22 +132,61 @@ bluewave.chart.Line = function(config) {
             default:
                 smoothing = "none";
                 break;
-        }    
+        }
         config.smoothing = smoothing;
     };
     
-    
+    this.setSmoothingValue = function(smoothingValue){
+        smoothingValue = parseFloat(smoothingValue);
+        if (isNaN(smoothingValue) || smoothingValue<0) {}
+        else config.smoothingValue = smoothingValue;
+    };
+
+
+  //**************************************************************************
+  //** getConfig
+  //**************************************************************************
+  /** Returns the line properties
+   */
+    this.getConfig = function () {
+        return config;
+    };
+
+
+  //**************************************************************************
+  //** Getters
+  //**************************************************************************
+    this.getColor = () => config.color;
+    this.getWidth = () => config.width;
+    this.getStyle = () => config.style;
+    this.getFill = () => config.fill;
+    this.getPoint = () => config.point;
+    this.getLabel = () => config.label;
+    this.getSmoothing = () => config.smoothing;
+    this.getSmoothingValue = () => config.smoothingValue;
+
+
+  //**************************************************************************
+  //** clone
+  //**************************************************************************
+  /** Returns a copy of this line*/
+    this.clone = function(){
+        let copy = Object.assign({},config);
+        return new bluewave.chart.Line(copy);
+    };
+
+
     var getColor = function(color){
         //TODO: validate color
         return color;
     };
-    
+
     var getOpacity = function(opacity){
         opacity = parseFloat(opacity);
         if (isNaN(opacity)) return null;
         if (opacity<0 || opacity>1) return null;
         return opacity;
     };
-    
+
     init();
 };
