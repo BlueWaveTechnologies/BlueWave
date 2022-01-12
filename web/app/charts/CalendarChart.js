@@ -67,12 +67,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
 
         var
-         title, // given d in data, returns the title text
          cellSize = config.cellSize,
          weekday = config.weekday,
          formatDay = i => "SMTWTFS"[i], // given a day number in [0, 6], the day-of-week label
-         formatMonth = "%b", // format specifier string for months (above the chart)
-         yFormat, // format specifier string for values (in the title)
+         formatMonth = d3.utcFormat("%b"), // format specifier string for months (above the chart)
          colors = d3.interpolatePiYG;
 
 
@@ -92,7 +90,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
         });
 
 
-      //Create an array dates and values
+      //Create an array of dates and values
         var dates = [];
         var values = [];
         var years = {};
@@ -103,30 +101,12 @@ bluewave.charts.CalendarChart = function(parent, config) {
             values.push(value);
 
             var year = date.getUTCFullYear();
-            var arr = years[year+""];
-            if (!arr){
-                arr = [];
-                years[year+""] = arr;
-            }
-            arr.push(date);
-
+            years[year+""] = year;
         });
-        const dateRange = d3.range(dates.length);
-
-
-      //Convert years into a double scripted array
-        var temp = [];
-        for (var key in years){
-            if (years.hasOwnProperty(key)){
-                var arr = years[key];
-                var year = parseInt(key);
-                temp.push([year, arr]);
-            }
-        }
-        temp.sort(function(a,b){
-            return b[0] - a[0];
+        years = Object.values(years);
+        years.sort(function(a,b){
+            return b - a;
         });
-        years = temp;
 
 
 
@@ -138,49 +118,30 @@ bluewave.charts.CalendarChart = function(parent, config) {
         // Compute a color scale. This assumes a diverging color scheme where the pivot
         // is zero, and we want symmetric difference around zero.
         const max = d3.quantile(values, 0.9975, Math.abs);
-        const color = d3.scaleSequential([-max, +max], colors).unknown("none");
-
-        // Construct formats.
-        formatMonth = d3.utcFormat(formatMonth);
-
-        // Compute titles.
-        if (title === undefined) {
-          const formatDate = d3.utcFormat("%B %-d, %Y");
-          const formatValue = color.tickFormat(100, yFormat);
-          title = i => `${formatDate(dates[i])}\n${formatValue(values[i])}`;
-        } else if (title !== null) {
-          const T = d3.map(data, title);
-          title = i => T[i];
-        }
+        var getColor = d3.scaleSequential([-max, +max], colors).unknown("none");
 
 
 
-        function pathMonth(t) {
-          const d = Math.max(0, Math.min(weekDays, countDay(t.getUTCDay())));
-          const w = timeWeek.count(d3.utcYear(t), t);
-          return `${d === 0 ? `M${w * cellSize},0`
-              : d === weekDays ? `M${(w + 1) * cellSize},0`
-              : `M${(w + 1) * cellSize},0V${d * cellSize}H${w * cellSize}`}V${weekDays * cellSize}`;
-        }
 
-
-        var yearGroup = calendarArea.selectAll("g")
+      //Create groups for every year
+        var yearGroup = calendarArea.selectAll("*")
           .data(years)
           .join("g")
             .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
 
-      //Add year label
+
+      //Add year label to every group
         yearGroup.append("text")
             .attr("x", -5)
             .attr("y", -5)
             .attr("font-weight", "bold")
             .attr("text-anchor", "end")
-            .text(([key]) => key);
+            .text(year => year);
 
 
-      //Add day of week abbreviation
+      //Add day of week abbreviation on the left side of each group
         yearGroup.append("g")
-            .attr("text-anchor", "end")
+          .attr("text-anchor", "end")
           .selectAll("text")
           .data(weekday === "weekday" ? d3.range(1, 6) : d3.range(7))
           .join("text")
@@ -191,11 +152,15 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
 
       //Create table and cells
-        const cell = yearGroup.append("g")
+        yearGroup.append("g")
           .selectAll("rect")
-          .data(weekday === "weekday"
-              ? ([, dateRange]) => dateRange.filter(i => ![0, 6].includes(dates[i].getUTCDay()))
-              : ([, dateRange]) => dateRange)
+          .data(function(year){
+              var arr = [];
+              dates.forEach(function(date){
+                  if (date.getUTCFullYear()===year) arr.push(date);
+              });
+              return arr;
+          })
           .join("rect")
             .attr("width", cellSize - 1)
             .attr("height", cellSize - 1)
@@ -203,31 +168,48 @@ bluewave.charts.CalendarChart = function(parent, config) {
             .attr("y", date => countDay(date.getUTCDay()) * cellSize + 0.5)
             .attr("fill", function(date, i){
                 var value = values[i];
-                return color(value);
+                return getColor(value);
             });
 
-        if (title) cell.append("title")
-            .text(title);
 
-        const month = yearGroup.append("g")
+      //Create month group
+        var monthGroup = yearGroup.append("g")
           .selectAll("g")
-          .data(([, dateRange]) => d3.utcMonths(d3.utcMonth(dates[dateRange[0]]), dates[dateRange[dateRange.length - 1]]))
+          .data(function(year){
+              var months = {};
+              dates.forEach(function(date){
+                  if (date.getUTCFullYear()===year){
+                      var month = date.getUTCMonth()+"";
+                      if (!months[month]) months[month] = d3.utcMonth(date);
+                  }
+              });
+              months = Object.values(months);
+              return d3.utcMonths(months[0], months[months.length - 1]);
+          })
           .join("g");
 
-        month.filter((d, i) => i).append("path")
+
+      //Add thick line to seperate months in the grid
+        monthGroup.filter((d, i) => i).append("path")
             .attr("fill", "none")
             .attr("stroke", "#fff")
             .attr("stroke-width", 3)
-            .attr("d", pathMonth);
+            .attr("d", function(date) {
+                const d = Math.max(0, Math.min(weekDays, countDay(date.getUTCDay())));
+                const w = timeWeek.count(d3.utcYear(date), date);
+                return `${d === 0 ? `M${w * cellSize},0`
+                    : d === weekDays ? `M${(w + 1) * cellSize},0`
+                    : `M${(w + 1) * cellSize},0V${d * cellSize}H${w * cellSize}`}V${weekDays * cellSize}`;
+            });
 
-        month.append("text")
+
+      //Add month labels
+        monthGroup.append("text")
             .attr("x", d => timeWeek.count(d3.utcYear(d), timeWeek.ceil(d)) * cellSize + 2)
             .attr("y", -5)
             .text(formatMonth);
 
-        return Object.assign(svg.node(), {scales: {color}});
     };
-
 
 
    //**************************************************************************
