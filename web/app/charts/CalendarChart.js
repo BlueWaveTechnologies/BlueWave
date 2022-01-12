@@ -75,10 +75,58 @@ bluewave.charts.CalendarChart = function(parent, config) {
          yFormat, // format specifier string for values (in the title)
          colors = d3.interpolatePiYG;
 
-        // Compute values.
-        const dates = d3.map(data, d => new Date(d[config.date])); //array of dates
-        const values = d3.map(data, d => d[config.value]); //array of values
+
+
+      //Update date field in the data
+        data.forEach((d)=>{
+            var date = d[config.date];
+            var value = d[config.value];
+            d[config.date] = new Date(date);
+            d[config.value] = parseFloat(value);
+        });
+
+
+      //Sort array in reverse chronological order
+        data.sort(function(a, b){
+            return b[config.date].getTime()-a[config.date].getTime();
+        });
+
+
+      //Create an array dates and values
+        var dates = [];
+        var values = [];
+        var years = {};
+        data.forEach((d)=>{
+            var date = d[config.date];
+            var value = d[config.value];
+            dates.push(date);
+            values.push(value);
+
+            var year = date.getUTCFullYear();
+            var arr = years[year+""];
+            if (!arr){
+                arr = [];
+                years[year+""] = arr;
+            }
+            arr.push(date);
+
+        });
         const dateRange = d3.range(dates.length);
+
+
+      //Convert years into a double scripted array
+        var temp = [];
+        for (var key in years){
+            if (years.hasOwnProperty(key)){
+                var arr = years[key];
+                var year = parseInt(key);
+                temp.push([year, arr]);
+            }
+        }
+        temp.sort(function(a,b){
+            return b[0] - a[0];
+        });
+        years = temp;
 
 
 
@@ -105,10 +153,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
           title = i => T[i];
         }
 
-        // Group the index by year, in reverse input order. (Assuming that the input is
-        // chronological, this will show years in reverse chronological order.)
-        const years = d3.groups(dateRange, i => dates[i].getUTCFullYear()).reverse();
-        console.log(years);
 
 
         function pathMonth(t) {
@@ -120,19 +164,22 @@ bluewave.charts.CalendarChart = function(parent, config) {
         }
 
 
-        const year = svg.selectAll("g")
+        var yearGroup = calendarArea.selectAll("g")
           .data(years)
           .join("g")
             .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
 
-        year.append("text")
+      //Add year label
+        yearGroup.append("text")
             .attr("x", -5)
             .attr("y", -5)
             .attr("font-weight", "bold")
             .attr("text-anchor", "end")
             .text(([key]) => key);
 
-        year.append("g")
+
+      //Add day of week abbreviation
+        yearGroup.append("g")
             .attr("text-anchor", "end")
           .selectAll("text")
           .data(weekday === "weekday" ? d3.range(1, 6) : d3.range(7))
@@ -142,7 +189,9 @@ bluewave.charts.CalendarChart = function(parent, config) {
             .attr("dy", "0.31em")
             .text(formatDay);
 
-        const cell = year.append("g")
+
+      //Create table and cells
+        const cell = yearGroup.append("g")
           .selectAll("rect")
           .data(weekday === "weekday"
               ? ([, dateRange]) => dateRange.filter(i => ![0, 6].includes(dates[i].getUTCDay()))
@@ -150,14 +199,17 @@ bluewave.charts.CalendarChart = function(parent, config) {
           .join("rect")
             .attr("width", cellSize - 1)
             .attr("height", cellSize - 1)
-            .attr("x", i => timeWeek.count(d3.utcYear(dates[i]), dates[i]) * cellSize + 0.5)
-            .attr("y", i => countDay(dates[i].getUTCDay()) * cellSize + 0.5)
-            .attr("fill", i => color(values[i]));
+            .attr("x", date => timeWeek.count(d3.utcYear(date), date) * cellSize + 0.5)
+            .attr("y", date => countDay(date.getUTCDay()) * cellSize + 0.5)
+            .attr("fill", function(date, i){
+                var value = values[i];
+                return color(value);
+            });
 
         if (title) cell.append("title")
             .text(title);
 
-        const month = year.append("g")
+        const month = yearGroup.append("g")
           .selectAll("g")
           .data(([, dateRange]) => d3.utcMonths(d3.utcMonth(dates[dateRange[0]]), dates[dateRange[dateRange.length - 1]]))
           .join("g");
