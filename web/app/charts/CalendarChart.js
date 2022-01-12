@@ -58,11 +58,9 @@ bluewave.charts.CalendarChart = function(parent, config) {
     this.update = function(chartConfig, data){
         console.log("udpate function called")
         me.clear();
-        // console.log(passedConfig)
-        // console.log(passedConfig.cellSize)
 
-        
 
+    
 
         var parent = svg.node().parentNode;
 
@@ -197,8 +195,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
     //** renderChart
     //**************************************************************************
     var renderChart = function(data, parent){
-        var x = ([x]) => x // given d in data, returns the (temporal) x-value
-        var y = ([, y]) => y // given d in data, returns the (quantitative) y-value
+        // x: d => d.date
+        // y: d => d.num_lines_changed
+        // var x = ([x]) => x // given d in data, returns the (temporal) x-value
+        // var y = ([, y]) => y // given d in data, returns the (quantitative) y-value
         var title // given d in data, returns the title text
         var width = 928 // width of the chart, in pixels
         var cellSize = 17 // width and height of an individual day, in pixels
@@ -218,7 +218,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
         // console.log("passed config is this ")
         // console.log(passedConfig)
-
+        // console.log(d3.map)
 
         var height = cellSize * (weekDays + 2);
 
@@ -232,10 +232,14 @@ bluewave.charts.CalendarChart = function(parent, config) {
         }
         console.log(data)
 
-        var X = d3.map(data, x);
+        // var X = d3.map(data, x);
+        var X = d3.map(data, d => d.date);
+
         console.log(X);
 
-        var Y = d3.map(data, y);
+        // var Y = d3.map(data, y);
+        var Y = d3.map(data, d => d.num_lines_changed);
+
         var I = d3.range(X.length);
 
         var countDay = weekday === "sunday" ? i => i : i => (i + 6) % 7;
