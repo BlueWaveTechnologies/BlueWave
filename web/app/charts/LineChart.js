@@ -162,6 +162,8 @@ bluewave.charts.LineChart = function(parent, config) {
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
         var stack = chartConfig.stackValues;
+        var ticks = chartConfig.ticks;
+        if (isNaN(ticks)) ticks = 10;
 
 
       //Generate unque list of x-values across all layers

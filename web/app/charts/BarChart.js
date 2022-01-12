@@ -235,15 +235,13 @@ bluewave.charts.BarChart = function(parent, config) {
                 .key((d) => d[xKey])
                 .entries(mergedData)
 
-    console.log("groupedStackData",groupedStackData)
 
             let stackGroup = [];
             let stackLength = groupedStackData[0].values.length;
             for (let i = 0; i < stackLength; i++) {
                 stackGroup.push(i);
             }
-            console.log("stackgroup",stackGroup)
-            // console.log(subgroups)
+
             var stackedData = d3.stack()
                 // .keys(subgroups)
                 .keys(stackGroup)
@@ -254,7 +252,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
                 })
                 (groupedStackData)
-    console.log("stackedData",stackedData)
+ 
 
             let colorIncrementer = 0;
             plotArea.append("g")

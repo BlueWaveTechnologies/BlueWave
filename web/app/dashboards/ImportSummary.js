@@ -185,7 +185,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 lineChart.clear();
                 get("import/history?country=" + country + "&threshold=" + threshold, {
                     success: function(csv){
-
+                        lineData = [];
+                        
                         var rows = parseCSV(csv, ",");      
                         var header = rows.shift();
                         var createRecord = function(row){
@@ -763,7 +764,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     key = "value";
                     break;
                 case "totalLines":
-                    key = "entries";
+                    key = "lines";
                     break;
                 default:
                     break;

@@ -192,6 +192,7 @@ body, textarea, input, select, td, th {
     border: 1px solid #e0e0e0;
     display: inline-block;
     float: left;
+    box-sizing: border-box;
 }
 
 
@@ -511,6 +512,8 @@ li.tree-node:hover {
 
 .company-profile-title {
     font-size: 20px;
+    color: #fff;
+    padding: 0 5px;    
 }
 
 .company-profile li {
@@ -1136,6 +1139,67 @@ li.tree-node:hover {
     font-weight: bold;
 }
 
+
+
+/**************************************************************************/
+/** Carousel Header
+/**************************************************************************/
+
+.carousel-header {
+    height: 60px;
+    background-color: #3f79ab;
+    background-color: #102b42;
+}
+
+.carousel-header-nav {
+  margin: 0px;
+  padding: 0px;
+  list-style: none;
+}
+
+.carousel-header-link {
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  margin: 0 20px;
+  color: #fff;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.carousel-header-link:after{
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  display: block;
+  margin-top: 5px;
+  right: 0;
+  background: #2e588d;
+  transition: width .15s ease;
+  -webkit-transition: width .15s ease;
+}
+
+
+.carousel-header-link:hover, .carousel-header-link:active, .carousel-header-link:focus, .carousel-header-link-selected{
+    opacity: 1.0;
+    transition: all .4s ease;
+    -webkit-transition: all .4s ease;
+    outline: 0 none;
+}
+
+
+.carousel-header-link-selected:after{
+    width: 100%;
+}
+
+
+.carousel-header-link:hover:after {
+  width: 100%;
+  left: 0;
+  background: #fff;
+  opacity: 0.6;
+}
 
 /**************************************************************************/
 /** Color Picker
