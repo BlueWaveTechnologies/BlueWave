@@ -421,6 +421,15 @@ bluewave.charts.LineChart = function(parent, config) {
                 applySmoothing(smoothingType, smoothingValue, sumData);
             }
 
+
+            if (stack===true){
+                for (var j=0; j<arr.length; j++){
+                    var prevSumData = arr[j];
+                    //TODO: add prevSumData to sumData
+                }
+            }
+            
+
             arr.push( {lineConfig: lineConfig, sumData: sumData} );
 
         };
