@@ -361,23 +361,6 @@ bluewave.charts.LineEditor = function(parent, config) {
     };
 
 
-
-  //**************************************************************************
-  //** setDefaultColors
-  //**************************************************************************
-    //Update chartConfig with line colors
-    var setDefaultColors = function(){
-        var colors = bluewave.utils.getColorPalette(true);
-        for (let i = 0; i < inputData.length; i++){
-            var lineColor = chartConfig.layers[i].color;
-            if (!lineColor){
-                lineColor = colors[i % colors.length];
-                chartConfig.layers[i].color = lineColor;
-            }
-        }
-
-    };
-    
   //**************************************************************************
   //** createLinePreview
   //**************************************************************************
@@ -385,15 +368,52 @@ bluewave.charts.LineEditor = function(parent, config) {
 
         lineChart.clear();
         lineChart.setConfig(chartConfig);
-        setDefaultColors();
-        //Add lines
+
+
+        var colors = bluewave.utils.getColorPalette(true);
+
+
+
+      //Add lines
         var layers = chartConfig.layers;
-        inputData.forEach(function (d, i){
+        inputData.forEach(function (data, i){
 
             let layer = layers[i];
             if (layer.xAxis && layer.yAxis){
-                let line = new bluewave.chart.Line(layer);
-                lineChart.addLine(line, d, layer.xAxis, layer.yAxis);
+
+
+                if (layer.group){
+
+
+                    let groupData = d3.nest()
+                    .key(function(d){return d[layer.group];})
+                    .entries(data);
+
+                    var subgroups = groupData.map(function(d) { return d["key"]; });
+
+
+                    groupData.forEach(function(g, j){
+                        var d = g.values;
+                        let line = new bluewave.chart.Line();
+                        line.setColor(colors[j % colors.length]);
+                        line.setLabel(subgroups[j]);
+                        lineChart.addLine(line, d, layer.xAxis, layer.yAxis);
+                    });
+
+                }
+                else{
+
+                    var lineColor = layer.color;
+                    if (!lineColor){
+                        lineColor = colors[i % colors.length];
+                        layer.color = lineColor;
+                    }
+
+                    let line = new bluewave.chart.Line(layer);
+                    lineChart.addLine(line, data, layer.xAxis, layer.yAxis);
+                }
+
+
             }
         });
 
