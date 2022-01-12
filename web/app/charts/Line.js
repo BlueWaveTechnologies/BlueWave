@@ -42,14 +42,9 @@ bluewave.chart.Line = function(config) {
 
         var chartConfig = config;
         config = defaultConfig;
-
-        for (var key in chartConfig) {
-            if (chartConfig.hasOwnProperty(key)){
-                var method = "set" + key.substring(0,1).toUpperCase() + key.substring(1);
-                if (me[method]) me[method].apply(me, [chartConfig[key]]);
-            }
-        }
+        me.setConfig(chartConfig);
     };
+
 
   //**************************************************************************
   //** Setters
@@ -135,7 +130,7 @@ bluewave.chart.Line = function(config) {
         }
         config.smoothing = smoothing;
     };
-    
+
     this.setSmoothingValue = function(smoothingValue){
         smoothingValue = parseFloat(smoothingValue);
         if (isNaN(smoothingValue) || smoothingValue<0) {}
@@ -150,6 +145,20 @@ bluewave.chart.Line = function(config) {
    */
     this.getConfig = function () {
         return config;
+    };
+
+
+
+  //**************************************************************************
+  //** setConfig
+  //**************************************************************************
+    this.setConfig = function(chartConfig){
+        for (var key in chartConfig) {
+            if (chartConfig.hasOwnProperty(key)){
+                var method = "set" + key.substring(0,1).toUpperCase() + key.substring(1);
+                if (me[method]) me[method].apply(me, [chartConfig[key]]);
+            }
+        }
     };
 
 
