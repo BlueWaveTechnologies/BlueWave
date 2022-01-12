@@ -12,11 +12,22 @@ if(!bluewave.charts) bluewave.charts={};
 bluewave.charts.PieEditor = function(parent, config) {
     var me = this;
     var defaultConfig = {
-        pieCutout: 0.65,
-        piePadding: 0,
-        maximumSlices: 8,
-        labelOffset: 120,
-        showOther: true
+        panel: {
+
+        },
+        colors: {
+            blue: ["#6699cc","#f8f8f8"],
+            orange: ["#FF8C42","#f8f8f8"],
+            purple: ["#933ed5","#f8f8f8"],
+            mixed: bluewave.utils.getColorPalette()
+        },
+        chart: {
+            pieCutout: 0.65,
+            piePadding: 0,
+            maximumSlices: 8,
+            labelOffset: 120,
+            showOther: true
+        }
     };
 
     var panel;
@@ -25,13 +36,7 @@ bluewave.charts.PieEditor = function(parent, config) {
     var previewArea;
     var pieChart;
     var optionsDiv;
-    var pieInputs={
-        key:"",
-        value:"",
-        direction:"",
-        sort:"",
-        sortDir:""
-    };
+    var pieInputs = {};
     var chartConfig = {};
     var styleEditor;
 
@@ -40,6 +45,10 @@ bluewave.charts.PieEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
+
+        if (!config) config = {};
+        config = merge(config, defaultConfig);
+        chartConfig = config.chart;
 
 
         let table = createTable();
@@ -87,10 +96,8 @@ bluewave.charts.PieEditor = function(parent, config) {
         };
 
 
-      //Initialize chart area when ready
-        onRender(previewArea, function(){
-            pieChart = new bluewave.charts.PieChart(previewArea, {});
-        });
+      //Initialize chart
+        pieChart = new bluewave.charts.PieChart(previewArea, {});
     };
 
 
@@ -109,11 +116,8 @@ bluewave.charts.PieEditor = function(parent, config) {
         inputData = inputs;
 
 
-        if (pieConfig) chartConfig = pieConfig;
-        merge(chartConfig, defaultConfig);
+        chartConfig = merge(pieConfig, config.chart);
 
-        var numSlices = inputData[0].length;
-        chartConfig.maximumSlices = numSlices<9 ? numSlices : 8;
 
 
         if (chartConfig.chartTitle){
@@ -333,6 +337,8 @@ bluewave.charts.PieEditor = function(parent, config) {
 
         onRender(previewArea, function(){
             var data = inputData[0];
+
+
             if (data.hasOwnProperty("links")) {
                 data = linksAndQuantity.slice();
                 data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
@@ -353,56 +359,10 @@ bluewave.charts.PieEditor = function(parent, config) {
                     scData.push(scEntry);
                 });
                 data = scData;
-
-
-            }
-
-            if (chartConfig.pieSort === "Key") {
-                data.sort(function(a, b){
-                    return sort(a[chartConfig.pieKey],b[chartConfig.pieKey]);
-                });
-            }
-            else if(chartConfig.pieSort === "Value") {
-                data = data.sort(function(a,b){
-                    a = parseFloat(a[chartConfig.pieValue]);
-                    b = parseFloat(b[chartConfig.pieValue]);
-                    return sort(a,b);
-                });
-            }
-
-            if(chartConfig.maximumSlices !== 0 && chartConfig.maximumSlices !==null) {
-
-                if (chartConfig.showOther == true && chartConfig.maximumSlices < data.length) {
-                    //Show Others
-                    var otherSlicesValue = data.slice(chartConfig.maximumSlices).map(entry => entry[chartConfig.pieValue]).reduce((prev, next) => parseFloat(prev) + parseFloat(next));
-                    var otherSlicesEntry = {[chartConfig.pieKey]: "Other", [chartConfig.pieValue]: otherSlicesValue};
-                    data = data.slice(0, chartConfig.maximumSlices).concat(otherSlicesEntry);
-                } else {
-                    //Truncate after max slice
-                    data = data.slice(0, chartConfig.maximumSlices);
-                }
             }
 
             pieChart.update(chartConfig, data);
         });
-    };
-
-
-  //**************************************************************************
-  //** sort
-  //**************************************************************************
-    var sort = function(x,y){
-
-        var compareStrings = (typeof x === "string" && typeof y === "string");
-
-        if (chartConfig.pieSortDir === "Descending") {
-            if (compareStrings) return y.localeCompare(x);
-            else return y-x;
-        }
-        else{
-            if (compareStrings) return x.localeCompare(y);
-            else return x-y;
-        }
     };
 
 
@@ -428,6 +388,16 @@ bluewave.charts.PieEditor = function(parent, config) {
         var body = styleEditor.getBody();
         body.innerHTML = "";
 
+
+        var colorField = new javaxt.dhtml.ComboBox(
+            document.createElement("div"),
+            {
+                style: config.style.combobox
+            }
+        );
+
+
+
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
             items: [
@@ -437,18 +407,13 @@ bluewave.charts.PieEditor = function(parent, config) {
                         {
                             name: "color",
                             label: "Color",
-                            type: new javaxt.dhtml.ComboBox(
-                                document.createElement("div"),
-                                {
-                                    style: config.style.combobox
-                                }
-                            )
+                            type: colorField
                         },
                         {
                             name: "cutout",
                             label: "Cutout",
                             type: "text"
-                        },
+                        }
                     ]
                 },
                 {
@@ -467,17 +432,13 @@ bluewave.charts.PieEditor = function(parent, config) {
                         {
                             name: "showOther",
                             label: "Show Other",
-                            type: "radio",
-                            alignment: "vertical",
+                            type: "checkbox",
                             options: [
                                 {
-                                    label: "True",
+                                    label: "",
                                     value: true
-                                },
-                                {
-                                    label: "False",
-                                    value: false
                                 }
+
                             ]
                         }
                     ]
@@ -488,17 +449,25 @@ bluewave.charts.PieEditor = function(parent, config) {
                         {
                             name: "labels",
                             label: "Show Labels",
-                            type: "radio",
-                            alignment: "vertical",
+                            type: "checkbox",
                             options: [
                                 {
-                                    label: "True",
+                                    label: "",
                                     value: true
-                                },
-                                {
-                                    label: "False",
-                                    value: false
                                 }
+
+                            ]
+                        },
+                        {
+                            name: "extendLines",
+                            label: "Extend Lines",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
                             ]
                         },
                         {
@@ -512,6 +481,15 @@ bluewave.charts.PieEditor = function(parent, config) {
         });
 
 
+      //Add color options
+        for (var key in config.colors) {
+            if (config.colors.hasOwnProperty(key)){
+                colorField.add(key, key);
+            }
+        }
+        //colorField.setValue(chartConfig.colors+"");
+
+
       //Update cutout field (add slider) and set initial value
         createSlider("cutout", form, "%");
         var cutout = Math.round(chartConfig.pieCutout*100.0);
@@ -519,8 +497,13 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
         var labelField = form.findField("labels");
-        var labels = chartConfig.pieLabels;
+        var labels = chartConfig.showLabels;
         labelField.setValue(labels===true ? true : false);
+
+
+        var extendLinesField = form.findField("extendLines");
+        var extendLines = chartConfig.extendLines;
+        extendLinesField.setValue(extendLines===true ? true : false);
 
 
         createSlider("labelOffset", form, "%", 0, 120, 1);
@@ -560,18 +543,26 @@ bluewave.charts.PieEditor = function(parent, config) {
             if (settings.labels==="true") {
                 settings.labels = true;
                 form.enableField("labelOffset");
+                form.enableField("extendLines");
             }
             else if (settings.labels==="false") {
                 settings.labels = false;
                 form.disableField("labelOffset");
+                form.disableField("extendLines");
             }
-            chartConfig.pieLabels = settings.labels;
+            chartConfig.showLabels = settings.labels;
+            chartConfig.extendLines = settings.extendLines==="true";
 
             chartConfig.labelOffset = settings.labelOffset;
 
             if (settings.showOther==="true") settings.showOther = true;
             else if (settings.showOther==="false") settings.showOther = false;
             chartConfig.showOther = settings.showOther;
+
+            chartConfig.colors = config.colors[settings.color];
+            if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
+            else chartConfig.colorScaling = "linear";
+
             createPreview();
         };
 

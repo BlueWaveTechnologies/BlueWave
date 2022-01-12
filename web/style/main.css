@@ -192,6 +192,7 @@ body, textarea, input, select, td, th {
     border: 1px solid #e0e0e0;
     display: inline-block;
     float: left;
+    box-sizing: border-box;
 }
 
 
@@ -1303,6 +1304,11 @@ svg text {
 .chart-subtitle {
     color: #8c8c8c;
     font-size: 13px;
+}
+
+.chart-axis-label{
+    fill: #000;
+    font-size: 14px;
 }
 
 

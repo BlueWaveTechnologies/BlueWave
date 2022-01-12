@@ -733,6 +733,21 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** formatNumber
+  //**************************************************************************
+  /** Adds commas and ensures that there are a maximum of 2 decimals if the
+   *  number has decimals
+   */
+    formatNumber: function(x){
+        if (x==null) return "";
+        if (typeof x !== "string") x+="";
+        var parts = x.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
+    },
+
+
+  //**************************************************************************
   //** getColorPalette
   //**************************************************************************
     getColorPalette: function(fixedColors){
