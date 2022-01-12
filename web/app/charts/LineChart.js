@@ -21,9 +21,8 @@ bluewave.charts.LineChart = function(parent, config) {
     };
     var svg, chart, plotArea;
     var x, y;
-
-    var dataSets=[];
     var layers=[];
+
 
   //**************************************************************************
   //** Constructor
@@ -77,7 +76,6 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         clearChart();
-        dataSets=[];
         layers=[];
     };
 
@@ -138,11 +136,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var chartConfig = config;
         var data = layers.map( d => d.data );
-
-        if(data.length === 0) return;
-
-        var data1 = data[0].slice();
-        dataSets = data.slice();
+        if (data.length === 0) return;
 
 
         var width = parent.offsetWidth;
@@ -248,15 +242,15 @@ bluewave.charts.LineChart = function(parent, config) {
       //Generate min/max datasets
         var minData = [];
         var maxData = [];
-        layers.forEach(function(layer){
-            if (!layer.data) return;
+        arr.forEach(function(a){
+            var sumData = a.sumData;
             xKeys.forEach(function(key){
 
-                for (var i=0; i<layer.data.length; i++){
-                    var d = layer.data[i];
-                    var xKey = d[layer.xAxis];
+                for (var i=0; i<sumData.length; i++){
+                    var d = sumData[i];
+                    var xKey = d.key;
                     if (xKey===key){
-                        var val = parseFloat(d[layer.yAxis]);
+                        var val = d.value;
 
                       //Update minData array
                         var foundMatch = false;
