@@ -186,6 +186,65 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
+
+      //Create dataset to render
+        var arr = [];
+        for (let i=0; i<layers.length; i++){
+            if (!layers[i].line) continue;
+
+
+            let xKey = layers[i].xAxis;
+            let yKey = layers[i].yAxis;
+
+
+            //If axes not picked, skip pushing/rendering this dataset
+            if ((!xKey || !yKey) && i>0) continue;
+
+
+            var sumData = d3.nest()
+                .key(function(d){return d[xKey];})
+                .rollup(function(d){
+                    return d3.sum(d,function(g){
+                        return g[yKey];
+                    });
+            }).entries(layers[i].data);
+
+
+          //Get lineConfig
+            var lineConfig = layers[i].line.getConfig();
+
+
+          //Smooth the data as needed
+            var smoothingType = lineConfig.smoothing;
+            if (smoothingType){
+                var smoothingValue = lineConfig.smoothingValue;
+                applySmoothing(smoothingType, smoothingValue, sumData);
+            }
+
+
+            if (stack===true){
+                for (var j=0; j<arr.length; j++){
+                    var prevSumData = arr[j];
+                    //TODO: add prevSumData to sumData
+                }
+            }
+
+
+            arr.push( {lineConfig: lineConfig, sumData: sumData} );
+
+        };
+
+
+
+        var accumulate = chartConfig.accumulateValues;
+        if (accumulate){
+            //Accumulate y-axis values if checked
+
+            arr = accumulateValues(arr);
+        }
+
+
+
       //Generate min/max datasets
         var minData = [];
         var maxData = [];
@@ -221,12 +280,7 @@ bluewave.charts.LineChart = function(parent, config) {
                             var entry = maxData[j];
                             if (entry.key==key){
                                 foundMatch = true;
-                                if (stack) {
-                                    entry.value += val;
-                                }
-                                else{
-                                    entry.value = Math.max(entry.value, val);
-                                }
+                                entry.value = Math.max(entry.value, val);
                             }
                         }
                         if (!foundMatch){
@@ -319,127 +373,75 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-        if (stack){
-        //Nest merged data object by X-axis value for stacked area
-            var mergedData = d3.merge(dataSets);
-            var groupedStackData = d3.nest()
-                // .key( (d) => d[xKey])
-                .key( (d) => d[layers[0].xAxis]) //not right yet
-                .entries(mergedData)
+//        if (stack){
+//        //Nest merged data object by X-axis value for stacked area
+//            var mergedData = d3.merge(dataSets);
+//            var groupedStackData = d3.nest()
+//                // .key( (d) => d[xKey])
+//                .key( (d) => d[layers[0].xAxis]) //not right yet
+//                .entries(mergedData)
+//
+//
+//            let stackGroup=[];
+//            let stackLength = groupedStackData[0].values.length;
+//            for (let i=0; i<stackLength; i++){
+//                stackGroup.push(i);
+//            }
+//
+//            var stackedData = d3.stack()
+//                // .keys(subgroups) no idea why this doesn'r work
+//                .keys(stackGroup)
+//                .value(function (d, key) {
+//
+//                    let v = d.values[key];
+//                    return v[layers[0].yAxis];  //not right yet
+//
+//                })
+//                (groupedStackData);
+//
+//
+//            var colors = bluewave.utils.getColorPalette(true);
+//            var globalxKeyType = getType(layers[0].xAxis);
+//
+//            plotArea
+//            .selectAll("stacks")
+//            .data(stackedData)
+//            .enter()
+//            .append("path")
+//            .attr("dataset", (d, i) => i )
+//            .style("fill", function(d, i){
+//                //Get color from config or mod through color array
+//                return chartConfig["lineColor" + i] || colors[i%colors.length];
+//            })
+//            .style("opacity", function(d, i){
+//                return chartConfig["opacity" + i];
+//            })
+//            .attr("d", d3.area()
+//                .x(function (d, i) {
+//
+//                    let subData = d.data;
+//                    let subKey = d.data.key;
+//
+//                    if (globalxKeyType === "date"){
+//                        subKey = new Date(subKey)
+//                    }
+//
+//                    return x(subKey);
+//
+//                })
+//                .y0(function (d) { return y(d[0]); })
+//                .y1(function (d) { return y(d[1]); })
+//            )
+//            .attr("class", "stackarea")
+//            .on("click", function(d){
+//                var datasetID = parseInt(d3.select(this).attr("dataset"));
+//                me.onClick(this, datasetID, d);
+//            });
+//
+//        };
 
 
-            let stackGroup=[];
-            let stackLength = groupedStackData[0].values.length;
-            for (let i=0; i<stackLength; i++){
-                stackGroup.push(i);
-            }
 
-            var stackedData = d3.stack()
-                // .keys(subgroups) no idea why this doesn'r work
-                .keys(stackGroup)
-                .value(function (d, key) {
-
-                    let v = d.values[key];
-                    return v[layers[0].yAxis];  //not right yet
-
-                })
-                (groupedStackData);
-
-
-            var colors = bluewave.utils.getColorPalette(true);
-            var globalxKeyType = getType(layers[0].xAxis);
-
-            plotArea
-            .selectAll("stacks")
-            .data(stackedData)
-            .enter()
-            .append("path")
-            .attr("dataset", (d, i) => i )
-            .style("fill", function(d, i){
-                //Get color from config or mod through color array
-                return chartConfig["lineColor" + i] || colors[i%colors.length];
-            })
-            .style("opacity", function(d, i){
-                return chartConfig["opacity" + i];
-            })
-            .attr("d", d3.area()
-                .x(function (d, i) {
-
-                    let subData = d.data;
-                    let subKey = d.data.key;
-
-                    if (globalxKeyType === "date"){
-                        subKey = new Date(subKey)
-                    }
-
-                    return x(subKey);
-
-                })
-                .y0(function (d) { return y(d[0]); })
-                .y1(function (d) { return y(d[1]); })
-            )
-            .attr("class", "stackarea")
-            .on("click", function(d){
-                var datasetID = parseInt(d3.select(this).attr("dataset"));
-                me.onClick(this, datasetID, d);
-            });
-
-        };
-
-
-      //Create dataset to render
-        var arr = [];
-        for (let i=0; i<layers.length; i++){
-            if (!layers[i].line) continue;
-
-
-            let xKey = layers[i].xAxis;
-            let yKey = layers[i].yAxis;
-
-
-            //If axes not picked, skip pushing/rendering this dataset
-            if ((!xKey || !yKey) && i>0) continue;
-
-
-            var sumData = d3.nest()
-                .key(function(d){return d[xKey];})
-                .rollup(function(d){
-                    return d3.sum(d,function(g){
-                        return g[yKey];
-                    });
-            }).entries(layers[i].data);
-
-
-          //Get lineConfig
-            var lineConfig = layers[i].line.getConfig();
-
-
-          //Smooth the data as needed
-            var smoothingType = lineConfig.smoothing;
-            if (smoothingType){
-                var smoothingValue = lineConfig.smoothingValue;
-                applySmoothing(smoothingType, smoothingValue, sumData);
-            }
-
-
-            if (stack===true){
-                for (var j=0; j<arr.length; j++){
-                    var prevSumData = arr[j];
-                    //TODO: add prevSumData to sumData
-                }
-            }
-            
-
-            arr.push( {lineConfig: lineConfig, sumData: sumData} );
-
-        };
-
-        var accumulate = chartConfig.accumulateValues;
-        if (accumulate){
-            //Accumulate y-axis values if checked
-
-            arr = accumulateValues(arr);
-        }
 
         var chartElements = [];
         for (let i=0; i<arr.length; i++){
@@ -514,8 +516,6 @@ bluewave.charts.LineChart = function(parent, config) {
         circleGroup.attr("name", "circles");
         lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
-
-            if(stack) break;
 
             var sumData = arr[i].sumData;
             let lineConfig = arr[i].lineConfig;
