@@ -340,15 +340,13 @@ bluewave.charts.LineChart = function(parent, config) {
                 .value(function (d, key) {
 
                     let v = d.values[key];
-                    // return v[yKey];
                     return v[layers[0].yAxis];  //not right yet
 
                 })
-                (groupedStackData)
+                (groupedStackData);
 
 
             var colors = bluewave.utils.getColorPalette(true);
-            // var globalxKeyType = getType(data1[0][xKey]);
             var globalxKeyType = getType(layers[0].xAxis);
 
             plotArea
@@ -389,7 +387,6 @@ bluewave.charts.LineChart = function(parent, config) {
         };
 
 
-
       //Create dataset to render
         var arr = [];
         for (let i=0; i<layers.length; i++){
@@ -410,15 +407,16 @@ bluewave.charts.LineChart = function(parent, config) {
                     return d3.sum(d,function(g){
                         return g[yKey];
                     });
-            // }).entries(dataSets[i]);
             }).entries(layers[i].data);
 
 
-          //Smooth the data as needed
+          //Get lineConfig
             var lineConfig = layers[i].line.getConfig();
+
+
+          //Smooth the data as needed
             var smoothingType = lineConfig.smoothing;
             if (smoothingType){
-                // var smoothingValue = chartConfig["smoothingValue" + i];
                 var smoothingValue = lineConfig.smoothingValue;
                 applySmoothing(smoothingType, smoothingValue, sumData);
             }
@@ -466,7 +464,6 @@ bluewave.charts.LineChart = function(parent, config) {
                 }
             };
 
-// Why are we adding 1 here if I forget to ask? to avoid log(0)=-inf?
             var getY = function(d){
                 var v = parseFloat(d["value"]);
                 return (config.scaling === "logarithmic") ? y(v+1):y(v);
