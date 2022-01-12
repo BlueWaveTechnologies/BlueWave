@@ -60,8 +60,8 @@ bluewave.charts.LineChart = function(parent, config) {
     this.setScaling = function(scale){
         config.scaling = scale==="logarithmic" ? "logarithmic" : "linear";
     };
-    
-    
+
+
   //**************************************************************************
   //** displayEndTags
   //**************************************************************************
@@ -140,7 +140,7 @@ bluewave.charts.LineChart = function(parent, config) {
         var data = layers.map( d => d.data );
 
         if(data.length === 0) return;
-        
+
         var data1 = data[0].slice();
         dataSets = data.slice();
 
@@ -157,7 +157,6 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
       //Get chart options
-        var group = chartConfig.group;
         var showLabels = chartConfig.endTags;
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
@@ -266,16 +265,8 @@ bluewave.charts.LineChart = function(parent, config) {
                 var labelHeight = 0;
                 layers.forEach(function(layer, i){
                     if (!layer.line) return;
-                    var label;
-                    if (group){
-                        let d = layers[i].data;
-                        label = d[group];
-                        if (!label) label = group + " " + i;
-                    }
-                    else{
-                        label = layer.line.getLabel();
-                        if (!label) label = "Series " + (i+1);
-                    }
+                    var label = layer.line.getLabel();
+                    if (!label) label = "Series " + (i+1);
 
 
                     if (label){
@@ -325,22 +316,6 @@ bluewave.charts.LineChart = function(parent, config) {
         y = axes.y;
 
 
-      //Reformat data if "group by" is selected
-        if(group !== null && group !== undefined && group !==""){
-
-            let groupData = d3.nest()
-            .key(function(d){return d[group];})
-            .entries(data);
-
-            let tempDataSets = [];
-            groupData.forEach(function(g){
-
-                tempDataSets.push(g.values)
-            })
-
-            dataSets = tempDataSets;
-            var subgroups = groupData.map(function(d) { return d["key"]; });
-        }
 
 
 
@@ -426,7 +401,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
             //If axes not picked, skip pushing/rendering this dataset
-            if ((!xKey || !yKey) && !group && i>0) continue;
+            if ((!xKey || !yKey) && i>0) continue;
 
 
             var sumData = d3.nest()
@@ -612,18 +587,9 @@ bluewave.charts.LineChart = function(parent, config) {
 
           //Display end tags if checked
             if (showLabels){
-                var label;
-                if (group){
-                    // let d = dataSets[i][0];
-                    let d = layers[i].data;
-                    label = d[group];
-                    if (!label) label = group + " " + i;
-                }
-                else{
-                    var labelKey = "label" + (i>0 ? i+1 : "");
-                    label = lineConfig.label;
-                    if (!label) label = "Series " + (i+1);
-                }
+                var label = lineConfig.label;
+                if (!label) label = "Series " + (i+1);
+
                 var line = chartElements[i].line2;
                 chartElements[i].tag = createTag(sumData, lineColor, label, line);
             }
