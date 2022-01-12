@@ -1306,6 +1306,11 @@ svg text {
     font-size: 13px;
 }
 
+.chart-axis-label{
+    fill: #000;
+    font-size: 14px;
+}
+
 
 .countries {
     fill: #f9f9f9;
