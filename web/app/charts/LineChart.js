@@ -261,8 +261,7 @@ bluewave.charts.LineChart = function(parent, config) {
             var arr2 = [];
             arr.forEach(function(d, i){
                 var sumData = d.sumData;
-                var keys = [];
-                sumData.forEach((d)=>keys.push(d.key));
+
 
 
               //Replicate sumData
@@ -295,10 +294,10 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
                   //Create missing values
-                    if (matches.length<arr.length){
+                    if (matches.length<i){
+                        for (var j=0; j<i; j++){
 
-                        for (var j=0; j<arr.length; j++){
-
+                          //Check whether we should interpolate this entry
                             var interpolateData = true;
                             for (var k=0; k<matches.length; k++){
                                 if (matches[k]==j){
@@ -309,9 +308,60 @@ bluewave.charts.LineChart = function(parent, config) {
 
                             if (interpolateData){
                                 var prevSumData = arr[j].sumData;
-                                //console.log(prevSumData);
+                                console.log(key, prevSumData);
 
-                                //TODO: find 
+
+                                var keys = [];
+                                sumData.forEach((d)=>keys.push(d.key));
+                                console.log(keys);
+
+                                var prevKeys = [];
+                                var nextKeys = [];
+                                var foundKey = false;
+                                for (var k=0; k<keys.length; k++){
+                                    if (keys[k]==key){
+                                        foundKey=true;
+                                        continue;
+                                    }
+                                    if (!foundKey) prevKeys.push(keys[k]);
+                                    else nextKeys.push(keys[k]);
+                                }
+                                console.log(prevKeys);
+                                console.log(nextKeys);
+
+
+                              //Get previous value
+                                var prevValue = null;
+                                for (var k=prevKeys.length-1; k>-1; k--){
+                                    var prevKey = prevKeys[k];
+                                    prevSumData.forEach(function(d){
+                                        if (d.key==prevKey){
+                                            prevValue = d.value;
+                                        }
+                                    });
+                                    if (!isNaN(prevValue)){
+                                        break;
+                                    }
+                                }
+
+
+                                var nextValue = null;
+                                for (var k=0; k<nextKeys.length; i++){
+                                    var nextKey = nextKeys[k];
+                                    prevSumData.forEach(function(d){
+                                        if (d.key==nextKey){
+                                            nextValue = d.value;
+                                        }
+                                    });
+                                    if (!isNaN(nextValue)){
+                                        break;
+                                    }
+                                }
+
+                                console.log(prevValue, nextValue);
+                                //val+=prevValue;
+                                
+
                             }
                         }
                     }
