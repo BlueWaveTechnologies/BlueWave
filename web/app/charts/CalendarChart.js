@@ -18,7 +18,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
         value: "value",
         weekday: "monday", // either: weekday, sunday, or monday
         cellSize: 17, // width and height of an individual day, in pixels
-        colors: ["#f8f8f8", "#6699cc"] //lighter to darker
+        colors: ["#f8f8f8", "#6699cc"], //lighter to darker
+        showTooltip: false
     };
     var svg, calendarArea;
 
@@ -35,6 +36,14 @@ bluewave.charts.CalendarChart = function(parent, config) {
             svg = s;
             calendarArea = g;
         });
+    };
+
+
+  //**************************************************************************
+  //** getTooltipLabel
+  //**************************************************************************
+    this.getTooltipLabel = function(d){
+        return d3.utcFormat("%m/%d/%Y")(d.date) + "<br/>" + d.value;
     };
 
 
@@ -140,6 +149,59 @@ bluewave.charts.CalendarChart = function(parent, config) {
         };
 
 
+        var tooltip;
+        if (config.showTooltip===true){
+            tooltip = bluewave.charts.PieChart.Tooltip;
+            if (!tooltip){
+                tooltip = bluewave.charts.PieChart.Tooltip =
+                d3.select(document.body)
+                .append("div")
+                .style("opacity", 0)
+                .attr("class", "tooltip");
+            }
+        }
+
+
+        var mouseover = function(d, i) {
+            if (tooltip){
+
+
+              //Get label
+                var label = me.getTooltipLabel({date: d, value: values[i]});
+
+              //Get zIndex
+                var highestElements = getHighestElements();
+                var zIndex = highestElements.zIndex;
+                if (!highestElements.contains(tooltip.node())) zIndex++;
+
+              //Update tooltip
+                tooltip
+                .html(label)
+                .style("opacity", 1)
+                .style("display", "block")
+                .style("z-index", zIndex);
+            }
+
+            d3.select(this).transition().duration(100).attr("opacity", "0.8");
+        };
+
+        var mousemove = function() {
+            var e = d3.event;
+            if (tooltip) tooltip
+            .style('top', (e.clientY) + "px")
+            .style('left', (e.clientX + 20) + "px");
+        };
+
+        var mouseleave = function() {
+            if (tooltip) tooltip
+            .style("opacity", 0)
+            .style("display", "none");
+
+            d3.select(this).transition().duration(100).attr("opacity", "1");
+        };
+
+
+
       //Create groups for every year
         var yearGroup = calendarArea.selectAll("*")
           .data(years)
@@ -171,7 +233,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
       //Create table and cells
         yearGroup.append("g")
-          .selectAll("rect")
+          .selectAll("*")
           .data(function(year){
               var arr = [];
               dates.forEach(function(date){
@@ -187,8 +249,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
             .attr("fill", function(date, i){
                 var value = values[i];
                 return getColor(value);
-            });
-
+            })
+        .on("mouseover", mouseover)
+        .on("mousemove", mousemove)
+        .on("mouseleave", mouseleave);
 
       //Create month group
         var monthGroup = yearGroup.append("g")
@@ -269,6 +333,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
+    var getHighestElements = javaxt.dhtml.utils.getHighestElements;
 
 
     init();
