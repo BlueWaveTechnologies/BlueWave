@@ -285,7 +285,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
           //Fill in missing values
-            arr.forEach(function(d, i){
+            arr.forEach(function(d, idx){
                 var sumData = d.sumData;
                 var newData = [];
 
@@ -301,10 +301,17 @@ bluewave.charts.LineChart = function(parent, config) {
                         }
                     }
 
-                    if (isNaN(val)){
-                        if (newData.length>0) val = newData[newData.length-1].value;
-                        else val = 0;
-                    };
+//                    if (isNaN(val)){
+//                        if (idx==0){
+//                            if (newData.length>0) val = newData[newData.length-1].value;
+//                            else val = 0;
+//                        }
+//                        else{
+//                            sumData = arr[idx-1].sumData;
+//                            //TODO: construct a line from the sumDate and find the y-intercept
+//                            val = 0; //remove later
+//                        }
+//                    };
 
 
                     newData.push({
@@ -346,24 +353,56 @@ bluewave.charts.LineChart = function(parent, config) {
                     var key = data.key;
                     var val = data.value;
 
-                    var matches = [];
-                    for (var j=0; j<i; j++){
-                        var prevSumData = arr[j].sumData;
-                        prevSumData.forEach(function(d){
-                            var k = d.key;
-                            var v = d.value;
-                            if (k==key){
-                                val+=v;
-                                matches.push(j);
-                            }
-                        });
-                    }
+                    if (isNaN(val)){
 
+                        for (var n=idx-1; n>-1; n--){
+                            var prevVal = newData[n].value;
+                            if (!isNaN(prevVal)){
+                                val = prevVal;
+                                break;
+                            }
+                        }
+
+                        if (isNaN(val)) val = 0;
+                    }
+                    else{
+
+                        for (var j=0; j<i; j++){
+                            var prevSumData = arr[j].sumData;
+                            prevSumData.forEach(function(d, idx2){
+                                var k = d.key;
+                                var v = d.value;
+
+
+                                if (k==key){
+
+                                    if (isNaN(v)){
+                                        for (var n=idx2-1; n>-1; n--){
+                                            var prevVal = prevSumData[n].value;
+                                            if (!isNaN(prevVal)){
+                                                v = prevVal;
+                                                break;
+                                            }
+                                        }
+
+                                        if (isNaN(v)) v = 0;
+                                        //val = v;
+                                        val+=v;
+                                    }
+                                    else{
+                                        val+=v;
+                                    }
+
+                                }
+                            });
+                        }
+                    }
 
                     newData[idx].value = val;
 
                 });
 
+                console.log(sumData, newData);
 
               //Update arr2 with newData
                 arr2.push( {lineConfig: d.lineConfig, sumData: newData} );
