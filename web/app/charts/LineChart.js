@@ -155,8 +155,7 @@ bluewave.charts.LineChart = function(parent, config) {
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
         var stack = chartConfig.stackValues;
-        var ticks = chartConfig.ticks;
-        if (isNaN(ticks)) ticks = 10;
+
 
 
       //Generate unque list of x-values across all layers
@@ -192,7 +191,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
             //If axes not picked, skip pushing/rendering this dataset
-            if ((!xKey || !yKey) && i>0) continue;
+            if (!xKey || !yKey) continue;
 
 
             var sumData = d3.nest()
@@ -207,6 +206,11 @@ bluewave.charts.LineChart = function(parent, config) {
           //Get lineConfig
             var lineConfig = layers[i].line.getConfig();
 
+          //Accumulate y-values if checked
+            var accumulate = chartConfig.accumulateValues;
+            if (accumulate){
+                sumData = accumulateValues(sumData);
+            };
 
           //Smooth the data as needed
             var smoothingType = lineConfig.smoothing;
@@ -223,20 +227,25 @@ bluewave.charts.LineChart = function(parent, config) {
                 }
             }
 
+            // if (stack===true){
+                
+            //         if (i>0){
+            //             var prevSumData = arr[i-1].sumData;
+            //             sumData.forEach(function(d, i){
+            //                 d.value += prevSumData[i].value;
+                                //I don't think this is gonna work for the same reason as the stack generator - the data isn't uniform
+                                //if the number of data points was the same I think it'd work
+                                //We might have to add the actual svg line data at the line generator in getY 
+            //             });
+                        
+            //         } 
+
+            // }
+
 
             arr.push( {lineConfig: lineConfig, sumData: sumData} );
 
         };
-
-
-
-        var accumulate = chartConfig.accumulateValues;
-        if (accumulate){
-            //Accumulate y-axis values if checked
-
-            arr = accumulateValues(arr);
-        }
-
 
 
       //Generate min/max datasets
@@ -463,6 +472,7 @@ bluewave.charts.LineChart = function(parent, config) {
             let lineColor = fillConfig.color;
             let startOpacity = fillConfig.startOpacity;
             let endOpacity = fillConfig.endOpacity;
+            var smoothingType = arr[i].lineConfig.smoothing;
 
             let keyType = getType(sumData[0].key);
 
@@ -828,17 +838,12 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     var accumulateValues = function(dataArray){
 
-        return dataArray.map(function(line){
+        let accVal = 0;
+        return dataArray.map(function (d) {
 
-            let accVal = 0;
-            return line.map(function(d){
-
-                accVal += parseFloat(d.value);
-                return { key:d.key, value:accVal };
-            })
-
-        });
-
+            accVal += parseFloat(d.value);
+            return { key: d.key, value: accVal };
+        })
     };
 
   //**************************************************************************
