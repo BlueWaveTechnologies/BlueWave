@@ -1244,7 +1244,7 @@ bluewave.dashboards.Premier = function (parent, config) {
   var createDashboardItem = bluewave.utils.createDashboardItem;
   var getData = bluewave.utils.getData;
   var parseCSV = bluewave.utils.parseCSV;
-  var getNaturalBreaks = bluewave.utils.getNaturalBreaks;
+  var getNaturalBreaks = bluewave.chart.utils.getNaturalBreaks;
 
   init();
 };
