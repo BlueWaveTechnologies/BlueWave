@@ -513,7 +513,7 @@ li.tree-node:hover {
 .company-profile-title {
     font-size: 20px;
     color: #fff;
-    padding: 0 5px;    
+    padding: 0 5px;
 }
 
 .company-profile li {
@@ -1309,8 +1309,12 @@ svg text {
 .chart-axis-label{
     fill: #000;
     font-size: 14px;
+    font-weight: bold;
 }
 
+.tick {
+    font-size: 10px;
+}
 
 .countries {
     fill: #f9f9f9;
