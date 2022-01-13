@@ -182,6 +182,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
       //Create dataset to render
         var arr = [];
+        var arr2 = [];
         for (let i=0; i<layers.length; i++){
             if (!layers[i].line) continue;
 
@@ -227,6 +228,18 @@ bluewave.charts.LineChart = function(parent, config) {
 
           //Stack values as needed
             if (stackValues){
+
+              //Replicate sumData
+                var newData = [];
+                sumData.forEach(function(d){
+                    newData.push({
+                        key: d.key,
+                        value: d.value
+                    });
+                });
+
+
+              //Update value in the newData
                 sumData.forEach(function(data, idx){
                     var key = data.key;
                     var val = data.value;
@@ -242,9 +255,13 @@ bluewave.charts.LineChart = function(parent, config) {
                         });
                     }
 
-                    sumData[idx].value = val;
+                    newData[idx].value = val;
 
                 });
+
+
+              //Update arr2 with newData
+                arr2.push( {lineConfig: lineConfig, sumData: newData} );
             }
 
 
@@ -252,6 +269,8 @@ bluewave.charts.LineChart = function(parent, config) {
             arr.push( {lineConfig: lineConfig, sumData: sumData} );
 
         };
+
+        if (stackValues) arr = arr2;
 
 
       //Generate min/max datasets
