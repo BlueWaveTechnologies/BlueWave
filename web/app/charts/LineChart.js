@@ -234,27 +234,39 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
           //Sort arr by largest data set for stacking
-            var temp = [];
-            arr.forEach(function(d){
-                var sumData = d.sumData;
-                var sumValue = 0;
-                sumData.forEach((d) => sumValue+=d.value);
-                temp.push({
-                    sumValue: sumValue,
-                    sumData: sumData,
-                    lineConfig: d.lineConfig
+            if (accumulateValues){
+                arr.sort(function(a, b){
+                    a = a.sumData;
+                    a = a[a.length-1].value;
+                    b = b.sumData;
+                    b = b[b.length-1].value;
+                    return b.sumValue-a.sumValue;
                 });
-            });
-            temp.sort(function(a, b){
-                return b.sumValue-a.sumValue;
-            });
+            }
+            else{
+                var temp = [];
+                arr.forEach(function(d){
+                    var sumData = d.sumData;
+                    var sumValue = 0;
+                    sumData.forEach((d) => sumValue+=d.value);
+                    temp.push({
+                        sumValue: sumValue,
+                        sumData: sumData,
+                        lineConfig: d.lineConfig
+                    });
+                });
+                temp.sort(function(a, b){
+                    return b.sumValue-a.sumValue;
+                });
+                temp.forEach((d) => console.log(d.lineConfig.label, d.sumValue, d.sumData));
 
-            arr = [];
-            temp.forEach((d) => arr.push({
-                sumData: d.sumData,
-                lineConfig: d.lineConfig
-            }));
-
+                arr = [];
+                temp.forEach((d) => arr.push({
+                    sumData: d.sumData,
+                    lineConfig: d.lineConfig
+                }));
+            }
+            arr.forEach((d) => console.log(d.lineConfig.label, d.sumData));
 
 
           //Compute new values for each entry in arr
@@ -308,7 +320,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
                             if (interpolateData){
                                 var prevSumData = arr[j].sumData;
-                                console.log(key, prevSumData);
+                                console.log(d.lineConfig.label, key, prevSumData);
 
 
                                 var keys = [];
@@ -360,7 +372,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
                                 console.log(prevValue, nextValue);
                                 //val+=prevValue;
-                                
+
 
                             }
                         }
