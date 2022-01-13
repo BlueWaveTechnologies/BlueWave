@@ -43,7 +43,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
   //** getTooltipLabel
   //**************************************************************************
     this.getTooltipLabel = function(d){
-        return d3.utcFormat("%m/%d/%Y")(d.date) + "<br/>" + d.value;
+        return d3.utcFormat("%m/%d/%Y")(d.date) + "<br/>" + d3.format(",")(d.value);
     };
 
 
@@ -221,14 +221,44 @@ bluewave.charts.CalendarChart = function(parent, config) {
       //Add day of week abbreviation on the left side of each group
         yearGroup.append("g")
           .attr("class", "tick")
-          .attr("text-anchor", "end")
+          .attr("text-anchor", "middle")
           .selectAll("text")
-          .data(weekday === "weekday" ? d3.range(1, 6) : d3.range(7))
+          .data(function(year){
+              var arr = d3.range(7);
+              arr.forEach(function(d, i){
+                  arr[i] = {
+                      day: d,
+                      year: year
+                  };
+              });
+              return arr;
+          })
           .join("text")
-            .attr("x", -5)
-            .attr("y", i => (countDay(i) + 0.5) * cellSize)
+            .attr("x", -10)
+            .attr("y", function(d){
+                return (countDay(d.day) + 0.5) * cellSize;
+            })
             .attr("dy", "0.31em")
-            .text(formatDay);
+            .text(function(d){
+                var dayOfWeek = d.day;
+                var year = d.year;
+
+                var hasData = false;
+                dates.every(function(date){
+                    if (date.getUTCFullYear()===year){
+                        var day = date.getUTCDay();
+                        if (day===dayOfWeek){
+                            hasData = true;
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
+                if (hasData || (dayOfWeek>0 && dayOfWeek<6)){
+                    return formatDay(dayOfWeek);
+                }
+            });
 
 
       //Create table and cells
