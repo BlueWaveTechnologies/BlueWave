@@ -177,16 +177,10 @@ bluewave.charts.LineChart = function(parent, config) {
 
         //TODO: sort keys
 
-        //Sort layers by largest data set for stacking
-        if(stackValues){
-            layers.sort(function(e1, e2){
-                return e1.data.length < e2.data.length;
-            });
-        }
+
 
       //Create dataset to render
         var arr = [];
-
         for (let i=0; i<layers.length; i++){
             if (!layers[i].line) continue;
 
@@ -234,7 +228,36 @@ bluewave.charts.LineChart = function(parent, config) {
         };
 
 
+
+      //Stack values
         if (stackValues){
+
+
+          //Sort arr by largest data set for stacking
+            var temp = [];
+            arr.forEach(function(d){
+                var sumData = d.sumData;
+                var sumValue = 0;
+                sumData.forEach((d) => sumValue+=d.value);
+                temp.push({
+                    sumValue: sumValue,
+                    sumData: sumData,
+                    lineConfig: d.lineConfig
+                });
+            });
+            temp.sort(function(a, b){
+                return b.sumValue-a.sumValue;
+            });
+
+            arr = [];
+            temp.forEach((d) => arr.push({
+                sumData: d.sumData,
+                lineConfig: d.lineConfig
+            }));
+
+
+
+          //Compute new values for each entry in arr
             var arr2 = [];
             arr.forEach(function(d, i){
                 var sumData = d.sumData;
@@ -271,9 +294,8 @@ bluewave.charts.LineChart = function(parent, config) {
                     }
 
 
-                  //Create a value
+                  //Create missing values
                     if (matches.length<arr.length){
-
 
                         for (var j=0; j<arr.length; j++){
 
@@ -289,7 +311,7 @@ bluewave.charts.LineChart = function(parent, config) {
                                 var prevSumData = arr[j].sumData;
                                 //console.log(prevSumData);
 
-
+                                //TODO: find 
                             }
                         }
                     }
