@@ -155,7 +155,7 @@ bluewave.charts.LineChart = function(parent, config) {
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
         var stackValues = chartConfig.stackValues===true;
-
+        var accumulateValues = chartConfig.accumulateValues===true;
 
 
       //Generate unque list of x-values across all layers
@@ -206,11 +206,16 @@ bluewave.charts.LineChart = function(parent, config) {
           //Get lineConfig
             var lineConfig = layers[i].line.getConfig();
 
-          //Accumulate y-values if checked
-            var accumulate = chartConfig.accumulateValues;
-            if (accumulate){
-                sumData = accumulateValues(sumData);
-            };
+
+          //Accumulate y-values as needed
+            if (accumulateValues){
+                sumData.forEach(function(d, idx){
+                    if (idx>0){
+                        sumData[idx].value += sumData[idx-1].value;
+                    }
+                });
+            }
+
 
           //Smooth the data as needed
             var smoothingType = lineConfig.smoothing;
@@ -220,6 +225,7 @@ bluewave.charts.LineChart = function(parent, config) {
             }
 
 
+          //Stack values as needed
             if (stackValues){
                 sumData.forEach(function(data, idx){
                     var key = data.key;
@@ -833,18 +839,6 @@ bluewave.charts.LineChart = function(parent, config) {
         return x => Math.abs(x /= bandwidth) <= 1 ? 0.75 * (1 - x * x) / bandwidth : 0;
     };
 
-  //**************************************************************************
-  //** accumulateValues
-  //**************************************************************************
-    var accumulateValues = function(dataArray){
-
-        let accVal = 0;
-        return dataArray.map(function (d) {
-
-            accVal += parseFloat(d.value);
-            return { key: d.key, value: accVal };
-        })
-    };
 
   //**************************************************************************
   //** Utils
