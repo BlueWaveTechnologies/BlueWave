@@ -97,7 +97,7 @@ bluewave.charts.LineEditor = function(parent, config) {
         lineChart.onClick = function(el, lineID){
             var line = lineChart.getLayers()[lineID].line;
             var layer = lineMap[lineID].layer;
-            editLine(line, layer);
+            editLine(line, lineID);
         };
     };
 
