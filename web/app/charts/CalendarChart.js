@@ -18,7 +18,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
         value: "value",
         weekday: "monday", // either: weekday, sunday, or monday
         cellSize: 17, // width and height of an individual day, in pixels
-        colors: ["#f8f8f8", "#6699cc"], //lighter to darker
+        colors: ["#fff","#ebf5dc","#cbe9a5","#2a671a"], //green colors
         showTooltip: false
     };
     var svg, calendarArea;
@@ -125,10 +125,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
       //Create color function using natural breaks
         var numClasses = 10;
-        var breaks = bluewave.utils.getNaturalBreaks(values, numClasses); //replace with d3.quantile?
-        var colors = config.colors;
-        if (!colors) colors = ["#f8f8f8", "#6699cc"];
-        colors = d3.scaleLinear().domain([0, breaks.length-1]).range(colors);
+        var breaks = getNaturalBreaks(values, numClasses);
+        var colors = getColorRange(breaks.length, config.colors);
         var getColor = function(value){
             for (var i=0; i<breaks.length; i++){
                 var currBreak = breaks[i];
@@ -136,19 +134,18 @@ bluewave.charts.CalendarChart = function(parent, config) {
                     if (i<breaks.length-1){
                         var nextBreak = breaks[i+1];
                         if (nextBreak>value){
-                            var color = colors(i);
-                            return color;
+                            return colors[i];
                         }
                     }
                     else{
-                        var color = colors(i);
-                        return color;
+                        return colors[i];
                     }
                 }
             }
         };
 
 
+      //Create tooltip
         var tooltip;
         if (config.showTooltip===true){
             tooltip = bluewave.charts.PieChart.Tooltip;
@@ -363,6 +360,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
+    var getColorRange = bluewave.chart.utils.getColorRange;
+    var getNaturalBreaks = bluewave.chart.utils.getNaturalBreaks;
     var getHighestElements = javaxt.dhtml.utils.getHighestElements;
 
 
