@@ -17,7 +17,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
         date: "date",
         value: "value",
         weekday: "monday", // either: weekday, sunday, or monday
-        cellSize: 17 // width and height of an individual day, in pixels
+        cellSize: 17, // width and height of an individual day, in pixels
+        colors: ["#f8f8f8", "#6699cc"] //lighter to darker
     };
     var svg, calendarArea;
 
@@ -60,9 +61,9 @@ bluewave.charts.CalendarChart = function(parent, config) {
     };
 
 
-    //**************************************************************************
-    //** renderChart
-    //**************************************************************************
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
     var renderChart = function(data){
 
 
@@ -75,7 +76,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
 
 
-      //Update date field in the data
+      //Update date and value fields in the data
         data.forEach((d)=>{
             var date = d[config.date];
             var value = d[config.value];
@@ -115,12 +116,31 @@ bluewave.charts.CalendarChart = function(parent, config) {
         const weekDays = weekday === "weekday" ? 5 : 7;
         const height = cellSize * (weekDays + 2);
 
-        // Compute a color scale. This assumes a diverging color scheme where the pivot
-        // is zero, and we want symmetric difference around zero.
-        const max = d3.quantile(values, 0.9975, Math.abs);
-        var getColor = d3.scaleSequential([-max, +max], colors).unknown("none");
 
-
+      //Create color function using natural breaks
+        var numClasses = 10;
+        var breaks = bluewave.utils.getNaturalBreaks(values, numClasses); //replace with d3.quantile?
+        var colors = config.colors;
+        if (!colors) colors = ["#f8f8f8", "#6699cc"];
+        colors = d3.scaleLinear().domain([0, breaks.length-1]).range(colors);
+        var getColor = function(value){
+            for (var i=0; i<breaks.length; i++){
+                var currBreak = breaks[i];
+                if (value=>currBreak){
+                    if (i<breaks.length-1){
+                        var nextBreak = breaks[i+1];
+                        if (nextBreak>value){
+                            var color = colors(i);
+                            return color;
+                        }
+                    }
+                    else{
+                        var color = colors(i);
+                        return color;
+                    }
+                }
+            }
+        };
 
 
       //Create groups for every year
