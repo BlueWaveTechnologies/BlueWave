@@ -266,7 +266,62 @@ bluewave.charts.LineChart = function(parent, config) {
                     lineConfig: d.lineConfig
                 }));
             }
-            arr.forEach((d) => console.log(d.lineConfig.label, d.sumData));
+
+
+          //Sort xKeys
+            var keyType = getType(xKeys[0]); //TODO: look at all the keys
+            xKeys.sort(function(a, b){
+                if (keyType=='number'){
+                    return parseFloat(a)-parseFloat(b);
+                }
+                else if (keyType=='date'){
+                    return (new Date(a).getTime())-(new Date(b).getTime());
+                }
+                else{
+                    return a.localeCompare(b);
+                }
+            });
+
+
+
+          //Fill in missing values
+            arr.forEach(function(d, i){
+                var sumData = d.sumData;
+                var newData = [];
+
+                xKeys.forEach(function(key){
+
+                    var val;
+                    for (var i=0; i<sumData.length; i++){
+                        var k = sumData[i].key;
+                        var v = sumData[i].value;
+                        if (k==key){
+                            val = v;
+                            break;
+                        }
+                    }
+
+                    if (isNaN(val)){
+                        if (newData.length>0) val = newData[newData.length-1].value;
+                        else val = 0;
+                    };
+
+
+                    newData.push({
+                        key: key,
+                        value: val
+                    });
+
+                });
+
+
+                d.sumData = newData;
+
+            });
+
+
+
+
 
 
           //Compute new values for each entry in arr
@@ -303,81 +358,6 @@ bluewave.charts.LineChart = function(parent, config) {
                             }
                         });
                     }
-
-
-                  //Create missing values
-                    if (matches.length<i){
-                        for (var j=0; j<i; j++){
-
-                          //Check whether we should interpolate this entry
-                            var interpolateData = true;
-                            for (var k=0; k<matches.length; k++){
-                                if (matches[k]==j){
-                                    interpolateData = false;
-                                    break;
-                                }
-                            }
-
-                            if (interpolateData){
-                                var prevSumData = arr[j].sumData;
-                                console.log(d.lineConfig.label, key, prevSumData);
-
-
-                                var keys = [];
-                                sumData.forEach((d)=>keys.push(d.key));
-                                console.log(keys);
-
-                                var prevKeys = [];
-                                var nextKeys = [];
-                                var foundKey = false;
-                                for (var k=0; k<keys.length; k++){
-                                    if (keys[k]==key){
-                                        foundKey=true;
-                                        continue;
-                                    }
-                                    if (!foundKey) prevKeys.push(keys[k]);
-                                    else nextKeys.push(keys[k]);
-                                }
-                                console.log(prevKeys);
-                                console.log(nextKeys);
-
-
-                              //Get previous value
-                                var prevValue = null;
-                                for (var k=prevKeys.length-1; k>-1; k--){
-                                    var prevKey = prevKeys[k];
-                                    prevSumData.forEach(function(d){
-                                        if (d.key==prevKey){
-                                            prevValue = d.value;
-                                        }
-                                    });
-                                    if (!isNaN(prevValue)){
-                                        break;
-                                    }
-                                }
-
-
-                                var nextValue = null;
-                                for (var k=0; k<nextKeys.length; i++){
-                                    var nextKey = nextKeys[k];
-                                    prevSumData.forEach(function(d){
-                                        if (d.key==nextKey){
-                                            nextValue = d.value;
-                                        }
-                                    });
-                                    if (!isNaN(nextValue)){
-                                        break;
-                                    }
-                                }
-
-                                console.log(prevValue, nextValue);
-                                //val+=prevValue;
-
-
-                            }
-                        }
-                    }
-
 
 
                     newData[idx].value = val;
