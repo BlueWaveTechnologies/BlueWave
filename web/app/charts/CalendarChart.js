@@ -70,10 +70,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
         var
          cellSize = config.cellSize,
          weekday = config.weekday,
-         formatDay = i => "SMTWTFS"[i], // given a day number in [0, 6], the day-of-week label
-         formatMonth = d3.utcFormat("%b"), // format specifier string for months (above the chart)
-         colors = d3.interpolatePiYG;
-
+         formatDay = i => "SMTWTFS"[i]; // given a day number in [0, 6], the day-of-week label
 
 
       //Update date and value fields in the data
@@ -152,15 +149,16 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
       //Add year label to every group
         yearGroup.append("text")
-            .attr("x", -5)
-            .attr("y", -5)
-            .attr("font-weight", "bold")
-            .attr("text-anchor", "end")
-            .text(year => year);
+          .attr("class", "chart-axis-label")
+          .attr("x", -5)
+          .attr("y", -5)
+          .attr("text-anchor", "end")
+          .text(year => year);
 
 
       //Add day of week abbreviation on the left side of each group
         yearGroup.append("g")
+          .attr("class", "tick")
           .attr("text-anchor", "end")
           .selectAll("text")
           .data(weekday === "weekday" ? d3.range(1, 6) : d3.range(7))
@@ -196,15 +194,21 @@ bluewave.charts.CalendarChart = function(parent, config) {
         var monthGroup = yearGroup.append("g")
           .selectAll("g")
           .data(function(year){
-              var months = {};
+
+              var firstDay, lastDate;
               dates.forEach(function(date){
                   if (date.getUTCFullYear()===year){
-                      var month = date.getUTCMonth()+"";
-                      if (!months[month]) months[month] = d3.utcMonth(date);
+                      if (!lastDate) lastDate = date;
+                      firstDay = date;
                   }
               });
-              months = Object.values(months);
-              return d3.utcMonths(months[0], months[months.length - 1]);
+
+              firstDay = new Date(firstDay.getTime());
+              lastDate = new Date(lastDate.getTime());
+
+              firstDay.setMonth(firstDay.getMonth()-1);
+              lastDate.setMonth(lastDate.getMonth()+1);
+              return d3.utcMonths(firstDay, lastDate);
           })
           .join("g");
 
@@ -224,10 +228,37 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
 
       //Add month labels
+        var renderedMonths = {};
         monthGroup.append("text")
+            .attr("class", "tick")
             .attr("x", d => timeWeek.count(d3.utcYear(d), timeWeek.ceil(d)) * cellSize + 2)
             .attr("y", -5)
-            .text(formatMonth);
+            .text(function(date){
+                var month = d3.utcFormat("%b")(date);
+                var year = d3.utcFormat("%Y")(date);
+                var key = year+"-"+month;
+
+                var dateInRange = false;
+                dates.every(function(d){
+
+                    var m = d3.utcFormat("%b")(d);
+                    var y = d3.utcFormat("%Y")(d);
+                    var k = y+"-"+m;
+                    if (k===key){
+                        dateInRange = true;
+                        return false;
+                    }
+                    return true;
+                });
+
+
+                if (dateInRange){
+                    if (!renderedMonths[key]){
+                        renderedMonths[key]=true;
+                        return month;
+                    }
+                }
+            });
 
     };
 
