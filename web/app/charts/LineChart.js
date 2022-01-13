@@ -177,8 +177,12 @@ bluewave.charts.LineChart = function(parent, config) {
 
         //TODO: sort keys
 
-
-
+        //Sort layers by largest data set for stacking
+        if(stackValues){
+            layers.sort(function(e1, e2){
+                return e1.data.length < e2.data.length;
+            });
+        }
 
       //Create dataset to render
         var arr = [];
