@@ -295,7 +295,8 @@ bluewave.charts.PieChart = function(parent, config) {
             }
 
             var extendLines = config.extendLines===true ? true : false;
-
+            if (extendLines && labelOffset<=110) extendLines = false;
+            
 
           //Create donut used to define the start of the lines
             var firstArc = d3.arc()

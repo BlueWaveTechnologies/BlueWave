@@ -96,10 +96,8 @@ bluewave.charts.PieEditor = function(parent, config) {
         };
 
 
-      //Initialize chart area when ready
-        onRender(previewArea, function(){
-            pieChart = new bluewave.charts.PieChart(previewArea, {});
-        });
+      //Initialize chart
+        pieChart = new bluewave.charts.PieChart(previewArea, {});
     };
 
 
@@ -434,17 +432,13 @@ bluewave.charts.PieEditor = function(parent, config) {
                         {
                             name: "showOther",
                             label: "Show Other",
-                            type: "radio",
-                            alignment: "vertical",
+                            type: "checkbox",
                             options: [
                                 {
-                                    label: "True",
+                                    label: "",
                                     value: true
-                                },
-                                {
-                                    label: "False",
-                                    value: false
                                 }
+
                             ]
                         }
                     ]
@@ -455,17 +449,25 @@ bluewave.charts.PieEditor = function(parent, config) {
                         {
                             name: "labels",
                             label: "Show Labels",
-                            type: "radio",
-                            alignment: "vertical",
+                            type: "checkbox",
                             options: [
                                 {
-                                    label: "True",
+                                    label: "",
                                     value: true
-                                },
-                                {
-                                    label: "False",
-                                    value: false
                                 }
+
+                            ]
+                        },
+                        {
+                            name: "extendLines",
+                            label: "Extend Lines",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
                             ]
                         },
                         {
@@ -497,6 +499,11 @@ bluewave.charts.PieEditor = function(parent, config) {
         var labelField = form.findField("labels");
         var labels = chartConfig.showLabels;
         labelField.setValue(labels===true ? true : false);
+
+
+        var extendLinesField = form.findField("extendLines");
+        var extendLines = chartConfig.extendLines;
+        extendLinesField.setValue(extendLines===true ? true : false);
 
 
         createSlider("labelOffset", form, "%", 0, 120, 1);
@@ -536,12 +543,15 @@ bluewave.charts.PieEditor = function(parent, config) {
             if (settings.labels==="true") {
                 settings.labels = true;
                 form.enableField("labelOffset");
+                form.enableField("extendLines");
             }
             else if (settings.labels==="false") {
                 settings.labels = false;
                 form.disableField("labelOffset");
+                form.disableField("extendLines");
             }
             chartConfig.showLabels = settings.labels;
+            chartConfig.extendLines = settings.extendLines==="true";
 
             chartConfig.labelOffset = settings.labelOffset;
 
