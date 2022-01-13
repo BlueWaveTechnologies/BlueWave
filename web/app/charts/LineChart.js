@@ -154,7 +154,7 @@ bluewave.charts.LineChart = function(parent, config) {
         var showLabels = chartConfig.endTags;
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
-        var stack = chartConfig.stackValues;
+        var stackValues = chartConfig.stackValues===true;
 
 
 
@@ -220,27 +220,27 @@ bluewave.charts.LineChart = function(parent, config) {
             }
 
 
-            if (stack===true){
-                for (var j=0; j<arr.length; j++){
-                    var prevSumData = arr[j];
-                    //TODO: add prevSumData to sumData
-                }
+            if (stackValues){
+                sumData.forEach(function(data, idx){
+                    var key = data.key;
+                    var val = data.value;
+
+                    for (var j=0; j<arr.length; j++){
+                        var prevSumData = arr[j].sumData;
+                        prevSumData.forEach(function(d){
+                            var k = d.key;
+                            var v = d.value;
+                            if (k==key){
+                                val+=v;
+                            }
+                        });
+                    }
+
+                    sumData[idx].value = val;
+
+                });
             }
 
-            // if (stack===true){
-                
-            //         if (i>0){
-            //             var prevSumData = arr[i-1].sumData;
-            //             sumData.forEach(function(d, i){
-            //                 d.value += prevSumData[i].value;
-                                //I don't think this is gonna work for the same reason as the stack generator - the data isn't uniform
-                                //if the number of data points was the same I think it'd work
-                                //We might have to add the actual svg line data at the line generator in getY 
-            //             });
-                        
-            //         } 
-
-            // }
 
 
             arr.push( {lineConfig: lineConfig, sumData: sumData} );
@@ -464,7 +464,7 @@ bluewave.charts.LineChart = function(parent, config) {
         fillGroup.attr("name", "fill");
         for (let i=0; i<arr.length; i++){
 
-            if(stack) break;
+            //if(stack) break;
             var sumData = arr[i].sumData;
 
             let fillConfig = arr[i].lineConfig.fill;
