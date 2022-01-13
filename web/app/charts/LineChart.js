@@ -182,7 +182,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
       //Create dataset to render
         var arr = [];
-        var arr2 = [];
+
         for (let i=0; i<layers.length; i++){
             if (!layers[i].line) continue;
 
@@ -226,8 +226,17 @@ bluewave.charts.LineChart = function(parent, config) {
             }
 
 
-          //Stack values as needed
-            if (stackValues){
+            arr.push( {lineConfig: lineConfig, sumData: sumData} );
+        };
+
+
+        if (stackValues){
+            var arr2 = [];
+            arr.forEach(function(d, i){
+                var sumData = d.sumData;
+                var keys = [];
+                sumData.forEach((d)=>keys.push(d.key));
+
 
               //Replicate sumData
                 var newData = [];
@@ -244,16 +253,44 @@ bluewave.charts.LineChart = function(parent, config) {
                     var key = data.key;
                     var val = data.value;
 
-                    for (var j=0; j<arr.length; j++){
+                    var matches = [];
+                    for (var j=0; j<i; j++){
                         var prevSumData = arr[j].sumData;
                         prevSumData.forEach(function(d){
                             var k = d.key;
                             var v = d.value;
                             if (k==key){
                                 val+=v;
+                                matches.push(j);
                             }
                         });
                     }
+
+
+                  //Create a value
+                    if (matches.length<arr.length){
+
+
+                        for (var j=0; j<arr.length; j++){
+
+                            var interpolateData = true;
+                            for (var k=0; k<matches.length; k++){
+                                if (matches[k]==j){
+                                    interpolateData = false;
+                                    break;
+                                }
+                            }
+
+                            if (interpolateData){
+                                var prevSumData = arr[j].sumData;
+                                //console.log(prevSumData);
+
+
+                            }
+                        }
+                    }
+
+
 
                     newData[idx].value = val;
 
@@ -261,16 +298,13 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
               //Update arr2 with newData
-                arr2.push( {lineConfig: lineConfig, sumData: newData} );
-            }
+                arr2.push( {lineConfig: d.lineConfig, sumData: newData} );
+            });
+
+            arr = arr2;
+        }
 
 
-
-            arr.push( {lineConfig: lineConfig, sumData: sumData} );
-
-        };
-
-        if (stackValues) arr = arr2;
 
 
       //Generate min/max datasets
