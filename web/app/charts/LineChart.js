@@ -158,7 +158,7 @@ bluewave.charts.LineChart = function(parent, config) {
         var accumulateValues = chartConfig.accumulateValues===true;
 
 
-      //Generate unque list of x-values across all layers
+      //Generate unique list of x-values across all layers
         var xKeys = [];
         layers.forEach(function(layer){
             if (!layer.data) return;
@@ -269,19 +269,103 @@ bluewave.charts.LineChart = function(parent, config) {
             }
 
 
-          //Sort xKeys
-            var keyType = getType(xKeys[0]); //TODO: look at all the keys
-            xKeys.sort(function(a, b){
-                if (keyType=='number'){
-                    return parseFloat(a)-parseFloat(b);
-                }
-                else if (keyType=='date'){
-                    return (new Date(a).getTime())-(new Date(b).getTime());
+
+          //Analyze all the keys and get key type (e.g. number, string, date)
+            var xType = getType(xKeys);
+
+
+          //Analyze keys in each dataset and determine sort direction
+            var xSorts = {};
+            arr.forEach(function(d, i){
+                var sumData = d.sumData;
+
+                var sortDir = "none";
+                var asc = 0;
+                var desc = 0;
+                var unk = 0;
+
+
+                if (sumData.length<2){
+                    //No sort if there are only 1 or 0 elements
                 }
                 else{
-                    return a.localeCompare(b);
+                    for (var j=0; j<sumData.length-1; j++){
+
+                        var currKey = sumData[j].key;
+                        var nextKey = sumData[j+1].key;
+
+                        if (xType=="date"){
+                            currKey = new Date(currKey).getTime();
+                            nextKey = new Date(nextKey).getTime();
+                            if (nextKey>=currKey) asc++;
+                            if (nextKey<=currKey) desc++;
+                        }
+                        else if (xType=="number"){
+                            currKey = parseFloat(currKey);
+                            nextKey = parseFloat(nextKey);
+                            if (nextKey>currKey) asc++;
+                            if (nextKey<currKey) desc++;
+                            if (nextKey==currKey) unk++;
+                        }
+                        else {
+                            var x = currKey.localeCompare(nextKey);
+                            if (x<0) asc++;
+                            if (x>0) desc++;
+                            if (x==0) unk++;
+                        }
+                    }
+
+                    //console.log("asc", asc+unk, sumData.length-1);
+                    //console.log("desc", desc+unk, sumData.length-1);
+                    if (asc+unk==sumData.length-1) sortDir = "asc";
+                    if (desc+unk==sumData.length-1) sortDir = "desc";
+                    //console.log(d.lineConfig.label, xType, sortDir);
+
+                    var sort = xSorts[sortDir];
+                    if (!sort){
+                        sort = [];
+                        xSorts[sortDir] = sort;
+                    }
+                    sort.push(i);
                 }
+
             });
+
+
+            var sortKeys = Object.keys(xSorts);
+            var xSort = sortKeys.length==1 ? sortKeys[0] : null;
+
+
+          //Sort xKeys
+            if (xSort){
+                xKeys.sort(function(a, b){
+                    if (xType=='number'){
+                        if (xSort=="asc"){
+                            return parseFloat(a)-parseFloat(b);
+                        }
+                        else{
+                            return parseFloat(b)-parseFloat(a);
+                        }
+                    }
+                    else if (xType=='date'){
+                        if (xSort=="asc"){
+                            return (new Date(a).getTime())-(new Date(b).getTime());
+                        }
+                        else{
+                            return (new Date(b).getTime())-(new Date(a).getTime());
+                        }
+                    }
+                    else{
+                        if (xSort=="asc"){
+                            return a.localeCompare(b);
+                        }
+                        else{
+                            return b.localeCompare(a);
+                        }
+                    }
+                });
+
+            }
 
 
 
