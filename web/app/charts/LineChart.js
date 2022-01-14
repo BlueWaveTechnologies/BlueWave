@@ -209,6 +209,8 @@ bluewave.charts.LineChart = function(parent, config) {
           //Accumulate y-values as needed
             if (accumulateValues){
                 sumData.forEach(function(d, idx){
+                    var val = sumData[idx].value;
+                    if (isNaN(val)) sumData[idx].value = 0;
                     if (idx>0){
                         sumData[idx].value += sumData[idx-1].value;
                     }
@@ -240,7 +242,7 @@ bluewave.charts.LineChart = function(parent, config) {
                     a = a[a.length-1].value;
                     b = b.sumData;
                     b = b[b.length-1].value;
-                    return b.sumValue-a.sumValue;
+                    return b-a;
                 });
             }
             else{
@@ -258,7 +260,6 @@ bluewave.charts.LineChart = function(parent, config) {
                 temp.sort(function(a, b){
                     return b.sumValue-a.sumValue;
                 });
-                temp.forEach((d) => console.log(d.lineConfig.label, d.sumValue, d.sumData));
 
                 arr = [];
                 temp.forEach((d) => arr.push({
@@ -285,10 +286,11 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
           //Fill in missing values
-            arr.forEach(function(d, idx){
+            arr.forEach(function(d){
                 var sumData = d.sumData;
                 var newData = [];
 
+              //Get value for each key
                 xKeys.forEach(function(key){
 
                     var val;
@@ -301,19 +303,6 @@ bluewave.charts.LineChart = function(parent, config) {
                         }
                     }
 
-//                    if (isNaN(val)){
-//                        if (idx==0){
-//                            if (newData.length>0) val = newData[newData.length-1].value;
-//                            else val = 0;
-//                        }
-//                        else{
-//                            sumData = arr[idx-1].sumData;
-//                            //TODO: construct a line from the sumDate and find the y-intercept
-//                            val = 0; //remove later
-//                        }
-//                    };
-
-
                     newData.push({
                         key: key,
                         value: val
@@ -322,11 +311,17 @@ bluewave.charts.LineChart = function(parent, config) {
                 });
 
 
+              //Trim leading null values
+                while (newData.length>0){
+                    var firstVal = newData[0].value;
+                    if (!isNaN(firstVal)) break;
+                    if (isNaN(firstVal)) newData.shift();
+                }
+
+
                 d.sumData = newData;
 
             });
-
-
 
 
 
@@ -338,7 +333,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-              //Replicate sumData
+              //Clone sumData into newData
                 var newData = [];
                 sumData.forEach(function(d){
                     newData.push({
@@ -348,15 +343,17 @@ bluewave.charts.LineChart = function(parent, config) {
                 });
 
 
-              //Update value in the newData
+              //Update values in the newData
                 sumData.forEach(function(data, idx){
                     var key = data.key;
                     var val = data.value;
 
+
+                  //If val is null, use previous value in this series
                     if (isNaN(val)){
 
                         for (var n=idx-1; n>-1; n--){
-                            var prevVal = newData[n].value;
+                            var prevVal = sumData[n].value;
                             if (!isNaN(prevVal)){
                                 val = prevVal;
                                 break;
@@ -365,44 +362,35 @@ bluewave.charts.LineChart = function(parent, config) {
 
                         if (isNaN(val)) val = 0;
                     }
-                    else{
-
-                        for (var j=0; j<i; j++){
-                            var prevSumData = arr[j].sumData;
-                            prevSumData.forEach(function(d, idx2){
-                                var k = d.key;
-                                var v = d.value;
 
 
-                                if (k==key){
-
-                                    if (isNaN(v)){
-                                        for (var n=idx2-1; n>-1; n--){
-                                            var prevVal = prevSumData[n].value;
-                                            if (!isNaN(prevVal)){
-                                                v = prevVal;
-                                                break;
-                                            }
-                                        }
-
-                                        if (isNaN(v)) v = 0;
-                                        //val = v;
-                                        val+=v;
-                                    }
-                                    else{
-                                        val+=v;
-                                    }
-
+                  //Find value under the current line
+                    var prevVals;
+                    for (var j=0; j<arr2.length; j++){
+                        var prevSumData = arr2[j].sumData;
+                        prevSumData.every(function(d){
+                            var k = d.key;
+                            var v = d.value;
+                            if (k==key){
+                                if (!isNaN(v)){
+                                    prevVals = v;
+                                    return false;
                                 }
-                            });
-                        }
+                            }
+                            return true;
+                        });
                     }
 
+
+                  //Update val
+                    if (!isNaN(prevVals)) val+=prevVals;
+
+
+                  //Set value in the newData array
                     newData[idx].value = val;
 
                 });
 
-                console.log(sumData, newData);
 
               //Update arr2 with newData
                 arr2.push( {lineConfig: d.lineConfig, sumData: newData} );
