@@ -570,7 +570,6 @@ bluewave.charts.BarChart = function(parent, config) {
                 bars.attr("x", 0).attr("width", 0);
 
                 bars.transition().duration(3000)
-                    // .attr("x", function (d) { return width - d.value / widthRatio; })
                     .attr("width", function (d) { return d.value / widthRatio; });
 
             }
