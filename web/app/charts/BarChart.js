@@ -199,22 +199,22 @@ bluewave.charts.BarChart = function(parent, config) {
         var axes;
         if (barType === "histogram") {
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, chartConfig, "barChart");
                 leftLabel = "Frequency";
                 bottomLabel = chartConfig.xAxis;
             } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, chartConfig, "barChart");
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = "Frequency";
             }
         }
         else{
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, null, chartConfig, "barChart");
                 leftLabel = chartConfig.yAxis;
                 bottomLabel = chartConfig.xAxis;
             } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData, null, chartConfig, "barChart");
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = chartConfig.yAxis;
             }
@@ -552,15 +552,41 @@ bluewave.charts.BarChart = function(parent, config) {
             bar.attr("fill", getBarColor(barID));
         });
 
+        //Bar transitions
+        var racingBars = chartConfig.racingBars;
+        if (racingBars){
+            var max = d3.max(maxData, d => parseFloat(d.value));
+            if (layout === "vertical"){
+                
+                var heightRatio = max / height;
+                bars.attr("y", height).attr("height", 0);
 
-        //Create d3 event listeners for bars
-        bars.on("mouseover", function(){
-            d3.select(this).transition().duration(100).attr("opacity", "0.8")
-        });
+                bars.transition().duration(3000)
+                    .attr("y", function (d) { return height - d.value / heightRatio; })
+                    .attr("height", function (d) { return d.value / heightRatio; });
+            }else if(layout === "horizontal"){
 
-        bars.on("mouseout", function(){
-            d3.select(this).transition().duration(100).attr("opacity", "1.0")
-        });
+                var widthRatio = max/width;
+                bars.attr("x", 0).attr("width", 0);
+
+                bars.transition().duration(3000)
+                    // .attr("x", function (d) { return width - d.value / widthRatio; })
+                    .attr("width", function (d) { return d.value / widthRatio; });
+
+            }
+        }else{
+
+            //Create d3 event listeners for bars
+            bars.on("mouseover", function() {
+                d3.select(this).transition().duration(100).attr("opacity", "0.8")
+            });
+
+            bars.on("mouseout", function() {
+                d3.select(this).transition().duration(100).attr("opacity", "1.0")
+            });
+
+        };
+            
 
         var getSiblings = function(bar){
             var arr = [];

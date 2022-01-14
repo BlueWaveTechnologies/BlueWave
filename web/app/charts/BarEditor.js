@@ -345,6 +345,19 @@ bluewave.charts.BarEditor = function(parent, config) {
                                 }
 
                             ]
+                        },
+                        {
+                            name: "racingBars",
+                            label: "Racing Bars",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
                         }
                     ]
                 },
@@ -448,6 +461,10 @@ bluewave.charts.BarEditor = function(parent, config) {
         var stack = chartConfig.stack;
         stackField.setValue(stack===true ? true : false);
 
+        var raceField = form.findField("racingBars");
+        var racingBars = chartConfig.racingBars;
+        raceField.setValue(racingBars===true ? true : false);
+
 
       //Process onChange events
         form.onChange = function(){
@@ -472,6 +489,9 @@ bluewave.charts.BarEditor = function(parent, config) {
             if (settings.stack==="true") settings.stack = true;
             else settings.stack = false;
 
+            if (settings.racingBars==="true") settings.racingBars = true;
+            else settings.racingBars = false;
+
 
             chartConfig.barLayout = settings.layout;
             chartConfig.barLegend = settings.legend;
@@ -480,6 +500,7 @@ bluewave.charts.BarEditor = function(parent, config) {
             chartConfig.xLabel = settings.xLabel;
             chartConfig.yLabel = settings.yLabel;
             chartConfig.stack = settings.stack;
+            chartConfig.racingBars = settings.racingBars;
             createBarPreview();
         };
 
