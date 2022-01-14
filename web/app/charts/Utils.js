@@ -420,29 +420,61 @@ bluewave.chart.utils = {
   //** getType
   //**************************************************************************
     getType: function(value) {
-        let dataType;
 
-        const validNumberRegex = /^[\+\-]?\d*\.?\d+(?:[Ee][\+\-]?\d+)?$/;
-        switch (typeof value) {
-            case "string":
-                if(value.match(validNumberRegex)){
-                    dataType =  "number";
-                }else if (Date.parse(value)){
-                    dataType =  "date";
-                }else{
-                    dataType = "string";
-                }
-                break;
-            case "number":
-                dataType = "number";
-                break;
-            case "object":
-                dataType = "date";
-                break;
-            default:
-                break;
-        }
-        return dataType;
+        var arr = javaxt.dhtml.utils.isArray(value) ? value : [value];
+
+        var getType = function(value){
+            let dataType;
+
+            const validNumberRegex = /^[\+\-]?\d*\.?\d+(?:[Ee][\+\-]?\d+)?$/;
+            switch (typeof value) {
+                case "string":
+                    if(value.match(validNumberRegex)){
+                        dataType =  "number";
+                    }else if (Date.parse(value)){
+                        dataType =  "date";
+                    }else{
+                        dataType = "string";
+                    }
+                    break;
+                case "number":
+                    dataType = "number";
+                    break;
+                case "object":
+                    dataType = "date";
+                    break;
+                default:
+                    break;
+            }
+            return dataType;
+        };
+
+        var numbers = 0;
+        var dates = 0;
+        var strings = 0;
+        var other = 0;
+        arr.forEach(function(value){
+            var dataType = getType(value);
+            switch (dataType) {
+                case "string":
+                    strings++;
+                    break;
+                case "number":
+                    numbers++;
+                    break;
+                case "date":
+                    dates++;
+                    break;
+                default:
+                    other++;
+                    break;
+            }
+        });
+
+        if (dates==arr.length) return "date";
+        if (numbers==arr.length) return "number";
+        if (strings==arr.length) return "string";
+        return null;
     },
 
 
