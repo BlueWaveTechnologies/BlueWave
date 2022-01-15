@@ -199,22 +199,22 @@ bluewave.charts.BarChart = function(parent, config) {
         var axes;
         if (barType === "histogram") {
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, chartConfig, "barChart");
                 leftLabel = "Frequency";
                 bottomLabel = chartConfig.xAxis;
             } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, chartConfig, "barChart");
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = "Frequency";
             }
         }
         else{
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, null, chartConfig, "barChart");
                 leftLabel = chartConfig.yAxis;
                 bottomLabel = chartConfig.xAxis;
             } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData, null, null, "barChart");
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData, null, chartConfig, "barChart");
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = chartConfig.yAxis;
             }

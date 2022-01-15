@@ -116,7 +116,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
       //Render X/Y axis
-        var axes = drawAxes(plotArea, axisWidth, axisHeight, xKey, yKey, data);
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, xKey, yKey, data, null, config);
         x = axes.x;
         y = axes.y;
 
