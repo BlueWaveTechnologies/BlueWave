@@ -175,8 +175,6 @@ bluewave.charts.LineChart = function(parent, config) {
             });
         });
 
-        //TODO: sort keys
-
 
 
       //Create dataset to render
@@ -613,77 +611,6 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-
-//        if (stack){
-//        //Nest merged data object by X-axis value for stacked area
-//            var mergedData = d3.merge(dataSets);
-//            var groupedStackData = d3.nest()
-//                // .key( (d) => d[xKey])
-//                .key( (d) => d[layers[0].xAxis]) //not right yet
-//                .entries(mergedData)
-//
-//
-//            let stackGroup=[];
-//            let stackLength = groupedStackData[0].values.length;
-//            for (let i=0; i<stackLength; i++){
-//                stackGroup.push(i);
-//            }
-//
-//            var stackedData = d3.stack()
-//                // .keys(subgroups) no idea why this doesn'r work
-//                .keys(stackGroup)
-//                .value(function (d, key) {
-//
-//                    let v = d.values[key];
-//                    return v[layers[0].yAxis];  //not right yet
-//
-//                })
-//                (groupedStackData);
-//
-//
-//            var colors = bluewave.utils.getColorPalette(true);
-//            var globalxKeyType = getType(layers[0].xAxis);
-//
-//            plotArea
-//            .selectAll("stacks")
-//            .data(stackedData)
-//            .enter()
-//            .append("path")
-//            .attr("dataset", (d, i) => i )
-//            .style("fill", function(d, i){
-//                //Get color from config or mod through color array
-//                return chartConfig["lineColor" + i] || colors[i%colors.length];
-//            })
-//            .style("opacity", function(d, i){
-//                return chartConfig["opacity" + i];
-//            })
-//            .attr("d", d3.area()
-//                .x(function (d, i) {
-//
-//                    let subData = d.data;
-//                    let subKey = d.data.key;
-//
-//                    if (globalxKeyType === "date"){
-//                        subKey = new Date(subKey)
-//                    }
-//
-//                    return x(subKey);
-//
-//                })
-//                .y0(function (d) { return y(d[0]); })
-//                .y1(function (d) { return y(d[1]); })
-//            )
-//            .attr("class", "stackarea")
-//            .on("click", function(d){
-//                var datasetID = parseInt(d3.select(this).attr("dataset"));
-//                me.onClick(this, datasetID, d);
-//            });
-//
-//        };
-
-
-
-
         var chartElements = [];
         for (let i=0; i<arr.length; i++){
             chartElements.push({
@@ -1081,7 +1008,6 @@ bluewave.charts.LineChart = function(parent, config) {
     var initChart = bluewave.chart.utils.initChart;
     var getType = bluewave.chart.utils.getType;
     var drawAxes = bluewave.chart.utils.drawAxes;
-    var drawLabels = bluewave.chart.utils.drawLabels;
     var drawGridlines = bluewave.chart.utils.drawGridlines;
 
     init();
