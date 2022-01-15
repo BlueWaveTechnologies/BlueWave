@@ -21,9 +21,8 @@ bluewave.charts.LineChart = function(parent, config) {
     };
     var svg, chart, plotArea;
     var x, y;
-
-    var dataSets=[];
     var layers=[];
+
 
   //**************************************************************************
   //** Constructor
@@ -77,7 +76,6 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         clearChart();
-        dataSets=[];
         layers=[];
     };
 
@@ -138,11 +136,7 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var chartConfig = config;
         var data = layers.map( d => d.data );
-
-        if(data.length === 0) return;
-
-        var data1 = data[0].slice();
-        dataSets = data.slice();
+        if (data.length === 0) return;
 
 
         var width = parent.offsetWidth;
@@ -160,12 +154,11 @@ bluewave.charts.LineChart = function(parent, config) {
         var showLabels = chartConfig.endTags;
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
-        var stack = chartConfig.stackValues;
-        var ticks = chartConfig.ticks;
-        if (isNaN(ticks)) ticks = 10;
+        var stackValues = chartConfig.stackValues===true;
+        var accumulateValues = chartConfig.accumulateValues===true;
 
 
-      //Generate unque list of x-values across all layers
+      //Generate unique list of x-values across all layers
         var xKeys = [];
         layers.forEach(function(layer){
             if (!layer.data) return;
@@ -182,22 +175,327 @@ bluewave.charts.LineChart = function(parent, config) {
             });
         });
 
-        //TODO: sort keys
+
+
+      //Create dataset to render
+        var arr = [];
+        for (let i=0; i<layers.length; i++){
+            if (!layers[i].line) continue;
+
+
+            let xKey = layers[i].xAxis;
+            let yKey = layers[i].yAxis;
+
+
+            //If axes not picked, skip pushing/rendering this dataset
+            if (!xKey || !yKey) continue;
+
+
+            var sumData = d3.nest()
+                .key(function(d){return d[xKey];})
+                .rollup(function(d){
+                    return d3.sum(d,function(g){
+                        return g[yKey];
+                    });
+            }).entries(layers[i].data);
+
+
+          //Get lineConfig
+            var lineConfig = layers[i].line.getConfig();
+
+
+          //Accumulate y-values as needed
+            if (accumulateValues){
+                sumData.forEach(function(d, idx){
+                    var val = sumData[idx].value;
+                    if (isNaN(val)) sumData[idx].value = 0;
+                    if (idx>0){
+                        sumData[idx].value += sumData[idx-1].value;
+                    }
+                });
+            }
+
+
+          //Smooth the data as needed
+            var smoothingType = lineConfig.smoothing;
+            if (smoothingType){
+                var smoothingValue = lineConfig.smoothingValue;
+                applySmoothing(smoothingType, smoothingValue, sumData);
+            }
+
+
+            arr.push( {lineConfig: lineConfig, sumData: sumData} );
+        };
+
+
+
+      //Stack values
+        if (stackValues){
+
+
+          //Sort arr by largest data set for stacking
+            if (accumulateValues){
+                arr.sort(function(a, b){
+                    a = a.sumData;
+                    a = a[a.length-1].value;
+                    b = b.sumData;
+                    b = b[b.length-1].value;
+                    return b-a;
+                });
+            }
+            else{
+                var temp = [];
+                arr.forEach(function(d){
+                    var sumData = d.sumData;
+                    var sumValue = 0;
+                    sumData.forEach((d) => sumValue+=d.value);
+                    temp.push({
+                        sumValue: sumValue,
+                        sumData: sumData,
+                        lineConfig: d.lineConfig
+                    });
+                });
+                temp.sort(function(a, b){
+                    return b.sumValue-a.sumValue;
+                });
+
+                arr = [];
+                temp.forEach((d) => arr.push({
+                    sumData: d.sumData,
+                    lineConfig: d.lineConfig
+                }));
+            }
+
+
+
+          //Analyze all the keys and get key type (e.g. number, string, date)
+            var xType = getType(xKeys);
+
+
+          //Analyze keys in each dataset and determine sort direction
+            var xSorts = {};
+            arr.forEach(function(d, i){
+                var sumData = d.sumData;
+
+                var sortDir = "none";
+                var asc = 0;
+                var desc = 0;
+                var unk = 0;
+
+
+                if (sumData.length<2){
+                    //No sort if there are only 1 or 0 elements
+                }
+                else{
+                    for (var j=0; j<sumData.length-1; j++){
+
+                        var currKey = sumData[j].key;
+                        var nextKey = sumData[j+1].key;
+
+                        if (xType=="date"){
+                            currKey = new Date(currKey).getTime();
+                            nextKey = new Date(nextKey).getTime();
+                            if (nextKey>=currKey) asc++;
+                            if (nextKey<=currKey) desc++;
+                        }
+                        else if (xType=="number"){
+                            currKey = parseFloat(currKey);
+                            nextKey = parseFloat(nextKey);
+                            if (nextKey>currKey) asc++;
+                            if (nextKey<currKey) desc++;
+                            if (nextKey==currKey) unk++;
+                        }
+                        else {
+                            var x = currKey.localeCompare(nextKey);
+                            if (x<0) asc++;
+                            if (x>0) desc++;
+                            if (x==0) unk++;
+                        }
+                    }
+
+                    //console.log("asc", asc+unk, sumData.length-1);
+                    //console.log("desc", desc+unk, sumData.length-1);
+                    if (asc+unk==sumData.length-1) sortDir = "asc";
+                    if (desc+unk==sumData.length-1) sortDir = "desc";
+                    //console.log(d.lineConfig.label, xType, sortDir);
+
+                    var sort = xSorts[sortDir];
+                    if (!sort){
+                        sort = [];
+                        xSorts[sortDir] = sort;
+                    }
+                    sort.push(i);
+                }
+
+            });
+
+
+            var sortKeys = Object.keys(xSorts);
+            var xSort = sortKeys.length==1 ? sortKeys[0] : null;
+
+
+          //Sort xKeys
+            if (xSort){
+                xKeys.sort(function(a, b){
+                    if (xType=='number'){
+                        if (xSort=="asc"){
+                            return parseFloat(a)-parseFloat(b);
+                        }
+                        else{
+                            return parseFloat(b)-parseFloat(a);
+                        }
+                    }
+                    else if (xType=='date'){
+                        if (xSort=="asc"){
+                            return (new Date(a).getTime())-(new Date(b).getTime());
+                        }
+                        else{
+                            return (new Date(b).getTime())-(new Date(a).getTime());
+                        }
+                    }
+                    else{
+                        if (xSort=="asc"){
+                            return a.localeCompare(b);
+                        }
+                        else{
+                            return b.localeCompare(a);
+                        }
+                    }
+                });
+
+            }
+
+
+
+          //Fill in missing values
+            arr.forEach(function(d){
+                var sumData = d.sumData;
+                var newData = [];
+
+              //Get value for each key
+                xKeys.forEach(function(key){
+
+                    var val;
+                    for (var i=0; i<sumData.length; i++){
+                        var k = sumData[i].key;
+                        var v = sumData[i].value;
+                        if (k==key){
+                            val = v;
+                            break;
+                        }
+                    }
+
+                    newData.push({
+                        key: key,
+                        value: val
+                    });
+
+                });
+
+
+              //Trim leading null values
+                while (newData.length>0){
+                    var firstVal = newData[0].value;
+                    if (!isNaN(firstVal)) break;
+                    if (isNaN(firstVal)) newData.shift();
+                }
+
+
+                d.sumData = newData;
+
+            });
+
+
+
+
+          //Compute new values for each entry in arr
+            var arr2 = [];
+            arr.forEach(function(d, i){
+                var sumData = d.sumData;
+
+
+
+              //Clone sumData into newData
+                var newData = [];
+                sumData.forEach(function(d){
+                    newData.push({
+                        key: d.key,
+                        value: d.value
+                    });
+                });
+
+
+              //Update values in the newData
+                sumData.forEach(function(data, idx){
+                    var key = data.key;
+                    var val = data.value;
+
+
+                  //If val is null, use previous value in this series
+                    if (isNaN(val)){
+
+                        for (var n=idx-1; n>-1; n--){
+                            var prevVal = sumData[n].value;
+                            if (!isNaN(prevVal)){
+                                val = prevVal;
+                                break;
+                            }
+                        }
+
+                        if (isNaN(val)) val = 0;
+                    }
+
+
+                  //Find value under the current line
+                    var prevVals;
+                    for (var j=0; j<arr2.length; j++){
+                        var prevSumData = arr2[j].sumData;
+                        prevSumData.every(function(d){
+                            var k = d.key;
+                            var v = d.value;
+                            if (k==key){
+                                if (!isNaN(v)){
+                                    prevVals = v;
+                                    return false;
+                                }
+                            }
+                            return true;
+                        });
+                    }
+
+
+                  //Update val
+                    if (!isNaN(prevVals)) val+=prevVals;
+
+
+                  //Set value in the newData array
+                    newData[idx].value = val;
+
+                });
+
+
+              //Update arr2 with newData
+                arr2.push( {lineConfig: d.lineConfig, sumData: newData} );
+            });
+
+            arr = arr2;
+        }
+
 
 
 
       //Generate min/max datasets
         var minData = [];
         var maxData = [];
-        layers.forEach(function(layer){
-            if (!layer.data) return;
+        arr.forEach(function(a){
+            var sumData = a.sumData;
             xKeys.forEach(function(key){
 
-                for (var i=0; i<layer.data.length; i++){
-                    var d = layer.data[i];
-                    var xKey = d[layer.xAxis];
+                for (var i=0; i<sumData.length; i++){
+                    var d = sumData[i];
+                    var xKey = d.key;
                     if (xKey===key){
-                        var val = parseFloat(d[layer.yAxis]);
+                        var val = d.value;
 
                       //Update minData array
                         var foundMatch = false;
@@ -221,12 +519,7 @@ bluewave.charts.LineChart = function(parent, config) {
                             var entry = maxData[j];
                             if (entry.key==key){
                                 foundMatch = true;
-                                if (stack) {
-                                    entry.value += val;
-                                }
-                                else{
-                                    entry.value = Math.max(entry.value, val);
-                                }
+                                entry.value = Math.max(entry.value, val);
                             }
                         }
                         if (!foundMatch){
@@ -318,115 +611,6 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
 
-
-        if (stack){
-        //Nest merged data object by X-axis value for stacked area
-            var mergedData = d3.merge(dataSets);
-            var groupedStackData = d3.nest()
-                // .key( (d) => d[xKey])
-                .key( (d) => d[layers[0].xAxis]) //not right yet
-                .entries(mergedData)
-
-
-            let stackGroup=[];
-            let stackLength = groupedStackData[0].values.length;
-            for (let i=0; i<stackLength; i++){
-                stackGroup.push(i);
-            }
-
-            var stackedData = d3.stack()
-                // .keys(subgroups) no idea why this doesn'r work
-                .keys(stackGroup)
-                .value(function (d, key) {
-
-                    let v = d.values[key];
-                    return v[layers[0].yAxis];  //not right yet
-
-                })
-                (groupedStackData);
-
-
-            var colors = bluewave.utils.getColorPalette(true);
-            var globalxKeyType = getType(layers[0].xAxis);
-
-            plotArea
-            .selectAll("stacks")
-            .data(stackedData)
-            .enter()
-            .append("path")
-            .attr("dataset", (d, i) => i )
-            .style("fill", function(d, i){
-                //Get color from config or mod through color array
-                return chartConfig["lineColor" + i] || colors[i%colors.length];
-            })
-            .style("opacity", function(d, i){
-                return chartConfig["opacity" + i];
-            })
-            .attr("d", d3.area()
-                .x(function (d, i) {
-
-                    let subData = d.data;
-                    let subKey = d.data.key;
-
-                    if (globalxKeyType === "date"){
-                        subKey = new Date(subKey)
-                    }
-
-                    return x(subKey);
-
-                })
-                .y0(function (d) { return y(d[0]); })
-                .y1(function (d) { return y(d[1]); })
-            )
-            .attr("class", "stackarea")
-            .on("click", function(d){
-                var datasetID = parseInt(d3.select(this).attr("dataset"));
-                me.onClick(this, datasetID, d);
-            });
-
-        };
-
-
-      //Create dataset to render
-        var arr = [];
-        for (let i=0; i<layers.length; i++){
-            if (!layers[i].line) continue;
-
-
-            let xKey = layers[i].xAxis;
-            let yKey = layers[i].yAxis;
-
-
-            //If axes not picked, skip pushing/rendering this dataset
-            if ((!xKey || !yKey) && i>0) continue;
-
-
-            var sumData = d3.nest()
-                .key(function(d){return d[xKey];})
-                .rollup(function(d){
-                    return d3.sum(d,function(g){
-                        return g[yKey];
-                    });
-            }).entries(layers[i].data);
-
-
-          //Get lineConfig
-            var lineConfig = layers[i].line.getConfig();
-
-
-          //Smooth the data as needed
-            var smoothingType = lineConfig.smoothing;
-            if (smoothingType){
-                var smoothingValue = lineConfig.smoothingValue;
-                applySmoothing(smoothingType, smoothingValue, sumData);
-            }
-
-            arr.push( {lineConfig: lineConfig, sumData: sumData} );
-
-        };
-
-
-
         var chartElements = [];
         for (let i=0; i<arr.length; i++){
             chartElements.push({
@@ -445,7 +629,7 @@ bluewave.charts.LineChart = function(parent, config) {
         fillGroup.attr("name", "fill");
         for (let i=0; i<arr.length; i++){
 
-            if(stack) break;
+            //if(stack) break;
             var sumData = arr[i].sumData;
 
             let fillConfig = arr[i].lineConfig.fill;
@@ -453,6 +637,7 @@ bluewave.charts.LineChart = function(parent, config) {
             let lineColor = fillConfig.color;
             let startOpacity = fillConfig.startOpacity;
             let endOpacity = fillConfig.endOpacity;
+            var smoothingType = arr[i].lineConfig.smoothing;
 
             let keyType = getType(sumData[0].key);
 
@@ -500,8 +685,6 @@ bluewave.charts.LineChart = function(parent, config) {
         circleGroup.attr("name", "circles");
         lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
-
-            if(stack) break;
 
             var sumData = arr[i].sumData;
             let lineConfig = arr[i].lineConfig;
@@ -825,7 +1008,6 @@ bluewave.charts.LineChart = function(parent, config) {
     var initChart = bluewave.chart.utils.initChart;
     var getType = bluewave.chart.utils.getType;
     var drawAxes = bluewave.chart.utils.drawAxes;
-    var drawLabels = bluewave.chart.utils.drawLabels;
     var drawGridlines = bluewave.chart.utils.drawGridlines;
 
     init();

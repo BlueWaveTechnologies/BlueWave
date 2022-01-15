@@ -159,6 +159,63 @@ bluewave.chart.utils = {
             return !(i % maxLabels);
         };
 
+        var updateDefaultTicks = function(axis, type){
+            var numWholeNumbers;
+            var years;
+            var days;
+
+            axis
+            .selectAll("text").each(function(value, index, nodeList) {
+                var label = nodeList[index].textContent;
+                if (type === "number") {
+                    if (isNaN(numWholeNumbers)){
+                        numWholeNumbers = 0;
+                        nodeList.forEach(function(n){
+                            var wholeNumber = parseFloat(n.textContent) % 1 == 0;
+                            if (wholeNumber) numWholeNumbers++;
+                        });
+                    }
+                    if (numWholeNumbers==nodeList.length){
+                        var format = d3.format(",");
+                        nodeList[index].textContent = format(label);
+                    }
+                }
+                else if (type === "date"){
+
+                    if (!years){
+                        years = {};
+                        days = {};
+                        nodeList.forEach(function(n){
+                            var date = new Date(n.textContent); //assumes m/d/yyyy
+                            var y = date.getFullYear();
+                            var d = date.getDate();
+                            years[y+""] = true;
+                            days[d+""] = true;
+                        });
+                        years = Object.keys(years);
+                        days = Object.keys(days);
+                    }
+
+                    if (years.length>1){
+                        if (days.length==1){
+                            var format = d3.timeFormat("%m/%y");
+                            label = format(value);
+                        }
+                    }
+                    else{
+                        if (days.length==1){
+                            var format = d3.timeFormat("%b");
+                            label = format(value);
+                        }
+                    }
+
+                    if (label.indexOf("0")===0) label = label.substring(1);
+                    label = label.replaceAll("/0", "/");
+                    nodeList[index].textContent = label;
+                }
+            });
+        };
+
         var getTickFormat = function(type, pattern){
             var format;
             if (type === "date"){
@@ -193,10 +250,13 @@ bluewave.chart.utils = {
             .attr("transform", "translate(0," + axisHeight + ")")
             .call(
                 d3.axisBottom(x)
-                //.ticks(ticks)
+                .ticks(chartConfig.xTicks)
                 .tickValues(widthCheck ? null : x.domain().filter(tickFilter))
                 .tickFormat(xFormat)
             );
+
+
+        if (!chartConfig.xFormat) updateDefaultTicks(xAxis, xType);
 
 
       //Rotate x-axis labels as needed
@@ -235,6 +295,8 @@ bluewave.chart.utils = {
                     .ticks(10, ",")
                     .tickFormat(yFormat)
             );
+
+        if (!chartConfig.yFormat) updateDefaultTicks(yAxis, yType);
 
 
 
@@ -420,29 +482,61 @@ bluewave.chart.utils = {
   //** getType
   //**************************************************************************
     getType: function(value) {
-        let dataType;
 
-        const validNumberRegex = /^[\+\-]?\d*\.?\d+(?:[Ee][\+\-]?\d+)?$/;
-        switch (typeof value) {
-            case "string":
-                if(value.match(validNumberRegex)){
-                    dataType =  "number";
-                }else if (Date.parse(value)){
-                    dataType =  "date";
-                }else{
-                    dataType = "string";
-                }
-                break;
-            case "number":
-                dataType = "number";
-                break;
-            case "object":
-                dataType = "date";
-                break;
-            default:
-                break;
-        }
-        return dataType;
+        var arr = javaxt.dhtml.utils.isArray(value) ? value : [value];
+
+        var getType = function(value){
+            let dataType;
+
+            const validNumberRegex = /^[\+\-]?\d*\.?\d+(?:[Ee][\+\-]?\d+)?$/;
+            switch (typeof value) {
+                case "string":
+                    if(value.match(validNumberRegex)){
+                        dataType =  "number";
+                    }else if (Date.parse(value)){
+                        dataType =  "date";
+                    }else{
+                        dataType = "string";
+                    }
+                    break;
+                case "number":
+                    dataType = "number";
+                    break;
+                case "object":
+                    dataType = "date";
+                    break;
+                default:
+                    break;
+            }
+            return dataType;
+        };
+
+        var numbers = 0;
+        var dates = 0;
+        var strings = 0;
+        var other = 0;
+        arr.forEach(function(value){
+            var dataType = getType(value);
+            switch (dataType) {
+                case "string":
+                    strings++;
+                    break;
+                case "number":
+                    numbers++;
+                    break;
+                case "date":
+                    dates++;
+                    break;
+                default:
+                    other++;
+                    break;
+            }
+        });
+
+        if (dates==arr.length) return "date";
+        if (numbers==arr.length) return "number";
+        if (strings==arr.length) return "string";
+        return null;
     },
 
 
@@ -453,7 +547,7 @@ bluewave.chart.utils = {
    *  @param pattern Date pattern like "YYYY-MM-DD" or "m/d/yy" or "dddd, MMMM D h:mm:ss A"
    */
     getDateFormat: function(pattern){
-        var dateFormat = "%m/%d";
+        var dateFormat = "%m/%d/%Y";
         if (pattern){
             dateFormat = pattern;
             dateFormat = dateFormat.replace("YYYY", "%Y");
