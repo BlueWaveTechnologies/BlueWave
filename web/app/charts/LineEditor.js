@@ -434,6 +434,9 @@ bluewave.charts.LineEditor = function(parent, config) {
                 }
                 else{
 
+
+                    if (!layer.line) layer.line = {};
+
                     var lineColor = layer.line.color;
                     if (!lineColor){
                         lineColor = colors[i % colors.length];
@@ -560,6 +563,11 @@ bluewave.charts.LineEditor = function(parent, config) {
                                 }
 
                             ]
+                        },
+                        {
+                            name: "xTicks",
+                            label: "Ticks",
+                            type: "text"
                         }
                     ]
                 },
@@ -609,12 +617,12 @@ bluewave.charts.LineEditor = function(parent, config) {
         var yGrid = chartConfig.yGrid;
         yGridField.setValue(yGrid===true ? true : false);
 
-        //Set intial value for xLabel
+      //Set intial value for xLabel
         var xLabelField = form.findField("xLabel");
         var xLabel = chartConfig.xLabel;
         xLabelField.setValue(xLabel ? true : false);
 
-        //Set intial value for yLabel
+      //Set intial value for yLabel
         var yLabelField = form.findField("yLabel");
         var yLabel = chartConfig.yLabel;
         yLabelField.setValue(yLabel ? true : false);
@@ -635,6 +643,10 @@ bluewave.charts.LineEditor = function(parent, config) {
         var scale = chartConfig.scaling;
         scalingField.setValue(scale==="logarithmic" ? "logarithmic" : "linear");
 
+        createSlider("xTicks", form, "", 0, 50, 1);
+        var xTicks = chartConfig.xTicks;
+        if (isNaN(xTicks)) xTicks = 10;
+        form.findField("xTicks").setValue(xTicks);
 
 
       //Process onChange events
@@ -672,7 +684,7 @@ bluewave.charts.LineEditor = function(parent, config) {
             chartConfig.accumulateValues = settings.accumulate;
             if (chartConfig.xLabel) chartConfig.xLabel = chartConfig.layers[0].xAxis;
             if (chartConfig.yLabel) chartConfig.yLabel = chartConfig.layers[0].yAxis;
-            chartConfig.ticks = settings.ticks;
+            chartConfig.xTicks = settings.xTicks;
             createLinePreview();
         };
 
