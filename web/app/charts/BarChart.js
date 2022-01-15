@@ -13,15 +13,11 @@ bluewave.charts.BarChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: {
-            top: 15,
-            right: 5,
-            bottom: 65,
-            left: 82
-        }
+        layout: "vertical", 
+        animationSteps: 1500, //duration in milliseconds
+        stackValues: false
     };
     var svg, chart, plotArea;
-    var axisHeight;
     var x, y;
     var xAxis, yAxis;
 
@@ -31,7 +27,7 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        config = merge(config, defaultConfig);
+        me.setConfig(config);
 
 
         initChart(parent, function(s, g){
@@ -39,6 +35,15 @@ bluewave.charts.BarChart = function(parent, config) {
             chart = g;
         });
 
+    };
+
+
+  //**************************************************************************
+  //** setConfig
+  //**************************************************************************
+    this.setConfig = function(chartConfig){
+        if (!chartConfig) config = defaultConfig;
+        else config = merge(chartConfig, defaultConfig);
     };
 
 
@@ -55,10 +60,11 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
+        me.setConfig(chartConfig);
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-            renderChart(chartConfig, data, parent);
+            renderChart(data, parent);
         });
     };
 
@@ -66,23 +72,25 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
   //** renderChart
   //**************************************************************************
-    var renderChart = function(chartConfig, data, parent){
+    var renderChart = function(data, parent){
+
+        var chartConfig = config;
+
 
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
-        var margin = config.margin;
-        axisHeight = height - margin.top - margin.bottom;
-        var axisWidth = width - margin.left - margin.right;
-        var plotHeight = height - margin.top - margin.bottom;
-        var plotWidth = width - margin.left - margin.right;
+        var axisHeight = height;
+        var axisWidth = width;
         plotArea = chart.append("g");
         plotArea
-            .attr("width", plotWidth)
-            .attr("height", plotHeight)
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + (margin.top) + ")"
-            );
+            .attr("width", width)
+            .attr("height", height);
+
+
+      //Get chart options
+        var layout = chartConfig.barLayout;
+        var stackValues = chartConfig.stackValues===true;
+
 
 
         var xKey;
@@ -190,50 +198,93 @@ bluewave.charts.BarChart = function(parent, config) {
         //Flip axes if layout is horizontal
         var leftLabel, bottomLabel;
 
-        //Set intitial value for layout to vertical and barType to barchart
-        if (!chartConfig.barLayout) chartConfig.barLayout = "vertical";
-        var layout = chartConfig.barLayout;
+
 
 
       //Render X/Y axis
-        var axes;
+        var axisKey, axisValue;
         if (barType === "histogram") {
+            axisKey = "key";
+            axisValue = "key";
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, chartConfig, "barChart");
                 leftLabel = "Frequency";
                 bottomLabel = chartConfig.xAxis;
-            } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, chartConfig, "barChart");
+            }
+            else if (layout === "horizontal") {
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = "Frequency";
             }
         }
         else{
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, null, chartConfig, "barChart");
+                axisKey = "key";
+                axisValue = "value";
                 leftLabel = chartConfig.yAxis;
                 bottomLabel = chartConfig.xAxis;
-            } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData, null, chartConfig, "barChart");
+            }
+            else if (layout === "horizontal") {
+                axisKey = "value";
+                axisValue = "key";
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = chartConfig.yAxis;
             }
         }
+
+
+      //Render X/Y axis
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, axisKey, axisValue, maxData, null, chartConfig, "barChart");
+
+
+      //Update X/Y axis as needed
+        var margin = axes.margin;
+        if (margin){
+
+            var marginLeft = margin.left;
+            var marginRight = margin.right;
+            var marginTop = margin.top;
+            var marginBottom = margin.bottom;
+
+
+
+            if (marginTop>0 || marginBottom>0 || marginLeft>0 || marginRight>0){
+                axisHeight-=(marginTop+marginBottom);
+                axisWidth-=(marginLeft+marginRight);
+                plotArea.selectAll("*").remove();
+                plotArea
+                    .attr(
+                        "transform",
+                        "translate(" + marginLeft + "," + marginTop + ")"
+                    );
+
+                axes = drawAxes(plotArea, axisWidth, axisHeight, axisKey, axisValue, maxData, null, chartConfig, "barChart");
+            }
+            margin = {
+                top: marginTop,
+                right: marginRight,
+                bottom: marginBottom,
+                left: marginLeft
+            };
+        }
+
+
+
+      //Get x and y functions from the axes
         x = axes.x;
         y = axes.y;
         xAxis = axes.xAxis;
         yAxis = axes.yAxis;
 
 
-        width = plotWidth;
-        height = plotHeight;
+        height = height-(margin.top+margin.bottom);
+        width = width-(margin.left+margin.right);
 
-        if (chartConfig.stack){
+
+        if (stackValues){
 
             //Nest merged data object by X-axis value for stack
             var groupedStackData = d3.nest()
                 .key((d) => d[xKey])
-                .entries(mergedData)
+                .entries(mergedData);
 
 
             let stackGroup = [];
@@ -252,7 +303,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
                 })
                 (groupedStackData)
- 
+
 
             let colorIncrementer = 0;
             plotArea.append("g")
@@ -297,7 +348,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
         for (let i=0; i<dataSets.length; i++){
 
-            if (chartConfig.stack) break;
+            if (stackValues) break;
 
 
             var sumData = arr[i];
@@ -332,8 +383,8 @@ bluewave.charts.BarChart = function(parent, config) {
                     .range(layout === "vertical" ? [height, 0] : [0, width]);
                     frequencyAxis.domain([0, frequencyMax]);
 
-                if (layout === "vertical") displayHistogramAxis(x, frequencyAxis);
-                else if(layout === "horizontal") displayHistogramAxis(frequencyAxis, y);
+                if (layout === "vertical") displayHistogramAxis(x, frequencyAxis, axisHeight);
+                else if(layout === "horizontal") displayHistogramAxis(frequencyAxis, y, axisHeight);
 
 
                 plotArea.selectAll("rect")
@@ -543,25 +594,24 @@ bluewave.charts.BarChart = function(parent, config) {
 
         //Set bar colors
         var bars = plotArea.selectAll("rect");
-
         bars.each(function (d, i) {
-
-            //i is a d3 internal callback incrementer
             let bar = d3.select(this);
             let barID = parseInt(d3.select(this).attr("barID"));
             bar.attr("fill", getBarColor(barID));
         });
 
+
+
         //Bar transitions
-        var racingBars = chartConfig.racingBars;
-        if (racingBars){
+        var animationSteps = chartConfig.animationSteps;
+        if (!isNaN(animationSteps) && animationSteps>50){
             var max = d3.max(maxData, d => parseFloat(d.value));
             if (layout === "vertical"){
-                
+
                 var heightRatio = max / height;
                 bars.attr("y", height).attr("height", 0);
 
-                bars.transition().duration(3000)
+                bars.transition().duration(animationSteps)
                     .attr("y", function (d) { return height - d.value / heightRatio; })
                     .attr("height", function (d) { return d.value / heightRatio; });
             }else if(layout === "horizontal"){
@@ -569,11 +619,12 @@ bluewave.charts.BarChart = function(parent, config) {
                 var widthRatio = max/width;
                 bars.attr("x", 0).attr("width", 0);
 
-                bars.transition().duration(3000)
+                bars.transition().duration(animationSteps)
                     .attr("width", function (d) { return d.value / widthRatio; });
 
             }
-        }else{
+        }
+        else{
 
             //Create d3 event listeners for bars
             bars.on("mouseover", function() {
@@ -585,7 +636,7 @@ bluewave.charts.BarChart = function(parent, config) {
             });
 
         };
-            
+
 
         var getSiblings = function(bar){
             var arr = [];
@@ -611,11 +662,11 @@ bluewave.charts.BarChart = function(parent, config) {
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
         }
 
-        //Draw labels if checked
-        if(chartConfig.xLabel || chartConfig.yLabel){
-            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                axisHeight, axisWidth, margin, bottomLabel, leftLabel);
-        }
+//        //Draw labels if checked
+//        if(chartConfig.xLabel || chartConfig.yLabel){
+//            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+//                axisHeight, axisWidth, margin, bottomLabel, leftLabel);
+//        }
 
 
         //Display legend
@@ -678,7 +729,7 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
   //** displayHistogramAxis
   //**************************************************************************
-    var displayHistogramAxis = function (x, y) {
+    var displayHistogramAxis = function (x, y, axisHeight) {
 
         if (xAxis) xAxis.selectAll("*").remove();
         if (yAxis) yAxis.selectAll("*").remove();
