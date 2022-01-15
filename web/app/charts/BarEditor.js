@@ -13,7 +13,6 @@ bluewave.charts.BarEditor = function(parent, config) {
     var me = this;
     var panel;
     var inputData = [];
-    var svg;
     var previewArea;
     var barChart;
     var optionsDiv;
@@ -345,19 +344,6 @@ bluewave.charts.BarEditor = function(parent, config) {
                                 }
 
                             ]
-                        },
-                        {
-                            name: "racingBars",
-                            label: "Racing Bars",
-                            type: "checkbox",
-                            options: [
-                                {
-                                    label: "",
-                                    value: true,
-                                    checked: false
-                                }
-
-                            ]
                         }
                     ]
                 },
@@ -458,12 +444,8 @@ bluewave.charts.BarEditor = function(parent, config) {
         yLabelField.setValue(yLabel===true ? true : false);
 
         var stackField = form.findField("stack");
-        var stack = chartConfig.stack;
+        var stack = chartConfig.stackValues;
         stackField.setValue(stack===true ? true : false);
-
-        var raceField = form.findField("racingBars");
-        var racingBars = chartConfig.racingBars;
-        raceField.setValue(racingBars===true ? true : false);
 
 
       //Process onChange events
@@ -486,11 +468,9 @@ bluewave.charts.BarEditor = function(parent, config) {
             if (settings.yLabel==="true") settings.yLabel = true;
             else settings.yLabel = false;
 
-            if (settings.stack==="true") settings.stack = true;
-            else settings.stack = false;
+            if (settings.stackValues==="true") settings.stackValues = true;
+            else settings.stackValues = false;
 
-            if (settings.racingBars==="true") settings.racingBars = true;
-            else settings.racingBars = false;
 
 
             chartConfig.barLayout = settings.layout;
@@ -499,8 +479,7 @@ bluewave.charts.BarEditor = function(parent, config) {
             chartConfig.yGrid = settings.yGrid;
             chartConfig.xLabel = settings.xLabel;
             chartConfig.yLabel = settings.yLabel;
-            chartConfig.stack = settings.stack;
-            chartConfig.racingBars = settings.racingBars;
+            chartConfig.stackValues = settings.stackValues;
             createBarPreview();
         };
 
