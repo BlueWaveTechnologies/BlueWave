@@ -16,14 +16,12 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
         },
         chart: {
-            date: "date",
-            value: "value"
+
         }
     };
 
     var panel;
     var inputData = [];
-    var linksAndQuantity = [];
     var previewArea;
     var calendarChart;
     var optionsDiv;
@@ -197,9 +195,9 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
 
 
-        calendarInputs.date.setValue(chartConfig.calendarDate, true);
+        calendarInputs.date.setValue(chartConfig.date, true);
         if(typeof calendarInputs.value == "object") {
-            calendarInputs.value.setValue(chartConfig.calendarValue, true);
+            calendarInputs.value.setValue(chartConfig.value, true);
         }
     };
 
@@ -207,7 +205,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //**************************************************************************
   //** createDropdown
   //**************************************************************************
-    var createDropdown = function(tbody,chartConfigRef,displayName,inputType){
+    var createDropdown = function(tbody,displayName,inputType){
         var tr, td;
 
         tr = document.createElement("tr");
@@ -228,29 +226,9 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         });
         calendarInputs[inputType].clear();
         calendarInputs[inputType].onChange = function(name, value){
-            if (chartConfigRef==="calendarSort"){
-                if (value.length>0){
-                    chartConfig[chartConfigRef] = value;
+            
 
-                    var dir = calendarInputs.sortDir.getValue();
-                    if (!dir) dir = "Ascending";
-
-                    calendarInputs.sortDir.clear();
-                    calendarInputs.sortDir.add("Ascending");
-                    calendarInputs.sortDir.add("Descending");
-
-                    calendarInputs.sortDir.setValue(dir); //this will call createPreview()
-                }
-                else{
-                    delete chartConfig[chartConfigRef];
-                    calendarInputs.sortDir.clear();
-                    createPreview();
-                }
-            }
-            else{
-                chartConfig[chartConfigRef] = value;
-                createPreview();
-            }
+            createPreview();
         };
     };
 
