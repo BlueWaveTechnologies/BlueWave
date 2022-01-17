@@ -107,8 +107,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         console.log("calendar config is")
         console.log(calendarConfig)
         
-        calendarConfig.date = "date"
-        calendarConfig.value = "num_lines_changed"
+        //calendarConfig.date = "date"
+        //calendarConfig.value = "num_lines_changed"
 
         console.log("calendar config is")
         console.log(calendarConfig)
@@ -206,8 +206,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
 
 
-        createDropdown(tbody,"calendarDate","Date","date");
-        createDropdown(tbody,"calendarValue","Value","value");
+        createDropdown(tbody,"date","Date","date");
+        createDropdown(tbody,"value","Value","value");
         dataOptions.forEach((val)=>{
             if (!isNaN(data[0][val])){
                 calendarInputs.value.add(val,val);
