@@ -59,9 +59,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
-        console.log("config passed in is")
-        console.log(chartConfig)
-        console.log(data)
+
         me.clear();
 
         config = merge(chartConfig, defaultConfig);
@@ -78,10 +76,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
   //**************************************************************************
     var renderChart = function(data){
 
-        console.log("our config for this chart rendering is")
-        console.log(config)
-        
-        console.log(data)
+
         var
          cellSize = config.cellSize,
          weekday = config.weekday,
