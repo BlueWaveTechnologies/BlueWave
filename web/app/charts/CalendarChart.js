@@ -36,6 +36,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
             svg = s;
             calendarArea = g;
         });
+        
     };
 
 

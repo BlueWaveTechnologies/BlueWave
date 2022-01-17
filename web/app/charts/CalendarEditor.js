@@ -92,7 +92,10 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
       //Initialize chart area when ready
         onRender(previewArea, function(){
+            
             calendarChart = new bluewave.charts.CalendarChart(previewArea, {});
+            
+            
         });
     };
 
@@ -101,9 +104,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(calendarConfig, inputs){
-
+        console.log("update function for chart called")
         me.clear();
-
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
             if (typeof input !== 'object' && input!=null) {
@@ -257,35 +259,12 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** createPreview
   //**************************************************************************
     var createPreview = function(){
-        if (chartConfig.calendarKey===null || chartConfig.calendarValue===null) return;
+        if (chartConfig.date===null || chartConfig.value===null) return;
 
 
         onRender(previewArea, function(){
             var data = inputData[0];
 
-
-            if (data.hasOwnProperty("links")) {
-                data = linksAndQuantity.slice();
-                data = data.filter(entry => entry.key.includes(chartConfig.calendarKey));
-
-                if(chartConfig.calendarDirection === "Inbound") {
-                    data = data.filter(entry => entry.receiveType.endsWith(chartConfig.calendarKey));
-                }
-                else {
-                    data = data.filter(entry => entry.sendType.startsWith(chartConfig.calendarKey));
-                }
-                let scData = [];
-                data.forEach(function(entry, index) {
-                    let scEntry = {};
-                    if (entry.key.includes(chartConfig.calendarKey)) {
-                        scEntry[chartConfig.calendarKey] = entry.key;
-                        scEntry[chartConfig.calendarValue] = entry.value;
-                    }
-                    scData.push(scEntry);
-                });
-                data = scData;
-                
-            }
 
             calendarChart.update(chartConfig, data);
         });
