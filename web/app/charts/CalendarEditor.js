@@ -16,19 +16,21 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         panel: {
 
         },
-        colors: {
-            blue: ["#6699cc","#f8f8f8"],
-            orange: ["#FF8C42","#f8f8f8"],
-            purple: ["#933ed5","#f8f8f8"],
-            mixed: bluewave.utils.getColorPalette()
-        },
-        chart: {
-            calendarCutout: 0.65,
-            calendarPadding: 0,
-            maximumSlices: 8,
-            labelOffset: 120,
-            showOther: true
-        }
+        // colors: {
+        //     blue: ["#6699cc","#f8f8f8"],
+        //     orange: ["#FF8C42","#f8f8f8"],
+        //     purple: ["#933ed5","#f8f8f8"],
+        //     mixed: bluewave.utils.getColorPalette()
+        // },
+        // chart: {
+        //     calendarCutout: 0.65,
+        //     calendarPadding: 0,
+        //     maximumSlices: 8,
+        //     labelOffset: 120,
+        //     showOther: true
+        // },
+        date: "date",
+        value: "value"
     };
 
     var panel;
@@ -37,9 +39,25 @@ bluewave.charts.CalendarEditor = function(parent, config) {
     var previewArea;
     var calendarChart;
     var optionsDiv;
+    var dataOptions;
     var calendarInputs = {};
     var chartConfig = {};
     var styleEditor;
+
+  //**************************************************************************
+  //** Update Selected Node Properties
+  //**************************************************************************
+    var updateSelectedNodeProperties = function(){
+        console.log("update selected node properties called")
+        console.log("data options currently are ")
+        if (dataOptions != null){
+            console.log(dataOptions)
+        }
+        console.log("calendar inputs are ")
+        console.log(calendarInputs)
+
+    }
+
 
 
   //**************************************************************************
@@ -108,6 +126,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(calendarConfig, inputs){
+        console.log("calendarEditor update called")
+        updateSelectedNodeProperties()
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
@@ -117,6 +137,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             }
         }
         inputData = inputs;
+
+
 
 
         chartConfig = merge(calendarConfig, config.chart);
@@ -167,6 +189,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** createOptions
   //**************************************************************************
     var createOptions = function(parent) {
+
+        console.log("creating options editor calendar")
         var data = inputData[0];
 
 
@@ -226,11 +250,18 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                     linksAndQuantity.push(linksAndQuantityEntry);
                 }
             }
-
+            console.log("got to datOptions area 2")
+            
             dataOptions = nodeTypeList;
+            console.log(dataOptions)
+
         }
         else{
+            console.log("got to datOptions area")
+            // console.log(dataOptions)
             dataOptions = Object.keys(data[0]);
+            console.log(dataOptions)
+
         }
 
 
@@ -242,6 +273,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
 
         if (hasLinks){
+            console.log("creating dropdown")
             createDropdown(tbody,"calendarKey","Group By","key");
             createDropdown(tbody,"calendarDirection","Direction","direction");
             dataOptions.forEach((val)=>{
@@ -263,6 +295,11 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                    calendarInputs.key.add(val,val);
                 }
             });
+            console.log("data options currently are ")
+            console.log(dataOptions)
+
+            console.log("calendar inputs are ")
+            console.log(calendarInputs)
         }
 
 
@@ -499,12 +536,12 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
 
 
-      //Set initial value for padding and update
-        createSlider("padding", form, "%", 0, 100, 1);
-        var padding = chartConfig.calendarPadding;
-        var maxPadding = 5;
-        padding = Math.round((padding/maxPadding)*100.0);
-        form.findField("padding").setValue(padding);
+    //   //Set initial value for padding and update
+    //     createSlider("padding", form, "%", 0, 100, 1);
+    //     var padding = chartConfig.calendarPadding;
+    //     var maxPadding = 5;
+    //     padding = Math.round((padding/maxPadding)*100.0);
+    //     form.findField("padding").setValue(padding);
 
 
         var maxSliceOptField = form.findField("showOther");
