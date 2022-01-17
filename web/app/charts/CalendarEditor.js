@@ -27,7 +27,6 @@ bluewave.charts.CalendarEditor = function(parent, config) {
     var previewArea;
     var calendarChart;
     var optionsDiv;
-    var dataOptions;
     var calendarInputs = {};
     var chartConfig = {};
     var styleEditor;
@@ -336,70 +335,10 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                             label: "Color",
                             type: colorField
                         },
-                        // {
-                        //     name: "cutout",
-                        //     label: "Cutout",
-                        //     type: "text"
-                        // }
                     ]
                 },
-                // {
-                //     group: "Slices",
-                //     items: [
-                //         {
-                //             name: "padding",
-                //             label: "Padding",
-                //             type: "text"
-                //         },
-                //         {
-                //             name: "maximumSlices",
-                //             label: "Max Slices",
-                //             type: "text"
-                //         },
-                //         {
-                //             name: "showOther",
-                //             label: "Show Other",
-                //             type: "radio",
-                //             alignment: "vertical",
-                //             options: [
-                //                 {
-                //                     label: "True",
-                //                     value: true
-                //                 },
-                //                 {
-                //                     label: "False",
-                //                     value: false
-                //                 }
-                //             ]
-                //         }
-                //     ]
-                // },
-                // {
-                //     group: "Labels",
-                //     items: [
-                //         {
-                //             name: "labels",
-                //             label: "Show Labels",
-                //             type: "radio",
-                //             alignment: "vertical",
-                //             options: [
-                //                 {
-                //                     label: "True",
-                //                     value: true
-                //                 },
-                //                 {
-                //                     label: "False",
-                //                     value: false
-                //                 }
-                //             ]
-                //         },
-                //         {
-                //             name: "labelOffset",
-                //             label: "Label Offset",
-                //             type: "text"
-                //         }
-                //     ]
-                // }
+                
+               
             ]
         });
 
@@ -413,66 +352,12 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         //colorField.setValue(chartConfig.colors+"");
 
 
-      //Update cutout field (add slider) and set initial value
-        // createSlider("cutout", form, "%");
-        // var cutout = Math.round(chartConfig.calendarCutout*100.0);
-        // form.findField("cutout").setValue(cutout);
-
-
-        // var labelField = form.findField("labels");
-        // var labels = chartConfig.showLabels;
-        // labelField.setValue(labels===true ? true : false);
-
-
-        // createSlider("labelOffset", form, "%", 0, 120, 1);
-        // var labelOffset = chartConfig.labelOffset;
-        // form.findField("labelOffset").setValue(labelOffset);
-
-
-
-    //   //Set initial value for padding and update
-    //     createSlider("padding", form, "%", 0, 100, 1);
-    //     var padding = chartConfig.calendarPadding;
-    //     var maxPadding = 5;
-    //     padding = Math.round((padding/maxPadding)*100.0);
-    //     form.findField("padding").setValue(padding);
-
-
-        var maxSliceOptField = form.findField("showOther");
-        var showOther = chartConfig.showOther;
-        // maxSliceOptField.setValue(showOther===true ? true : false);
-
-        // var numSlices = inputData[0].length;
-        // createSlider("maximumSlices", form, "", 1, numSlices, 1);
-        // var maximumSlices = chartConfig.maximumSlices;
-        // form.findField("maximumSlices").setValue(maximumSlices);
-
 
       //Process onChange events
         form.onChange = function(){
             var settings = form.getData();
-            chartConfig.calendarCutout = settings.cutout/100;
 
 
-            // chartConfig.calendarPadding = (settings.padding*maxPadding)/100;
-
-            // chartConfig.maximumSlices = settings.maximumSlices;
-
-            // if (settings.labels==="true") {
-            //     settings.labels = true;
-            //     form.enableField("labelOffset");
-            // }
-            // else if (settings.labels==="false") {
-            //     settings.labels = false;
-            //     form.disableField("labelOffset");
-            // }
-            chartConfig.showLabels = settings.labels;
-
-            // chartConfig.labelOffset = settings.labelOffset;
-
-            if (settings.showOther==="true") settings.showOther = true;
-            else if (settings.showOther==="false") settings.showOther = false;
-            chartConfig.showOther = settings.showOther;
 
             chartConfig.colors = config.colors[settings.color];
             if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
