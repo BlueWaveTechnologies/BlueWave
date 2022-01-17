@@ -201,8 +201,6 @@ bluewave.charts.LineEditor = function(parent, config) {
             plotInputs[groupN].add("", "");
 
             let dataOptions = Object.keys(inputData[i][0]);
-
-
             dataOptions.forEach((val)=>{
                 plotInputs[xAxisN].add(val, val);
                 plotInputs[yAxisN].add(val, val);
