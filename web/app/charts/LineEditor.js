@@ -20,7 +20,6 @@ bluewave.charts.LineEditor = function(parent, config) {
     var chartConfig = {
         layers: []
     };
-    var dataOptions;
     var lineMap = []; //used to map lines in the chart to a layer in the config
     var colorPicker;
 
@@ -107,8 +106,6 @@ bluewave.charts.LineEditor = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(config, inputs){
-        console.log(dataOptions)
-
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
@@ -129,7 +126,6 @@ bluewave.charts.LineEditor = function(parent, config) {
         if (!chartConfig.layers){
             chartConfig.layers = [];
             for (var i=0; i<inputs.length; i++){
-                console.log("adding new layer in lineEditor")
                 addLayer();
             }
         }
@@ -205,8 +201,6 @@ bluewave.charts.LineEditor = function(parent, config) {
             plotInputs[groupN].add("", "");
 
             let dataOptions = Object.keys(inputData[i][0]);
-            console.log("data options of line chart are ")
-            console.log(dataOptions)
 
 
             dataOptions.forEach((val)=>{
