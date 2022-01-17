@@ -327,16 +327,16 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
             items: [
-                {
-                    group: "General",
-                    items: [
-                        {
-                            name: "color",
-                            label: "Color",
-                            type: colorField
-                        },
-                    ]
-                },
+                // {
+                //     group: "General",
+                //     items: [
+                //         {
+                //             name: "color",
+                //             label: "Color",
+                //             type: colorField
+                //         },
+                //     ]
+                // },
                 
                
             ]
@@ -359,9 +359,9 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
 
 
-            chartConfig.colors = config.colors[settings.color];
-            if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
-            else chartConfig.colorScaling = "linear";
+            // chartConfig.colors = config.colors[settings.color];
+            // if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
+            // else chartConfig.colorScaling = "linear";
 
             createPreview();
         };
