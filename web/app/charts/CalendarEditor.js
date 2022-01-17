@@ -16,23 +16,10 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         panel: {
 
         },
-        // colors: {
-        //     blue: ["#6699cc","#f8f8f8"],
-        //     orange: ["#FF8C42","#f8f8f8"],
-        //     purple: ["#933ed5","#f8f8f8"],
-        //     mixed: bluewave.utils.getColorPalette()
-        // },
-        // chart: {
-        //     calendarCutout: 0.65,
-        //     calendarPadding: 0,
-        //     maximumSlices: 8,
-        //     labelOffset: 120,
-        //     showOther: true
-        // },
-        date: "date",
-        value: "value"
-        // value: "num_lines_changed"
-
+        chart: {
+            date: "date",
+            value: "value"
+        }
     };
 
     var panel;
@@ -46,19 +33,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
     var chartConfig = {};
     var styleEditor;
 
-  //**************************************************************************
-  //** Update Selected Node Properties
-  //**************************************************************************
-    var updateSelectedNodeProperties = function(){
-        // console.log("update selected node properties called")
-        // console.log("data options currently are ")
-        if (dataOptions != null){
-            // console.log(dataOptions)
-        }
-        // console.log("calendar inputs are ")
-        // console.log(calendarInputs)
 
-    }
 
 
 
@@ -128,9 +103,18 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(calendarConfig, inputs){
-        this.setConfig()
+        // this.setConfig()
+        console.log("calendar config is")
+        console.log(calendarConfig)
+        
+        calendarConfig.date = "date"
+        calendarConfig.value = "num_lines_changed"
+
+        console.log("calendar config is")
+        console.log(calendarConfig)
+
         console.log("calendarEditor update called")
-        updateSelectedNodeProperties()
+        // updateSelectedNodeProperties()
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
@@ -210,17 +194,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
         var dataOptions;
 
-
-        
-            // console.log("got to datOptions area 2")
-            
-            dataOptions = nodeTypeList;
-            // console.log(dataOptions)
-
-            // console.log("got to datOptions area")
-            // console.log(dataOptions)
-            dataOptions = Object.keys(data[0]);
-            // console.log(dataOptions)
+        dataOptions = Object.keys(data[0]);
 
 
 
@@ -242,11 +216,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                 calendarInputs.date.add(val,val);
             }
         });
-        // console.log("data options currently are ")
-        // console.log(dataOptions)
 
-        // console.log("calendar inputs are ")
-        // console.log(calendarInputs)
 
 
         calendarInputs.date.setValue(chartConfig.calendarDate, true);

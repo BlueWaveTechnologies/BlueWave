@@ -86,6 +86,9 @@ bluewave.charts.LineChart = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
+        console.log("update fucntion called linechart")
+        console.log("config is")
+        console.log(config)
         var parent = svg.node().parentNode;
         onRender(parent, function(){
             renderChart(parent);
@@ -138,7 +141,10 @@ bluewave.charts.LineChart = function(parent, config) {
 
         var chartConfig = config;
         var data = layers.map( d => d.data );
-
+        console.log("data passed to linechart is ")
+        console.log(data)
+        console.log("logging layers here")
+        console.log(layers)
         if(data.length === 0) return;
 
         var data1 = data[0].slice();
@@ -394,6 +400,16 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
             let xKey = layers[i].xAxis;
+            console.log("logging x key")
+            console.log(layers[i].xAxis)
+
+            console.log("logging y key")
+            console.log(layers[i].yAxis)
+
+
+
+            console.log("logging this whole layers object")
+            console.log(layers.xAxis)
             let yKey = layers[i].yAxis;
 
 
