@@ -1342,8 +1342,6 @@ bluewave.Explorer = function(parent, config) {
   //** addEventListeners
   //**************************************************************************
     var addEventListeners = function(node){
-        console.log("printing node type , expecting calendar chart")
-        console.log(node.type)
         switch (node.type) {
             case "addData":
 
@@ -1478,10 +1476,8 @@ bluewave.Explorer = function(parent, config) {
             case "calendarChart" :
 
                 node.ondblclick = function(){
-                    console.log("got to here in our process")
 
                     if (!calendarEditor){
-                        console.log('creating calendar editor')
                         calendarEditor = createNodeEditor({
                             title: "Edit Calendar Chart",
                             width: 1060,
@@ -1490,7 +1486,6 @@ bluewave.Explorer = function(parent, config) {
                             editor: bluewave.charts.CalendarEditor
                         });
                     }
-                    console.log("this is our calendarEditor object.. should be identical to the others")
 
                     editChart(this, calendarEditor);
                 };
@@ -1728,8 +1723,6 @@ bluewave.Explorer = function(parent, config) {
     var editChart = function(node, editor){
 
 
-        console.log("our editor object printing is")
-        console.log(editor)
 
         editor.getNode = function(){
             return node;
@@ -1750,7 +1743,6 @@ bluewave.Explorer = function(parent, config) {
         var chartConfig = {};
         merge(chartConfig, node.config);
 
-        console.log(`our config for this is ${node.type}`)
 
         chartConfig.chartType = node.type; //is this used for anything?
         editor.update(chartConfig, data);
