@@ -1722,8 +1722,6 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var editChart = function(node, editor){
 
-
-
         editor.getNode = function(){
             return node;
         };
@@ -1742,7 +1740,6 @@ bluewave.Explorer = function(parent, config) {
       //Get config
         var chartConfig = {};
         merge(chartConfig, node.config);
-
 
         chartConfig.chartType = node.type; //is this used for anything?
         editor.update(chartConfig, data);
