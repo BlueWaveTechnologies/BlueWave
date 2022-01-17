@@ -31,6 +31,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         // },
         date: "date",
         value: "value"
+        // value: "num_lines_changed"
+
     };
 
     var panel;
@@ -285,14 +287,14 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             calendarInputs.direction.setValue(chartConfig.calendarDirection, true);
         }
         else{
-            createDropdown(tbody,"calendarKey","Key","key");
+            createDropdown(tbody,"calendarDate","Date","date");
             createDropdown(tbody,"calendarValue","Value","value");
             dataOptions.forEach((val)=>{
                 if (!isNaN(data[0][val])){
                     calendarInputs.value.add(val,val);
                 }
                 else{
-                   calendarInputs.key.add(val,val);
+                   calendarInputs.date.add(val,val);
                 }
             });
             console.log("data options currently are ")
@@ -303,7 +305,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         }
 
 
-        calendarInputs.key.setValue(chartConfig.calendarKey, true);
+        calendarInputs.date.setValue(chartConfig.calendarDate, true);
         if(typeof calendarInputs.value == "object") {
             calendarInputs.value.setValue(chartConfig.calendarValue, true);
         }
@@ -392,6 +394,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                     scData.push(scEntry);
                 });
                 data = scData;
+                
             }
 
             calendarChart.update(chartConfig, data);
@@ -449,63 +452,63 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                         }
                     ]
                 },
-                {
-                    group: "Slices",
-                    items: [
-                        {
-                            name: "padding",
-                            label: "Padding",
-                            type: "text"
-                        },
-                        {
-                            name: "maximumSlices",
-                            label: "Max Slices",
-                            type: "text"
-                        },
-                        {
-                            name: "showOther",
-                            label: "Show Other",
-                            type: "radio",
-                            alignment: "vertical",
-                            options: [
-                                {
-                                    label: "True",
-                                    value: true
-                                },
-                                {
-                                    label: "False",
-                                    value: false
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    group: "Labels",
-                    items: [
-                        {
-                            name: "labels",
-                            label: "Show Labels",
-                            type: "radio",
-                            alignment: "vertical",
-                            options: [
-                                {
-                                    label: "True",
-                                    value: true
-                                },
-                                {
-                                    label: "False",
-                                    value: false
-                                }
-                            ]
-                        },
-                        {
-                            name: "labelOffset",
-                            label: "Label Offset",
-                            type: "text"
-                        }
-                    ]
-                }
+                // {
+                //     group: "Slices",
+                //     items: [
+                //         {
+                //             name: "padding",
+                //             label: "Padding",
+                //             type: "text"
+                //         },
+                //         {
+                //             name: "maximumSlices",
+                //             label: "Max Slices",
+                //             type: "text"
+                //         },
+                //         {
+                //             name: "showOther",
+                //             label: "Show Other",
+                //             type: "radio",
+                //             alignment: "vertical",
+                //             options: [
+                //                 {
+                //                     label: "True",
+                //                     value: true
+                //                 },
+                //                 {
+                //                     label: "False",
+                //                     value: false
+                //                 }
+                //             ]
+                //         }
+                //     ]
+                // },
+                // {
+                //     group: "Labels",
+                //     items: [
+                //         {
+                //             name: "labels",
+                //             label: "Show Labels",
+                //             type: "radio",
+                //             alignment: "vertical",
+                //             options: [
+                //                 {
+                //                     label: "True",
+                //                     value: true
+                //                 },
+                //                 {
+                //                     label: "False",
+                //                     value: false
+                //                 }
+                //             ]
+                //         },
+                //         {
+                //             name: "labelOffset",
+                //             label: "Label Offset",
+                //             type: "text"
+                //         }
+                //     ]
+                // }
             ]
         });
 
