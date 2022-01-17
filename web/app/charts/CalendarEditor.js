@@ -10,7 +10,7 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.CalendarEditor = function(parent, config) {
-    console.log("this calendarEditor initialized")
+    // console.log("this calendarEditor initialized")
     var me = this;
     var defaultConfig = {
         panel: {
@@ -50,13 +50,13 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** Update Selected Node Properties
   //**************************************************************************
     var updateSelectedNodeProperties = function(){
-        console.log("update selected node properties called")
-        console.log("data options currently are ")
+        // console.log("update selected node properties called")
+        // console.log("data options currently are ")
         if (dataOptions != null){
-            console.log(dataOptions)
+            // console.log(dataOptions)
         }
-        console.log("calendar inputs are ")
-        console.log(calendarInputs)
+        // console.log("calendar inputs are ")
+        // console.log(calendarInputs)
 
     }
 
@@ -128,6 +128,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(calendarConfig, inputs){
+        this.setConfig()
         console.log("calendarEditor update called")
         updateSelectedNodeProperties()
         me.clear();
@@ -178,6 +179,17 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         return chartConfig;
     };
 
+  //**************************************************************************
+  //** setConfig
+  //**************************************************************************
+  /** updates chart configuration file for the selected properties of editor
+   */
+   this.setConfig = function(){
+    console.log("current config is ")
+    console.log(chartConfig)
+};
+
+
 
   //**************************************************************************
   //** getChart
@@ -192,79 +204,24 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //**************************************************************************
     var createOptions = function(parent) {
 
-        console.log("creating options editor calendar")
+        // console.log("creating options editor calendar")
         var data = inputData[0];
 
 
-        var hasLinks = data.hasOwnProperty("links");
         var dataOptions;
 
 
-        if (hasLinks) {
-            data = Object.values(inputData[0].links);
-
-            var nodeTypeList = [];
-            var nodeAndType = [];
-            for (var node in inputData[0].nodes) {
-                var nodeType =inputData[0].nodes[node].type;
-                var nodeName = inputData[0].nodes[node].name;
-                if (nodeTypeList.indexOf(nodeType) === -1) {
-                nodeTypeList.push(nodeType);
-                }
-                var nodeAndTypeEntry = {};
-                nodeAndTypeEntry.id = node;
-                nodeAndTypeEntry.type = nodeType;
-                nodeAndTypeEntry.name = nodeName;
-                nodeAndType.push(nodeAndTypeEntry);
-            }
-
-            for (var link in inputData[0].links) {
-                var linkStartType = "";
-                var linkEndType = "";
-                var linkStartName = "";
-                var linkEndName = "";
-                var linkQuantity = inputData[0].links[link].quantity;
-
-                for (var entry of nodeAndType) {
-                    if (link.startsWith(entry.id)) {
-                        linkStartType = entry.type;
-                        linkStartName = entry.name;
-                    }
-                    if (link.endsWith(entry.id)) {
-                        linkEndType = entry.type;
-                        linkEndName = entry.name;
-                    }
-
-                }
-
-                var linkFullType = linkStartType + " to " + linkEndName;
-                var linksAndQuantityEntry = {};
-                linksAndQuantityEntry.key = linkFullType;
-                linksAndQuantityEntry.value = linkQuantity;
-                linksAndQuantityEntry.sendType = linkStartType;
-                linksAndQuantityEntry.receiveType = linkEndType;
-
-                var previousEntryIndex = linksAndQuantity.findIndex(entry => entry.key === linkFullType);
-
-                if (previousEntryIndex !== -1) {
-                    linksAndQuantity[previousEntryIndex].value = linksAndQuantity[previousEntryIndex].value + linkQuantity;
-                } else {
-                    linksAndQuantity.push(linksAndQuantityEntry);
-                }
-            }
-            console.log("got to datOptions area 2")
+        
+            // console.log("got to datOptions area 2")
             
             dataOptions = nodeTypeList;
-            console.log(dataOptions)
+            // console.log(dataOptions)
 
-        }
-        else{
-            console.log("got to datOptions area")
+            // console.log("got to datOptions area")
             // console.log(dataOptions)
             dataOptions = Object.keys(data[0]);
-            console.log(dataOptions)
+            // console.log(dataOptions)
 
-        }
 
 
 
@@ -274,35 +231,22 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         parent.appendChild(table);
 
 
-        if (hasLinks){
-            console.log("creating dropdown")
-            createDropdown(tbody,"calendarKey","Group By","key");
-            createDropdown(tbody,"calendarDirection","Direction","direction");
-            dataOptions.forEach((val)=>{
-                calendarInputs.key.add(val, val);
-            });
-            chartConfig.calendarValue = "quantity";
-            calendarInputs.direction.add("Inbound");
-            calendarInputs.direction.add("Outbound");
-            calendarInputs.direction.setValue(chartConfig.calendarDirection, true);
-        }
-        else{
-            createDropdown(tbody,"calendarDate","Date","date");
-            createDropdown(tbody,"calendarValue","Value","value");
-            dataOptions.forEach((val)=>{
-                if (!isNaN(data[0][val])){
-                    calendarInputs.value.add(val,val);
-                }
-                else{
-                   calendarInputs.date.add(val,val);
-                }
-            });
-            console.log("data options currently are ")
-            console.log(dataOptions)
 
-            console.log("calendar inputs are ")
-            console.log(calendarInputs)
-        }
+        createDropdown(tbody,"calendarDate","Date","date");
+        createDropdown(tbody,"calendarValue","Value","value");
+        dataOptions.forEach((val)=>{
+            if (!isNaN(data[0][val])){
+                calendarInputs.value.add(val,val);
+            }
+            else{
+                calendarInputs.date.add(val,val);
+            }
+        });
+        // console.log("data options currently are ")
+        // console.log(dataOptions)
+
+        // console.log("calendar inputs are ")
+        // console.log(calendarInputs)
 
 
         calendarInputs.date.setValue(chartConfig.calendarDate, true);
