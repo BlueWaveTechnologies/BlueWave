@@ -98,7 +98,7 @@ bluewave.charts.LineEditor = function(parent, config) {
         lineChart.onClick = function(el, lineID){
             var line = lineChart.getLayers()[lineID].line;
             var layer = lineMap[lineID].layer;
-            editLine(line, layer);
+            editLine(line, lineID);
         };
     };
 
@@ -442,6 +442,9 @@ bluewave.charts.LineEditor = function(parent, config) {
                 }
                 else{
 
+
+                    if (!layer.line) layer.line = {};
+
                     var lineColor = layer.line.color;
                     if (!lineColor){
                         lineColor = colors[i % colors.length];
@@ -512,6 +515,19 @@ bluewave.charts.LineEditor = function(parent, config) {
                             ]
                         },
                         {
+                            name: "accumulate",
+                            label: "Accumulate Values",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        },
+                        {
                             name: "stack",
                             label: "Stack Lines",
                             type: "checkbox",
@@ -557,7 +573,7 @@ bluewave.charts.LineEditor = function(parent, config) {
                             ]
                         },
                         {
-                            name: "ticks",
+                            name: "xTicks",
                             label: "Ticks",
                             type: "text"
                         }
@@ -609,12 +625,12 @@ bluewave.charts.LineEditor = function(parent, config) {
         var yGrid = chartConfig.yGrid;
         yGridField.setValue(yGrid===true ? true : false);
 
-        //Set intial value for xLabel
+      //Set intial value for xLabel
         var xLabelField = form.findField("xLabel");
         var xLabel = chartConfig.xLabel;
         xLabelField.setValue(xLabel ? true : false);
 
-        //Set intial value for yLabel
+      //Set intial value for yLabel
         var yLabelField = form.findField("yLabel");
         var yLabel = chartConfig.yLabel;
         yLabelField.setValue(yLabel ? true : false);
@@ -627,15 +643,18 @@ bluewave.charts.LineEditor = function(parent, config) {
         var stack = chartConfig.stackValues;
         stackField.setValue(stack===true ? true : false);
 
+        var accumulateField = form.findField("accumulate");
+        var accumulate = chartConfig.accumulateValues;
+        accumulateField.setValue(accumulate===true ? true : false);
+
         var scalingField = form.findField("scaleOptions");
         var scale = chartConfig.scaling;
         scalingField.setValue(scale==="logarithmic" ? "logarithmic" : "linear");
 
-        createSlider("ticks", form, "", 0, 50, 1);
-        var ticks = chartConfig.ticks;
-        if (isNaN(ticks)) ticks = 10;
-        chartConfig.ticks = ticks;
-        form.findField("ticks").setValue(ticks);
+        createSlider("xTicks", form, "", 0, 50, 1);
+        var xTicks = chartConfig.xTicks;
+        if (isNaN(xTicks)) xTicks = 10;
+        form.findField("xTicks").setValue(xTicks);
 
 
       //Process onChange events
@@ -660,6 +679,9 @@ bluewave.charts.LineEditor = function(parent, config) {
             if (settings.stack==="true") settings.stack = true;
             else settings.stack = false;
 
+            if (settings.accumulate==="true") settings.accumulate = true;
+            else settings.accumulate = false;
+
             chartConfig.scaling = settings.scaleOptions;
             chartConfig.xGrid = settings.xGrid;
             chartConfig.yGrid = settings.yGrid;
@@ -667,9 +689,10 @@ bluewave.charts.LineEditor = function(parent, config) {
             chartConfig.yLabel = settings.yLabel;
             chartConfig.endTags = settings.endTags;
             chartConfig.stackValues = settings.stack;
+            chartConfig.accumulateValues = settings.accumulate;
             if (chartConfig.xLabel) chartConfig.xLabel = chartConfig.layers[0].xAxis;
             if (chartConfig.yLabel) chartConfig.yLabel = chartConfig.layers[0].yAxis;
-            chartConfig.ticks = settings.ticks;
+            chartConfig.xTicks = settings.xTicks;
             createLinePreview();
         };
 
