@@ -84,9 +84,6 @@ bluewave.charts.LineChart = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
-        console.log("update fucntion called linechart")
-        console.log("config is")
-        console.log(config)
         var parent = svg.node().parentNode;
         onRender(parent, function(){
             renderChart(parent);
