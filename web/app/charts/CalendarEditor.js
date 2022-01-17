@@ -10,7 +10,6 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.CalendarEditor = function(parent, config) {
-    // console.log("this calendarEditor initialized")
     var me = this;
     var defaultConfig = {
         panel: {
@@ -103,18 +102,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(calendarConfig, inputs){
-        // this.setConfig()
-        console.log("calendar config is")
-        console.log(calendarConfig)
-        
-        //calendarConfig.date = "date"
-        //calendarConfig.value = "num_lines_changed"
 
-        console.log("calendar config is")
-        console.log(calendarConfig)
-
-        console.log("calendarEditor update called")
-        // updateSelectedNodeProperties()
         me.clear();
 
         for (var i=0; i<inputs.length; i++){
@@ -163,16 +151,6 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         return chartConfig;
     };
 
-  //**************************************************************************
-  //** setConfig
-  //**************************************************************************
-  /** updates chart configuration file for the selected properties of editor
-   */
-   this.setConfig = function(){
-    console.log("current config is ")
-    console.log(chartConfig)
-};
-
 
 
   //**************************************************************************
@@ -188,7 +166,6 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //**************************************************************************
     var createOptions = function(parent) {
 
-        // console.log("creating options editor calendar")
         var data = inputData[0];
 
 
