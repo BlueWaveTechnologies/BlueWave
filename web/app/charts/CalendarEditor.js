@@ -336,11 +336,11 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                             label: "Color",
                             type: colorField
                         },
-                        {
-                            name: "cutout",
-                            label: "Cutout",
-                            type: "text"
-                        }
+                        // {
+                        //     name: "cutout",
+                        //     label: "Cutout",
+                        //     type: "text"
+                        // }
                     ]
                 },
                 // {
@@ -405,28 +405,28 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
 
       //Add color options
-        for (var key in config.colors) {
-            if (config.colors.hasOwnProperty(key)){
-                colorField.add(key, key);
-            }
-        }
+        // for (var key in config.colors) {
+        //     if (config.colors.hasOwnProperty(key)){
+        //         colorField.add(key, key);
+        //     }
+        // }
         //colorField.setValue(chartConfig.colors+"");
 
 
       //Update cutout field (add slider) and set initial value
-        createSlider("cutout", form, "%");
-        var cutout = Math.round(chartConfig.calendarCutout*100.0);
-        form.findField("cutout").setValue(cutout);
+        // createSlider("cutout", form, "%");
+        // var cutout = Math.round(chartConfig.calendarCutout*100.0);
+        // form.findField("cutout").setValue(cutout);
 
 
-        var labelField = form.findField("labels");
-        var labels = chartConfig.showLabels;
-        labelField.setValue(labels===true ? true : false);
+        // var labelField = form.findField("labels");
+        // var labels = chartConfig.showLabels;
+        // labelField.setValue(labels===true ? true : false);
 
 
-        createSlider("labelOffset", form, "%", 0, 120, 1);
-        var labelOffset = chartConfig.labelOffset;
-        form.findField("labelOffset").setValue(labelOffset);
+        // createSlider("labelOffset", form, "%", 0, 120, 1);
+        // var labelOffset = chartConfig.labelOffset;
+        // form.findField("labelOffset").setValue(labelOffset);
 
 
 
@@ -440,12 +440,12 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
         var maxSliceOptField = form.findField("showOther");
         var showOther = chartConfig.showOther;
-        maxSliceOptField.setValue(showOther===true ? true : false);
+        // maxSliceOptField.setValue(showOther===true ? true : false);
 
-        var numSlices = inputData[0].length;
-        createSlider("maximumSlices", form, "", 1, numSlices, 1);
-        var maximumSlices = chartConfig.maximumSlices;
-        form.findField("maximumSlices").setValue(maximumSlices);
+        // var numSlices = inputData[0].length;
+        // createSlider("maximumSlices", form, "", 1, numSlices, 1);
+        // var maximumSlices = chartConfig.maximumSlices;
+        // form.findField("maximumSlices").setValue(maximumSlices);
 
 
       //Process onChange events
@@ -454,21 +454,21 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             chartConfig.calendarCutout = settings.cutout/100;
 
 
-            chartConfig.calendarPadding = (settings.padding*maxPadding)/100;
+            // chartConfig.calendarPadding = (settings.padding*maxPadding)/100;
 
-            chartConfig.maximumSlices = settings.maximumSlices;
+            // chartConfig.maximumSlices = settings.maximumSlices;
 
-            if (settings.labels==="true") {
-                settings.labels = true;
-                form.enableField("labelOffset");
-            }
-            else if (settings.labels==="false") {
-                settings.labels = false;
-                form.disableField("labelOffset");
-            }
+            // if (settings.labels==="true") {
+            //     settings.labels = true;
+            //     form.enableField("labelOffset");
+            // }
+            // else if (settings.labels==="false") {
+            //     settings.labels = false;
+            //     form.disableField("labelOffset");
+            // }
             chartConfig.showLabels = settings.labels;
 
-            chartConfig.labelOffset = settings.labelOffset;
+            // chartConfig.labelOffset = settings.labelOffset;
 
             if (settings.showOther==="true") settings.showOther = true;
             else if (settings.showOther==="false") settings.showOther = false;
