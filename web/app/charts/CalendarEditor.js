@@ -16,14 +16,13 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
         },
         colors: {
-         green: ["#fff","#ade69e","#5ecf41","#2a671a"],
-         blue: ["#fff","#aebfee","#587bdd","#1d3c90"],
-         orange: ["#fff","#fbdc77","#f8c82c","#b78e06"],
-
-
+            green: ["#fff","#ebf5dc","#cbe9a5","#2a671a"],
+            blue: ["#fff","#aebfee","#587bdd","#1d3c90"],
+            orange: ["#fff","#fbdc77","#f8c82c","#b78e06"]
         },
         chart: {
-
+            cellSize: 13,
+            showTooltip: true
         }
     };
 
@@ -37,15 +36,13 @@ bluewave.charts.CalendarEditor = function(parent, config) {
     var styleEditor;
 
 
-
-
-
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
 
         if (!config) config = {};
+        defaultConfig.chart.colors = defaultConfig.colors.blue;
         config = merge(config, defaultConfig);
         chartConfig = config.chart;
 
@@ -307,55 +304,72 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                 {
                   group: "Labels",
                   items: [
-                      {
-                          name: "dayLabel",
-                          label: "Show Day",
-                          type: "checkbox",
-                          options: [
-                              {
-                                  label: "",
-                                  value: true
-                              }
-    
-                          ]
-                      },
-                      {
-                          name: "yearLabel",
-                          label: "Show Year",
-                          type: "checkbox",
-                          options: [
-                              {
-                                  label: "",
-                                  value: true
-                              }
-    
-                          ]
-                      }
-                  ]
-              },
-              {
-                group: "Graph",
-                items: [
-                    {
-                        name: "cellSize",
-                        label: "Cell Size",
-                        type: "text"
+                        {
+                            name: "dayLabel",
+                            label: "Show Day",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
 
-                    }
-                ]
-              }
+                            ]
+                        },
+                        {
+                            name: "yearLabel",
+                            label: "Show Year",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
+
+                            ]
+                        }
+                    ]
+                },
+                {
+                  group: "Graph",
+                  items: [
+                        {
+                            name: "cellSize",
+                            label: "Cell Size",
+                            type: "text"
+
+                        }
+                    ]
+                }
 
 
             ]
         });
-       
-        //Add color options
+
+      //Add color options
         for (var key in config.colors) {
-          if (config.colors.hasOwnProperty(key)){
-              colorField.add(key, key);
-          }
+            if (config.colors.hasOwnProperty(key)){
+                colorField.add(key, JSON.stringify(config.colors[key]));
+            }
         }
-      
+
+      //Set initial value for the color
+        if (chartConfig.colors){
+            var color = chartConfig.colors;
+            colorField.getOptions().every(function(d){
+                var key = d.text;
+                var val = d.value;
+                if (color==key || JSON.stringify(color)==val){
+                    colorField.setValue(key);
+                    return false;
+                }
+                return true;
+            });
+        }
+        else{
+            colorField.setValue("blue");
+        }
+
 
       //Set initial value for Day label
         var dayLabelField = form.findField("dayLabel");
@@ -366,20 +380,19 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         var yearLabelField = form.findField("yearLabel");
         var yearLabel = chartConfig.yearLabel;
         yearLabelField.setValue(yearLabel===true ? true : false);
-       
-      //Set initial value for Cell Size 
+
+      //Set initial value for Cell Size
         var cellSizeField = form.findField("cellSize");
         var cellSizeValue = chartConfig.cellSize;
-        form.findField("cellSize").setValue(cellSizeValue);
-
-
+        if (isNaN(cellSizeValue) || cellSizeValue<1) cellSizeValue = 13;
+        cellSizeField.setValue(cellSizeValue);
 
 
 
       //Process onChange events
         form.onChange = function(){
             var settings = form.getData();
-           
+
             if (settings.dayLabel==="true") settings.dayLabel = true;
             else settings.dayLabel = false;
 
@@ -388,15 +401,12 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
             chartConfig.dayLabel = settings.dayLabel;
             chartConfig.yearLabel = settings.yearLabel;
-    
-            chartConfig.cellSize = settings.cellSize;
 
-            chartConfig.colors = config.colors[settings.color];
+            var cellSize = settings.cellSize;
+            if (isNaN(cellSize) || cellSize<1) cellSize = 13;
+            chartConfig.cellSize = cellSize;
 
-
-            // chartConfig.colors = config.colors[settings.color];
-            // if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
-            // else chartConfig.colorScaling = "linear";
+            chartConfig.colors = JSON.parse(settings.color);
 
             createPreview();
         };
