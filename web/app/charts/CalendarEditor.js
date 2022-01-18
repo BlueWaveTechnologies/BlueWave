@@ -72,6 +72,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             settings: true
         });
         previewArea = panel.innerDiv;
+        calendarChart = new bluewave.charts.CalendarChart(previewArea, {});
         panel.el.className = "";
 
 
@@ -86,15 +87,6 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         panel.settings.onclick = function(){
             if (chartConfig) editStyle();
         };
-
-
-      //Initialize chart area when ready
-        onRender(previewArea, function(){
-            
-            calendarChart = new bluewave.charts.CalendarChart(previewArea, {});
-            
-            
-        });
     };
 
 
@@ -102,7 +94,6 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(calendarConfig, inputs){
-        console.log("update function for chart called")
         me.clear();
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
@@ -116,7 +107,6 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
 
         chartConfig = merge(calendarConfig, config.chart);
-
 
 
         if (chartConfig.chartTitle){
@@ -166,38 +156,57 @@ bluewave.charts.CalendarEditor = function(parent, config) {
     var createOptions = function(parent) {
 
         var data = inputData[0];
+        var fields = Object.keys(data[0]);
 
 
-        var dataOptions;
+      //Analyze dataset
+        var dateFields = [];
+        var valueFields = [];
+        fields.forEach((field)=>{
+            var values = [];
+            data.forEach((d)=>{
+                var val = d[field];
+                values.push(val);
+            });
+            var type = getType(values);
+            if (type=="date") dateFields.push(field);
+            if (type=="number") valueFields.push(field);
+        });
 
-        dataOptions = Object.keys(data[0]);
 
-
-
-
+      //Create form inputs
         var table = createTable();
         var tbody = table.firstChild;
         table.style.height = "";
         parent.appendChild(table);
+        createDropdown(tbody,"Date","date");
+        createDropdown(tbody,"Value","value");
 
 
-
-        createDropdown(tbody,"date","Date","date");
-        createDropdown(tbody,"value","Value","value");
-        dataOptions.forEach((val)=>{
-            if (!isNaN(data[0][val])){
-                calendarInputs.value.add(val,val);
-            }
-            else{
-                calendarInputs.date.add(val,val);
-            }
+      //Populate date pulldown
+        dateFields.forEach((field)=>{
+            calendarInputs.date.add(field,field);
         });
 
 
+      //Populate value pulldown
+        valueFields.forEach((field)=>{
+            calendarInputs.value.add(field,field);
+        });
 
-        calendarInputs.date.setValue(chartConfig.date, true);
-        if(typeof calendarInputs.value == "object") {
-            calendarInputs.value.setValue(chartConfig.value, true);
+
+      //Select default options
+        if (chartConfig.date){
+            calendarInputs.date.setValue(chartConfig.date, false);
+        }
+        else{
+            calendarInputs.date.setValue(dateFields[0], false);
+        }
+        if (chartConfig.value){
+            calendarInputs.value.setValue(chartConfig.value, false);
+        }
+        else{
+            calendarInputs.value.setValue(valueFields[0], false);
         }
     };
 
@@ -226,8 +235,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         });
         calendarInputs[inputType].clear();
         calendarInputs[inputType].onChange = function(name, value){
-            
-
+            chartConfig[inputType] = value;
             createPreview();
         };
     };
@@ -237,15 +245,10 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //** createPreview
   //**************************************************************************
     var createPreview = function(){
-        if (chartConfig.date===null || chartConfig.value===null) return;
-
-
-        onRender(previewArea, function(){
+        if (chartConfig.date && chartConfig.value){
             var data = inputData[0];
-
-
             calendarChart.update(chartConfig, data);
-        });
+        }
     };
 
 
@@ -294,8 +297,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                 //         },
                 //     ]
                 // },
-                
-               
+
+
             ]
         });
 
@@ -340,6 +343,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
+    var getType = bluewave.chart.utils.getType;
 
     init();
 };
