@@ -287,6 +287,35 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
             items: [
+                {
+                  group: "Labels",
+                  items: [
+                      {
+                          name: "dayLabel",
+                          label: "Show Day",
+                          type: "checkbox",
+                          options: [
+                              {
+                                  label: "",
+                                  value: true
+                              }
+    
+                          ]
+                      },
+                      {
+                          name: "yearLabel",
+                          label: "Show Year",
+                          type: "checkbox",
+                          options: [
+                              {
+                                  label: "",
+                                  value: true
+                              }
+    
+                          ]
+                      }
+                  ]
+              }
                 // {
                 //     group: "General",
                 //     items: [
@@ -316,7 +345,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
       //Process onChange events
         form.onChange = function(){
             var settings = form.getData();
-
+           
 
 
             // chartConfig.colors = config.colors[settings.color];
