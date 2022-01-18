@@ -774,29 +774,6 @@ bluewave.charts.LineChart = function(parent, config) {
                 var line = chartElements[i].line2;
                 chartElements[i].tag = createTag(sumData, lineColor, label, line);
 
-                //TODO: put this with other animation logic - chartElements[i].tag is null in there
-                //for some reason - not sure why
-                var animationSteps = chartConfig.animationSteps;
-                var poly = chartElements[i].tag.poly;
-                var text = chartElements[i].tag.text;
-
-                var polyTransform = poly.attr("transform");
-                var textTransform = text.attr("transform");
-
-                //Get x-coordinate from transform string
-                var polyX = polyTransform.slice(10).split(",")[0];
-                var textX = textTransform.slice(10).split(",")[0];
-
-                //Set polygon to bottom right corner for transition
-                // poly.attr("transform", "translate("+ (axisWidth) +","+ (axisHeight) +")");
-                poly.attr("transform", "translate("+ (polyX) +","+ (axisHeight) +")");
-                text.attr("transform", "translate("+ (textX) +","+ (axisHeight) +")");
-
-                poly.transition().duration(animationSteps)
-                    .attr("transform", polyTransform)
-
-                text.transition().duration(animationSteps)
-                    .attr("transform", textTransform)
             }
         
         };
@@ -848,16 +825,32 @@ bluewave.charts.LineChart = function(parent, config) {
                     .y1(getY)
                     );
 
-            // for (var i=0; i<chartElements.length; i++){
-            //     var transform = chartElements[i].tag.poly.attr("transform");
+            if (showLabels) {
+                for (var i = 0; i < chartElements.length; i++) {
 
-            //     //Set polygon to bottom right corner for transition
-            //     chartElements[i].tag.poly.attr("transform", "translate("+ (axisWidth) +","+ (axisHeight) +")");
+                    var poly = chartElements[i].tag.poly;
+                    var text = chartElements[i].tag.text;
 
-            //     chartElements[i].tag.poly.transition().duration(animationSteps)
-            //         .attr("transform", transform)
-            
-            // }
+                    var polyTransform = poly.attr("transform");
+                    var textTransform = text.attr("transform");
+
+                    //Get x-coordinate from transform string
+                    var polyX = polyTransform.slice(10).split(",")[0];
+                    var textX = textTransform.slice(10).split(",")[0];
+
+                    //Set polygon vertex to (x, 0)
+                    poly.attr("transform", "translate(" + (polyX) + "," + (axisHeight - 9.6) + ")");
+                    text.attr("transform", "translate(" + (textX) + "," + (axisHeight) + ")");
+
+                    poly.transition().duration(animationSteps)
+                        .attr("transform", polyTransform)
+
+                    text.transition().duration(animationSteps)
+                        .attr("transform", textTransform)
+
+                }
+            };
+
         };
 
       //Draw grid lines if option is checked
