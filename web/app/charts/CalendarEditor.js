@@ -15,6 +15,13 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         panel: {
 
         },
+        colors: {
+         green: ["#fff","#ade69e","#5ecf41","#2a671a"],
+         blue: ["#fff","#aebfee","#587bdd","#1d3c90"],
+         orange: ["#fff","#fbdc77","#f8c82c","#b78e06"],
+
+
+        },
         chart: {
 
         }
@@ -288,6 +295,16 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             style: config.style.form,
             items: [
                 {
+                  group: "General",
+                  items: [
+                      {
+                          name: "color",
+                          label: "Color",
+                          type: colorField
+                      }
+                  ]
+                },
+                {
                   group: "Labels",
                   items: [
                       {
@@ -343,6 +360,14 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             ]
         });
        
+        //Add color options
+        for (var key in config.colors) {
+          if (config.colors.hasOwnProperty(key)){
+              colorField.add(key, key);
+          }
+        }
+      
+
       //Set initial value for Day label
         var dayLabelField = form.findField("dayLabel");
         var dayLabel = chartConfig.dayLabel;
@@ -382,6 +407,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             chartConfig.yearLabel = settings.yearLabel;
     
             chartConfig.cellSize = settings.cellSize;
+
+            chartConfig.colors = config.colors[settings.color];
 
 
             // chartConfig.colors = config.colors[settings.color];
