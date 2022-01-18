@@ -19,8 +19,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
         date: "date",
         value: "value",
         weekday: "monday", // either: weekday, sunday, or monday
-        cellSize: 13, // width and height of an individual day, in pixels
-        colors: ["#fff","#aebfee","#587bdd","#1d3c90"], // blue colors - default color scheme (more options via calendarEditor)
+        cellSize: 17, // width and height of an individual day, in pixels
+        colors: ["#fff","#ebf5dc","#cbe9a5","#2a671a"], //green colors
         showTooltip: false
     };
     var svg, calendarArea;
@@ -38,7 +38,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
             svg = s;
             calendarArea = g;
         });
-        
+
     };
 
   //**************************************************************************
@@ -139,19 +139,19 @@ bluewave.charts.CalendarChart = function(parent, config) {
       //Create color function using natural breaks
         var numClasses = 10;
         var breaks = getNaturalBreaks(values, numClasses);
-        var colors = getColorRange(breaks.length, config.colors);
+        var colors = getColorRange(breaks.length+1, config.colors);
         var getColor = function(value){
-            for (var i=0; i<breaks.length; i++){
+            for (var i=0; i<breaks.length-1; i++){
                 var currBreak = breaks[i];
-                if (value=>currBreak){
-                    if (i<breaks.length-1){
-                        var nextBreak = breaks[i+1];
-                        if (nextBreak>value){
-                            return colors[i];
-                        }
-                    }
-                    else{
-                        return colors[i];
+                var nextBreak = breaks[i+1];
+                var color = colors[i];
+
+                if (value>=currBreak && value<nextBreak){
+                    return color;
+                }
+                else{
+                    if (value==breaks[breaks.length-1]){ 
+                        return colors[colors.length-1];
                     }
                 }
             }
