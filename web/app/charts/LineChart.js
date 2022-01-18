@@ -17,7 +17,8 @@ bluewave.charts.LineChart = function(parent, config) {
         yGrid: false,
         scaling: "linear", //"logarithmic"
         stackValues: false,
-        endTags: false
+        endTags: false,
+        animationSteps: 1500
     };
     var svg, chart, plotArea;
     var x, y;
@@ -762,9 +763,9 @@ bluewave.charts.LineChart = function(parent, config) {
                         raiseLine(chartElements[datasetID]);
                         me.onClick(this, datasetID, d);
                     });
-            }
+            };
 
-
+            
           //Display end tags if checked
             if (showLabels){
                 var label = lineConfig.label;
@@ -772,10 +773,85 @@ bluewave.charts.LineChart = function(parent, config) {
 
                 var line = chartElements[i].line2;
                 chartElements[i].tag = createTag(sumData, lineColor, label, line);
+
             }
+        
         };
 
+        //Add animations
+        var animationSteps = chartConfig.animationSteps;
+        if (!isNaN(animationSteps) && animationSteps > 50) {
 
+            let lines = lineGroup.selectAll("path");
+            let circles = circleGroup.selectAll("circle");
+            let fill = fillGroup.selectAll("path");
+
+            let min = d3.min(minData, d => parseFloat(d.value));
+            let scaleY = config.scaling === "logarithmic" ? y(min) : y(0);
+
+            //playing with rendering lines one at a time
+            // function animateLine(){
+            //     let length = this.getTotalLength();
+            //     i = d3.interpolateString("0," + length, length + "," + length);
+            //     return function (t) { return i(t); };
+            // }
+            
+            //Reset lines to y=0
+            lines.attr("d", d3.line().x(getX).y(scaleY));
+
+            circles.attr("cx", getX).attr("cy", scaleY);
+
+            fill.attr("d", d3.area()
+                    .x(getX)
+                    .y0( axisHeight )
+                    .y1(scaleY)
+                );
+
+            //Transition back to calculated y-values
+            lines.transition().duration(animationSteps)
+                .attr("d", getLine())
+
+                // .delay(function(d, i) { return i * 2000; })
+                // .attrTween("stroke-dasharray", animateLine)
+
+            circles.transition().duration(animationSteps)
+                .attr("cx", getX).attr("cy", getY)
+
+            fill.transition().duration(animationSteps)
+                .attr(
+                    "d", d3.area()
+                    .x(getX)
+                    .y0(axisHeight)
+                    .y1(getY)
+                    );
+
+            if (showLabels) {
+                for (var i = 0; i < chartElements.length; i++) {
+
+                    var poly = chartElements[i].tag.poly;
+                    var text = chartElements[i].tag.text;
+
+                    var polyTransform = poly.attr("transform");
+                    var textTransform = text.attr("transform");
+
+                    //Get x-coordinate from transform string
+                    var polyX = polyTransform.slice(10).split(",")[0];
+                    var textX = textTransform.slice(10).split(",")[0];
+
+                    //Set polygon vertex to (x, 0)
+                    poly.attr("transform", "translate(" + (polyX) + "," + (axisHeight - 9.6) + ")");
+                    text.attr("transform", "translate(" + (textX) + "," + (axisHeight) + ")");
+
+                    poly.transition().duration(animationSteps)
+                        .attr("transform", polyTransform)
+
+                    text.transition().duration(animationSteps)
+                        .attr("transform", textTransform)
+
+                }
+            };
+
+        };
 
       //Draw grid lines if option is checked
         if (chartConfig.xGrid || chartConfig.yGrid){
