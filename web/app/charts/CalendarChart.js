@@ -20,7 +20,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
         value: "value",
         weekday: "monday", // either: weekday, sunday, or monday
         cellSize: 13, // width and height of an individual day, in pixels
-        colors: ["#fff","#ebf5dc","#cbe9a5","#2a671a"], //green colors
+        colors: ["#fff","#aebfee","#587bdd","#1d3c90"], // blue colors - default color scheme (more options via calendarEditor)
         showTooltip: false
     };
     var svg, calendarArea;
