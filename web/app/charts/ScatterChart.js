@@ -86,7 +86,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
     var renderChart = function(data, parent){
         //me.clear();
-
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
         var margin = config.margin;
