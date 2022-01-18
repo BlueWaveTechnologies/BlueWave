@@ -345,17 +345,6 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                 ]
               }
 
-                // {
-                //     group: "General",
-                //     items: [
-                //         {
-                //             name: "color",
-                //             label: "Color",
-                //             type: colorField
-                //         },
-                //     ]
-                // },
-
 
             ]
         });
@@ -383,13 +372,7 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         var cellSizeValue = chartConfig.cellSize;
         form.findField("cellSize").setValue(cellSizeValue);
 
-      //Add color options
-        // for (var key in config.colors) {
-        //     if (config.colors.hasOwnProperty(key)){
-        //         colorField.add(key, key);
-        //     }
-        // }
-        //colorField.setValue(chartConfig.colors+"");
+
 
 
 
