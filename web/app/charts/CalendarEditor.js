@@ -330,7 +330,17 @@ bluewave.charts.CalendarEditor = function(parent, config) {
 
             ]
         });
+       
+      //Set initial value for Day label
+        var dayLabelField = form.findField("dayLabel");
+        var dayLabel = chartConfig.dayLabel;
+        dayLabelField.setValue(dayLabel===true ? true : false);
 
+      //Set initial value for Year label
+        var yearLabelField = form.findField("yearLabel");
+        var yearLabel = chartConfig.yearLabel;
+        yearLabelField.setValue(yearLabel===true ? true : false);
+       
 
       //Add color options
         // for (var key in config.colors) {
@@ -346,7 +356,15 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         form.onChange = function(){
             var settings = form.getData();
            
+            if (settings.dayLabel==="true") settings.dayLabel = true;
+            else settings.dayLabel = false;
 
+            if (settings.yearLabel==="true") settings.yearLabel = true;
+            else settings.yearLabel = false;
+
+            chartConfig.dayLabel = settings.dayLabel;
+            chartConfig.yearLabel = settings.yearLabel;
+    
 
             // chartConfig.colors = config.colors[settings.color];
             // if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
