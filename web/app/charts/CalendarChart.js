@@ -14,6 +14,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
+        dayLabel: true,
+        yearLabel: true,
         date: "date",
         value: "value",
         weekday: "monday", // either: weekday, sunday, or monday
