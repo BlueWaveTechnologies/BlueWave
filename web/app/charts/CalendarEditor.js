@@ -315,7 +315,19 @@ bluewave.charts.CalendarEditor = function(parent, config) {
                           ]
                       }
                   ]
+              },
+              {
+                group: "Graph",
+                items: [
+                    {
+                        name: "cellSize",
+                        label: "Cell Size",
+                        type: "text"
+
+                    }
+                ]
               }
+
                 // {
                 //     group: "General",
                 //     items: [
@@ -341,6 +353,10 @@ bluewave.charts.CalendarEditor = function(parent, config) {
         var yearLabel = chartConfig.yearLabel;
         yearLabelField.setValue(yearLabel===true ? true : false);
        
+      //Set initial value for Cell Size 
+        var cellSizeField = form.findField("cellSize");
+        var cellSizeValue = chartConfig.cellSize;
+        form.findField("cellSize").setValue(cellSizeValue);
 
       //Add color options
         // for (var key in config.colors) {
@@ -365,6 +381,8 @@ bluewave.charts.CalendarEditor = function(parent, config) {
             chartConfig.dayLabel = settings.dayLabel;
             chartConfig.yearLabel = settings.yearLabel;
     
+            chartConfig.cellSize = settings.cellSize;
+
 
             // chartConfig.colors = config.colors[settings.color];
             // if (settings.color==="mixed") chartConfig.colorScaling = "ordinal";
