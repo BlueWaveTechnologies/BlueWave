@@ -137,7 +137,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .append("text")
             .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
             .attr("y", function(d){ return d.y0+20})    // +20 to adjust position (lower)
-            .text(function(d){ return d.data.name.replace('mister_','') })
+            .text(function(d){ return d.data.name})
             .attr("font-size", "19px")
             .attr("fill", "white")
 
