@@ -13,14 +13,18 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-         margin : {top: 10, right: 10, bottom: 10, left: 10},
-         groupNames : ["boss1", "boss2", "boss3"],
+        margin : {top: 10, right: 10, bottom: 10, left: 10},
+        groupNames : ["boss1", "boss2", "boss3"],
         // dayLabel: true,
         // yearLabel: true,
         key: "name",
         groupBy: "group",
         value: "value",
         colors: [ "#402D54", "#D18975", "#8FD175"], //first set of colors
+        groups: { // populated by editor
+            group1 : [], 
+            group2 : []
+        }
         // showTooltip: false
     };
     var svg, treeMapArea;
@@ -82,6 +86,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         var chartConfig = config;
         console.log(data)
+
       //Update date and value fields in the data
         // data.forEach((d)=>{
         //     var value = d[config.value];
