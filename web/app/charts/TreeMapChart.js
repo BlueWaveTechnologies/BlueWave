@@ -11,7 +11,7 @@ if(!bluewave.charts) bluewave.charts={};
  *
  ******************************************************************************/
 
-bluewave.charts.CalendarChart = function(parent, config) {
+bluewave.charts.TreeMapChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
@@ -50,6 +50,13 @@ bluewave.charts.CalendarChart = function(parent, config) {
         if (!chartConfig) config = defaultConfig;
         else config = merge(chartConfig, defaultConfig);
 
+    };
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        if (calendarArea) calendarArea.selectAll("*").remove();
     };
 
 
@@ -95,8 +102,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
         .attr("transform",
                 "translate(" + margin.left + "," + margin.top + ")");
 
-        // read json data
-        d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_dendrogram_full.json", function(data) {
+        // // read json data
+        // d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_dendrogram_full.json", function(data) {
 
         // Give the data to this cluster layout:
         var root = d3.hierarchy(data).sum(function(d){ return d.value}) // Here the size of each leave is given in the 'value' field in input data
@@ -180,7 +187,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
             .attr("font-size", "19px")
             .attr("fill",  "grey" )
 
-    })
+
     }
 
 }
