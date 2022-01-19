@@ -1,5 +1,3 @@
-console.log("running tree map chart")
-
 if(!bluewave) var bluewave={};
 if(!bluewave.charts) bluewave.charts={};
 
@@ -15,14 +13,13 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-         margin : {top: 10, right: 10, bottom: 10, left: 10}
+         margin : {top: 10, right: 10, bottom: 10, left: 10},
+         bossNames : ["boss1", "boss2", "boss3"],
         // dayLabel: true,
         // yearLabel: true,
         // date: "date",
         // value: "value",
-        // weekday: "monday", // either: weekday, sunday, or monday
-        // cellSize: 17, // width and height of an individual day, in pixels
-        // colors: ["#fff","#ebf5dc","#cbe9a5","#2a671a"], //green colors
+        colors: [ "#402D54", "#D18975", "#8FD175"], //first set of colors
         // showTooltip: false
     };
     var svg, treeMapArea;
@@ -110,9 +107,9 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         // color scale
         var color = d3.scaleOrdinal()
-            .domain(["boss1", "boss2", "boss3"])
-            .range([ "#402D54", "#D18975", "#8FD175"])
-
+            .domain(["boss1", "boss2", "boss3"]) // bind this to config
+            .range(config.colors)   
+            
         // opacity scale
         var opacity = d3.scaleLinear()
             .domain([10, 30])
