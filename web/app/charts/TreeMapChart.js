@@ -17,8 +17,9 @@ bluewave.charts.TreeMapChart = function(parent, config) {
          groupNames : ["boss1", "boss2", "boss3"],
         // dayLabel: true,
         // yearLabel: true,
-        // date: "date",
-        // value: "value",
+        key: "name",
+        groupBy: "group",
+        value: "value",
         colors: [ "#402D54", "#D18975", "#8FD175"], //first set of colors
         // showTooltip: false
     };
