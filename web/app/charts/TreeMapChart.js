@@ -110,7 +110,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         });
 
-        // set the dimensions and margins of the graph
+        // set the dimensions of the graph
         var
         width = parent.offsetWidth - config.margin.left - config.margin.right,
         height = parent.offsetHeight - config.margin.top - config.margin.bottom;
