@@ -18,13 +18,9 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         // dayLabel: true,
         // yearLabel: true,
         key: "name",
-        groupBy: "group",
         value: "value",
+        group: "repo", 
         colors: [ "#402D54", "#D18975", "#8FD175"], //first set of colors
-        groups: { // populated by editor
-            group1 : [], 
-            group2 : []
-        }
         // showTooltip: false
     };
     var svg, treeMapArea;
