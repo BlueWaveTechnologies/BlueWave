@@ -14,12 +14,11 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         margin : {top: 10, right: 10, bottom: 10, left: 10},
-        groupNames : ["boss1", "boss2", "boss3"],
         // dayLabel: true,
         // yearLabel: true,
         key: "name",
         value: "value",
-        group: "repo", 
+        groupBy: "repo", 
         colors: [ "#402D54", "#D18975", "#8FD175"], //first set of colors
         // showTooltip: false
     };
@@ -82,6 +81,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         var chartConfig = config;
         console.log(data)
+
+        groupNames = [] // populate this by filtering through the config-set dataset 'groupBy' column to seperate records into unique values of this column
 
       //Update date and value fields in the data
         // data.forEach((d)=>{
