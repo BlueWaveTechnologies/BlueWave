@@ -160,12 +160,69 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         });
 
+        console.log("listed named, then listed values, and then listed groups")
+        console.log(names)
+        console.log(values)
+        console.log(groupNames)
+
+        function onlyUnique(value, index, self) {
+            return self.indexOf(value) === index;
+        }
+
+        var data = // base structure expected for d3.hierarchy
+        {"children":
+            [
+                {"name":"boss1",
+                "children":
+                [
+                    {"name":"mister_a","group":"A","value":28,"colname":"level3"},
+                    {"name":"mister_b","group":"A","value":19,"colname":"level3"},
+                    {"name":"mister_c","group":"C","value":18,"colname":"level3"},
+                    {"name":"mister_d","group":"C","value":19,"colname":"level3"}
+                ],
+                "colname":"level2"},
+                {"name":"boss2",
+                "children":
+                [
+                    {"name":"mister_e","group":"C","value":14,"colname":"level3"},
+                    {"name":"mister_f","group":"A","value":11,"colname":"level3"},
+                    {"name":"mister_g","group":"B","value":15,"colname":"level3"},
+                    {"name":"mister_h","group":"B","value":16,"colname":"level3"}
+                ],
+                "colname":"level2"},
+                {"name":"boss3",
+                "children":
+                [
+                    {"name":"mister_i","group":"B","value":10,"colname":"level3"},
+                    {"name":"mister_j","group":"A","value":13,"colname":"level3"},
+                    {"name":"mister_k","group":"A","value":13,"colname":"level3"},
+                    {"name":"mister_l","group":"D","value":25,"colname":"level3"},
+                    {"name":"mister_m","group":"D","value":16,"colname":"level3"},
+                    {"name":"mister_n","group":"D","value":28,"colname":"level3"}
+                ],
+                "colname":"level2"}
+            ],
+        "name":"CEO"}
+
+
+        var namesToUse = names.filter(onlyUnique);
+        var groupsToUse = groupNames.filter(onlyUnique);
+        console.log(namesToUse)
+        console.log(groupsToUse)
+        data.forEach((d)=>{
+
+        })
+
+        return 
+
+        // data = // modify data so it fits into the format for hierarchy
+
         // set the dimensions of the graph
         var
         width = parent.offsetWidth - config.margin.left - config.margin.right,
         height = parent.offsetHeight - config.margin.top - config.margin.bottom;
 
- 
+
         // Give the data to this cluster layout:
         var root = d3.hierarchy(data).sum(function(d){ return d.value}) // Here the size of each leave is given in the 'value' field in input data
 
@@ -181,7 +238,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         // color scale
         var color = d3.scaleOrdinal()
-            // .domain(config.groupName)
+            .domain(groupNames)
             .range(config.colors)   
 
         // opacity scale
@@ -189,10 +246,13 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .domain([10, 30])
             .range([.5,1])
 
+        console.log(root)
+        console.log(root.leaves())
         // add rectangles
         svg
             .selectAll("rect")
             .data(root.leaves())
+            .logData()
             .enter()
             .append("rect")
             .attr('x', function (d) { return d.x0; })
@@ -200,7 +260,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr('width', function (d) { return d.x1 - d.x0; })
             .attr('height', function (d) { return d.y1 - d.y0; })
             .style("stroke", "black")
-            .logMsg(d.parent.data.name)
+            // .logMsg(data.parent.data.name)
             .style("fill", function(d){ return color(d.parent.data.name)} )
             .style("opacity", function(d){ return opacity(d.data.value)})
 
