@@ -99,19 +99,16 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         });
 
 
-        // //Create an array of names, groups and values
-        // var names = [];
-        // var values = [];
-        // var groups = {};
-        // data.forEach((d)=>{
-        //     var name = d[config.key];
-        //     var value = d[config.value];
-        //     var group = d[config.group];
-        //     names.push(name);
-        //     values.push(value);
-        //     groups.push(group);
+        // //Create an array of names and values
+        var names = [];
+        var values = [];
+        data.forEach((d)=>{
+            var name = d[config.key];
+            var value = d[config.value];
+            names.push(name);
+            values.push(value);
 
-        // });
+        });
 
         // set the dimensions and margins of the graph
         var
