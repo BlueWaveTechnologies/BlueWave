@@ -169,7 +169,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             return self.indexOf(value) === index;
         }
 
-        var data = // base structure expected for d3.hierarchy
+        var dataNotUsed = // base structure expected for d3.hierarchy
         {"children":
             [
                 {"name":"boss1",
@@ -204,11 +204,60 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             ],
         "name":"CEO"}
 
-
+        console.log(dataNotUsed)
         var namesToUse = names.filter(onlyUnique);
         var groupsToUse = groupNames.filter(onlyUnique);
         console.log(namesToUse)
         console.log(groupsToUse)
+
+        structure =
+        {"children":
+            [],
+
+        "name":"all"}
+        data.forEach((d)=>{
+            userValue = d[config.key]
+            namedValue = d[config.groupBy]
+
+            value = d[config.value]
+            // console.log(typeof(structure["children"][namedValue]))
+            if (typeof(structure["children"]["name"][namedValue]) !== "undefined"){
+                structure["children"]["name"][namedValue].push(value)
+            }
+            else {
+                // structure["children"][namedValue] = new Object()
+                console.log("creating new array for this value")
+                structure["children"]["name"][namedValue] = new Array()
+                console.log(structure)
+                structure["children"][namedValue].push(value)
+
+
+
+            }
+        })
+     
+
+        children = new Object();
+        groupsToUse.forEach((d)=>{
+            children.push(d)
+        })
+        console.log(children)
+        return
+
+        children.forEach((d)=>{
+            structure.children.push({"name":d})
+        })
+        // console.log(search)
+        data.forEach((d)=>{
+            console.log("found new record")
+            namevalue = d[config.key]
+            console.log(structure.children[namevalue])
+            structure.children[namevalue].push(d[config.value])
+        })
+
+        console.log(structure)
+
+
         data.forEach((d)=>{
 
         })
