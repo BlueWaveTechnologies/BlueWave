@@ -37,7 +37,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         initChart(parent, function(s, g){
             svg = s;
-            calendarArea = g;
+            treeMapArea = g;
         });
 
     };
@@ -94,17 +94,15 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         height = 445 - margin.top - margin.bottom;
 
         // append the svg object to the body of the page
-        var svg = d3.select(parent)
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform",
-                "translate(" + margin.left + "," + margin.top + ")");
+        // var svg = d3.select(parent)
+        // .append("svg")
+        // .attr("width", width + margin.left + margin.right)
+        // .attr("height", height + margin.top + margin.bottom)
+        // .append("g")
+        // .attr("transform",
+        //         "translate(" + margin.left + "," + margin.top + ")");
 
-        // // read json data
-        // d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_dendrogram_full.json", function(data) {
-
+ 
         // Give the data to this cluster layout:
         var root = d3.hierarchy(data).sum(function(d){ return d.value}) // Here the size of each leave is given in the 'value' field in input data
 
