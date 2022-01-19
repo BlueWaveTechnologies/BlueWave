@@ -90,8 +90,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         // set the dimensions and margins of the graph
         var margin = {top: 10, right: 10, bottom: 10, left: 10},
-        width = 445 - margin.left - margin.right,
-        height = 445 - margin.top - margin.bottom;
+        width = parent.offsetWidth - margin.left - margin.right,
+        height = parent.offsetHeight - margin.top - margin.bottom;
 
         // append the svg object to the body of the page
         // var svg = d3.select(parent)
@@ -102,6 +102,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         // .attr("transform",
         //         "translate(" + margin.left + "," + margin.top + ")");
 
+        console.log(parent)
  
         // Give the data to this cluster layout:
         var root = d3.hierarchy(data).sum(function(d){ return d.value}) // Here the size of each leave is given in the 'value' field in input data
