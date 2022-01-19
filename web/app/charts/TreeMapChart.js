@@ -81,15 +81,27 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     var renderChart = function(data){
 
         var chartConfig = config;
-
+        console.log(data)
       //Update date and value fields in the data
-        data.forEach((d)=>{
-            var value = d[config.value];
-            d[config.value] = parseFloat(value);
-        });
+        // data.forEach((d)=>{
+        //     var value = d[config.value];
+        //     d[config.value] = parseFloat(value);
+        // });
 
 
+        // //Create an array of names, groups and values
+        // var names = [];
+        // var values = [];
+        // var groups = {};
+        // data.forEach((d)=>{
+        //     var name = d[config.key];
+        //     var value = d[config.value];
+        //     var group = d[config.group];
+        //     names.push(name);
+        //     values.push(value);
+        //     groups.push(group);
 
+        // });
 
         // set the dimensions and margins of the graph
         var

@@ -94,6 +94,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
          weekday = config.weekday,
          formatDay = i => "SMTWTFS"[i]; // given a day number in [0, 6], the day-of-week label
 
+        console.log(data)
 
       //Update date and value fields in the data
         data.forEach((d)=>{
