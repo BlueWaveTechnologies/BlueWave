@@ -14,7 +14,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
          margin : {top: 10, right: 10, bottom: 10, left: 10},
-         bossNames : ["boss1", "boss2", "boss3"],
+         groupNames : ["boss1", "boss2", "boss3"],
         // dayLabel: true,
         // yearLabel: true,
         // date: "date",
@@ -107,9 +107,9 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         // color scale
         var color = d3.scaleOrdinal()
-            .domain(["boss1", "boss2", "boss3"]) // bind this to config
+            .domain(config.groupNames)
             .range(config.colors)   
-            
+
         // opacity scale
         var opacity = d3.scaleLinear()
             .domain([10, 30])
