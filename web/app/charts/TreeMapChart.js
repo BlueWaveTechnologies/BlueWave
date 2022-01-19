@@ -91,7 +91,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             });
         }
 
-      //Update date and value fields in the data
+      //Update value fields in the data
         data.forEach((d)=>{
             var value = d[config.value];
             console.log(value)
