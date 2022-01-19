@@ -81,10 +81,14 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     var renderChart = function(data){
 
         var chartConfig = config;
-        // var
-        // cellSize = config.cellSize,
-        // weekday = config.weekday,
-        // formatDay = i => "SMTWTFS"[i]; // given a day number in [0, 6], the day-of-week label
+
+      //Update date and value fields in the data
+        data.forEach((d)=>{
+            var value = d[config.value];
+            d[config.value] = parseFloat(value);
+        });
+
+
 
 
         // set the dimensions and margins of the graph
