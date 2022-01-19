@@ -14,4 +14,6 @@ nb-configuration.xml
 *.DS_Store
 *.dll
 **/test.html*
+**/test2.html*
+
 **/!README.TXT
