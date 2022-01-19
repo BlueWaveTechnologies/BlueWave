@@ -56,7 +56,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (calendarArea) calendarArea.selectAll("*").remove();
+        if (treeMapArea) treeMapArea.selectAll("*").remove();
     };
 
 
@@ -189,5 +189,18 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
 
     }
+  //**************************************************************************
+  //** Utils
+  //**************************************************************************
+   var merge = javaxt.dhtml.utils.merge;
+   var onRender = javaxt.dhtml.utils.onRender;
+   var initChart = bluewave.chart.utils.initChart;
+   var getColorRange = bluewave.chart.utils.getColorRange;
+   var getNaturalBreaks = bluewave.chart.utils.getNaturalBreaks;
+   var getHighestElements = javaxt.dhtml.utils.getHighestElements;
+
+
+   init();
+
 
 }
