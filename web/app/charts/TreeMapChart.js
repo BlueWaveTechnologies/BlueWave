@@ -15,6 +15,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
+         margin : {top: 10, right: 10, bottom: 10, left: 10}
         // dayLabel: true,
         // yearLabel: true,
         // date: "date",
@@ -89,25 +90,15 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
 
         // set the dimensions and margins of the graph
-        var margin = {top: 10, right: 10, bottom: 10, left: 10},
-        width = parent.offsetWidth - margin.left - margin.right,
-        height = parent.offsetHeight - margin.top - margin.bottom;
+        var
+        width = parent.offsetWidth - config.margin.left - config.margin.right,
+        height = parent.offsetHeight - config.margin.top - config.margin.bottom;
 
-        // append the svg object to the body of the page
-        // var svg = d3.select(parent)
-        // .append("svg")
-        // .attr("width", width + margin.left + margin.right)
-        // .attr("height", height + margin.top + margin.bottom)
-        // .append("g")
-        // .attr("transform",
-        //         "translate(" + margin.left + "," + margin.top + ")");
-
-        console.log(parent)
  
         // Give the data to this cluster layout:
         var root = d3.hierarchy(data).sum(function(d){ return d.value}) // Here the size of each leave is given in the 'value' field in input data
 
-        // Then d3.treemap computes the position of each element of the hierarchy
+        // Use d3.treemap to compute the position of each element of the hierarchy
         d3.treemap()
             .size([width, height])
             .paddingTop(28)
@@ -117,17 +108,17 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             //.padding(20)
             (root)
 
-        // prepare a color scale
+        // color scale
         var color = d3.scaleOrdinal()
             .domain(["boss1", "boss2", "boss3"])
             .range([ "#402D54", "#D18975", "#8FD175"])
 
-        // And a opacity scale
+        // opacity scale
         var opacity = d3.scaleLinear()
             .domain([10, 30])
             .range([.5,1])
 
-        // use this information to add rectangles:
+        // add rectangles
         svg
             .selectAll("rect")
             .data(root.leaves())
@@ -141,7 +132,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .style("fill", function(d){ return color(d.parent.data.name)} )
             .style("opacity", function(d){ return opacity(d.data.value)})
 
-        // and to add the text labels
+        // add text labels
         svg
             .selectAll("text")
             .data(root.leaves())
@@ -153,7 +144,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr("font-size", "19px")
             .attr("fill", "white")
 
-        // and to add the text labels
+        // add text labels
         svg
             .selectAll("vals")
             .data(root.leaves())
@@ -165,7 +156,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr("font-size", "11px")
             .attr("fill", "white")
 
-        // Add title for the 3 groups
+        // Add title for each group
         svg
             .selectAll("titles")
             .data(root.descendants().filter(function(d){return d.depth==1}))
@@ -177,12 +168,11 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr("font-size", "19px")
             .attr("fill",  function(d){ return color(d.data.name)} )
 
-        // Add title for the 3 groups
+        // Add title for each group
         svg
             .append("text")
             .attr("x", 0)
             .attr("y", 14)    // +20 to adjust position (lower)
-            .text("Three group leaders and 14 employees")
             .attr("font-size", "19px")
             .attr("fill",  "grey" )
 
