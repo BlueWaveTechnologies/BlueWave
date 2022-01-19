@@ -84,20 +84,19 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         if (config.groupBy !== null){
             groupNames = [] // populate this by filtering through the config-set dataset 'groupBy' column to seperate records into unique values of this column
-            console.log("got here")
             data.forEach((d)=>{
                 group = d[config.groupBy]
                 console.log(group)
                 groupNames.push(group)
             });
-            console.log("finished")
         }
 
       //Update date and value fields in the data
-        // data.forEach((d)=>{
-        //     var value = d[config.value];
-        //     d[config.value] = parseFloat(value);
-        // });
+        data.forEach((d)=>{
+            var value = d[config.value];
+            console.log(value)
+            d[config.value] = parseFloat(value);
+        });
 
 
         // //Create an array of names, groups and values
