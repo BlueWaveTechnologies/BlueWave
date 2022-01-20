@@ -79,6 +79,9 @@ bluewave.charts.ScatterEditor = function(parent, config) {
 
       //Initialize chart area when ready
         scatterChart = new bluewave.charts.ScatterChart(previewArea, {});
+        scatterChart.onClick = function(plot, plotID){
+            editScatterPlot(plotID);
+        };
     };
 
 
