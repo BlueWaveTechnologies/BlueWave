@@ -220,17 +220,21 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             (root)
 
         // color scale
-        var color = d3.scaleOrdinal()
-            // .domain(groupNames)
-            .range(config.colors)   
+        if (typeof(groupNames) !== "undefined"){
+            var color = d3.scaleOrdinal()
+                .domain(groupNames)
+                .range(config.colors)   
+        }
+        else{
+            var color = d3.scaleOrdinal()
+                .range(config.colors)
+        }
 
         // opacity scale
         var opacity = d3.scaleLinear()
             .domain([10, 30])
             .range([.5,1])
 
-        console.log(root)
-        console.log(root.leaves())
         // add rectangles
         svg
             .selectAll("rect")
