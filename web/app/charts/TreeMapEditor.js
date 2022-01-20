@@ -166,6 +166,8 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
       //Analyze dataset
         var keyFields = [];
         var valueFields = [];
+        var groupByFields = [];
+
         fields.forEach((field)=>{
             var values = [];
             data.forEach((d)=>{
@@ -175,6 +177,8 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
             var type = getType(values);
             if (type=="string") keyFields.push(field);
             if (type=="number") valueFields.push(field);
+            if (type=="string") groupByFields.push(field);
+
         });
 
 
@@ -199,6 +203,10 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
             treeMapInputs.value.add(field,field);
         });
 
+      //Populate groupBy pulldown
+        groupByFields.forEach((field)=>{
+            treeMapInputs.groupBy.add(field,field);
+        });
 
       //Select default options
         if (chartConfig.key){
@@ -212,6 +220,9 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
         }
         else{
             treeMapInputs.value.setValue(valueFields[0], false);
+        }
+        if (chartConfig.groupBy){
+            treeMapInputs.groupBy.setValue(chartConfig.groupBy, false);
         }
     };
 
