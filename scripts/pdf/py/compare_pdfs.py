@@ -29,6 +29,15 @@ from pydivsufsort import divsufsort, kasai
 #-------------------------------------------------------------------------------
 # UTILS
 #-------------------------------------------------------------------------------
+
+datadir = '' 
+def get_datadir(): 
+    import os 
+    from pathlib import Path 
+    currdir = os.path.dirname(os.path.realpath(__file__)) 
+    parentdir = str(Path(currdir).parent) 
+    return parentdir + os.path.sep + 'data' + os.path.sep 
+
 def list_of_unique_dicts(L):
     # https://stackoverflow.com/questions/11092511/python-list-of-unique-dictionaries
     return list({json.dumps(v, sort_keys=True): v for v in L}.values())
@@ -268,9 +277,10 @@ def filter_sus_pairs(suspicious_pairs):
     if not common_text_sus_pairs:
         return suspicious_pairs
 
-    with open('data/vectorizer.p', 'rb') as f:
+    datadir = get_datadir()
+    with open(datadir+'vectorizer.p', 'rb') as f:
         vectorizer = pickle.load(f)
-    with open('data/text_clf.p', 'rb') as f:
+    with open(datadir+'text_clf.p', 'rb') as f:
         clf = pickle.load(f)
 
     text_strs = [p['string'] for p in common_text_sus_pairs]
