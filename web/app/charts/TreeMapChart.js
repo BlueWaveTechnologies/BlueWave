@@ -108,6 +108,119 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     };
 
 
+
+  //**************************************************************************
+  //** setDataHierarchy
+  //**************************************************************************
+  // modify data so it fits into the format for d3.hierarchy
+    var setDataHierarchy = function(data){
+
+        if (config.groupBy !== null){
+            groupNames = [] // populate this by filtering through the config-set dataset 'groupBy' column to seperate records into unique values of this column
+            data.forEach((d)=>{
+                group = d[config.groupBy]
+                groupNames.push(group)
+            });
+
+            function onlyUnique(value, index, self) { // returns only unique values from an array
+                return self.indexOf(value) === index;
+            }
+    
+    
+            var groupsToUse = groupNames.filter(onlyUnique);
+        }
+
+      //Update value fields in the data
+        data.forEach((d)=>{
+            var value = d[config.value];
+            d[config.value] = parseFloat(value);
+        });
+
+
+
+
+        dataHierarchy = 
+        {"children":
+            [],
+
+        "name":"all"}
+
+        const customFilter = (object, key, value) => {
+            if (Array.isArray(object)) {
+              for (const obj of object) {
+                const result = customFilter(obj, key, value);
+                if (result) {
+                  return obj;
+                }
+              }
+            } else {
+              if (object.hasOwnProperty(key) && object[key] === value) {
+                return object;
+              }
+              for (const k of Object.keys(object)) {
+                if (typeof object[k] === "object") {
+                  const o = customFilter(object[k], key, value);
+                  if (o !== null && typeof o !== 'undefined')
+                    return o;
+                }
+              }
+              return null;
+            }
+          }
+
+
+        if (config.groupBy !== null){
+
+            groupsToUse.forEach((g)=> {
+                dataHierarchy["children"].push({"name": g, "children":[], "colname":"level2"})
+                objectToInsertTo = customFilter(dataHierarchy["children"], 'name', g)
+
+                data.forEach((d)=>{
+                    userValue = d[config.key]
+                    groupByValue = d[config.groupBy]
+                    value = d[config.value]
+
+                    if (g === groupByValue){
+                        // check whether this user already exists - if he does then accumulate values with pre-existing record
+                        if (typeof(customFilter(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
+                            userRecord = customFilter(objectToInsertTo["children"],"name", userValue) 
+                            userRecord = userRecord["value"] + value
+
+                        }
+                        else {    // create new user record 
+                            objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value})
+                        }
+                    }
+                })
+            })
+        }
+
+        else{
+            dataHierarchy["children"].push({"name": "", "children":[], "colname":"level2"})
+            objectToInsertTo = customFilter(dataHierarchy["children"], 'name', "")
+
+            data.forEach((d)=>{
+                userValue = d[config.key]
+                value = d[config.value]
+                groupByValue = ""
+                // check whether this user already exists - if he does then accumulate values with pre-existing record
+                if (typeof(customFilter(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
+                    userRecord = customFilter(objectToInsertTo["children"],"name", userValue) 
+                    userRecord = userRecord["value"] + value
+                }
+
+                else {    // create new user record 
+                    objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value})
+                }
+                
+            })
+
+        }
+        return dataHierarchy
+    }
+
+
+
   //**************************************************************************
   //** update
   //**************************************************************************
@@ -124,147 +237,18 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     };
 
 
+
+
+
+
   //**************************************************************************
   //** renderChart
   //**************************************************************************
     var renderChart = function(data){
 
         var chartConfig = config;
-        console.log(data)
-
-        if (config.groupBy !== null){
-            groupNames = [] // populate this by filtering through the config-set dataset 'groupBy' column to seperate records into unique values of this column
-            data.forEach((d)=>{
-                group = d[config.groupBy]
-                console.log(group)
-                groupNames.push(group)
-            });
-        }
-
-      //Update value fields in the data
-        data.forEach((d)=>{
-            var value = d[config.value];
-            console.log(value)
-            d[config.value] = parseFloat(value);
-        });
-
-
-        // //Create an array of names and values
-        var names = [];
-        var values = [];
-        data.forEach((d)=>{
-            var name = d[config.key];
-            var value = d[config.value];
-            names.push(name);
-            values.push(value);
-
-        });
-
-        console.log("listed named, then listed values, and then listed groups")
-        console.log(names)
-        console.log(values)
-        console.log(groupNames)
-
-        function onlyUnique(value, index, self) {
-            return self.indexOf(value) === index;
-        }
-
-        var dataNotUsed = // base structure expected for d3.hierarchy
-        {"children":
-            [
-                {"name":"boss1",
-                "children":
-                [
-                    {"name":"mister_a","group":"A","value":28,"colname":"level3"},
-                    {"name":"mister_b","group":"A","value":19,"colname":"level3"},
-                    {"name":"mister_c","group":"C","value":18,"colname":"level3"},
-                    {"name":"mister_d","group":"C","value":19,"colname":"level3"}
-                ],
-                "colname":"level2"},
-                {"name":"boss2",
-                "children":
-                [
-                    {"name":"mister_e","group":"C","value":14,"colname":"level3"},
-                    {"name":"mister_f","group":"A","value":11,"colname":"level3"},
-                    {"name":"mister_g","group":"B","value":15,"colname":"level3"},
-                    {"name":"mister_h","group":"B","value":16,"colname":"level3"}
-                ],
-                "colname":"level2"},
-                {"name":"boss3",
-                "children":
-                [
-                    {"name":"mister_i","group":"B","value":10,"colname":"level3"},
-                    {"name":"mister_j","group":"A","value":13,"colname":"level3"},
-                    {"name":"mister_k","group":"A","value":13,"colname":"level3"},
-                    {"name":"mister_l","group":"D","value":25,"colname":"level3"},
-                    {"name":"mister_m","group":"D","value":16,"colname":"level3"},
-                    {"name":"mister_n","group":"D","value":28,"colname":"level3"}
-                ],
-                "colname":"level2"}
-            ],
-        "name":"CEO"}
-
-        console.log(dataNotUsed)
-        var namesToUse = names.filter(onlyUnique);
-        var groupsToUse = groupNames.filter(onlyUnique);
-        console.log(namesToUse)
-        console.log(groupsToUse)
-
-        structure =
-        {"children":
-            [],
-
-        "name":"all"}
-        data.forEach((d)=>{
-            userValue = d[config.key]
-            namedValue = d[config.groupBy]
-
-            value = d[config.value]
-            // console.log(typeof(structure["children"][namedValue]))
-            if (typeof(structure["children"]["name"][namedValue]) !== "undefined"){
-                structure["children"]["name"][namedValue].push(value)
-            }
-            else {
-                // structure["children"][namedValue] = new Object()
-                console.log("creating new array for this value")
-                structure["children"]["name"][namedValue] = new Array()
-                console.log(structure)
-                structure["children"][namedValue].push(value)
-
-
-
-            }
-        })
-     
-
-        children = new Object();
-        groupsToUse.forEach((d)=>{
-            children.push(d)
-        })
-        console.log(children)
-        return
-
-        children.forEach((d)=>{
-            structure.children.push({"name":d})
-        })
-        // console.log(search)
-        data.forEach((d)=>{
-            console.log("found new record")
-            namevalue = d[config.key]
-            console.log(structure.children[namevalue])
-            structure.children[namevalue].push(d[config.value])
-        })
-
-        console.log(structure)
-
-
-        data.forEach((d)=>{
-
-        })
-
-        return 
-
-        // data = // modify data so it fits into the format for hierarchy
+        
+        var data = setDataHierarchy(data) 
 
         // set the dimensions of the graph
         var
