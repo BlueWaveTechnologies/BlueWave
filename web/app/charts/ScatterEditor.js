@@ -8,15 +8,6 @@ if(!bluewave.charts) bluewave.charts={};
  *   Panel used to edit scatter chart
  *
  ******************************************************************************/
-/**
- *   Data Flow:
- *   init - stubs out chart areas
- *   initializeChartSpace - stubs out chart spaces
- *   Update - chart information and config is passed in.
- *   createDropDown - initializes chart Type specific dropdowns
- *   createOptions - adds chart input options from updated Data
- *      scatter chart creation.
- ******************************************************************************/
 
 bluewave.charts.ScatterEditor = function(parent, config) {
     var me = this;
@@ -93,8 +84,8 @@ bluewave.charts.ScatterEditor = function(parent, config) {
 
 
       //Initialize chart area when ready
-        onRender(previewArea, function(){
-            initializeChartSpace();
+        scatterChart = new bluewave.charts.ScatterChart(previewArea, {
+            margin: margin
         });
     };
 

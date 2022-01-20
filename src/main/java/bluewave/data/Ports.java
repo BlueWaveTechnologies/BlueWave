@@ -3,6 +3,7 @@ import bluewave.graph.Neo4J;
 import bluewave.utils.GeoCoder;
 import bluewave.utils.StatusLogger;
 import static bluewave.utils.StatusLogger.*;
+import static bluewave.graph.Utils.*;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.math.BigDecimal;
@@ -233,18 +234,6 @@ public class Ports {
                 }
 
                 recordCounter.incrementAndGet();
-            }
-
-
-            private Long getIdFromError(Exception e){
-              //Parse error string (super hacky)
-              //Node(4846531) already exists
-                String err = e.getMessage().trim();
-                if (err.contains("Node(") && err.contains(") already exists")){
-                    err = err.substring(err.indexOf("(")+1, err.indexOf(")"));
-                    return Long.parseLong(err);
-                }
-                return null;
             }
 
 

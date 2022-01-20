@@ -5,7 +5,7 @@ if(!bluewave.dashboards) bluewave.dashboards={};
 //**  ImportSummary
 //******************************************************************************
 /**
- *   Used to render ports of entry
+ *   Used render a summary of imports by country, company, product code, etc
  *
  ******************************************************************************/
 
@@ -89,7 +89,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         establishmentOptions.setValue("Manufacturer", true);
         countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
         productOptions.setValue("All", true);
-        yAxis = "totalEntries";
+        yAxis = "totalLines";
     };
 
 
@@ -172,7 +172,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 });
 
                 data.sort(function(a,b){
-                    return b.totalEntries-a.totalEntries;
+                    return b.totalLines-a.totalLines;
                 });
                 
 
@@ -185,7 +185,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 lineChart.clear();
                 get("import/history?country=" + country + "&threshold=" + threshold, {
                     success: function(csv){
-
+                        lineData = [];
+                        
                         var rows = parseCSV(csv, ",");      
                         var header = rows.shift();
                         var createRecord = function(row){
@@ -238,7 +239,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         var d = data[i];
                         chartData.push({
                             name: d.name,
-                            quantity: d.totalEntries
+                            quantity: d.totalLines
                         });
                     }
                     barChart.update({
@@ -317,7 +318,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         });
                         
                         
-
+ 
                       //Create Links
                         data.forEach((d)=>{
 
@@ -371,6 +372,43 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                         });  
                         
                         
+                      //Update node.type attributes using realtionships
+                        var nodeTypes = {};
+                        links.forEach((link)=>{
+                            if (link.relationship){
+                                var relationships = link.relationship.split(",");
+                                if (nodeTypes[link.target]){
+                                    var currRelationships = nodeTypes[link.target];
+                                    relationships.forEach((relationship)=>{
+                                        var foundMatch = false;
+                                        for (var i=0; i<currRelationships.length; i++){
+                                            if (currRelationships[i]===relationship){
+                                                foundMatch = true;
+                                            }
+                                        }
+                                        if (!foundMatch){
+                                            currRelationships.push(relationship);
+                                        }
+                                    });
+                                    
+                                }
+                                else{
+                                    nodeTypes[link.target] = link.relationship.split(",");
+                                }
+                            }
+                        });
+                        nodes.forEach((node)=>{
+                            if (!node.type){
+                                var relationships = nodeTypes[node.name];
+                                if (relationships){
+                                    node.type = relationships.join(",");
+                                }
+                            }
+                        });
+                        
+                        
+                        
+                      //Update graph
                         nodeView.update(nodes, links);
                         
                     }
@@ -567,10 +605,10 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 {header: 'Name', width:'100%', sortable: true},
                 {header: 'Reported Quantity', width:'200px', align:'right', sortable: true},
                 {header: 'Reported Value', width:'150px', align:'right', sortable: true},
-                {header: 'Total Entries', width:'120px', align:'right', sortable: true},
+                {header: 'Total Lines', width:'120px', align:'right', sortable: true},
                 {header: 'Field Exams', width:'120px', align:'right', sortable: true},
                 {header: 'Label Exams', width:'120px', align:'right', sortable: true},
-                {header: 'Bad Samples', width:'120px', align:'right', sortable: true},
+                {header: 'Samples', width:'120px', align:'right', sortable: true},
                 {header: '% Elevated Risk', width:'135px', align:'right', sortable: true}
                 
             ],
@@ -580,7 +618,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 row.set('Name', name);
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
-                row.set('Total Entries', formatNumber(d.totalEntries));
+                row.set('Total Lines', formatNumber(d.totalLines));
                 if (d.fieldExams>0){ 
                     var str = formatNumber(d.fieldExams);
                     if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
@@ -591,11 +629,15 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";                    
                     row.set('Label Exams', str);
                 }
-                if (d.badSamples>0){ 
-                    var str = formatNumber(d.badSamples);                  
-                    row.set('Bad Samples', str);
-                }                
-                var p = (d.highPredict/d.totalEntries)*100;
+                if (d.totalSamples>0){
+                    var str = formatNumber(d.totalSamples);  
+                    if (d.badSamples>0){ 
+                        str += " (" + formatNumber(d.badSamples) + " Bad)";                  
+                        
+                    }
+                    row.set('Samples', str);
+                }
+                var p = (d.highPredict/d.totalLines)*100;
                 if (p>0){
                     p = round(p, 1);
                     row.set('% Elevated Risk', formatNumber(p)+"%");
@@ -630,7 +672,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     key = "totalValue";
                     break;
                 case 3:
-                    key = "totalEntries";
+                    key = "totalLines";
                     break;
                 default:
                     break;
@@ -721,16 +763,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 case "totalValue":
                     key = "value";
                     break;
-                case "totalEntries":
-                    key = "entries";
+                case "totalLines":
+                    key = "lines";
                     break;
                 default:
                     break;
-            }             
+            }
             
 
             var title = yAxis.replace("total","");            
-            dashboardItem.title.innerText = title + " Timeline";
+            dashboardItem.title.innerText = title + " Per Day";
             
 
             lineChart._update({
@@ -840,6 +882,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** createRelationshipGraph
   //**************************************************************************    
     var createRelationshipGraph = function(parent){
+        
+      //Create dashboard item
         var dashboardItem = createDashboardItem(parent,{
             title: "Relationships",
             width: "100%",
@@ -847,20 +891,41 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         });
         dashboardItem.el.style.margin = "0px";
         dashboardItem.el.style.display = "table";
+        
+        
+      //Get colors
+        var themeColors = getColorPalette(true);
+        var numColors = themeColors.length/2;
+        var colors = {};
+        var i = 0;
+        ["blue","green","red","orange","purple","gray"].forEach((color)=>{
+            colors[color] = {dark: themeColors[i], light: themeColors[i+numColors]};
+            i++;
+        });
+        var colorMap = {
+            manufacturer: "green",
+            shipper: "orange",
+            importer: "red",
+            consignee: "blue",
+            dii: "purple"
+        };
+
+
+      //Create relationship graph
         nodeView = new bluewave.charts.ForceDirectedChart(dashboardItem.innerDiv,{
             getNodeFill: function(node){
-                var establishment = getEstablishment();
-                if (node.type===establishment){
-                    return "#e66869";
+                var color = colorMap[node.type];
+                if (color){
+                    return colors[color].light;
                 }
                 else{
                     return "#dcdcdc";
                 }
             },
             getNodeOutline: function(node){
-                var establishment = getEstablishment();
-                if (node.type===establishment){
-                    return "#dd3131";
+                var color = colorMap[node.type];
+                if (color){
+                    return colors[color].dark;
                 }
                 else{
                     return "#777";
@@ -934,7 +999,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-
+    var getColorPalette = bluewave.utils.getColorPalette;
 
     init();
 };
