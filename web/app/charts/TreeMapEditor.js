@@ -15,15 +15,6 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
         panel: {
 
         },
-        // colors: {
-        //     green: ["#fff","#ebf5dc","#cbe9a5","#2a671a"],
-        //     blue: ["#fff","#aebfee","#587bdd","#1d3c90"],
-        //     orange: ["#fff","#fbdc77","#f8c82c","#b78e06"]
-        // },
-        // chart: {
-        //     cellSize: 13,
-        //     showTooltip: true
-        // }
     };
 
     var panel;
@@ -42,7 +33,6 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
     var init = function(){
 
         if (!config) config = {};
-        // defaultConfig.chart.colors = defaultConfig.colors.blue;
         config = merge(config, defaultConfig);
         chartConfig = config.chart;
 
@@ -291,134 +281,94 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
         body.innerHTML = "";
 
 
-        // var colorField = new javaxt.dhtml.ComboBox(
-        //     document.createElement("div"),
-        //     {
-        //         style: config.style.combobox
-        //     }
-        // );
 
 
 
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
-            // items: [
-            //     {
-            //       group: "General",
-            //       items: [
-            //           {
-            //               name: "color",
-            //               label: "Color",
-            //               type: colorField
-            //           }
-            //       ]
-            //     },
-            //     {
-            //       group: "Labels",
-            //       items: [
-            //             {
-            //                 name: "dayLabel",
-            //                 label: "Show Day",
-            //                 type: "checkbox",
-            //                 options: [
-            //                     {
-            //                         label: "",
-            //                         value: true
-            //                     }
+            items: [
 
-            //                 ]
-            //             },
-            //             {
-            //                 name: "yearLabel",
-            //                 label: "Show Year",
-            //                 type: "checkbox",
-            //                 options: [
-            //                     {
-            //                         label: "",
-            //                         value: true
-            //                     }
+                {
+                  group: "Labels",
+                  items: [
+                        {
+                            name: "groupLabel",
+                            label: "Show Group",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
 
-            //                 ]
-            //             }
-            //         ]
-            //     },
-            //     {
-            //       group: "Graph",
-            //       items: [
-            //             {
-            //                 name: "cellSize",
-            //                 label: "Cell Size",
-            //                 type: "text"
+                            ]
+                        },
+                        {
+                            name: "keyLabel",
+                            label: "Show Key",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
 
-            //             }
-            //         ]
-            //     }
+                            ]
+                        },
+                        {
+                            name: "valueLabel",
+                            label: "Show Value",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true
+                                }
 
+                            ]
+                        }
+                    ]
+                },
 
-            // ]
+            ]
         });
 
-    //   //Add color options
-    //     for (var key in config.colors) {
-    //         if (config.colors.hasOwnProperty(key)){
-    //             colorField.add(key, JSON.stringify(config.colors[key]));
-    //         }
-    //     }
-
-      //Set initial value for the color
-        // if (chartConfig.colors){
-        //     var color = chartConfig.colors;
-        //     colorField.getOptions().every(function(d){
-        //         var key = d.text;
-        //         var val = d.value;
-        //         if (color==key || JSON.stringify(color)==val){
-        //             colorField.setValue(key);
-        //             return false;
-        //         }
-        //         return true;
-        //     });
-        // }
-        // else{
-        //     colorField.setValue("blue");
-        // }
 
 
-    //   //Set initial value for Day label
-    //     var dayLabelField = form.findField("dayLabel");
-    //     var dayLabel = chartConfig.dayLabel;
-    //     dayLabelField.setValue(dayLabel===true ? true : false);
 
-    //   //Set initial value for Year label
-    //     var yearLabelField = form.findField("yearLabel");
-    //     var yearLabel = chartConfig.yearLabel;
-    //     yearLabelField.setValue(yearLabel===true ? true : false);
+      //Set initial value for Day label
+        var groupLabelField = form.findField("groupLabel");
+        var groupLabel = chartConfig.groupLabel;
+        groupLabelField.setValue(groupLabel===true ? true : false);
 
-    //   //Set initial value for Cell Size
-    //     var cellSizeField = form.findField("cellSize");
-    //     var cellSizeValue = chartConfig.cellSize;
-    //     if (isNaN(cellSizeValue) || cellSizeValue<1) cellSizeValue = 13;
-    //     cellSizeField.setValue(cellSizeValue);
+      //Set initial value for key label
+        var keyLabelField = form.findField("keyLabel");
+        var keyLabel = chartConfig.keyLabel;
+        keyLabelField.setValue(keyLabel===true ? true : false);
+      
+      //Set initial value for value label
+        var valueLabelField = form.findField("valueLabel");
+        var valueLabel = chartConfig.valueLabel;
+        valueLabelField.setValue(valueLabel===true ? true : false);
 
 
 
       //Process onChange events
         form.onChange = function(){
-            // var settings = form.getData();
+            var settings = form.getData();
 
-            // if (settings.dayLabel==="true") settings.dayLabel = true;
-            // else settings.dayLabel = false;
+            if (settings.groupLabel==="true") settings.groupLabel = true;
+            else settings.groupLabel = false;
 
-            // if (settings.yearLabel==="true") settings.yearLabel = true;
-            // else settings.yearLabel = false;
+            if (settings.valueLabel==="true") settings.valueLabel = true;
+            else settings.valueLabel = false;
 
-            // chartConfig.dayLabel = settings.dayLabel;
-            // chartConfig.yearLabel = settings.yearLabel;
+            if (settings.keyLabel==="true") settings.keyLabel = true;
+            else settings.keyLabel = false;
 
-            // var cellSize = settings.cellSize;
-            // if (isNaN(cellSize) || cellSize<1) cellSize = 13;
-            // chartConfig.cellSize = cellSize;
-
-            // chartConfig.colors = JSON.parse(settings.color);
+            chartConfig.groupLabel = settings.groupLabel;
+            chartConfig.keyLabel = settings.keyLabel;
+            chartConfig.valueLabel = settings.valueLabel;
 
             createPreview();
         };
