@@ -21,12 +21,6 @@ bluewave.charts.ScatterEditor = function(parent, config) {
     var plotInputs = {};
     var chartConfig = {};
 
-    var margin = {
-        top: 15,
-        right: 5,
-        bottom: 65,
-        left: 82
-    };
 
     var styleEditor;
     var colorPicker;
@@ -59,7 +53,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        
+
         panel = createDashboardItem(td,{
             width: "100%",
             height: "100%",
@@ -84,9 +78,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
 
 
       //Initialize chart area when ready
-        scatterChart = new bluewave.charts.ScatterChart(previewArea, {
-            margin: margin
-        });
+        scatterChart = new bluewave.charts.ScatterChart(previewArea, {});
     };
 
 
@@ -318,7 +310,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
               {
                   group: "General",
                   items: [
-            
+
                       {
                           name: "pointLabels",
                           label: "Display Point Labels",
@@ -447,7 +439,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
           if (settings.pointLabels==="true") settings.pointLabels = true;
           else settings.pointLabels = false;
 
-          
+
           chartConfig.xGrid = settings.xGrid;
           chartConfig.yGrid = settings.yGrid;
           chartConfig.xLabel = settings.xLabel;
@@ -499,7 +491,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
       var form = new javaxt.dhtml.Form(body, {
           style: config.style.form,
           items: [
-              
+
               {
                   group: "Points",
                   items: [
@@ -545,7 +537,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
 
                   ]
               },
-              
+
           ]
       });
 
@@ -568,7 +560,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
       chartConfig.pointOpacity = pointOpacity;
       form.findField("pointOpacity").setValue(pointOpacity * 100);
 
- 
+
 
       let n = parseInt(datasetID);
       if (!isNaN(n)){ //Single line edit case
