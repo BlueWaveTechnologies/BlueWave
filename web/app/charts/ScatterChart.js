@@ -13,12 +13,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: {
-            top: 15,
-            right: 15,
-            bottom: 65,
-            left: 82
-        },
         getPointLabel: function(d){
             return "labeltestloooooooooong";
         },
@@ -90,22 +84,16 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //** renderChart
   //**************************************************************************
     var renderChart = function(data, parent){
-        //me.clear();
+
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
-        var margin = config.margin;
-        var axisHeight = height - margin.top - margin.bottom;
-        var axisWidth = width - margin.left - margin.right;
-        var plotHeight = height - margin.top - margin.bottom;
-        var plotWidth = width - margin.left - margin.right;
+        var axisHeight = height;
+        var axisWidth = width;
         plotArea = chart.append("g");
         plotArea
-            .attr("width", plotWidth)
-            .attr("height", plotHeight)
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + (margin.top) + ")"
-            );
+            .attr("width", width)
+            .attr("height", height);
+
 
 
         let xKey = config.xAxis;
@@ -119,23 +107,74 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
 
+//      //Render X/Y axis
+//        var axes = drawAxes(plotArea, axisWidth, axisHeight, xKey, yKey, data, null, config);
+//        x = axes.x;
+//        y = axes.y;
+//        var xAxis = axes.xAxis;
+//
+//        //Extend x-axis if point labels are checked
+//        if (config.pointLabels){
+//
+//            x = extendScale({scale:axes.x, band:axes.xBand}, [0, axisWidth], 8).scale;
+//            reDrawAxes(plotArea, xAxis, x, null, null, axisHeight);
+//        }
+
+
+
+
+
       //Render X/Y axis
         var axes = drawAxes(plotArea, axisWidth, axisHeight, xKey, yKey, data, null, config);
+
+
+      //Update X/Y axis as needed
+        var margin = axes.margin;
+        if (margin){
+
+            var marginLeft = margin.left;
+            var marginRight = margin.right;
+            var marginTop = margin.top;
+            var marginBottom = margin.bottom;
+
+
+          //Update right margin as needed.
+            if (config.pointLabels){
+                //Check boxes of all the labels and see if the right side of any of
+                //the boxes exceeds the right margin. Adjust accordingly
+            }
+
+
+          //Rerender axis
+            if (marginTop>0 || marginBottom>0 || marginLeft>0 || marginRight>0){
+                axisHeight-=(marginTop+marginBottom);
+                axisWidth-=(marginLeft+marginRight);
+                plotArea.selectAll("*").remove();
+                plotArea
+                    .attr(
+                        "transform",
+                        "translate(" + marginLeft + "," + marginTop + ")"
+                    );
+
+                axes = drawAxes(plotArea, axisWidth, axisHeight, xKey, yKey, data, null, config);
+            }
+            margin = {
+                top: marginTop,
+                right: marginRight,
+                bottom: marginBottom,
+                left: marginLeft
+            };
+        }
+
+
+      //Get x and y functions from the axes
         x = axes.x;
         y = axes.y;
-        var xAxis = axes.xAxis;
-
-        //Extend x-axis if point labels are checked
-        if (config.pointLabels){
-
-            x = extendScale({scale:axes.x, band:axes.xBand}, [0, axisWidth], 8).scale;
-            reDrawAxes(plotArea, xAxis, x, null, null, axisHeight);
-        }
 
 
 
         let xType = getType(data[xKey]);
-        let yType = getType(data[yKey]);
+
 
 
 
@@ -237,13 +276,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 });
         }
 
-
-
-      //Draw labels if checked
-        if (config.xLabel || config.yLabel){
-            drawLabels(plotArea, config.xLabel, config.yLabel,
-                axisHeight, axisWidth, margin, config.xAxis, config.yAxis);
-        }
 
 
       //Show regression line
