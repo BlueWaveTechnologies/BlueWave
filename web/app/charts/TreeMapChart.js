@@ -14,7 +14,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin : {top: 10, right: 10, bottom: 10, left: 10},
+        // margin : {top: 10, right: 10, bottom: 10, left: 10},
         // dayLabel: true,
         // yearLabel: true,
         key: "name",
@@ -180,7 +180,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         me.clear();
 
         config = merge(chartConfig, defaultConfig);
-        
+
         var data = setDataHierarchy(data);
 
         var parent = svg.node().parentNode;
@@ -238,7 +238,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .range([.5,1])
 
         // add rectangles
-        svg
+        treeMapArea
             .selectAll("rect")
             .data(root.leaves())
             .enter()
@@ -252,7 +252,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .style("opacity", function(d){ return opacity(d.data.value)})
 
         // add text labels
-        svg
+        treeMapArea
             .selectAll("text")
             .data(root.leaves())
             .enter()
@@ -264,7 +264,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr("fill", "white")
 
         // add text labels
-        svg
+        treeMapArea
             .selectAll("vals")
             .data(root.leaves())
             .enter()
@@ -276,7 +276,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr("fill", "white")
 
         // Add title for each group
-        svg
+        treeMapArea
             .selectAll("titles")
             .data(root.descendants().filter(function(d){return d.depth==1}))
             .enter()
@@ -288,7 +288,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr("fill",  function(d){ return color(d.data.name)} )
 
         // Add title for each group
-        svg
+        treeMapArea
             .append("text")
             .attr("x", 0)
             .attr("y", 14)    // +20 to adjust position (lower)
