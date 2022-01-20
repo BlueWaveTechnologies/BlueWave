@@ -11,9 +11,20 @@ if(!bluewave.charts) bluewave.charts={};
 
 bluewave.charts.ScatterEditor = function(parent, config) {
     var me = this;
+    var defaultConfig = {
+        panel: {
+
+        },
+        chart: {
+            pointColor: "#6699cc",
+            pointRadius: 7,
+            pointOpacity: 0.8,
+            showRegLine: false
+        }
+    };
+
     var panel;
     var inputData = [];
-    var svg;
     var previewArea;
     var scatterChart;
     var optionsDiv;
@@ -30,6 +41,11 @@ bluewave.charts.ScatterEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
+
+        if (!config) config = {};
+        config = merge(config, defaultConfig);
+        chartConfig = config.chart;
+
 
         let table = createTable();
         let tbody = table.firstChild;
@@ -79,16 +95,13 @@ bluewave.charts.ScatterEditor = function(parent, config) {
 
       //Initialize chart area when ready
         scatterChart = new bluewave.charts.ScatterChart(previewArea, {});
-        scatterChart.onClick = function(plot, plotID){
-            editScatterPlot(plotID);
-        };
     };
 
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(config, inputs){
+    this.update = function(pieConfig, inputs){
         me.clear();
         for (var i=0; i<inputs.length; i++){
             var input = inputs[i];
@@ -97,14 +110,14 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         inputData = inputs;
 
 
-        if (config) chartConfig = config;
+        chartConfig = merge(pieConfig, config.chart);
 
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
 
-        createDropDown(optionsDiv);
-        createOptions();
+
+        createOptions(optionsDiv);
     };
 
 
@@ -128,8 +141,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
   /** Return chart configuration file
    */
     this.getConfig = function(){
-        let copy = Object.assign({},chartConfig);
-        return copy;
+        return chartConfig;
     };
 
 
@@ -144,63 +156,32 @@ bluewave.charts.ScatterEditor = function(parent, config) {
   //**************************************************************************
   //** createOptions
   //**************************************************************************
-  /** Initializes Options for Dropdowns.
-   */
-    var createOptions = function() {
-        var data = inputData[0];
-        var data2 = inputData[1];
-
-        let dataOptions = Object.keys(data[0]);
-        let dataOptions2 = data2?Object.keys(data2[0]):null;
-
-
-        plotInputs.xAxis.clear();
-        plotInputs.yAxis.clear();
-        dataOptions.forEach((val)=>{
-            plotInputs.xAxis.add(val,val);
-            plotInputs.yAxis.add(val,val);
-        });
-        plotInputs.xAxis.setValue(chartConfig.xAxis,chartConfig.xAxis);
-        plotInputs.yAxis.setValue(chartConfig.yAxis,chartConfig.yAxis);
-        if(dataOptions2){
-            dataOptions2.forEach(val=>{
-                plotInputs.xAxis2.add(val,val);
-                plotInputs.yAxis2.add(val,val);
-            });
-        }
-
-        createScatterPreview();
-    };
-
-
-  //**************************************************************************
-  //** createDropDown
-  //**************************************************************************
-    var createDropDown = function(parent){
+    var createOptions = function(parent) {
 
         var table = createTable();
         var tbody = table.firstChild;
         table.style.height = "";
         parent.appendChild(table);
-        createScatterDropDown(tbody);
+        createDropdown(tbody,"xAxis","X-Axis",createScatterPreview);
+        createDropdown(tbody,"yAxis","Y-Axis",createScatterPreview);
+
+
+        var data = inputData[0];
+        let dataOptions = Object.keys(data[0]);
+
+        dataOptions.forEach((val)=>{
+            plotInputs.xAxis.add(val,val);
+            plotInputs.yAxis.add(val,val);
+        });
+        plotInputs.xAxis.setValue(chartConfig.xAxis, false);
+        plotInputs.yAxis.setValue(chartConfig.yAxis, false);
     };
 
-   //**************************************************************************
-   //** createScatterDropDown
-   //**************************************************************************
-    var createScatterDropDown = function(tbody){
-        dropdownItem(tbody,"xAxis","X-Axis",createScatterPreview,plotInputs,"xAxis");
-        dropdownItem(tbody,"yAxis","Y-Axis",createScatterPreview,plotInputs,"yAxis");
-        if (inputData.length>1){
-          dropdownItem(tbody,"xAxis2","X-Axis2",createScatterPreview,plotInputs,"xAxis2");
-          dropdownItem(tbody,"yAxis2","Y-Axis2",createScatterPreview,plotInputs,"yAxis2");
-        }
-    };
 
   //**************************************************************************
-  //** dropdownItem
+  //** createDropdown
   //**************************************************************************
-    var dropdownItem = function(tbody,chartConfigRef,displayName,callBack,input,inputType){
+    var createDropdown = function(tbody,inputType,displayName,callBack){
         var tr, td;
 
         tr = document.createElement("tr");
@@ -215,102 +196,54 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         tr.appendChild(td);
 
 
-        input[inputType] = new javaxt.dhtml.ComboBox(td, {
+        plotInputs[inputType] = new javaxt.dhtml.ComboBox(td, {
             style: config.style.combobox,
             readOnly: true
         });
-        input[inputType].clear();
-        input[inputType].onChange = function(name,value){
-            chartConfig[chartConfigRef] = value;
+        plotInputs[inputType].onChange = function(name,value){
+            chartConfig[inputType] = value;
             callBack();
         };
     };
 
 
   //**************************************************************************
-  //** initializeChartSpace
-  //**************************************************************************
-    var initializeChartSpace = function(){
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
-
-        svg = d3.select(previewArea).append("svg");
-        svg.attr("width", width);
-        svg.attr("height", height);
-
-
-
-        scatterChart = new bluewave.charts.ScatterChart(svg, {
-            margin: margin
-        });
-        scatterChart.onClick = function(scatterPlot, datasetID){
-          editScatterPlot(datasetID);
-      };
-
-    };
-
-  //**************************************************************************
   //** createScatterPreview
   //**************************************************************************
     var createScatterPreview = function(){
-        onRender(previewArea, function(){
-            scatterChart.update(chartConfig, inputData);
-        });
+        console.log(chartConfig);
+        scatterChart.update(chartConfig, inputData);
     };
 
 
   //**************************************************************************
   //** editChart
   //**************************************************************************
-      var editChart = function(){
-
-          //Create styleEditor as needed
-            if (!styleEditor){
-                styleEditor = new javaxt.dhtml.Window(document.body, {
-                    title: "Edit Style",
-                    width: 400,
-                    valign: "top",
-                    modal: false,
-                    resizable: false,
-                    style: config.style.window
-                });
-            }
+    var editChart = function(){
 
 
-          //Update form
-          var body = styleEditor.getBody();
-          body.innerHTML = "";
-
-        //   var checkbox = document.createElement('input');
-        //   checkbox.type = "checkbox";
-        //   checkbox.name = "regression";
-        //   checkbox.value = "value";
-        //   checkbox.id = "regression";
-        //   checkbox.style.appearance = "auto";
-
-        //   var label = document.createElement('label')
-        //   label.htmlFor = "regression";
-        //   label.appendChild(document.createTextNode('Enable Regression Line'));
-
-        //   body.appendChild(checkbox);
-        //   body.appendChild(label);
+      //Create styleEditor as needed
+        if (!styleEditor){
+            styleEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Style",
+                width: 400,
+                valign: "top",
+                modal: false,
+                resizable: false,
+                style: config.style.window
+            });
+        }
 
 
+      //Update form
+        var body = styleEditor.getBody();
+        body.innerHTML = "";
 
-        //  checkbox.addEventListener('change', (event) => {
-        //    if (event.currentTarget.checked) {
-        //      chartConfig.showRegLine = true;
-        //      scatterChart.update(chartConfig, inputData);
-        //    } else {
-        //      chartConfig.showRegLine = false;
-        //      scatterChart.update(chartConfig, inputData);
-        //    }
-        //  });
 
-         var form = new javaxt.dhtml.Form(body, {
-          style: config.style.form,
-          items: [
-              {
+        var form = new javaxt.dhtml.Form(body, {
+            style: config.style.form,
+            items: [
+                {
                   group: "General",
                   items: [
 
@@ -325,12 +258,58 @@ bluewave.charts.ScatterEditor = function(parent, config) {
                               }
 
                           ]
-                    },
+                    }
 
 
                   ]
-              },
-              {
+                },
+                {
+                  group: "Analysis",
+                  items: [
+
+                      {
+                          name: "showRegLine",
+                          label: "Enable Regression Line",
+                          type: "checkbox",
+                          options: [
+                              {
+                                  label: "",
+                                  value: true,
+                              }
+
+                          ]
+                      },
+
+                  ]
+                },
+                {
+                  group: "Points",
+                  items: [
+                      {
+                          name: "pointColor",
+                          label: "Color",
+                          type: new javaxt.dhtml.ComboBox(
+                              document.createElement("div"),
+                              {
+                                  style: config.style.combobox
+                              }
+                          )
+                      },
+                      {
+                          name: "pointOpacity",
+                          label: "Point Opacity",
+                          type: "text"
+                      },
+                      {
+                          name: "pointRadius",
+                          label: "Radius",
+                          type: "text"
+                      }
+
+                  ]
+                },
+
+                {
                   group: "X-Axis",
                   items: [
 
@@ -359,7 +338,7 @@ bluewave.charts.ScatterEditor = function(parent, config) {
                           ]
                       }
                   ]
-              },
+                },
 
               {
                   group: "Y-Axis",
@@ -396,226 +375,105 @@ bluewave.charts.ScatterEditor = function(parent, config) {
       });
 
 
-     //Set initial value for X-gridline
-      var xGridField = form.findField("xGrid");
-      var xGrid = chartConfig.xGrid;
-      xGridField.setValue(xGrid===true ? true : false);
+      //Set initial value for X-gridline
+        var xGridField = form.findField("xGrid");
+        var xGrid = chartConfig.xGrid;
+        xGridField.setValue(xGrid===true ? true : false);
 
-     //Set initial value for Y-gridline
-      var yGridField = form.findField("yGrid");
-      var yGrid = chartConfig.yGrid;
-      yGridField.setValue(yGrid===true ? true : false);
+      //Set initial value for Y-gridline
+        var yGridField = form.findField("yGrid");
+        var yGrid = chartConfig.yGrid;
+        yGridField.setValue(yGrid===true ? true : false);
 
       //Set intial value for xLabel
-      var xLabelField = form.findField("xLabel");
-      var xLabel = chartConfig.xLabel;
-      xLabelField.setValue(xLabel===true ? true : false);
+        var xLabelField = form.findField("xLabel");
+        var xLabel = chartConfig.xLabel;
+        xLabelField.setValue(xLabel ? true : false);
 
       //Set intial value for yLabel
-      var yLabelField = form.findField("yLabel");
-      var yLabel = chartConfig.yLabel;
-      yLabelField.setValue(yLabel===true ? true : false);
+        var yLabelField = form.findField("yLabel");
+        var yLabel = chartConfig.yLabel;
+        yLabelField.setValue(yLabel ? true : false);
 
-      var tagField = form.findField("pointLabels");
-      var pointLabels = chartConfig.pointLabels;
-      tagField.setValue(pointLabels===true ? true : false);
-
-
+        var tagField = form.findField("pointLabels");
+        var pointLabels = chartConfig.showPointLabels;
+        tagField.setValue(pointLabels===true ? true : false);
 
 
-    //Process onChange events
-      form.onChange = function(){
-          var settings = form.getData();
 
-          if (settings.xGrid==="true") settings.xGrid = true;
-          else settings.xGrid = false;
-
-          if (settings.yGrid==="true") settings.yGrid = true;
-          else settings.yGrid = false;
-
-          if (settings.xLabel==="true") settings.xLabel = true;
-          else settings.xLabel = false;
-
-          if (settings.yLabel==="true") settings.yLabel = true;
-          else settings.yLabel = false;
-
-          if (settings.pointLabels==="true") settings.pointLabels = true;
-          else settings.pointLabels = false;
+      //Update color field (add colorPicker) and set initial value
+        createColorOptions("pointColor", form);
+        form.findField("pointColor").setValue(chartConfig.pointColor);
 
 
-          chartConfig.xGrid = settings.xGrid;
-          chartConfig.yGrid = settings.yGrid;
-          chartConfig.xLabel = settings.xLabel;
-          chartConfig.yLabel = settings.yLabel;
-          chartConfig.pointLabels = settings.pointLabels;
-          createScatterPreview();
-      };
-
-//          checkbox.onChange = function(checked) {
-//            if (checkbox.checked) {
-//                chartConfig.showRegLine = true;
-//                scatterChart.update(chartConfig, inputData);
-//            }
-//            else {
-//                chartConfig.showRegLine = false;
-//                scatterChart.update(chartConfig, inputData);
-//            }
-//          }
+      //Add radius slider
+        createSlider("pointRadius", form, "px", 0, 20, 1);
+        var pointRadius = parseInt(chartConfig.pointRadius);
+        if (isNaN(pointRadius) || pointRadius<1){
+            pointRadius = defaultConfig.chart.pointRadius;
+        }
+        form.findField("pointRadius").setValue(pointRadius);
 
 
-//
-//              //Process onChange events
-//                form.onChange = function(){
-//                    var settings = form.getData();
-//                    if (settings.labels==="true") settings.labels = true;
-//                    else if (settings.labels==="false") settings.labels = false;
-//                    createRegressionLine();
-//                };
-//
-//
-//
+        createSlider("pointOpacity", form, "%");
+        var pointOpacity = parseFloat(chartConfig.pointOpacity);
+        if (isNaN(pointOpacity) || pointOpacity<0 || pointOpacity>100){
+            pointOpacity = defaultConfig.chart.pointOpacity;
+        }
+        form.findField("pointOpacity").setValue(round(pointOpacity * 100,0));
 
-            styleEditor.showAt(108,57);
-            form.resize();
+
+
+
+
+      //Process onChange events
+        form.onChange = function(){
+            var settings = form.getData();
+
+
+            chartConfig.pointColor = settings.pointColor;
+            chartConfig.pointOpacity = settings.pointOpacity/100;
+            chartConfig.pointRadius = settings.pointRadius;
+
+
+            if (settings.xGrid==="true") settings.xGrid = true;
+            else settings.xGrid = false;
+
+            if (settings.yGrid==="true") settings.yGrid = true;
+            else settings.yGrid = false;
+
+            if (settings.xLabel==="true") settings.xLabel = chartConfig.xAxis;
+            else settings.xLabel = null;
+
+            if (settings.yLabel==="true") settings.yLabel = chartConfig.yAxis;
+            else settings.yLabel = null;
+
+            if (settings.pointLabels==="true") settings.pointLabels = true;
+            else settings.pointLabels = false;
+
+
+            if (settings.showRegLine==="true") settings.showRegLine = true;
+            else settings.showRegLine = false;
+
+
+            chartConfig.xGrid = settings.xGrid;
+            chartConfig.yGrid = settings.yGrid;
+            chartConfig.xLabel = settings.xLabel;
+            chartConfig.yLabel = settings.yLabel;
+            chartConfig.pointLabels = settings.pointLabels;
+            chartConfig.showRegLine = settings.showRegLine;
+
+
+            createScatterPreview();
         };
 
-  //**************************************************************************
-  //** editScatterPlot
-  //**************************************************************************
-  var editScatterPlot = function (datasetID) {
-
-        //Update form
-        var styleEditor = getStyleEditor(config);
-        var body = styleEditor.getBody();
-        body.innerHTML = "";
 
 
-    //Add style options
-      var form = new javaxt.dhtml.Form(body, {
-          style: config.style.form,
-          items: [
-
-              {
-                  group: "Points",
-                  items: [
-                      {
-                          name: "pointColor",
-                          label: "Color",
-                          type: new javaxt.dhtml.ComboBox(
-                              document.createElement("div"),
-                              {
-                                  style: config.style.combobox
-                              }
-                          )
-                      },
-                      {
-                          name: "pointOpacity",
-                          label: "Point Opacity",
-                          type: "text"
-                      },
-                      {
-                          name: "pointRadius",
-                          label: "Radius",
-                          type: "text"
-                      }
-
-                  ]
-              },
-              {
-                  group: "Analysis",
-                  items: [
-
-                      {
-                          name: "showRegLine",
-                          label: "Enable Regression Line",
-                          type: "checkbox",
-                          options: [
-                              {
-                                  label: "",
-                                  value: true,
-                              }
-
-                          ]
-                      },
-
-                  ]
-              },
-
-          ]
-      });
+        styleEditor.showAt(108,57);
+        form.resize();
+    };
 
 
-
-    //Update color field (add colorPicker) and set initial value
-      createColorOptions("pointColor", form);
-
-    //Add radius slider
-      createSlider("pointRadius", form, "px", 0, 20, 1);
-      var pointRadius = chartConfig.pointRadius;
-      if (isNaN(pointRadius)) pointRadius = 0;
-      chartConfig.pointRadius = pointRadius;
-      form.findField("pointRadius").setValue(pointRadius);
-
-
-      createSlider("pointOpacity", form, "%");
-      var pointOpacity = chartConfig.pointOpacity;
-      if (isNaN(pointOpacity)) pointOpacity = 0.8;
-      chartConfig.pointOpacity = pointOpacity;
-      form.findField("pointOpacity").setValue(pointOpacity * 100);
-
-
-
-      let n = parseInt(datasetID);
-      if (!isNaN(n)){ //Single line edit case
-
-          var colors = bluewave.utils.getColorPalette(true);
-
-          if( !chartConfig["pointColor" + n] ) chartConfig["pointColor" + n] = colors[n%colors.length];
-          if( isNaN(chartConfig["pointRadius" + n]) ) chartConfig["pointRadius" + n] = 7;
-          if( isNaN(chartConfig["pointOpacity" + n]) ) chartConfig["pointOpacity" + n] = 0.8;
-          if( chartConfig["showLineReg" + n] !== true) chartConfig["showLineReg" + n] = false;
-
-
-          form.findField("pointColor").setValue(chartConfig["pointColor" + n]);
-          form.findField("pointRadius").setValue(chartConfig["pointRadius" + n]);
-          form.findField("pointOpacity").setValue(chartConfig["pointOpacity" + n]*100);
-          form.findField("showRegLine").setValue(chartConfig["showRegLine" + n]);
-
-
-          form.onChange = function(){
-              let settings = form.getData();
-
-              if (settings.showRegLine === "true") settings.showRegLine = true;
-              else settings.showRegLine = false;
-
-              chartConfig["pointColor" + n] = settings.pointColor;
-              chartConfig["pointRadius" + n] = settings.pointRadius;
-              chartConfig["pointOpacity" + n] = settings.pointOpacity/100;
-              chartConfig["showRegLine" + n] = settings.showRegLine;
-
-              createScatterPreview();
-          };
-
-      }
-      else{
-
-        //Process onChange events
-          form.onChange = function(){
-              let settings = form.getData();
-              chartConfig.pointColor = settings.pointColor;
-              chartConfig.pointOpacity = settings.pointOpacity/100;
-              chartConfig.pointRadius = settings.pointRadius;
-              createScatterPreview();
-          };
-      }
-
-
-
-
-    //Render the styleEditor popup and resize the form
-      styleEditor.showAt(108,57);
-      form.resize();
-  };
   //**************************************************************************
   //** createColorOptions
   //**************************************************************************
@@ -635,25 +493,17 @@ bluewave.charts.ScatterEditor = function(parent, config) {
       });
   };
 
-  //**************************************************************************
-  //** CreateRegressionLine
-  //**************************************************************************
-
-  var createRegressionLine = function() {
-
-  }
 
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
-    var onRender = javaxt.dhtml.utils.onRender;
+    var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
-    var getData = bluewave.utils.getData;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
-    var getStyleEditor = bluewave.chart.utils.getStyleEditor;
+    var round = javaxt.dhtml.utils.round;
 
     init();
 };
