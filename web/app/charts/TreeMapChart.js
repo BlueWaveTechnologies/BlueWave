@@ -1,53 +1,4 @@
 
-const logger = {
-    log() {          // Generic method logging all arguments.
-        console.log(...arguments);
-        return this;
-    },
-    
-    logMsg(msg) {    // Logging just a simple msg.
-        console.log(msg);
-        return this;
-    },
-    
-    logSel() {       // Log the selection.
-        console.log(this);
-        return this;
-    },
-    
-    logAttr(name) {  // Log the attributes with "name" for all selected elements.
-        this.each(function(d, i) {
-        let attr = d3.select(this).attr(name);
-        console.log(`Node ${i}: ${name}=${attr}`);
-        });
-        return this;
-    },
-
-    logText(name) {  // Log the text attached to this object
-        this.each(function(d, i) {
-            let text = d3.select(this).text();
-            console.log(`Node ${name}: ${name}=${text}`);
-        });
-        return this;
-        },
-    
-    logData() {      // Log the data bound to this selection.
-        console.log(this.data());
-        return this;
-    },
-    
-    logNodeData() {  // Log datum per node.
-        this.each(function(d, i) {
-        console.log(`Node ${i}: ${d}`);
-        });
-        return this;
-    }
-    };
-    
-    // this assigns the d3.selection "class like thing" to have the logging attribute capabilities
-    Object.assign(d3.selection.prototype, logger);
-
-
 if(!bluewave) var bluewave={};
 if(!bluewave.charts) bluewave.charts={};
 
@@ -184,8 +135,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                         // check whether this user already exists - if he does then accumulate values with pre-existing record
                         if (typeof(customFilter(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
                             userRecord = customFilter(objectToInsertTo["children"],"name", userValue) 
-                            userRecord = userRecord["value"] + value
-
+                            userRecord["value"] = userRecord["value"] + value
                         }
                         else {    // create new user record 
                             objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value})
@@ -206,7 +156,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                 // check whether this user already exists - if he does then accumulate values with pre-existing record
                 if (typeof(customFilter(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
                     userRecord = customFilter(objectToInsertTo["children"],"name", userValue) 
-                    userRecord = userRecord["value"] + value
+                    userRecord["value"] = userRecord["value"] + value
                 }
 
                 else {    // create new user record 
@@ -271,7 +221,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         // color scale
         var color = d3.scaleOrdinal()
-            .domain(groupNames)
+            // .domain(groupNames)
             .range(config.colors)   
 
         // opacity scale
@@ -285,7 +235,6 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         svg
             .selectAll("rect")
             .data(root.leaves())
-            .logData()
             .enter()
             .append("rect")
             .attr('x', function (d) { return d.x0; })
@@ -293,7 +242,6 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr('width', function (d) { return d.x1 - d.x0; })
             .attr('height', function (d) { return d.y1 - d.y0; })
             .style("stroke", "black")
-            // .logMsg(data.parent.data.name)
             .style("fill", function(d){ return color(d.parent.data.name)} )
             .style("opacity", function(d){ return opacity(d.data.value)})
 
