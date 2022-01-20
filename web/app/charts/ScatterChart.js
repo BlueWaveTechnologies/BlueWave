@@ -13,29 +13,11 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        getPointLabel: function(d){
-            return "labeltestloooooooooong";
-        },
-        getPointRadius: function(d){
-            var pointRadius = parseFloat(config.pointRadius0);
-            if (isNaN(pointRadius)) pointRadius = 7;
-            return pointRadius;
-        },
-        getPointColor: function(d){
-            var pointColor = config.pointColor0;
-            if (!pointColor) pointColor = "#6699cc";
-            return pointColor;
-        },
-        getPointOpacity: function(d){
-            var pointOpacity = parseFloat(config.pointOpacity0);
-            if (isNaN(pointOpacity)) pointOpacity = 0.8;
-            return pointOpacity;
-        },
-        getShowRegLine: function(d){
-            var showRegLine = config.showRegLine0;
-            if (showRegLine !== true) showRegLine = false;
-            return showRegLine;
-        }
+        pointColor: "#6699cc",
+        pointRadius: 7,
+        pointOpacity: 0.8,
+        pointLabels: false,
+        showRegLine: false
     };
     var svg, chart, plotArea, line;
     var x, y;
@@ -53,6 +35,15 @@ bluewave.charts.ScatterChart = function(parent, config) {
             svg = s;
             chart = g;
         });
+    };
+
+
+  //**************************************************************************
+  //** setConfig
+  //**************************************************************************
+    this.setConfig = function(chartConfig){
+        if (!chartConfig) config = defaultConfig;
+        else config = merge(chartConfig, defaultConfig);
     };
 
 
@@ -78,6 +69,27 @@ bluewave.charts.ScatterChart = function(parent, config) {
             renderChart(data, parent);
         });
     };
+
+
+    this.getPointLabel = function(d){
+        return "labeltestloooooooooong";
+    };
+
+    this.getPointRadius = function(d){
+        return config.pointRadius;
+    };
+
+
+    this.getPointColor = function(d){
+        return config.pointColor;
+    };
+
+    this.getPointOpacity = function(d){
+        return config.pointOpacity;
+    };
+
+
+    this.onClick = function(el, datasetID, d){};
 
 
   //**************************************************************************
@@ -178,36 +190,6 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
 
-        var tooltip = d3.select(parent)
-         .append("div")
-         .style("opacity", 0)
-         .attr("class", "tooltip")
-         .style("background-color", "white")
-         .style("border", "solid")
-         .style("border-width", "1px")
-         .style("border-radius", "5px")
-         .style("padding", "10px");
-
-        var mouseover = function(d) {
-            if (config.tooltip!==true) return;
-            tooltip.style("opacity", 1);
-        };
-
-        var mousemove = function(d) {
-            if (config.tooltip!==true) return;
-            tooltip
-            .html("X: " + d[xKey]+ "     Y: " + d[yKey])
-            .style("left", (d3.mouse(this)[0]+90) + "px")
-            .style("top", (d3.mouse(this)[1]) + "px");
-        };
-
-        var mouseleave = function(d) {
-            if (config.tooltip!==true) return;
-            tooltip
-            .transition()
-            .duration(200)
-            .style("opacity", 0);
-        };
 
 
       //Draw grid lines if option is checked
@@ -240,13 +222,10 @@ bluewave.charts.ScatterChart = function(parent, config) {
               .attr("dataset", 0)
               .attr("cx", getX)
               .attr("cy", getY)
-              .attr("r", config.getPointRadius)
-              .style("fill", config.getPointColor)
-              .style("opacity", config.getPointOpacity)
+              .attr("r", me.getPointRadius())
+              .style("fill", me.getPointColor())
+              .style("opacity", me.getPointOpacity())
               .style("stroke", "white")
-              .on("mouseover", mouseover)
-              .on("mousemove", mousemove)
-              .on("mouseleave", mouseleave)
               .on("click", function(d){
                 var datasetID = parseInt(d3.select(this).attr("dataset"));
                 me.onClick(this, datasetID, d);
@@ -265,12 +244,12 @@ bluewave.charts.ScatterChart = function(parent, config) {
             .append("text")
                 .attr("x", function(d){
                     var cx = getX(d);
-                    var r = config.getPointRadius(d);
+                    var r = me.getPointRadius(d);
                     return cx+r+1;
                 })
                 .attr("y", getY)
                 .attr("font-size", 10)
-                .text(config.getPointLabel)
+                .text(me.getPointLabel())
                 .on("click", function(node){
                     //selectNode(node, this);
                 });
@@ -279,7 +258,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
       //Show regression line
-        if (config.getShowRegLine()) {
+        if (config.showRegLine) {
             var linReg = calculateLinReg(data, xKey, yKey,
                 d3.min(data, function(d) {return d[xKey]}),
                 d3.min(data, function(d) { return d[yKey]}), x, y)
@@ -297,7 +276,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 //   .attr("class", "line")
                   .attr("dataset", 0)
                   .attr("d", line)
-                  .attr("stroke", config.getPointColor)
+                  .attr("stroke", me.getPointColor())
                   .attr("stroke-linecap", 'round')
                   .attr("stroke-width", 2)
                   .on("click", function(d){
