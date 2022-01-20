@@ -332,7 +332,7 @@ bluewave.charts.PieEditor = function(parent, config) {
   //** createPreview
   //**************************************************************************
     var createPreview = function(){
-        if (chartConfig.pieKey===null || chartConfig.pieValue===null) return;
+        if (chartConfig.pieKey==null || chartConfig.pieValue==null) return;
 
 
         onRender(previewArea, function(){
