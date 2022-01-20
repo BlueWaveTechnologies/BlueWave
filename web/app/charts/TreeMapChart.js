@@ -55,6 +55,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+        console.log("clear function ran")
         if (treeMapArea) treeMapArea.selectAll("*").remove();
     };
 
@@ -179,6 +180,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         me.clear();
 
         config = merge(chartConfig, defaultConfig);
+        
+        var data = setDataHierarchy(data);
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
@@ -198,12 +201,11 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         var chartConfig = config;
         
-        var data = setDataHierarchy(data) 
 
         // set the dimensions of the graph
         var
-        width = parent.offsetWidth - config.margin.left - config.margin.right,
-        height = parent.offsetHeight - config.margin.top - config.margin.bottom;
+        width = parent.offsetWidth - chartConfig.margin.left - chartConfig.margin.right,
+        height = parent.offsetHeight - chartConfig.margin.top - chartConfig.margin.bottom;
 
 
         // Give the data to this cluster layout:
@@ -223,11 +225,11 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         if (typeof(groupNames) !== "undefined"){
             var color = d3.scaleOrdinal()
                 .domain(groupNames)
-                .range(config.colors)   
+                .range(chartConfig.colors)   
         }
         else{
             var color = d3.scaleOrdinal()
-                .range(config.colors)
+                .range(chartConfig.colors)
         }
 
         // opacity scale
