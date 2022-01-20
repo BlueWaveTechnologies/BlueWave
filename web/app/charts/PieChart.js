@@ -491,11 +491,15 @@ bluewave.charts.PieChart = function(parent, config) {
         if (!isNaN(animationSteps) && animationSteps > 50) {
 
           var totalDelay = 0;
-
+          animationSteps /= 2;
           var arcs = pieGroup.selectAll("path");
 
-          //Reset arcs
-          arcs.attr("d", 0);
+          
+          var zeroaArc = d3.arc()
+         .innerRadius(0)
+         .outerRadius(0);
+         //Reset arcs
+          arcs.attr("d", zeroaArc);
 
           arcs
             .transition().delay(function (d, i) {
