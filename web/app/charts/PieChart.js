@@ -23,7 +23,7 @@ bluewave.charts.PieChart = function(parent, config) {
         colors: ["#6699cc","#f8f8f8"], //start->end
         colorScaling: "linear",
         otherColor: "#b8b8b8",
-        animationSteps: 11500
+        animationSteps: 1500
     };
     var svg, pieArea;
 
@@ -260,8 +260,6 @@ bluewave.charts.PieChart = function(parent, config) {
          .innerRadius(innerRadius)
          .outerRadius(radius);
 
-        var lastTimeStep = 0;
-        var animationSteps = config.animationSteps;
       //Render pie chart
         var pieGroup = pieChart.append("g");
         pieGroup.attr("name", "pie");
@@ -269,7 +267,7 @@ bluewave.charts.PieChart = function(parent, config) {
         .data(pieData)
         .enter()
         .append("path")
-        // .attr("d", arc)
+        .attr("d", arc)
         .attr("fill", function (d,i) {
             if (hasOther && i==numSlices-1){
                 return otherColor;
@@ -278,38 +276,9 @@ bluewave.charts.PieChart = function(parent, config) {
         })
         .attr("stroke", "#777")
         .style("stroke-width", "1px")
-        // .on("mouseover", mouseover)
-        // .on("mousemove", mousemove)
-        // .on("mouseleave", mouseleave);
-        .transition().delay(function (d, i) { 
-            var angleDiff = Math.abs(d.startAngle - d.endAngle);
-            var angleRatio = angleDiff / (2 * Math.PI);
-            // return angleRatio * animationSteps;
-            // return i * (animationSteps); 
-
-            var time = angleRatio * animationSteps;
-            var timeStep = lastTimeStep + time;
-            lastTimeStep += time;
-            console.log(lastTimeStep)
-            return timeStep;
-            // return i*animationSteps/9
- 
-        })
-        .duration(function (d) {
-            var angleDiff = Math.abs(d.startAngle - d.endAngle);
-            var angleRatio = angleDiff / (2 * Math.PI);
-            return angleRatio * animationSteps;
-          })
-        .ease(d3.easeLinear)
-        .attrTween('d', function (d) {
-          // console.log(d.startAngle, d.endAngle)
-            var i = d3.interpolate(d.startAngle, d.endAngle);
-            return function (t) {
-              d.endAngle = i(t);
-              return arc(d);
-              // return 0;
-            }
-          });
+        .on("mouseover", mouseover)
+        .on("mousemove", mousemove)
+        .on("mouseleave", mouseleave);
 
 
       //Render lines and labels as needed
@@ -513,23 +482,79 @@ bluewave.charts.PieChart = function(parent, config) {
                     "scale(" + scale + ")"
                 );
 
-            };
+            }
+
+        };
+
+        //Add animations
+        var animationSteps = config.animationSteps;
+        if (!isNaN(animationSteps) && animationSteps > 50) {
+
+          var totalDelay = 0;
+
+          var arcs = pieGroup.selectAll("path");
+
+          //Reset arcs
+          arcs.attr("d", 0);
+
+          arcs
+            .transition().delay(function (d, i) {
+              var angleDiff = Math.abs(d.startAngle - d.endAngle) + (d.padAngle);
+              var angleRatio = angleDiff / (2 * Math.PI);
+ 
+              var thisDelay = totalDelay;
+              var nextDelay = angleRatio * animationSteps;
+    
+              totalDelay += nextDelay ;
+
+              return thisDelay;
+            })
+            .duration(function (d) {
+              var angleDiff = Math.abs(d.startAngle - d.endAngle) + (d.padAngle);
+              var angleRatio = angleDiff / (2 * Math.PI);
+              return angleRatio * animationSteps;
+            })
+            .ease(d3.easeLinear)
+            .attrTween('d', function (d) {
+              
+              var interpolater = d3.interpolate(d.startAngle, d.endAngle);
+              return function (t) {
+                d.endAngle = interpolater(t);
+                return arc(d);
+              }
+            });
+
+            if(showLabels){
+
+              var labels = labelGroup.selectAll("text");
+              var polylines = lineGroup.selectAll("polyline");
+
+              //Reset opacity for lines and labels to 0 for transition
+              polylines.attr("opacity", 0);
+              labels.attr("opacity", 0);
+
+              var delayTransition = function(d, i){
+                return i*animationSteps/numSlices;
+              }
+
+              //All the coordinates for the labels and polylines are in endPoints, so we can do any positioning transition I think
+              polylines.transition()
+                .delay(delayTransition)
+                .duration(animationSteps)
+                .attr("opacity", 1);
+
+              labels.transition()
+                .delay(delayTransition)
+                .duration(animationSteps)
+                .attr("opacity", 1);
+            }
 
 
-          //Add animations
-          // var animationSteps = chartConfig.animationSteps;
-          // if (!isNaN(animationSteps) && animationSteps > 50) {
+        };
 
 
 
 
-
-
-          // }
-
-
-
-        }
     };
 
 
