@@ -1,178 +1,119 @@
+"""
+python3 py/compare_pdfs.py -f data/test_pdfs/00026_04_fda-K071597_test_data.pdf data/test_pdfs/small_test/copied_data.pdf
+"""
+
 import re
 import sys
 import json
 import math
 import pickle
 import time
-import difflib
 import argparse
+
 import itertools
 from itertools import groupby
 from itertools import combinations
 from operator import itemgetter
 from random import randint
-from scipy.stats import chisquare
-import fitz  # this is pymupdf
+# from scipy.stats import chisquare
+
+# PyMuPDF
+import fitz
 fitz.TOOLS.mupdf_display_errors(False)
 import warnings
 warnings.filterwarnings("ignore")
 
+from pydivsufsort import divsufsort, kasai
+
+
 #-------------------------------------------------------------------------------
 # UTILS
 #-------------------------------------------------------------------------------
-datadir = ''
-def get_datadir():
-    import os
-    from pathlib import Path
-    currdir = os.path.dirname(os.path.realpath(__file__))
-    parentdir = str(Path(currdir).parent)
-    return parentdir + os.path.sep + 'data' + os.path.sep
-
 def list_of_unique_dicts(L):
     # https://stackoverflow.com/questions/11092511/python-list-of-unique-dictionaries
     return list({json.dumps(v, sort_keys=True): v for v in L}.values())
 
 
-def longest_common_substring(len_a, text, min_len):
-    """Get the longest common substrings and their positions.
-    >>> longest_common_substring('banana')
-    {'ana': [1, 3]}
-    >>> text = "not so Agamemnon, who spoke fiercely to "
-    >>> sorted(longest_common_substring(text).items())
-    [(' s', [3, 21]), ('no', [0, 13]), ('o ', [5, 20, 38])]
-    This function can be easy modified for any criteria, e.g. for searching ten
-    longest non overlapping repeated substrings.
-    """
-    sa, rsa, lcp = suffix_array(text)
-    cross_doc_substrings = []
-    for i in range(1, len(text)):
-        if lcp[i] > min_len:
-            j1, j2, h = sa[i - 1], sa[i], lcp[i]
-            is_cross_doc = min(j1, j2) < len_a and max(j1, j2) > len_a
-            if is_cross_doc:
-                assert text[j1:j1 + h] == text[j2:j2 + h]
-                substring = text[j1:j1 + h]
-                cross_doc_substrings.append((substring, sorted([j1, j2])))
-    # Get non overlapping
-    # Sort by length
-    cross_doc_substrings = sorted(cross_doc_substrings, key=lambda tup: -len(tup[0]))
+def find_common_substrings(text1, text2, min_len):
+    # Find all common non-overlapping substrings between two strings.
+    # minLen is the minimum acceptable length of resulting common substrings.
+    #
+    # findCommonSubstrings("abcde", "bcbcd", 2)
+    #  -> ["bcd"]
+    #  Note: "bc" and "cd" are also common substrings, but they are substrings
+    #      of "bcd" and therefore do not count.
+    #
+    # combined: "abcdebcbcd"
+    # suffix array:    [0 5 7 1 6 8 2 9 3 4]
+    # suffixes:
+    #  - abcdebcbcd
+    #  - bcbcd
+    #  - bcd
+    #  - bcdebcbcd
+    #  - cbcd
+    #  - cd
+    #  - cdebcbcd
+    #  - d
+    #  - debcbcd
+    #  - ebcbcd
+    # LCP array:       [0 0 2 3 0 1 2 0 1 0]
+    #
+    # Iterating through LCP we check to see if the LCP value is greater than
+    # minLen (meaning the overlap is long enough), and if the overlap occurs
+    # in both texts.
+    # We get some candidates:
+    #   - bc
+    #   - bcd
+    #   - cd
+    #
+    # We sort the candidates by length and remove those that are substrings of
+    # any previous candidate. Thus we are left with "bcd".
+
+    text_combined = text1 + '||' + text2
+    sa = divsufsort(text_combined)
+    lcp = kasai(text_combined, sa)
+    lcp = list(lcp)
+    lcp = [lcp[-1]] + lcp[:-1]
+
+    # Collect candidates
+    candidates = []
+    for i in range(1, len(sa)):
+        is_long_enough = lcp[i] >= min_len;
+        if is_long_enough:
+            j1 = sa[i-1]
+            j2 = sa[i]
+            h = lcp[i]
+            j_min = min(j1, j2)
+            j_max = max(j1, j2)
+            is_in_both = j_min < len(text1) and j_max > len(text1)
+            does_not_cross = not (j_min < len(text1) and j_min+h > len(text1))
+            if is_in_both and does_not_cross:
+                substring = text_combined[j1:j1+h]
+                candidates.append((substring, j1, j1+h))
+    
+    # Remove candidates that are a substring of other candidates
+
+    # Sort by length, descending
+    candidates = sorted(candidates, key=lambda tup: -len(tup[0]))
     non_overlapping = []
     def is_subset_of_any_existing(new, existing):
-        # This is made easier bc it's sorted by length
-        # so a subsequent element can never be a superset of an existing.
-        new_str, new_idxs = new
-        n1_start, n2_start = new_idxs
-        n1_end = n1_start + len(new_str)
-
-        for str_existing, idxs_existing in existing:
-            e1_start, e2_start = idxs_existing # "e" for "existing"
-            e1_end = e1_start + len(str_existing)
-            # Look only at the zeroth occurrence of both strings
-            new_is_subset_exi = e1_start <= n1_start and n1_end <= e1_end
-            if new_is_subset_exi:
+        # for existing_str in existing:
+        #     if new in existing:
+        #         return True
+        new_str, new_start, new_end = new
+        for ex_str, ex_start, ex_end in existing:
+            if ex_start <= new_start and new_end <= ex_end:
                 return True
         return False
 
-    for new in cross_doc_substrings:
+    # Go through and take out overlapping substrings
+    for new in candidates:
         if not is_subset_of_any_existing(new=new, existing=non_overlapping):
             non_overlapping.append(new)
-
-    return non_overlapping
-
-
-def suffix_array(text, _step=16):
-    """Analyze all common strings in the text.
-    Short substrings of the length _step a are first pre-sorted. The are the
-    results repeatedly merged so that the garanteed number of compared
-    characters bytes is doubled in every iteration until all substrings are
-    sorted exactly.
-    Arguments:
-        text:  The text to be analyzed.
-        _step: Is only for optimization and testing. It is the optimal length
-               of substrings used for initial pre-sorting. The bigger value is
-               faster if there is enough memory. Memory requirements are
-               approximately (estimate for 32 bit Python 3.3):
-                   len(text) * (29 + (_size + 20 if _size > 2 else 0)) + 1MB
-    Return value:      (tuple)
-      (sa, rsa, lcp)
-        sa:  Suffix array                  for i in range(1, size):
-               assert text[sa[i-1]:] < text[sa[i]:]
-        rsa: Reverse suffix array          for i in range(size):
-               assert rsa[sa[i]] == i
-        lcp: Longest common prefix         for i in range(1, size):
-               assert text[sa[i-1]:sa[i-1]+lcp[i]] == text[sa[i]:sa[i]+lcp[i]]
-               if sa[i-1] + lcp[i] < len(text):
-                   assert text[sa[i-1] + lcp[i]] < text[sa[i] + lcp[i]]
-    >>> suffix_array(text='banana')
-    ([5, 3, 1, 0, 4, 2], [3, 2, 5, 1, 4, 0], [0, 1, 3, 0, 0, 2])
-    Explanation: 'a' < 'ana' < 'anana' < 'banana' < 'na' < 'nana'
-    The Longest Common String is 'ana': lcp[2] == 3 == len('ana')
-    It is between  tx[sa[1]:] == 'ana' < 'anana' == tx[sa[2]:]
-    """
-    tx = text
-    t0 = time.time()
-    size = len(tx)
-    step = min(max(_step, 1), len(tx))
-    sa = list(range(len(tx)))
-    # log.debug('%6.3f pre sort', time.time() - t0)
-    sa.sort(key=lambda i: tx[i:i + step])
-    # log.debug('%6.3f after sort', time.time() - t0)
-    grpstart = size * [False] + [True]  # a boolean map for iteration speedup.
-    # It helps to skip yet resolved values. The last value True is a sentinel.
-    rsa = size * [None]
-    stgrp, igrp = '', 0
-    for i, pos in enumerate(sa):
-        st = tx[pos:pos + step]
-        if st != stgrp:
-            grpstart[igrp] = (igrp < i - 1)
-            stgrp = st
-            igrp = i
-        rsa[pos] = igrp
-        sa[i] = pos
-    grpstart[igrp] = (igrp < size - 1 or size == 0)
-    # log.debug('%6.3f after group', time.time() - t0)
-    while grpstart.index(True) < size:
-        # assert step <= size
-        nmerge = 0
-        nextgr = grpstart.index(True)
-        while nextgr < size:
-            igrp = nextgr
-            nextgr = grpstart.index(True, igrp + 1)
-            glist = []
-            for ig in range(igrp, nextgr):
-                pos = sa[ig]
-                if rsa[pos] != igrp:
-                    break
-                newgr = rsa[pos + step] if pos + step < size else -1
-                glist.append((newgr, pos))
-            glist.sort()
-            for ig, g in groupby(glist, key=itemgetter(0)):
-                g = [x[1] for x in g]
-                sa[igrp:igrp + len(g)] = g
-                grpstart[igrp] = (len(g) > 1)
-                for pos in g:
-                    rsa[pos] = igrp
-                igrp += len(g)
-            nmerge += len(glist)
-        # log.debug('%6.3f for step=%d nmerge=%d', time.time() - t0, step, nmerge)
-        step *= 2
-    del grpstart
-    # create LCP array
-    lcp = size * [None]
-    h = 0
-    for i in range(size):
-        if rsa[i] > 0:
-            j = sa[rsa[i] - 1]
-            while i != size - h and j != size - h and tx[i + h] == tx[j + h]:
-                h += 1
-            lcp[rsa[i]] = h
-            if h > 0:
-                h -= 1
-    if size > 0:
-        lcp[0] = 0
-    # log.debug('%6.3f end', time.time() - t0)
-    return sa, rsa, lcp
-
+    
+    result = [i[0] for i in non_overlapping]
+    
+    return result
 
 #-------------------------------------------------------------------------------
 # COMPARISON
@@ -184,20 +125,11 @@ def get_digits(text):
 
 
 def compare_texts(full_text_a, full_text_b, min_len):
-    combined_text = (full_text_a + '&&' + full_text_b)
-    l = len(full_text_a)
-    
-    lcs_result = sorted(longest_common_substring(l, combined_text, min_len))
-    
-    my_lcs = []
-    for s, posns in lcs_result:
-        if len(s) < min_len:
-            continue
-        # Make sure occurrence is between different texts
-        if not (min(posns) < l and max(posns) > l):
-            continue
-        my_lcs.append(s.strip('|'))
-    return my_lcs
+    com_substrs = find_common_substrings(full_text_a, full_text_b, min_len)
+
+    com_substrs = [s.split('|')[0] for s in com_substrs]
+
+    return com_substrs
 
 
 def compare_images(hashes_a, hashes_b):
@@ -253,7 +185,9 @@ def get_page_texts(filename):
     with fitz.open(filename) as doc:
         for page in doc:
             page_text = page.get_text()
-            texts.append((page.number+1, page_text))
+            page_text_ascii = ''.join(c if c.isascii() else ' ' for c in page_text)
+            texts.append((page.number+1, page_text_ascii))
+
     return texts
 
 
@@ -334,9 +268,9 @@ def filter_sus_pairs(suspicious_pairs):
     if not common_text_sus_pairs:
         return suspicious_pairs
 
-    with open(datadir+'vectorizer.p', 'rb') as f:
+    with open('data/vectorizer.p', 'rb') as f:
         vectorizer = pickle.load(f)
-    with open(datadir+'text_clf.p', 'rb') as f:
+    with open('data/text_clf.p', 'rb') as f:
         clf = pickle.load(f)
 
     text_strs = [p['string'] for p in common_text_sus_pairs]
@@ -394,8 +328,6 @@ def get_file_info(file_data, suspicious_pairs):
 def main(filenames, pretty_print, verbose=False):
     t0 = time.time()
     assert len(filenames) >= 2, 'Must have at least 2 files to compare!'
-
-    datadir = get_datadir()
 
     suspicious_pairs = []
 
@@ -456,6 +388,7 @@ def main(filenames, pretty_print, verbose=False):
         if verbose: print('Comparing texts...')
         com_txt_substrs = compare_texts(
             a['full_text'], b['full_text'], min_len=280)
+        if verbose: print('\tGathering text results...')
         text_is_sus = len(com_txt_substrs) > 0
         if text_is_sus:
             for sus_substr in com_txt_substrs:
