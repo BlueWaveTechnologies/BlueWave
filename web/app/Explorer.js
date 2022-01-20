@@ -420,6 +420,9 @@ bluewave.Explorer = function(parent, config) {
                         if (node.type==="supplyChain"){
                             button.mapChart.enable();
                         }
+                        if (node.type==="pdf"){
+                            button.compareDocs.enable();
+                        }
                         numNodes++;
                     }
                 }
