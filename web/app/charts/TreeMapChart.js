@@ -14,7 +14,6 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        // margin : {top: 10, right: 10, bottom: 10, left: 10},
         keyLabel: true,
         groupLabel: true,
         valueLabel: true,
@@ -22,7 +21,6 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         value: "value",
         groupBy: null, 
         colors: [ "#402D54", "#D18975", "#8FD175","#cc0a12", "#b8eb14","#0d90f2","#14e8eb","#1ce35b"], //first set of colors
-        // showTooltip: false
     };
     var svg, treeMapArea;
 
@@ -56,9 +54,37 @@ bluewave.charts.TreeMapChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        console.log("clear function ran")
         if (treeMapArea) treeMapArea.selectAll("*").remove();
     };
+
+
+  //**************************************************************************
+  //** getNestedObject
+  //**************************************************************************
+    // parse through the data heirarchy and return the object matching these parameters
+    var getNestedObject = (object, key, value) => {
+        if (Array.isArray(object)) {
+          for (const obj of object) {
+            const result = getNestedObject(obj, key, value);
+            if (result) {
+              return obj;
+            }
+          }
+        } else {
+          if (object.hasOwnProperty(key) && object[key] === value) {
+            return object;
+          }
+          for (const k of Object.keys(object)) {
+            if (typeof object[k] === "object") {
+              const o = getNestedObject(object[k], key, value);
+              if (o !== null && typeof o !== 'undefined')
+                return o;
+            }
+          }
+          return null;
+        }
+      }
+
 
 
 
@@ -98,35 +124,13 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         "name":"all"}
 
-        const customFilter = (object, key, value) => {
-            if (Array.isArray(object)) {
-              for (const obj of object) {
-                const result = customFilter(obj, key, value);
-                if (result) {
-                  return obj;
-                }
-              }
-            } else {
-              if (object.hasOwnProperty(key) && object[key] === value) {
-                return object;
-              }
-              for (const k of Object.keys(object)) {
-                if (typeof object[k] === "object") {
-                  const o = customFilter(object[k], key, value);
-                  if (o !== null && typeof o !== 'undefined')
-                    return o;
-                }
-              }
-              return null;
-            }
-          }
 
 
         if (config.groupBy !== null){
 
             groupsToUse.forEach((g)=> {
                 dataHierarchy["children"].push({"name": g, "children":[], "colname":"level2"})
-                objectToInsertTo = customFilter(dataHierarchy["children"], 'name', g)
+                objectToInsertTo = getNestedObject(dataHierarchy["children"], 'name', g)
 
                 data.forEach((d)=>{
                     userValue = d[config.key]
@@ -135,8 +139,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
                     if (g === groupByValue){
                         // check whether this user already exists - if he does then accumulate values with pre-existing record
-                        if (typeof(customFilter(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
-                            userRecord = customFilter(objectToInsertTo["children"],"name", userValue) 
+                        if (typeof(getNestedObject(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
+                            userRecord = getNestedObject(objectToInsertTo["children"],"name", userValue) 
                             userRecord["value"] = userRecord["value"] + value
                         }
                         else {    // create new user record 
@@ -149,15 +153,15 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         else{
             dataHierarchy["children"].push({"name": "", "children":[], "colname":"level2"})
-            objectToInsertTo = customFilter(dataHierarchy["children"], 'name', "")
+            objectToInsertTo = getNestedObject(dataHierarchy["children"], 'name', "")
 
             data.forEach((d)=>{
                 userValue = d[config.key]
                 value = d[config.value]
                 groupByValue = ""
                 // check whether this user already exists - if he does then accumulate values with pre-existing record
-                if (typeof(customFilter(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
-                    userRecord = customFilter(objectToInsertTo["children"],"name", userValue) 
+                if (typeof(getNestedObject(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
+                    userRecord = getNestedObject(objectToInsertTo["children"],"name", userValue) 
                     userRecord["value"] = userRecord["value"] + value
                 }
 
@@ -233,10 +237,25 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                 .range(chartConfig.colors)
         }
 
+
         // opacity scale
-        var opacity = d3.scaleLinear()
-            .domain([10, 30])
-            .range([.5,1])
+        var opacity = function(currValue, groupName){
+            
+            parsingObject = getNestedObject(data["children"],"name",groupName)
+            values = new Array()
+            parsingObject["children"].forEach(d => {
+                values.push(d["value"])
+            })
+
+            calculatedScale = d3.scaleLinear()
+            .domain([d3.min(values), d3.max(values)])
+            .range([.5, 1])
+            
+            return calculatedScale(currValue)
+        }
+
+
+
 
         // add rectangles
         treeMapArea
@@ -245,12 +264,13 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .enter()
             .append("rect")
             .attr('x', function (d) { return d.x0; })
-            .attr('y', function (d) { return d.y0; })
+            .attr('y', function (d) { return d.y0; })   
             .attr('width', function (d) { return d.x1 - d.x0; })
             .attr('height', function (d) { return d.y1 - d.y0; })
             .style("stroke", "black")
             .style("fill", function(d){ return color(d.parent.data.name)} )
-            .style("opacity", function(d){ return opacity(d.data.value)})
+            .style("opacity", function(d){ return opacity(d.data.value, d.data.group)})
+
 
         // add key text labels
         if (chartConfig.keyLabel){

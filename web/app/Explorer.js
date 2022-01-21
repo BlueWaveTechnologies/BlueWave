@@ -1491,7 +1491,6 @@ bluewave.Explorer = function(parent, config) {
                 };
                 break;
             case "treeMapChart" :
-                console.log("got to tree map case")
                 node.ondblclick = function(){
                     if (!treeMapEditor){
                         treeMapEditor = createNodeEditor({
@@ -1502,7 +1501,6 @@ bluewave.Explorer = function(parent, config) {
                             editor: bluewave.charts.TreeMapEditor
                         });
                     }
-                    console.log(treeMapEditor)
                     editChart(this, treeMapEditor);
                 };
                 break;
