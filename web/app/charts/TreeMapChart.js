@@ -45,8 +45,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
   //** setConfig
   //**************************************************************************
     this.setConfig = function(chartConfig){
-        if (!chartConfig) config = defaultConfig;
-        else config = merge(chartConfig, defaultConfig);
+        if (!chartConfig) var config = defaultConfig;
+        else var config = merge(chartConfig, defaultConfig);
 
     };
 
@@ -61,15 +61,15 @@ bluewave.charts.TreeMapChart = function(parent, config) {
   //**************************************************************************
   //** getNestedObject
   //**************************************************************************
-    // parse through the data heirarchy and return the object matching these parameters
+    // parse through the data heirarchy (parameter: object) and return the object matching the value (parameter: value) of key (parameter: key)
     var getNestedObject = (object, key, value) => {
         if (Array.isArray(object)) {
           for (const obj of object) {
             const result = getNestedObject(obj, key, value);
             if (result) {
               return obj;
-            }
-          }
+            };
+          };
         } else {
           if (object.hasOwnProperty(key) && object[key] === value) {
             return object;
@@ -79,11 +79,11 @@ bluewave.charts.TreeMapChart = function(parent, config) {
               const o = getNestedObject(object[k], key, value);
               if (o !== null && typeof o !== 'undefined')
                 return o;
-            }
+            };
           }
           return null;
-        }
-      }
+        };
+      };
 
 
 
@@ -95,10 +95,10 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     var setDataHierarchy = function(data){
 
         if (config.groupBy !== null){
-            groupNames = [] // populate this by filtering through the config-set dataset 'groupBy' column to seperate records into unique values of this column
+            var groupNames = [] // populate this by filtering through the config-set dataset 'groupBy' column to seperate records into unique values of this column
             data.forEach((d)=>{
-                group = d[config.groupBy]
-                groupNames.push(group)
+                var group = d[config.groupBy];
+                groupNames.push(group);
             });
 
             function onlyUnique(value, index, self) { // returns only unique values from an array
@@ -118,62 +118,62 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
 
 
-        dataHierarchy = 
+        var dataHierarchy = 
         {"children":
             [],
 
-        "name":"all"}
+        "name":"all"};
 
 
 
         if (config.groupBy !== null){
 
             groupsToUse.forEach((g)=> {
-                dataHierarchy["children"].push({"name": g, "children":[], "colname":"level2"})
-                objectToInsertTo = getNestedObject(dataHierarchy["children"], 'name', g)
+                dataHierarchy["children"].push({"name": g, "children":[], "colname":"level2"});
+                var objectToInsertTo = getNestedObject(dataHierarchy["children"], 'name', g);
 
                 data.forEach((d)=>{
-                    userValue = d[config.key]
-                    groupByValue = d[config.groupBy]
-                    value = d[config.value]
+                    var userValue = d[config.key];
+                    var groupByValue = d[config.groupBy];
+                    var value = d[config.value];
 
                     if (g === groupByValue){
                         // check whether this user already exists - if he does then accumulate values with pre-existing record
                         if (typeof(getNestedObject(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
-                            userRecord = getNestedObject(objectToInsertTo["children"],"name", userValue) 
-                            userRecord["value"] = userRecord["value"] + value
+                            var userRecord = getNestedObject(objectToInsertTo["children"],"name", userValue);
+                            userRecord["value"] = userRecord["value"] + value;
                         }
                         else {    // create new user record 
-                            objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value})
-                        }
-                    }
-                })
-            })
+                            objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value});
+                        };
+                    };
+                });
+            });
         }
 
         else{
-            dataHierarchy["children"].push({"name": "", "children":[], "colname":"level2"})
-            objectToInsertTo = getNestedObject(dataHierarchy["children"], 'name', "")
+            dataHierarchy["children"].push({"name": "", "children":[], "colname":"level2"});
+            var objectToInsertTo = getNestedObject(dataHierarchy["children"], 'name', "");
 
             data.forEach((d)=>{
-                userValue = d[config.key]
-                value = d[config.value]
-                groupByValue = ""
+                var userValue = d[config.key];
+                var value = d[config.value];
+                var groupByValue = "";
                 // check whether this user already exists - if he does then accumulate values with pre-existing record
                 if (typeof(getNestedObject(objectToInsertTo["children"],"name", userValue)) !== "undefined"){
-                    userRecord = getNestedObject(objectToInsertTo["children"],"name", userValue) 
-                    userRecord["value"] = userRecord["value"] + value
+                    userRecord = getNestedObject(objectToInsertTo["children"],"name", userValue) ;
+                    userRecord["value"] = userRecord["value"] + value;
                 }
 
                 else {    // create new user record 
-                    objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value})
-                }
+                    objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value});
+                };
                 
-            })
+            });
 
-        }
-        return dataHierarchy
-    }
+        };
+        return dataHierarchy;
+    };
 
 
 
@@ -185,7 +185,6 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         me.clear();
 
         config = merge(chartConfig, defaultConfig);
-
         var data = setDataHierarchy(data);
 
         var parent = svg.node().parentNode;
@@ -209,12 +208,11 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         // set the dimensions of the graph
         var
-        width = parent.offsetWidth;
+        width = parent.offsetWidth,
         height = parent.offsetHeight;
 
-
         // Give the data to this cluster layout:
-        var root = d3.hierarchy(data).sum(function(d){ return d.value}) // Here the size of each leave is given in the 'value' field in input data
+        var root = d3.hierarchy(data).sum(function(d){ return d.value}); // Here the size of each leave is given in the 'value' field in input data
 
         // Use d3.treemap to compute the position of each element of the hierarchy
         d3.treemap()
@@ -224,7 +222,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .paddingInner(3)      // Padding between each rectangle
             //.paddingOuter(6)
             //.padding(20)
-            (root)
+            (root);
 
         // color scale
         if (typeof(groupNames) !== "undefined"){
@@ -235,24 +233,24 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         else{
             var color = d3.scaleOrdinal()
                 .range(chartConfig.colors)
-        }
+        };
 
 
         // opacity scale
         var opacity = function(currValue, groupName){
             
-            parsingObject = getNestedObject(data["children"],"name",groupName)
-            values = new Array()
+            var parsingObject = getNestedObject(data["children"],"name",groupName);
+            var values = new Array();
             parsingObject["children"].forEach(d => {
-                values.push(d["value"])
-            })
+                values.push(d["value"]);
+            });
 
-            calculatedScale = d3.scaleLinear()
+            var calculatedScale = d3.scaleLinear()
             .domain([d3.min(values), d3.max(values)])
-            .range([.5, 1])
+            .range([.5, 1]);
             
-            return calculatedScale(currValue)
-        }
+            return calculatedScale(currValue);
+        };
 
 
 
@@ -269,7 +267,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .attr('height', function (d) { return d.y1 - d.y0; })
             .style("stroke", "black")
             .style("fill", function(d){ return color(d.parent.data.name)} )
-            .style("opacity", function(d){ return opacity(d.data.value, d.data.group)})
+            .style("opacity", function(d){ return opacity(d.data.value, d.data.group)});
 
 
         // add key text labels
@@ -283,8 +281,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                 .attr("y", function(d){ return d.y0+20})    // +20 to adjust position (lower)
                 .text(function(d){ return d.data.name})
                 .attr("font-size", "19px")
-                .attr("fill", "white")
-        }
+                .attr("fill", "white");
+        };
 
         // add value text labels
         if (chartConfig.valueLabel){
@@ -297,8 +295,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                 .attr("y", function(d){ return d.y0+35})    // +20 to adjust position (lower)
                 .text(function(d){ return d.data.value })
                 .attr("font-size", "11px")
-                .attr("fill", "white")
-        }
+                .attr("fill", "white");
+        };
 
         // Add group text label
         if (chartConfig.groupLabel){
@@ -311,18 +309,18 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                 .attr("y", function(d){ return d.y0+21})
                 .text(function(d){ return d.data.name })
                 .attr("font-size", "19px")
-                .attr("fill",  function(d){ return color(d.data.name)} )
-        }
+                .attr("fill",  function(d){ return color(d.data.name)} );
+        };
         // Add title for each group
         treeMapArea
             .append("text")
             .attr("x", 0)
             .attr("y", 14)    // +20 to adjust position (lower)
             .attr("font-size", "19px")
-            .attr("fill",  "grey" )
+            .attr("fill",  "grey" );
 
 
-    }
+    };
   //**************************************************************************
   //** Utils
   //**************************************************************************
@@ -337,4 +335,4 @@ bluewave.charts.TreeMapChart = function(parent, config) {
    init();
 
 
-}
+};
