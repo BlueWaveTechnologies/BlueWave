@@ -20,7 +20,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         key: "name",
         value: "value",
         groupBy: null, 
-        colors: [ "#402D54", "#D18975", "#8FD175","#cc0a12", "#b8eb14","#0d90f2","#14e8eb","#1ce35b"], //first set of colors
+        colors: [ "#0d90f2","#14e8eb","#1ce35b", "#402D54", "#D18975", "#8FD175","#cc0a12", "#b8eb14"], //first set of colors
     };
     var svg, treeMapArea;
 
@@ -212,7 +212,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         height = parent.offsetHeight;
 
         // Give the data to this cluster layout:
-        var root = d3.hierarchy(data).sum(function(d){ return d.value}); // Here the size of each leave is given in the 'value' field in input data
+        var root = d3.hierarchy(data).sum((d) => d.value ); // Here the size of each leave is given in the 'value' field in input data
 
         // Use d3.treemap to compute the position of each element of the hierarchy
         d3.treemap()
@@ -261,13 +261,13 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .data(root.leaves())
             .enter()
             .append("rect")
-            .attr('x', function (d) { return d.x0; })
-            .attr('y', function (d) { return d.y0; })   
-            .attr('width', function (d) { return d.x1 - d.x0; })
-            .attr('height', function (d) { return d.y1 - d.y0; })
+            .attr('x', (d) => d.x0 )
+            .attr('y', (d) => d.y0 )   
+            .attr('width', (d) => d.x1 - d.x0 )
+            .attr('height', (d) => d.y1 - d.y0 )
             .style("stroke", "black")
-            .style("fill", function(d){ return color(d.parent.data.name)} )
-            .style("opacity", function(d){ return opacity(d.data.value, d.data.group)});
+            .style("fill", (d) => color(d.parent.data.name) )
+            .style("opacity", (d) => opacity(d.data.value, d.data.group) );
 
 
         // add key text labels
@@ -277,9 +277,9 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                 .data(root.leaves())
                 .enter()
                 .append("text")
-                .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
-                .attr("y", function(d){ return d.y0+20})    // +20 to adjust position (lower)
-                .text(function(d){ return d.data.name})
+                .attr("x", (d) => d.x0+5 )    // +10 to adjust position (more right)
+                .attr("y", (d) => d.y0+20 )    // +20 to adjust position (lower)
+                .text((d) => d.data.name )
                 .attr("font-size", "19px")
                 .attr("fill", "white");
         };
@@ -291,9 +291,9 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                 .data(root.leaves())
                 .enter()
                 .append("text")
-                .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
-                .attr("y", function(d){ return d.y0+35})    // +20 to adjust position (lower)
-                .text(function(d){ return d.data.value })
+                .attr("x", (d) => d.x0+5 )    // +10 to adjust position (more right)
+                .attr("y", (d) => d.y0+35 )    // +20 to adjust position (lower)
+                .text((d) => d.data.value )
                 .attr("font-size", "11px")
                 .attr("fill", "white");
         };
@@ -302,14 +302,14 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         if (chartConfig.groupLabel){
             treeMapArea
                 .selectAll("titles")
-                .data(root.descendants().filter(function(d){return d.depth==1}))
+                .data(root.descendants().filter((d) => d.depth==1 ))
                 .enter()
                 .append("text")
-                .attr("x", function(d){ return d.x0})
-                .attr("y", function(d){ return d.y0+21})
-                .text(function(d){ return d.data.name })
+                .attr("x", (d) => d.x0 )
+                .attr("y", (d) => d.y0+21)
+                .text((d) => d.data.name )
                 .attr("font-size", "19px")
-                .attr("fill",  function(d){ return color(d.data.name)} );
+                .attr("fill",  (d) => color(d.data.name) );
         };
         // Add title for each group
         treeMapArea
