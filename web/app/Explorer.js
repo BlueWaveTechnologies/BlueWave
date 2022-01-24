@@ -18,7 +18,7 @@ bluewave.Explorer = function(parent, config) {
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
     var dbView, lineEditor, barEditor, sankeyEditor, layoutEditor, nameEditor,
-    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, calendarEditor, userManager,
+    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, calendarEditor, treeMapEditor, userManager,
     fileViewer, docComparer; //popup dialogs
     var windows = [];
     var zoom = 0;
@@ -985,7 +985,7 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("histogramChart", "fas fa-chart-area", "Histogram Chart", menubar);
         createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
         createMenuButton("mapChart", "fas fa-globe-americas", "Map", menubar);
-        //createMenuButton("treemapChart", "fas fa-border-all", "Treemap Chart", menubar);
+        createMenuButton("treeMapChart", "fas fa-border-all", "Treemap Chart", menubar);
         createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
@@ -1477,7 +1477,6 @@ bluewave.Explorer = function(parent, config) {
                 };
                 break;
             case "calendarChart" :
-
                 node.ondblclick = function(){
 
                     if (!calendarEditor){
@@ -1493,6 +1492,21 @@ bluewave.Explorer = function(parent, config) {
                     editChart(this, calendarEditor);
                 };
                 break;
+            case "treeMapChart" :
+                node.ondblclick = function(){
+                    if (!treeMapEditor){
+                        treeMapEditor = createNodeEditor({
+                            title: "Edit Tree Map Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.TreeMapEditor
+                        });
+                    }
+                    editChart(this, treeMapEditor);
+                };
+                break;
+
             case "histogramChart":
                 node.ondblclick = function(){
                     if (!histogramEditor){
@@ -2943,6 +2957,10 @@ bluewave.Explorer = function(parent, config) {
                         else if (node.type==="calendarChart"){
                             var calendarChart = new bluewave.charts.CalendarChart(createChartContainer(),{});
                             calendarChart.update(chartConfig, data);
+                        }
+                        else if (node.type==="treeMapChart"){
+                            var treeMapChart = new bluewave.charts.TreeMapChart(createChartContainer(),{});
+                            treeMapChart.update(chartConfig, data);
                         }
                         else if (node.type==="mapChart"){
 

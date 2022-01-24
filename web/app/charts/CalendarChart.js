@@ -41,14 +41,15 @@ bluewave.charts.CalendarChart = function(parent, config) {
 
     };
 
+
   //**************************************************************************
   //** setConfig
   //**************************************************************************
     this.setConfig = function(chartConfig){
         if (!chartConfig) config = defaultConfig;
         else config = merge(chartConfig, defaultConfig);
-
     };
+
 
   //**************************************************************************
   //** getTooltipLabel
@@ -150,7 +151,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
                     return color;
                 }
                 else{
-                    if (value==breaks[breaks.length-1]){ 
+                    if (value==breaks[breaks.length-1]){
                         return colors[colors.length-1];
                     }
                 }
@@ -218,22 +219,23 @@ bluewave.charts.CalendarChart = function(parent, config) {
           .join("g")
             .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
 
-      // Add year label if option is checked
-      if (chartConfig.yearLabel){
+      //Add year label if option is checked
+        if (chartConfig.yearLabel){
 
-        //Add year label to every group
-            yearGroup.append("text")
-            .attr("class", "chart-axis-label")
-            .attr("x", -5)
-            .attr("y", -5)
-            .attr("text-anchor", "end")
-            .text(year => year);
-      }
+          //Add year label to every group
+              yearGroup.append("text")
+              .attr("class", "chart-axis-label")
+              .attr("x", -5)
+              .attr("y", -5)
+              .attr("text-anchor", "end")
+              .text(year => year);
+        }
 
-      // Add day label if option is checked
-      if (chartConfig.dayLabel){
 
-        //Add day of week abbreviation on the left side of each group
+      //Add day label if option is checked
+        if (chartConfig.dayLabel){
+
+          //Add day of week abbreviation on the left side of each group
             yearGroup.append("g")
             .attr("class", "tick")
             .attr("text-anchor", "middle")
@@ -274,7 +276,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
                         return formatDay(dayOfWeek);
                     }
                 });
-      };
+        };
 
 
       //Create table and cells
