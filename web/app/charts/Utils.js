@@ -19,9 +19,25 @@ bluewave.chart.utils = {
             javaxt.dhtml.utils.onRender(parent, function(){
                 var width = parent.offsetWidth;
                 var height = parent.offsetHeight;
-                svg.attr("width", width);
-                svg.attr("height", height);
+                // Responsive SVG needs these 2 attributes and no width and height attr.
+                svg.attr("preserveAspectRatio", "xMinYMin meet")
+                svg.attr("viewBox", `0 0 ${width} ${height}`)
+
+
+                // Class to make it responsive.
+                svg.classed("svg-content-responsive", true)
             });
+
+            var callbackResize = function (){
+                var width = parent.offsetWidth;
+                var height = parent.offsetHeight;
+                // Responsive SVG needs these 2 attributes and no width and height attr.
+                svg.attr("preserveAspectRatio", "xMinYMin meet")
+                svg.attr("viewBox", `0 0 ${width} ${height}`)
+            }
+
+            javaxt.dhtml.utils.addResizeListener(parent, callbackResize)
+
         }
 
         var g = svg.append("g");
@@ -481,7 +497,7 @@ bluewave.chart.utils = {
   //**************************************************************************
   //** extendScale
   //**************************************************************************
-    
+
     extendScale: function (scaleBandObj, axisRange, scalingFactor, type) {
 
         var domain = scaleBandObj.scale.domain();
@@ -512,7 +528,7 @@ bluewave.chart.utils = {
                     .rangeRound(axisRange)
                     .padding(0.2);
 
-            
+
 
         } else if (type === 'string') {
 
@@ -521,7 +537,7 @@ bluewave.chart.utils = {
             let ordinalDomain = domain;
             //Hackyest hack in ever - creates space strings of increasing length. Ordinal domain values must be unique
             for(let i=0; i<numExtraTicks; i++){
-                
+
                 spaceString = spaceString + " ";
                 ordinalDomain.push(spaceString);
             }
@@ -531,7 +547,7 @@ bluewave.chart.utils = {
                     .domain(ordinalDomain)
                     .range(axisRange)
                     .padding(0.2);
-           
+
 
         } else { //Number
 
@@ -554,7 +570,7 @@ bluewave.chart.utils = {
   //** reDrawAxes
   //**************************************************************************
     reDrawAxes: function(svg, xAxis, x, yAxis, y, axisHeight) {
-     
+
 
         if (xAxis){
             xAxis.remove();
@@ -572,7 +588,7 @@ bluewave.chart.utils = {
             yAxis = svg
             .append("g")
             .call(
-                d3.axisLeft(y) 
+                d3.axisLeft(y)
             );
 
         }
