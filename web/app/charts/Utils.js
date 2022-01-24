@@ -324,7 +324,7 @@ bluewave.chart.utils = {
         var marginLeft = xExtents.left-left; //extra space for the left-most x-axis label
         if (marginLeft<0) marginLeft = 0;
 
-        var marginRight = (xExtents.right-left)-axisWidth; //extra space for the right-most x-axis label
+        var marginRight = (xExtents.right-right); //extra space for the right-most x-axis label
         if (marginRight<0) marginRight = 0;
 
 
@@ -477,6 +477,106 @@ bluewave.chart.utils = {
         };
     },
 
+
+  //**************************************************************************
+  //** extendScale
+  //**************************************************************************
+    
+    extendScale: function (scaleBandObj, axisRange, scalingFactor, type) {
+
+        var domain = scaleBandObj.scale.domain();
+        var scale, band;
+
+        var getType = bluewave.chart.utils.getType;
+        if (!type) type = getType(domain[0]);
+        if (!scalingFactor) scalingFactor = 1;
+
+        if (type === 'date') {
+            let endDate = domain[1];
+            let startDate = domain[0];
+            let dateinMilliseconds = endDate.getTime();
+
+
+            let timeDiff = endDate - startDate;
+            let timetoAdd = timeDiff * scalingFactor;
+            let extendedDate = new Date(dateinMilliseconds + timetoAdd);
+
+            scale = d3
+                    .scaleTime()
+                    .domain([startDate, extendedDate])
+                    .rangeRound(axisRange);
+
+            band = d3
+                    .scaleBand()
+                    .domain(d3.timeDay.range(...scale.domain()))
+                    .rangeRound(axisRange)
+                    .padding(0.2);
+
+            
+
+        } else if (type === 'string') {
+
+            let numExtraTicks = Math.ceil(domain.length * scalingFactor);
+            let spaceString = "";
+            let ordinalDomain = domain;
+            //Hackyest hack in ever - creates space strings of increasing length. Ordinal domain values must be unique
+            for(let i=0; i<numExtraTicks; i++){
+                
+                spaceString = spaceString + " ";
+                ordinalDomain.push(spaceString);
+            }
+
+            scale = d3
+                    .scaleBand()
+                    .domain(ordinalDomain)
+                    .range(axisRange)
+                    .padding(0.2);
+           
+
+        } else { //Number
+
+            let numDomain = [domain[0], domain[1]*(scalingFactor + 1)]
+
+            scale = d3.scaleLinear()
+                    .domain(numDomain)
+                    .range(axisRange);
+        }
+
+
+        return {
+            scale: scale,
+            band: band
+        };
+
+    },
+
+  //**************************************************************************
+  //** reDrawAxes
+  //**************************************************************************
+    reDrawAxes: function(svg, xAxis, x, yAxis, y, axisHeight) {
+     
+
+        if (xAxis){
+            xAxis.remove();
+            xAxis = svg
+            .append("g")
+            .attr("transform", "translate(0," + axisHeight + ")")
+            .call(
+                d3.axisBottom(x)
+            );
+
+        }
+
+        if (yAxis){
+            yAxis.remove()
+            yAxis = svg
+            .append("g")
+            .call(
+                d3.axisLeft(y) 
+            );
+
+        }
+    },
 
   //**************************************************************************
   //** getType
