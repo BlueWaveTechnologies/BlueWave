@@ -1,4 +1,5 @@
 @import url(https://fonts.googleapis.com/css?family=Open+Sans);
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300&display=swap');
 
 html, body {
     height:100%;
@@ -191,6 +192,7 @@ body, textarea, input, select, td, th {
     border: 1px solid #e0e0e0;
     display: inline-block;
     float: left;
+    box-sizing: border-box;
 }
 
 
@@ -504,6 +506,20 @@ li.tree-node:hover {
 }
 
 
+/**************************************************************************/
+/** Company Profile
+/**************************************************************************/
+
+.company-profile-title {
+    font-size: 20px;
+    color: #fff;
+    padding: 0 5px;
+}
+
+.company-profile li {
+    color: #777;
+}
+
 
 /**************************************************************************/
 /** Tooltip
@@ -574,7 +590,7 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
-/** Drawflow Overrides
+/** Drawflow
 /**************************************************************************/
 
 .drawflow-toolbar {
@@ -630,6 +646,25 @@ li.tree-node:hover {
     width: 34px;
     margin-left: -2px;
     margin-top: -4px;
+}
+
+
+.drawflow-toolbar-hint {
+    position: absolute;
+    left: 50px;
+    top: 5px;
+    background: url(../images/arrow.png) no-repeat;
+    width: 85px;
+    height: 120px;
+    color: #ef5646;
+    font-size: 32px;
+    font-family: 'Kalam', cursive;
+}
+.drawflow-toolbar-hint:after {
+    content:"Drag icon onto canvas";
+    line-height: 225px;
+    margin: 0 0 0 82px;
+    white-space: nowrap;
 }
 
 
@@ -1105,6 +1140,67 @@ li.tree-node:hover {
 }
 
 
+
+/**************************************************************************/
+/** Carousel Header
+/**************************************************************************/
+
+.carousel-header {
+    height: 60px;
+    background-color: #3f79ab;
+    background-color: #102b42;
+}
+
+.carousel-header-nav {
+  margin: 0px;
+  padding: 0px;
+  list-style: none;
+}
+
+.carousel-header-link {
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  margin: 0 20px;
+  color: #fff;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.carousel-header-link:after{
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  display: block;
+  margin-top: 5px;
+  right: 0;
+  background: #2e588d;
+  transition: width .15s ease;
+  -webkit-transition: width .15s ease;
+}
+
+
+.carousel-header-link:hover, .carousel-header-link:active, .carousel-header-link:focus, .carousel-header-link-selected{
+    opacity: 1.0;
+    transition: all .4s ease;
+    -webkit-transition: all .4s ease;
+    outline: 0 none;
+}
+
+
+.carousel-header-link-selected:after{
+    width: 100%;
+}
+
+
+.carousel-header-link:hover:after {
+  width: 100%;
+  left: 0;
+  background: #fff;
+  opacity: 0.6;
+}
+
 /**************************************************************************/
 /** Color Picker
 /**************************************************************************/
@@ -1210,6 +1306,15 @@ svg text {
     font-size: 13px;
 }
 
+.chart-axis-label{
+    fill: #000;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.tick {
+    font-size: 10px;
+}
 
 .countries {
     fill: #f9f9f9;

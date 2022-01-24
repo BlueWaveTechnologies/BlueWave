@@ -1,8 +1,12 @@
 package bluewave.web.services;
 import bluewave.Config;
+import bluewave.graph.Neo4J;
+import bluewave.utils.Address;
+import bluewave.utils.Routing;
 import bluewave.utils.SpatialIndex;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.awt.*;
 
@@ -23,6 +27,12 @@ import org.locationtech.jts.io.WKTReader;
 //scripting includes
 import javax.script.*;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
+
+
+//Neo4J includes
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
 
 
 //******************************************************************************
@@ -118,6 +128,99 @@ public class MapService extends WebService {
     public ServiceResponse getBasemaps(ServiceRequest request, Database database)
         throws ServletException, IOException {
         return new ServiceResponse(Config.get("basemaps").toJSONArray());
+    }
+
+
+  //**************************************************************************
+  //** getCoords
+  //**************************************************************************
+  /** Returns lat/lon coordinates for a node with an address
+   */
+    public ServiceResponse getCoords(ServiceRequest request, Database database)
+    throws ServletException {
+
+
+      //Parse params
+        String node = request.getParameter("node").toString();
+        if (node==null) return new ServiceResponse(400, "node is required");
+
+        String key = request.getParameter("key").toString();
+        if (key==null) return new ServiceResponse(400, "key is required");
+
+        String id = request.getParameter("id").toString();
+        if (id==null) return new ServiceResponse(400, "id is required");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Execute query and return response
+        try{
+            BigDecimal[] coords = Address.getCoords(node, key, id, graph);
+            return new ServiceResponse(coords[0]+","+coords[1]);
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getRoute
+  //**************************************************************************
+  /** Used to compute an transportation route between 2 points on the earth
+   *  for a given mode of transport (land, sea, air)
+   */
+    public ServiceResponse getRoute(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+      //Parse params
+        String type = request.getParameter("type").toString();
+        if (type==null) type = "GreatCircle"; //vs Shipping
+
+        String start = request.getParameter("start").toString();
+        if (start==null) return new ServiceResponse(400, "start coordinate is required");
+
+        String end = request.getParameter("end").toString();
+        if (end==null) return new ServiceResponse(400, "end coordinate is required");
+
+        String method = request.getParameter("shippingMethod").toString();
+        if (method==null) method = request.getParameter("method").toString();
+        if (method==null && type.equalsIgnoreCase("Shipping")){
+            return new ServiceResponse(400, "shippingMethod is required");
+        }
+
+      //Parse coords
+        String[] s = start.split(",");
+        String[] e = end.split(",");
+
+        BigDecimal[] c1 = new BigDecimal[]{
+            new BigDecimal(Double.parseDouble(s[0])),
+            new BigDecimal(Double.parseDouble(s[1]))
+        };
+
+        BigDecimal[] c2 = new BigDecimal[]{
+            new BigDecimal(Double.parseDouble(e[0])),
+            new BigDecimal(Double.parseDouble(e[1]))
+        };
+
+
+      //Get route
+        try{
+            JSONObject geoJson = null;
+            if (type.equalsIgnoreCase("Shipping")){
+                geoJson = Routing.getShippingRoute(c1, c2, method);
+            }
+            else{
+                geoJson = Routing.getGreatCircleRoute(c1, c2, 50);
+            }
+            return new ServiceResponse(geoJson);
+        }
+        catch(Exception ex){
+            return new ServiceResponse(ex);
+        }
     }
 
 

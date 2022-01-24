@@ -2,36 +2,42 @@ if(!bluewave) var bluewave={};
 if(!bluewave.dashboards) bluewave.dashboards={};
 
 //******************************************************************************
-//**  ImportSummary Dashboard
+//**  ImportSummary
 //******************************************************************************
 /**
- *   Used to visualize FXX
+ *   Used render a summary of imports by country, company, product code, etc
  *
  ******************************************************************************/
 
 bluewave.dashboards.ImportSummary = function(parent, config) {
 
     var me = this;
-    var title = "Time Series Views";
-    var lineGraph; //dashboard item
-    var tooltip, tooltipLine; //d3 svg nodes
-    var productOptions, sourceOptions, groupOptions; //comboboxes
-    var currProduct, currMonth; //strings
-    var data = {};
-    var callout;
-    var useLogScale = false;
-
-
+    var initializing = true;
+    var title = "Import Summary";
+    var grid;
+    var data = [];
+    var lineData = [];
+    var countryOptions, productOptions, establishmentOptions; //dropdowns
+    var slider, thresholdInput;
+    var lineChart, barChart, scatterChart;
+    var yAxis;
+    var nodeView;
+    var companyProfile;    
+    var waitmask;
+    
+    
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;        
+        
 
       //Create main table
         var table = createTable();
         var tbody = table.firstChild;
         var tr, td;
-
 
       //Create toolbar
         tr = document.createElement("tr");
@@ -41,35 +47,28 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         createToolbar(td);
 
 
-      //Create body
+      //Create grid
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
+        td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        var div = document.createElement("div");
-        div.style.height = "100%";
-        div.style.textAlign = "center";
-        td.appendChild(div);
-
-        var innerDiv = document.createElement("div");
-        innerDiv.style.height = "100%";
-        innerDiv.style.display = "inline-block";
-        div.appendChild(innerDiv);
+        createGrid(td);
 
 
-        createLineGraph(innerDiv);
-        createTooltip(div);
+      //Create charts
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "350px";
+        tr.appendChild(td);
+        createCharts(td);
+
 
         parent.appendChild(table);
-        me.el = table;
+        me.el = table;                        
     };
-
-
-  //**************************************************************************
-  //** onUpdate
-  //**************************************************************************
-    this.onUpdate = function(){};
 
 
   //**************************************************************************
@@ -81,598 +80,349 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
   //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        data = [];
+        lineData = [];
+        grid.clear();
+        establishmentOptions.setValue("Manufacturer", true);
+        countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
+        productOptions.setValue("All", true);
+        yAxis = "totalLines";
+    };
+
+
+  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(){
-        productOptions.clear();
-        sourceOptions.clear();
-        data = {};
+        var onReady = function(){
+            me.clear();
+            update();
+        };
+        
+        if (initializing){
+            var timer;
 
-
-        getData("ImportSummary", function(json){
-
-          //Generate list of productTypes
-            var productTypes = [];
-            for (var type in json) {
-                if (json.hasOwnProperty(type)){
-                    productTypes.push(type);
+            var checkStatus = function(){
+                if (initializing){
+                    timer = setTimeout(checkStatus, 100);
                 }
-            }
+                else{
+                    clearTimeout(timer);
+                    onReady();
+                }
+            };
+
+            timer = setTimeout(checkStatus, 100);
+        }
+        else{
+            onReady();
+        }                
+    };
+
+    
+  //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+        
+    };    
+    
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    var update = function(){
+        if (companyProfile) companyProfile.hide();
+        if (grid) grid.setSortIndicator(3, "DESC");
+        
+        
+        waitmask.show(500);
+        
+        
+        var establishment = getEstablishment();
+        var country = countryOptions.getValue();
+        var threshold = parseFloat(thresholdInput.value);
+        if (isNaN(threshold)) threshold = "";
+
+        data = [];
+        get("import/summary?country=" + country + "&establishment=" + establishment + "&threshold=" + threshold, {
+            success: function(csv){            
+                var rows = parseCSV(csv, ",");      
+                var header = rows.shift();
+                var createRecord = function(row){
+                    var r = {};                    
+                    header.forEach((field, i)=>{
+                        var val = row[i];
+                        if (field==="fei"||field==="manufacturer"||field==="shipper"||
+                            field==="importer"||field==="consignee"||field==="dii"){ 
+                            val = val.split(",");
+                        }
+                        else if (field!="name"){
+                            val = Math.round(parseFloat(val));
+                        }
+                        r[field] = val;
+                    });
+                    return r;
+                };
+                rows.forEach((row)=>{
+                    data.push(createRecord(row));
+                });
+
+                data.sort(function(a,b){
+                    return b.totalLines-a.totalLines;
+                });
+                
+
+              //Update main table
+                grid.update(data);
+                
+                
+                
+              //Update line chart
+                lineChart.clear();
+                get("import/history?country=" + country + "&threshold=" + threshold, {
+                    success: function(csv){
+                        lineData = [];
+                        
+                        var rows = parseCSV(csv, ",");      
+                        var header = rows.shift();
+                        var createRecord = function(row){
+                            var r = {};                    
+                            header.forEach((field, i)=>{
+                                var val = row[i];
+                                if (field!=="date"){
+                                    val = Math.round(parseFloat(val));
+                                }                                                        
+                                r[field] = val;
+                            });
+                            return r;
+                        };                    
+                        
+                        rows.forEach((row)=>{
+                            var d = createRecord(row);                            
+
+                            var date = new Date(d.date).getTime();
+                            if (!isNaN(date)){
+                                d.date = date;
+                                lineData.push(d);
+                            }
+                        });
+
+                        lineData.sort(function(a,b){
+                            return a.date-b.date;
+                        });
+
+//                        var firstDate = new Date(lineData[0].date);
+//                        var lastDate = new Date(lineData[lineData.length-1].date);
+//                        console.log(lineData.length);
+//                        console.log(firstDate, lastDate);
+                        
+
+                        lineData.forEach((d)=>{
+                            var date = new Date(d.date);
+                            d.date = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
+                        });                   
+                        
+                        lineChart.update();
+                    }
+                });
+
+                
+                
+              //Update bar chart
+                if (barChart){
+                    var chartData = [];
+                    for (var i=0; i<Math.min(10,data.length); i++){
+                        var d = data[i];
+                        chartData.push({
+                            name: d.name,
+                            quantity: d.totalLines
+                        });
+                    }
+                    barChart.update({
+                        xAxis: "name",
+                        yAxis: "quantity"
+                    }, [chartData]);
+                }
 
 
-          //Parse data and update combobox
-            for (var type in productTypes){
-                var productType = productTypes[type];
+                scatterChart.update();
+                
 
-              //Update combobox
-                productOptions.add(productType, productType);
-
-
-
-              //Parse data and conflate csv
-                var _data = json[productType];
-                for (var i=0; i<_data.length; i++){
-                    var entry = _data[i];
-                    var name = entry.name;
-                    var csv = parseCSV(entry.csv, ",");
-
-                  //Parse csv
-                    var header = csv[0];
-                    var arr = [];
-                    for (var j=1; j<csv.length; j++){
-                        var row = csv[j];
-                        var date = formatDate(row[0]);
-
-                        for (var k=1; k<row.length; k++){
-                            var val = parseFloat(row[k]);
-                            if (isNaN(val)) val = 0.0;
-                            arr.push({
-                                date: date,
-                                type: header[k],
-                                value: val
+              //Update graph
+                var feis = {};
+                var nodes = [];
+                var links = [];              
+                var entityTypes = ["manufacturer","shipper","importer","consignee","dii"];
+                data.forEach((d)=>{
+                    
+                    entityTypes.forEach((entity)=>{
+                        if (entity!==establishment){
+                            d[entity].forEach((fei)=>{
+                                if (!feis[fei]){
+                                    feis[fei] = false;
+                                }
                             });
                         }
-                    }
-
-
-
-                  //Group data
-                    var groups = {};
-                    var labelFunction = {};
-                    var updateGroups = function(name, entry){
-                        var arr = groups[name];
-                        if (arr==null){
-                            arr = [];
-                            groups[name] = arr;
+                    });
+                    
+                    d.fei.forEach((fei)=>{
+                        feis[fei] = d.name;
+                    });
+                    
+                    nodes.push({
+                        name: d.name,
+                        fei: d.fei,
+                        type: establishment
+                    });
+                    
+                });                
+                
+                
+              //Generate list of FEIs to match
+                var numFEIs = 0;
+                var str = "";
+                for (var fei in feis) {
+                    if (feis.hasOwnProperty(fei)){                        
+                        if (!feis[fei]){                        
+                            if (str.length>0) str += ",";
+                            str += fei;
+                            numFEIs++;
                         }
-                        arr.push(entry);
-                    };
-                    for (var j=0; j<arr.length; j++){
-                        const v = arr[j];
-                        const t = v.type;
-                        var groupName;
-                        if (name=="RFI"){
-                            if (t=="order_total" || t=="fill_total"){
-                                groupName = "order vs fill (total)";
-                                updateGroups(groupName, v);
-                                labelFunction[groupName] = function(str){
-                                    return str.replace("_total","");
-                                };
-                            }
-                            else{
-                                if (t.indexOf("total_fillRate_")==0){
-                                    groupName = "fill rate (by distributor)";
-                                    updateGroups(groupName, v);
-                                    labelFunction[groupName] = function(str){
-                                        return str.substring("total_fillRate_".length);
-                                    };
+                    }   
+                }                     
+                //console.log(nodes.length, numFEIs);
+                
+              //Match FEIs
+                get("import/EstablishmentNames", str, {
+                    success: function(csv){
+                        
+                      //Update FEIs
+                        var rows = parseCSV(csv, ",");      
+                        rows.shift(); //remove header
+                        rows.forEach((arr)=>{
+                            var name = arr[0];
+                            var ids = arr[1].split(",");
+                            
+                            nodes.push({
+                                name: name,
+                                fei: ids
+                            });                            
+                            
+                            ids.forEach((fei)=>{
+                                feis[fei] = name;
+                            });
+                        });
+                        
+                        
+ 
+                      //Create Links
+                        data.forEach((d)=>{
+
+                            entityTypes.forEach((entity)=>{
+                                if (entity!==establishment){
+                                    var ids = d[entity];
+                                    var name;
+                                    for (var fei in feis) {
+                                        if (feis.hasOwnProperty(fei)){  
+                                            ids.every((id)=>{
+                                                var foundMatch = false;
+                                                if (id===fei){
+                                                    name = feis[fei];
+                                                    foundMatch = true;
+                                                }
+                                                return !foundMatch;
+                                            });
+                                            if (name) break;
+                                        }
+                                    }                                    
+                                    
+                                    if (d.name!==name){
+                                        var source = d.name;
+                                        var target = name;
+                                        var addLink = true;
+                                        
+                                        links.every((link)=>{
+                                            var foundMatch = false;
+                                            if (link.source===source && link.target===target){
+                                                if (link.relationship.indexOf(entity)===-1){
+                                                    link.relationship += "," + entity;
+                                                }
+                                                addLink = false;
+                                            }
+                                            return !foundMatch;
+                                        });
+                                        
+                                        if (addLink){
+                                            links.push({
+                                                source: source,
+                                                target: target,
+                                                relationship: entity
+                                            });
+                                        }
+                                    }
                                 }
-                                else if (
-                                    t.indexOf("total_order_")==0 ||
-                                    t.indexOf("total_fill_")==0){
-                                    groupName = "order vs fill (by distributor)";
-                                    updateGroups(groupName, v);
-                                    labelFunction[groupName] = function(str){
-                                        str = str.substring("total_".length);
-                                        var arr = str.split("_");
-                                        return arr[1] + " (" + arr[0] + ")";
-                                    };
-                                }
-                                else if (
-                                    t.indexOf("diff_fill_from_base_")==0 ||
-                                    t.indexOf("diff_order_from_base_")==0){
-                                    updateGroups("diff order vs fill from base (by distributor)", v);
+                            });
+          
+                            
+
+                        });  
+                        
+                        
+                      //Update node.type attributes using realtionships
+                        var nodeTypes = {};
+                        links.forEach((link)=>{
+                            if (link.relationship){
+                                var relationships = link.relationship.split(",");
+                                if (nodeTypes[link.target]){
+                                    var currRelationships = nodeTypes[link.target];
+                                    relationships.forEach((relationship)=>{
+                                        var foundMatch = false;
+                                        for (var i=0; i<currRelationships.length; i++){
+                                            if (currRelationships[i]===relationship){
+                                                foundMatch = true;
+                                            }
+                                        }
+                                        if (!foundMatch){
+                                            currRelationships.push(relationship);
+                                        }
+                                    });
+                                    
                                 }
                                 else{
-                                    if ( //ends with
-                                        t.indexOf("_order_total")>0 ||
-                                        t.indexOf("_fill_total")>0){
-                                        groupName = "order vs fill (by product type)";
-                                        updateGroups(groupName, v);
-                                        labelFunction[groupName] = function(str){
-                                            str = str.substring(0, str.length-("_total".length));
-                                            var idx = str.lastIndexOf("_");
-                                            var supplier = str.substring(0, idx);
-                                            var type = str.substring(idx+1);
-                                            return supplier + " (" + type + ")";
-                                        };
-                                    }
-                                    else if ( //contains
-                                        t.indexOf("_order_")>0 ||
-                                        t.indexOf("_fill_")>0){
-                                        updateGroups("order vs fill (product type to distributor)", v);
-                                    }
-                                    else if ( //contains
-                                        t.indexOf("_fillRate_")>0){
-                                        updateGroups("fill rate (product type to distributor)", v);
-                                    }
-                                    else{
-                                        updateGroups("misc", v);
-                                    }
+                                    nodeTypes[link.target] = link.relationship.split(",");
                                 }
                             }
-                        }
-                        else if (name=="Imports"){
-                            if (t.indexOf("total")==0){
-                                updateGroups(t, v);
-                            }
-                            else if ( //start with
-                                t.indexOf("country_")==0 ||
-                                t.indexOf("manufacturer_")==0 ||
-                                t.indexOf("shipper_")==0 ||
-                                t.indexOf("consignee_")==0
-                            ){
-                                groupName = t.substring(0, t.indexOf("_"));
-                                updateGroups(groupName, v);
-                                labelFunction[groupName] = function(str){
-                                    return str.substring(str.indexOf("_")+1);
-                                };
-                            }
-                            else{
-                                updateGroups("misc", v);
-                            }
-                        }
-                        else if (name=="Premier"){
-                            if (t=="total"){
-                                updateGroups(t, v);
-                            }
-                            else{
-                                if ( //start with
-                                    t.indexOf("Manufacturer_")==0 ||
-                                    t.indexOf("Vendor_")==0
-                                ){
-                                    if (t.indexOf("_Top_")>1){
-                                        groupName = t.substring(0, t.indexOf("_Top_")+4);
-                                    }
-                                    else{
-                                        groupName = t.substring(0, t.indexOf("_"));
-                                    }
-                                    updateGroups(groupName, v);
-                                    labelFunction[groupName] = function(str){
-                                        str = str.substring(str.indexOf("_")+1);
-                                        return str.replace("Top_","");
-                                    };
-                                }
-                                else{
-                                    updateGroups("misc", v);
+                        });
+                        nodes.forEach((node)=>{
+                            if (!node.type){
+                                var relationships = nodeTypes[node.name];
+                                if (relationships){
+                                    node.type = relationships.join(",");
                                 }
                             }
-
-                        }
+                        });
+                        
+                        
+                        
+                      //Update graph
+                        nodeView.update(nodes, links);
+                        
                     }
-                    //console.log(name, groups);
-                    entry.groups = groups;
-                    entry.labelFunction = labelFunction;
-                    entry.data = arr;
-                    delete entry.csv;
-                }
-                data[productType] = _data;
-            }
+                });
 
-            if (i>0) productOptions.setValue(productTypes[0]);
+
+
+                waitmask.hide();
+            },
+            failure: function(request){
+                waitmask.hide();
+                alert(request);
+            }
         });
-    };
-
-
-  //**************************************************************************
-  //** createLineGraph
-  //**************************************************************************
-    var createLineGraph = function(parent){
-
-      //Create dashboard item with a settings icon
-        lineGraph = createDashboardItem(parent, {
-            width: 1000,
-            height: 640,
-            settings: true
-        });
-
-
-      //Create menu callout for the settings icon
-        callout = new javaxt.dhtml.Callout(document.body,{
-            style: config.style.callout
-        });
-        var innerDiv = callout.getInnerDiv();
-        var menu = document.createElement("div");
-        menu.className = "app-menu";
-        innerDiv.appendChild(menu);
-
-        var menuItem = document.createElement("div");
-        menuItem.className = "app-menu-item noselect";
-        menuItem.innerHTML = '<i class="fas fa-check"></i>' + "Linear Scale";
-        menuItem.onclick = function(){
-            menu.toggle(this);
-        };
-        menu.appendChild(menuItem);
-
-        menuItem = document.createElement("div");
-        menuItem.className = "app-menu-item noselect";
-        menuItem.innerHTML = '<i class="fas"></i>' + "Logarithmic Scale";
-        menuItem.onclick = function(){
-            menu.toggle(this);
-        };
-        menu.appendChild(menuItem);
-
-        lineGraph.settings.onclick = function(){
-            var rect = javaxt.dhtml.utils.getRect(this);
-            var x = rect.x + (rect.width/2);
-            var y = rect.y + rect.height + 3;
-            callout.showAt(x, y, "below", "right");
-        };
-
-
-      //Add custom functions to toggle and select items in the menu
-        lineGraph.menu = menu;
-        menu.toggle = function(el){
-            if (el && el.firstChild.className.indexOf("check")>-1) return;
-            for (var i=0; i<menu.childNodes.length; i++){
-                var menuItem = menu.childNodes[i];
-                var isChecked = menuItem.firstChild.className.indexOf("check")>-1;
-                menuItem.firstChild.className = "fas" + (isChecked?"" : " fa-check");
-                if (!isChecked){
-                    useLogScale = menuItem.lastChild.textContent.indexOf("Log")>-1 ? true : false;
-                }
-            }
-            if (el){ //user initiated menu click
-                updateLineGraph(lineGraph.data, lineGraph.groupName, lineGraph.labelFunction);
-            }
-        };
-        menu.select = function(val){
-            useLogScale = val.indexOf("Log")>-1 ? true : false;
-            for (var i=0; i<menu.childNodes.length; i++){
-                var menuItem = menu.childNodes[i];
-                var isChecked = menuItem.firstChild.className.indexOf("check")>-1;
-                if (menuItem.lastChild.textContent.indexOf(val)>-1){
-                    if (isChecked) return;
-                }
-            }
-            menu.toggle();
-        };
-
-    };
-
-
-  //**************************************************************************
-  //** updateLineGraph
-  //**************************************************************************
-    var updateLineGraph = function(data, groupName, labelFunction){
-
-
-      //Update panel
-        var subtitle = lineGraph.subtitle;
-        var innerDiv = lineGraph.innerDiv;
-        innerDiv.innerHTML = "";
-
-
-      //Cache inputs
-        lineGraph.data = clone(data);
-        lineGraph.groupName = groupName;
-        lineGraph.labelFunction = labelFunction;
-
-
-      //Set the dimensions and margins of the graph
-        var margin = {top: 20, right: 100, bottom: 50, left: 85},
-        width = innerDiv.offsetWidth - margin.left - margin.right,
-        height = innerDiv.offsetHeight - margin.top - margin.bottom;
-
-
-
-      //set the ranges
-        var x = d3.scaleTime().range([0, width]);
-        var yScale = useLogScale ? d3.scaleLog() : d3.scaleLinear();
-        var y = yScale.range([height, 0]);
-
-
-      //create svg
-        var svg = d3.select(innerDiv).append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-            .attr("transform",
-              "translate(" + margin.left + "," + margin.top + ")");
-
-
-
-      //Group the data by line type
-        var types = {};
-        data.forEach(function(d) {
-            var arr = types[d.type];
-            if (!arr){
-                arr = [];
-                types[d.type] = arr;
-            }
-            arr.push(d);
-        });
-        data = [];
-
-
-
-      //Create lines for each type
-        var lines = {};
-        for (var type in types) {
-            if (types.hasOwnProperty(type)){
-
-
-              //Sort data for each type by date
-                var arr = types[type];
-                arr.sort((a, b) => (a.date > b.date) ? 1 : -1);
-
-
-              //Create line function for the type
-                lines[type] = d3.line()
-                    .defined(function(d) {return !isNaN(d.value);})
-                    .x(function(d) { return x(d.date); })
-                    .y(function(d) { return useLogScale? y(d.value+1):y(d.value); });
-
-
-              //Update data
-                data.push(...arr);
-            }
-        }
-
-
-
-      //format the data
-        var minY = useLogScale ? 1e12 : 100;
-        var maxY = useLogScale ? -1e12 : -100;
-        var parseTime = d3.timeParse("%Y-%m-%d"); //2020-08-07
-        data.forEach(function(d) {
-          // Sometimes months are expressed as first of month, other times they
-          //  are expressed as last of month. Here we round always to the first.
-            d.date = roundToYM(parseTime(d.date));
-
-            minY = isNaN(d.value)? minY:Math.min(minY, d.value);
-            maxY = isNaN(d.value)? maxY:Math.max(maxY, d.value);
-        });
-        if (minY == maxY) {maxY = minY + 1;}
-        if (useLogScale) {
-            minY = Math.pow(10, Math.floor(Math.log10(minY+1)));
-            maxY = Math.pow(10, Math.ceil(Math.log10(maxY)));
-        }
-
-
-      //Scale the range of the data
-        x.domain(d3.extent(data, function(d) { return d.date; }));
-        y.domain([minY, maxY]);
-
-
-
-        var colors = [
-
-          //darker
-            '#6699CC', //blue
-            '#98DFAF', //green
-            '#FF3C38', //red
-            '#FF8C42', //orange
-            '#933ed5', //purple
-            '#bebcc1', //gray
-
-          //lighter
-            '#9DBEDE',
-            '#C6EDD3',
-            '#FF8280',
-            '#FFB586'
-        ];
-
-
-
-      //Add y-axis
-        svg.append("g")
-            .attr("class", "axis")
-            .call(useLogScale ? d3.axisLeft(y).ticks(5, ",") : d3.axisLeft(y).ticks(5));
-
-
-
-      //add the X gridlines
-        svg.append("g")
-            .attr("class", "grid")
-            .attr("transform", "translate(0," + height + ")")
-            .call(d3.axisBottom(x)
-              .ticks()
-              .tickSize(-height)
-              .tickFormat("")
-            );
-
-      //add the Y gridlines
-        svg.append("g")
-            .attr("class", "grid")
-            .call(d3.axisLeft(y)
-                .ticks(5)
-                .tickSize(-width)
-                .tickFormat("")
-              );
-
-
-      //Add x-axis
-        const allMonths = Object.values(types)
-            .map(arr => arr.map(d => d.date))
-            .flat();
-        const allUniqueMonths = getUniqueDates(allMonths);
-        svg.append("g")
-            .attr("class", "axis")
-            .attr("transform", "translate(0,"+height+")")
-            .call(d3.axisBottom(x)
-                .tickFormat(ymFormat)
-                .tickValues(allUniqueMonths)
-            );
-
-
-      //Extract types into a string array
-        var keys = [];
-        for (var type in types) {
-            if (types.hasOwnProperty(type)){
-                keys.push(type);
-            }
-        }
-
-
-      //Sort the types as needed
-        var hasOrdersAndFill = groupName.indexOf("order")>-1;
-        if (hasOrdersAndFill){
-            keys.sort(function(a, b){
-                var t1 = a.replace("order","").replace("fill","");
-                var t2 = b.replace("order","").replace("fill","");
-                if (t1==t2){
-                    return a.indexOf("fill") ? -1 : 1;
-                }
-                return -0;
-            });
-        }
-
-
-
-      //Create rectangle over the grid to watch for mouse events.
-      //Note that this is significantly faster than monitoring the svg node!
-        var d = clone(data);
-        svg.append('rect')
-          .attr('width', width)
-          .attr('height', height)
-          .attr('opacity', 0)
-          .on('mousemove', function() {
-            drawTooltip(this, x, d, labelFunction);
-          })
-          .on('mouseout', function(){
-            if (tooltip) tooltip.style('display', 'none');
-            if (tooltipLine) tooltipLine.attr('stroke', 'none');
-          });
-
-      //Add vertical line for the tooltip
-        tooltipLine = svg.append('line')
-          .attr('stroke', 'black')
-          .attr('y1', 0)
-          .attr('y2', height);
-
-
-      //Draw lines and tags
-        var tags = {};
-        var idx = 0;
-        for (var i=0; i<keys.length; i++) {
-            var type = keys[i];
-            var line = lines[type];
-            var arr = types[type];
-            var color = colors[idx];
-            var isFill = type.indexOf("fill")>-1 && hasOrdersAndFill;
-            if (isFill){
-                if (idx>0) idx--;
-                else idx = 0;
-                color = colors[idx];
-            }
-
-
-            idx++;
-            if (idx>colors.length) idx = 0;
-
-
-            var raiseCorrespondingTag = function(d) {
-                  var tag = tags[d[0].type];
-                  var poly = tag.poly.node().cloneNode(true);
-                  var text = tag.text.node().cloneNode(true);
-
-                  tag.poly.remove();
-                  tag.text.remove();
-
-                  svg.node().appendChild(poly);
-                  svg.node().appendChild(text);
-
-                  tag.poly = d3.select(poly);
-                  tag.text = d3.select(text);
-            }
-
-
-          //Add thick transparent line for clicking purposes
-            svg.append("path")
-              .data([arr])
-              .attr("class", "line")
-              .style("stroke-opacity", 0.0)
-              .style("stroke-width", "11px")
-              .attr("d", line)
-              .on('mousemove', function() { //show tooltip
-                  drawTooltip(this, x, d, labelFunction);
-              })
-              .on("click", function(d) { raiseCorrespondingTag(d) });
-
-
-
-          //Draw line
-            svg.append("path")
-              .data([arr])
-              .attr("class", "line")
-              .style("stroke", color)
-              .style(isFill ? "stroke-dasharray" : "stroke", isFill ? ("3, 3") : color) //add dashes
-              .attr("d", line)
-              .on("click", function(d) { raiseCorrespondingTag(d) });
-
-
-
-          //Add label to the end of the line
-            var label = type;
-            if (labelFunction) label = labelFunction(label);
-            var lastItem = arr[arr.length-1];
-            var lastVal = lastItem.value;
-            var lastDate = lastItem.date;
-            var tx = x(lastDate)+3; //vs width+3
-            var ty = useLogScale? y(lastVal+1):y(lastVal);
-
-
-            var temp = svg.append("text")
-                .attr("dy", ".35em")
-                .attr("text-anchor", "start")
-                .text(label);
-            var box = temp.node().getBBox();
-            temp.remove();
-
-            var w = Math.max(box.width+8, 60);
-            var h = box.height;
-            var a = h/2;
-            var vertices = [
-              [0, 0], //ul
-              [w, 0], //ur
-              [w, h], //11
-              [0, h], //lr
-              [-a,a] //arrow point
-            ];
-
-
-          //Add tag (rect)
-            var poly = svg.append("polygon")
-                .attr("points", vertices.join(" "))
-                .attr("transform", "translate("+ (tx+(a)) +","+ (ty-(a)) +")")
-                .style("fill", color);
-
-          //Add label
-            var text = svg.append("text")
-                .attr("transform", "translate("+ (tx+a+4) +","+ty +")")
-                .attr("dy", ".35em")
-                .attr("text-anchor", "start")
-                .style("fill", "#fff")
-                .text(label);
-
-
-          //Update tags
-            tags[type] = {
-                poly: poly,
-                text: text
-            };
-        }
     };
 
 
@@ -687,313 +437,569 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
         var table = createTable();
+        table.style.width = "";
         div.appendChild(table);
         var tbody = table.firstChild;
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
         var td;
-
-
-
-        productOptions = createProductList(tr, config.style.combobox);
-        productOptions.clear();
-        productOptions.onChange = function(name, value){
-            currProduct = value;
-            title = value + " Time Series Views";
-
-            var _data = data[currProduct];
-
-
-          //Populate source combobox
-            sourceOptions.clear();
-            sourceOptions.add("All", "All");
-            for (var i=0; i<_data.length; i++){
-                var entry = _data[i];
-                sourceOptions.add(entry.name, i);
-            }
-            sourceOptions.setValue("All");
-
-            me.onUpdate();
+        
+        var paddingLeft = "15px";
+        var createDropdown = function(label, width){            
+            td = document.createElement("td");            
+            td.innerHTML = label + ":";
+            tr.appendChild(td);
+            if (td.previousSibling) td.style.paddingLeft = paddingLeft;
+            td = document.createElement("td");
+            if (isNaN(width)) width = 200;
+            td.style.width = width + "px";
+            tr.appendChild(td);  
+            td.style.paddingLeft = "7px";
+            return new javaxt.dhtml.ComboBox(td, {
+                style: config.style.combobox,
+                readOnly: true
+            });
+        };
+        
+        
+      //Create entity dropdown
+        establishmentOptions = createDropdown("Entity Type", 160);
+        ["Manufacturer","Shipper","Importer","Consignee","DII"].forEach((n)=>{
+            establishmentOptions.add(n, n);
+        });
+        establishmentOptions.setValue("Manufacturer");
+        establishmentOptions.onChange = function(name, value){
+            update();
         };
 
+        
+      //Create country dropdown
+        countryOptions = createDropdown("Country of Origin", 80);
+        countryOptions.add("Any", "");
+        countryOptions.setValue("Any");
+        countryOptions.onChange = function(name, value){
+            update();
+        };        
+      
+        
+      //Create product dropdown 
+        productOptions = createDropdown("Product Code", 100);
+        productOptions.add("All", "");
+        productOptions.setValue("All");
+        productOptions.onChange = function(name, value){
 
-
+        };
+        
+        
+      //Create slider
+        td = document.createElement("td");   
+        td.style.paddingLeft = paddingLeft;
+        td.innerHTML = "PREDICT Filter:";
+        tr.appendChild(td);                  
         td = document.createElement("td");
-        td.style.paddingLeft = "15px";
-        td.style.width = "65px";
-        td.innerHTML = "Source:";
+        td.style.width = "175px";
+        td.style.padding = "0 10px";
         tr.appendChild(td);
-        td = document.createElement("td");
-        td.style.width = "200px";
-        tr.appendChild(td);
-        sourceOptions = new javaxt.dhtml.ComboBox(td, {
-            style: config.style.combobox,
-            readOnly: true
-        });
-
-        sourceOptions.onChange = function(name, value){
-            groupOptions.clear();
-            var _data = data[currProduct];
-
-            if (value=="All"){
-                groupOptions.hide();
-
-
-              //Render combined data
-                var arr = [];
-                for (var i=0; i<_data.length; i++){
-                    var entry = _data[i];
-                    var groups = entry.groups;
-                    var name = entry.name;
-                    if (name=="RFI"){
-                        var d = clone(groups["order vs fill (total)"]);
-                        if (d){
-                            for (var j=0; j<d.length; j++){
-                                var t = d[j].type;
-                                if (t=="order_total") t = "RFI Orders";
-                                if (t=="fill_total") t = "RFI Fill";
-                                d[j].type = t;
-                            }
-                            arr.push(...d);
-                        }
-                    }
-                    else{
-                        var d = clone(groups["total"]);
-                        if (d){
-                            for (var j=0; j<d.length; j++){
-                                d[j].type = name;
-                            }
-                            arr.push(...d);
-                        }
-                    }
-                }
-
-                lineGraph.menu.select("Logarithmic");
-                updateLineGraph(arr, "", null);
-
+        slider = document.createElement("input");
+        slider.type = "range";
+        slider.className = "dashboard-slider";
+        slider.style.width = "100%";
+        slider.setAttribute("min", 1);
+        slider.setAttribute("max", 21);
+        slider.value = 1;
+        slider.getValue = function(){
+            var val = this.value-1;
+            return val;
+        };
+        slider.onchange = function(){ 
+            var val = this.getValue();
+            if (val>0){ 
+                thresholdInput.value = (5*val) + "%";
             }
             else{
-                groupOptions.show();
+                thresholdInput.value = "";
+            }
+            update();
+        };
+        td.appendChild(slider);     
+        td = document.createElement("td");
+        td.style.width = "45px";
+        tr.appendChild(td);
+        thresholdInput = document.createElement("input");
+        thresholdInput.className = "form-input";
+        thresholdInput.style.width = "100%";
+        td.appendChild(thresholdInput);
 
-              //Populate group options
-                var groups = _data[value].groups;
-                for (var name in groups) {
-                    if (groups.hasOwnProperty(name)){
-                        groupOptions.add(name, name);
+        
+        
+        
+      //Get data and populate the dropdowns
+        waitmask.show(500);
+        getData("Imports_Products", function(csv){
+
+            var productCodes = [];
+            var uniqueCountries = {};
+
+          //Parse csv
+            var rows = parseCSV(csv, ",");
+            for (var i=1; i<rows.length; i++){ //skip header
+                var col = rows[i];
+                var productCode = col[0];
+                var productCount = parseFloat(col[1]);
+                var countries = getArray(col[2]);
+
+                productCodes.push(productCode);
+                for (var j=0; j<countries.length; j++){
+                    uniqueCountries[countries[j]] = true;
+                }
+            }
+            
+            
+          //Update productOptions
+            productCodes.sort();
+            for (var i=0; i<productCodes.length; i++){
+                var productCode = productCodes[i];
+                productOptions.add(productCode, productCode);
+            }
+            
+            
+          //Update countryOptions
+            var arr = [];
+            for (var country in uniqueCountries) {
+                if (uniqueCountries.hasOwnProperty(country)){
+                    arr.push(country);
+                }   
+            }
+            arr.sort();
+            for (var i=0; i<arr.length; i++){
+                var country = arr[i];
+                countryOptions.add(country, country);
+            }
+
+
+            initializing = false;
+
+            //waitmask.hide();
+        });        
+    };
+
+
+  //**************************************************************************
+  //** getEstablishment
+  //**************************************************************************
+    var getEstablishment = function(){
+        return establishmentOptions.getValue().toLowerCase();
+    };
+    
+
+  //**************************************************************************
+  //** createGrid
+  //**************************************************************************
+    var createGrid = function(parent){
+
+      //Create grid control
+        grid = new javaxt.dhtml.DataGrid(parent, {
+            style: config.style.table,
+            localSort: true,
+            columns: [
+                {header: 'Name', width:'100%', sortable: true},
+                {header: 'Reported Quantity', width:'200px', align:'right', sortable: true},
+                {header: 'Reported Value', width:'150px', align:'right', sortable: true},
+                {header: 'Total Lines', width:'120px', align:'right', sortable: true},
+                {header: 'Field Exams', width:'120px', align:'right', sortable: true},
+                {header: 'Label Exams', width:'120px', align:'right', sortable: true},
+                {header: 'Samples', width:'120px', align:'right', sortable: true},
+                {header: '% Elevated Risk', width:'135px', align:'right', sortable: true}
+                
+            ],
+            update: function(row, d){
+                var name = d.name;
+                if (d.fei.length>1) name += " (" + formatNumber(d.fei.length) + ")";
+                row.set('Name', name);
+                row.set('Reported Quantity', formatNumber(d.totalQuantity));
+                row.set('Reported Value', "$"+formatNumber(d.totalValue));
+                row.set('Total Lines', formatNumber(d.totalLines));
+                if (d.fieldExams>0){ 
+                    var str = formatNumber(d.fieldExams);
+                    if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
+                    row.set('Field Exams', str);
+                }
+                if (d.labelExams>0){ 
+                    var str = formatNumber(d.labelExams);
+                    if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";                    
+                    row.set('Label Exams', str);
+                }
+                if (d.totalSamples>0){
+                    var str = formatNumber(d.totalSamples);  
+                    if (d.badSamples>0){ 
+                        str += " (" + formatNumber(d.badSamples) + " Bad)";                  
+                        
                     }
+                    row.set('Samples', str);
+                }
+                var p = (d.highPredict/d.totalLines)*100;
+                if (p>0){
+                    p = round(p, 1);
+                    row.set('% Elevated Risk', formatNumber(p)+"%");
+                }
+                else{
+                    row.set('% Elevated Risk', "0%");
                 }
 
+            }
+        });
 
-              //Update settings
-                lineGraph.menu.select("Linear");
 
-
-              //Select default value in the combobox
-                var defaultView = "order vs fill (by distributor)";
-                var foundDefault = false;
-                var options = groupOptions.getOptions();
-                if (options.length==0) return;
-                for (var i=0; i<options.length; i++){
-                    if (options[i].value==defaultView){
-                        foundDefault = true;
-                        break;
-                    }
-                }
-                if (!foundDefault) defaultView = options[0].value;
-                groupOptions.setValue(defaultView);
+      //TODO: Update header
+        var headerRow = grid.el.getElementsByClassName("table-header")[0];
+        
+        
+      //Add custom update method
+        grid.update = function(){
+            grid.clear();
+            grid.load(data);     
+        };        
+        
+        grid.setSortIndicator(3, "DESC");
+        grid.onSort = function(idx, sortDirection){
+            
+            var key;
+            switch (idx) {
+                case 1:
+                    key = "totalQuantity";
+                    break;
+                case 2:
+                    key = "totalValue";
+                    break;
+                case 3:
+                    key = "totalLines";
+                    break;
+                default:
+                    break;
+            }            
+            
+            if (key && key!==yAxis){
+                yAxis = key;
+                scatterChart.update();
+                lineChart.update();
+            }
+            
+            
+        };        
+        grid.onRowClick = function(row, e){
+            if (e.detail === 2) {
+                showCompanyProfile(row.record);
             }
         };
+    };
 
 
-        td = document.createElement("td");
-        td.style.width = "65px";
-        td.style.paddingLeft = "15px";
-        td.innerHTML = "Group:";
-        var groupLabel = td;
+  //**************************************************************************
+  //** createCharts
+  //**************************************************************************
+    var createCharts = function(parent){
+
+      //Create table
+        var table = createTable();
+        parent.appendChild(table);
+        var tbody = table.firstChild;
+        var tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        var td;
+        
+
+      //Create line chart
+        td = document.createElement("td");       
+        td.style.height = "100%";
+        td.style.width = "34%";
+        td.style.padding = "10px";
+        td.style.overflow = "hidden";
         tr.appendChild(td);
-        td = document.createElement("td");
-        td.style.width = "320px";
+        createLineChart(td);
+        
+
+      //Create bar chart
+        td = document.createElement("td"); 
+        td.style.height = "100%";
+        td.style.width = "33%";
+        td.style.padding = "10px 0px";        
+        td.style.overflow = "hidden";
         tr.appendChild(td);
-        groupOptions = new javaxt.dhtml.ComboBox(td, {
-            style: config.style.combobox,
-            readOnly: true
+        //createBarChart(td);
+        createRelationshipGraph(td);
+        
+        
+      //Create scatter chart
+        td = document.createElement("td");       
+        td.style.height = "100%";
+        td.style.width = "33%";
+        td.style.padding = "10px";
+        td.style.overflow = "hidden";
+        tr.appendChild(td);        
+        createScatterChart(td);
+    };
+    
+    
+  //**************************************************************************
+  //** createLineChart
+  //**************************************************************************    
+    var createLineChart = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Timeline",
+            width: "100%",
+            height: "360px"
         });
-        var _show = groupOptions.show;
-        var _hide = groupOptions.hide;
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
+        lineChart._update = lineChart.update;
+        lineChart.update = function(){
 
-        groupOptions.show = function(){
-            groupLabel.innerHTML = "Group:";
-            _show();
+            var key;
+            switch (yAxis) {
+                case "totalQuantity":
+                    key = "quantity";
+                    break;
+                case "totalValue":
+                    key = "value";
+                    break;
+                case "totalLines":
+                    key = "lines";
+                    break;
+                default:
+                    break;
+            }
+            
+
+            var title = yAxis.replace("total","");            
+            dashboardItem.title.innerText = title + " Per Day";
+            
+
+            lineChart._update({
+                yGrid: true,
+                xAxis: "date",
+                yAxis: key,                   
+                xAxis2: "date",
+                yAxis2: key,                      
+                endTags: false,
+                lineColor0: "#6699cc", //blue             
+                lineColor1: "#ff7800", //orange
+                smoothingType1: "movingAverage",
+                smoothingValue1: 30,
+                margin: {
+                    top: 15,
+                    right: 15,
+                    bottom: 15,
+                    left: 82
+                }                    
+            },[lineData,lineData]);              
         };
-
-        groupOptions.hide = function(){
-            groupLabel.innerHTML = "";
-            _hide();
-        };
-
-        groupOptions.onChange = function(name, value){
-            var groupName = value;
-            var _data = data[currProduct];
-            var entry = _data[sourceOptions.getValue()];
-            var groups = entry.groups;
-            var d = groups[groupName];
-            if (d==null) return;
-            var labelFunction = entry.labelFunction[groupName];
-            updateLineGraph(clone(d), groupName, labelFunction);
-        };
-
-
-        td = document.createElement("td");
-        tr.appendChild(td);
     };
-
-
-
-
+    
+    
   //**************************************************************************
-  //** createTooltip
-  //**************************************************************************
-    var createTooltip = function(parent) {
-        var div = document.createElement("div");
-        div.className = "tooltip noselect";
-        parent.appendChild(div);
-        tooltip = d3.select(div);
+  //** createBarChart
+  //**************************************************************************    
+    var createBarChart = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Top Shipments",
+            width: "100%",
+            height: "360px"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
     };
-
-
+    
+    
   //**************************************************************************
-  //** drawTooltip
+  //** createScatterChart
+  //**************************************************************************    
+    var createScatterChart = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Exams",
+            width: "100%",
+            height: "360px"
+        });                
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{
+            
+        });
+        scatterChart._update = scatterChart.update;
+        scatterChart.update = function(){
+            
+            var title = yAxis.replace("total","");            
+            dashboardItem.title.innerText = title + " vs Exams";
+            
+            var chartData = [];
+            data.forEach((d)=>{
+                var totalExams = d.totalExams;
+                if (!isNaN(totalExams)){
+                    if (totalExams>0){
+                        
+                        var failedExams = 0;
+                        if (!isNaN(d.failedFieldExams)) failedExams+=d.failedFieldExams;
+                        if (!isNaN(d.failedLabelExams)) failedExams+=d.failedLabelExams;
+                        
+                        chartData.push({
+                            Exams: totalExams,
+                            yAxis: d[yAxis],
+                            label: d.name,
+                            failedExams: failedExams                            
+                        });
+                    }
+                }
+            });
+
+            scatterChart._update({
+                xAxis: "Exams",
+                yAxis: "yAxis",
+                xGrid: true,
+                yGrid: true,
+                xLabel: true,
+                yLabel: false,
+                margin: {
+                    top: 15,
+                    right: 65,
+                    bottom: 32,
+                    left: 82
+                },                
+                pointLabels: true,
+                getPointLabel: function(d){
+                    return d.label;
+                },
+                getPointColor: function(d){
+                    if (d.failedExams>0) return "#e66869";
+                    return "#6699cc";
+                }
+            },[chartData]);            
+        };
+    };    
+    
+    
   //**************************************************************************
-    var drawTooltip = function(node, x, data, labelFunction) {
-
-      //Get date associated with the mouse position
-        const date = roundToYM(x.invert(d3.mouse(node)[0]));
-
-
-      //Update vertical line
-        const xOffset = x(date);
-        tooltipLine
-          .attr('stroke', 'black')
-          .attr('x1', xOffset)
-          .attr('x2', xOffset);
-
-
-      //Filter data by the selected date. Note that the data here is a clone
-        data = data.filter(d => (d.date.slice(0, 7))==ymFormat(date));
-        //data.sort((a, b) => b.value - a.value);
-
-
-
-        var fmtNum = function(val) {
-            val = Math.round(val).toLocaleString();
-            return '<div style="text-align:right">' + val + '</div>';
+  //** createRelationshipGraph
+  //**************************************************************************    
+    var createRelationshipGraph = function(parent){
+        
+      //Create dashboard item
+        var dashboardItem = createDashboardItem(parent,{
+            title: "Relationships",
+            width: "100%",
+            height: "360px"
+        });
+        dashboardItem.el.style.margin = "0px";
+        dashboardItem.el.style.display = "table";
+        
+        
+      //Get colors
+        var themeColors = getColorPalette(true);
+        var numColors = themeColors.length/2;
+        var colors = {};
+        var i = 0;
+        ["blue","green","red","orange","purple","gray"].forEach((color)=>{
+            colors[color] = {dark: themeColors[i], light: themeColors[i+numColors]};
+            i++;
+        });
+        var colorMap = {
+            manufacturer: "green",
+            shipper: "orange",
+            importer: "red",
+            consignee: "blue",
+            dii: "purple"
         };
 
-        var fmtLabel = function(label) {
-            if (labelFunction) return labelFunction(label);
-            var s = label;
-            s = s.replaceAll('_', ' ');
-            const words = s.split(' ');
-            var ucwords = words.map(w => w.charAt(0).toUpperCase()+w.slice(1));
-            return ucwords.join(' ');
-        };
 
-
-        var bound = tooltipLine.node().getBoundingClientRect();
-        var html = document.documentElement;
-        var minY = bound.left + window.pageXOffset - html.clientLeft;
-        //var left = d3.event.pageX;
-        //if (left<minY) left = minY;
-
-        tooltip.html("<strong>"+ymFormat(date)+"</strong>")
-            .style('display', 'block')
-            //.style('left', left+20) //d3.event.pageX + 20
-            .style('top', d3.event.pageY - 170)
-            .append('table')
-            .selectAll('tr')
-            .data(data).enter()
-                .append('tr')
-                .selectAll('td')
-                .data(d => [fmtLabel(d.type), fmtNum(d.value)]).enter()
-                    .append('td')
-                    .html(d => d);
-
-
-      //Position the tooltip to the left of the vertical line
-        var el = tooltip.node();
-        var box = el.getBoundingClientRect();
-        tooltip.style('left', minY-(box.width+30));
+      //Create relationship graph
+        nodeView = new bluewave.charts.ForceDirectedChart(dashboardItem.innerDiv,{
+            getNodeFill: function(node){
+                var color = colorMap[node.type];
+                if (color){
+                    return colors[color].light;
+                }
+                else{
+                    return "#dcdcdc";
+                }
+            },
+            getNodeOutline: function(node){
+                var color = colorMap[node.type];
+                if (color){
+                    return colors[color].dark;
+                }
+                else{
+                    return "#777";
+                }
+            },
+            getNodeRadius: function(node){
+                var establishment = getEstablishment();
+                if (node.type===establishment){
+                    return 20;
+                }
+                else{
+                    return 10;
+                }
+            }
+        });
     };
-
-
+    
+    
   //**************************************************************************
-  //** formatDate
+  //** showCompanyProfile
   //**************************************************************************
-  /** Returns date in YYYY-MM-DD format
-   */
-    var formatDate = function(date) {
-        var d = new Date(date),
-            month = '' + (d.getMonth() + 1),
-            day = '' + d.getDate(),
-            year = d.getFullYear();
+    var showCompanyProfile = function(d){        
+        if (!companyProfile){
 
-        if (month.length < 2)
-            month = '0' + month;
-        if (day.length < 2)
-            day = '0' + day;
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Company Profile",
+                width: 1060,
+                height: 600,
+                modal: true,
+                style: config.style.window,
+                resizable: true
+            });
 
-        return [year, month, day].join('-');
+            companyProfile = new bluewave.dashboards.CompanyProfile(win.getBody(), config);
+            companyProfile.show = win.show;
+            companyProfile.hide = win.hide;
+        }
+        
+        companyProfile.update(d.name,d.fei,getEstablishment());
+        companyProfile.show();
     };
-
-
+    
+    
+  //**************************************************************************
+  //** getArray
+  //**************************************************************************
+    var getArray = function(str){
+        str = str.substring(1);
+        return str.substring(0, str.length-1).split(", ");
+    };
+    
+    
+  //**************************************************************************
+  //** numberWithCommas
+  //**************************************************************************
+    const formatNumber = (x) => {
+        if (x==null) return "";
+        if (typeof x !== "string") x+="";
+        var parts = x.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
+    };    
+    
+    
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
-    var createDashboardItem = bluewave.utils.createDashboardItem;
-    var createProductList = bluewave.utils.createProductList;
+    var round = javaxt.dhtml.utils.round;
+    var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
-
-
-    var clone = function(json) {
-        if (json==null) return null;
-        return JSON.parse(JSON.stringify(json));
-    };
-
-
-    var ymFormat = d3.timeFormat("%Y-%m");
-    var roundToYM = function(timeStamp) {
-        const y = timeStamp.getFullYear();
-        const m = timeStamp.getMonth();
-        const result = new Date(y, m);
-        if (timeStamp.getDate() > 15) {
-            result.setMonth(result.getMonth()+1)
-        }
-        return result;
-    };
-
-
-    var isDateInArray = function(needle, haystack) {
-        for (var i = 0; i < haystack.length; i++) {
-            if (needle.getTime() === haystack[i].getTime()) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    var getUniqueDates = function(dates) {
-        var uniqueDates = [];
-        for (var i = 0; i < dates.length; i++) {
-            if (!isDateInArray(dates[i], uniqueDates)) {
-                uniqueDates.push(dates[i]);
-            }
-        }
-        return uniqueDates;
-    };
-
+    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var getColorPalette = bluewave.utils.getColorPalette;
 
     init();
-
 };

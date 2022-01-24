@@ -14,10 +14,11 @@ bluewave.Explorer = function(parent, config) {
     var dashboardPanel, editPanel, toggleButton, mask, waitmask; //primary components
     var id, name, thumbnail; //dashboard attributes
     var button = {};
+    var arrow;
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
-    var dbView, chartEditor, sankeyEditor, layoutEditor, nameEditor,
-    supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager,
+    var dbView, lineEditor, barEditor, sankeyEditor, layoutEditor, nameEditor,
+    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, calendarEditor, treeMapEditor, userManager,
     fileViewer, docComparer; //popup dialogs
     var windows = [];
     var zoom = 0;
@@ -29,6 +30,7 @@ bluewave.Explorer = function(parent, config) {
     var init = function(){
 
         if (!config) config = {};
+        if (!config.fx) config.fx = new javaxt.dhtml.Effects();
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
@@ -370,6 +372,8 @@ bluewave.Explorer = function(parent, config) {
   //** updateButtons
   //**************************************************************************
     var updateButtons = function(){
+        arrow.hide();
+
         if (me.isReadOnly()){
             for (var key in button) {
                 if (button.hasOwnProperty(key)){
@@ -406,6 +410,7 @@ bluewave.Explorer = function(parent, config) {
 
 
               //Enable map and pieChart buttons as needed
+                var numNodes = 0;
                 for (var key in nodes) {
                     if (nodes.hasOwnProperty(key)){
                         var node = nodes[key];
@@ -415,8 +420,15 @@ bluewave.Explorer = function(parent, config) {
                         if (node.type==="supplyChain"){
                             button.mapChart.enable();
                         }
+                        if (node.type==="pdf"){
+                            button.compareDocs.enable();
+                        }
+                        numNodes++;
                     }
                 }
+
+                if (numNodes===0) arrow.show();
+
             }
 
 
@@ -916,6 +928,7 @@ bluewave.Explorer = function(parent, config) {
             var nodeType = nodes[nodeID+""].type;
             delete nodes[nodeID+""];
             if (nodeType==="layout" && !getLayoutNode()) toggleButton.hide();
+            updateButtons();
         });
         drawflow.on('connectionRemoved', function(info) {
             var outputID = info.output_id+"";
@@ -961,7 +974,7 @@ bluewave.Explorer = function(parent, config) {
         });
 
 
-      //Create menubar
+      //Create toolbar
         var menubar = document.createElement("div");
         menubar.className = "drawflow-toolbar";
         div.appendChild(menubar);
@@ -969,14 +982,28 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("pieChart", "fas fa-chart-pie", "Pie Chart", menubar);
         createMenuButton("barChart", "fas fa-chart-bar", "Bar Chart", menubar);
         createMenuButton("lineChart", "fas fa-chart-line", "Line Chart", menubar);
+        createMenuButton("histogramChart", "fas fa-chart-area", "Histogram Chart", menubar);
         createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
-        createMenuButton("mapChart", "fas fa-map-marked-alt", "Map", menubar);
-        //createMenuButton("treemapChart", "fas fa-border-all", "Treemap Chart", menubar);
-        //createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
+        createMenuButton("mapChart", "fas fa-globe-americas", "Map", menubar);
+        createMenuButton("treeMapChart", "fas fa-border-all", "Treemap Chart", menubar);
+        createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("compareDocs", "fas fa-not-equal", "Document Analysis", menubar);
         createMenuButton("layout", "far fa-object-ungroup", "Layout", menubar);
+
+
+      //Create little arrow/hint for the toolbar
+        arrow = document.createElement("div");
+        arrow.className = "drawflow-toolbar-hint noselect";
+        arrow.style.display = "none";
+        menubar.appendChild(arrow);
+        arrow.show = function(){
+            config.fx.fadeIn(this,"easeIn",500);
+        };
+        arrow.hide = function(){
+            config.fx.fadeOut(this,"easeIn",100);
+        };
     };
 
 
@@ -1057,6 +1084,8 @@ bluewave.Explorer = function(parent, config) {
 
         e.stopPropagation();
         e.preventDefault();
+
+        arrow.hide();
 
         if (e.type === "touchend") {
             /*
@@ -1400,9 +1429,99 @@ bluewave.Explorer = function(parent, config) {
             case "scatterChart" :
 
                 node.ondblclick = function(){
-                    editScatter(this);
+
+                    if (!scatterEditor){
+                        scatterEditor = createNodeEditor({
+                            title: "Edit Scatter Chart",
+                            width: 1060,
+                            height: 600,
+                            editor: bluewave.charts.ScatterEditor
+                        });
+                    }
+
+                    editChart(this, scatterEditor);
                 };
                 break;
+            case "lineChart" :
+
+                node.ondblclick = function(){
+
+                    if (!lineEditor){
+                        lineEditor = createNodeEditor({
+                            title: "Edit Line Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.LineEditor
+                        });
+                    }
+
+                    editChart(this, lineEditor);
+                };
+                break;
+            case "barChart" :
+
+                node.ondblclick = function(){
+
+                    if (!barEditor){
+                        barEditor = createNodeEditor({
+                            title: "Edit Bar Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.BarEditor
+                        });
+                    }
+
+                    editChart(this, barEditor);
+                };
+                break;
+            case "calendarChart" :
+                node.ondblclick = function(){
+
+                    if (!calendarEditor){
+                        calendarEditor = createNodeEditor({
+                            title: "Edit Calendar Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.CalendarEditor
+                        });
+                    }
+
+                    editChart(this, calendarEditor);
+                };
+                break;
+            case "treeMapChart" :
+                node.ondblclick = function(){
+                    if (!treeMapEditor){
+                        treeMapEditor = createNodeEditor({
+                            title: "Edit Tree Map Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.TreeMapEditor
+                        });
+                    }
+                    editChart(this, treeMapEditor);
+                };
+                break;
+
+            case "histogramChart":
+                node.ondblclick = function(){
+                    if (!histogramEditor){
+                        histogramEditor = createNodeEditor({
+                            title: "Edit Histogram",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.HistogramEditor
+                        });
+                    }
+                    editChart(this, histogramEditor);
+                };
+                break;
+
             case "pieChart" :
 
                 node.ondblclick = function(){
@@ -1461,21 +1580,7 @@ bluewave.Explorer = function(parent, config) {
 
             default:
 
-                node.ondblclick = function(){
-                    var hasData = false;
-                    var inputs = this.inputs;
-                    for (var key in inputs) {
-                        if (inputs.hasOwnProperty(key)){
-                            if (inputs[key].csv){
-                                hasData = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (hasData){
-                        editChart(this);
-                    }
-                };
+                break;
         }
     };
 
@@ -1632,17 +1737,9 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
   //** editChart
   //**************************************************************************
-    var editChart = function(node){
-        if (!chartEditor){
-            chartEditor = createNodeEditor({
-                title: "Edit Chart",
-                width: 1060,
-                height: 600,
-                resizable: true,
-                editor: bluewave.ChartEditor
-            });
-        }
-        chartEditor.getNode = function(){
+    var editChart = function(node, editor){
+
+        editor.getNode = function(){
             return node;
         };
 
@@ -1661,9 +1758,9 @@ bluewave.Explorer = function(parent, config) {
         var chartConfig = {};
         merge(chartConfig, node.config);
 
-
-        chartEditor.update(node.type, chartConfig, data, node);
-        chartEditor.show();
+        chartConfig.chartType = node.type; //is this used for anything?
+        editor.update(chartConfig, data);
+        editor.show();
     };
 
 
@@ -1731,42 +1828,6 @@ bluewave.Explorer = function(parent, config) {
 
       //Show sankeyEditor when we are in the editor view
         sankeyEditor.show();
-    };
-
-
-  //**************************************************************************
-  //** editScatter
-  //**************************************************************************
-    var editScatter = function(node){
-        if (!scatterEditor){
-            scatterEditor = createNodeEditor({
-                title: "Edit Scatter Chart",
-                width: 1060,
-                height: 600,
-                editor: bluewave.charts.ScatterEditor
-            });
-        }
-        scatterEditor.getNode = function(){
-            return node;
-        };
-
-
-      //Get config
-        var chartConfig = {};
-        merge(chartConfig, node.config);
-
-
-      //Get data
-        var data = [];
-        for (var key in node.inputs) {
-            if (node.inputs.hasOwnProperty(key)){
-                var csv = node.inputs[key].csv;
-                data.push(csv);
-            }
-        }
-
-        scatterEditor.update(chartConfig, data);
-        scatterEditor.show();
     };
 
 
@@ -1928,7 +1989,8 @@ bluewave.Explorer = function(parent, config) {
             });
             docComparer.getConfig = function(){
                 return {
-                    chartTitle: title
+                    chartTitle: title,
+                    similarities: docComparer.getSimilarities()
                 };
             };
             docComparer.getChart = function(){
@@ -1956,7 +2018,7 @@ bluewave.Explorer = function(parent, config) {
 
 
       //Update and show docComparer
-        docComparer.update(inputs, chartConfig);
+        docComparer.update(inputs, chartConfig.similarities);
         docComparer.show();
     };
 
@@ -2028,8 +2090,10 @@ bluewave.Explorer = function(parent, config) {
                                 if (el.show) el.show();
                                 setTimeout(function(){
                                     createPreview(el, function(canvas){
-                                        node.preview = canvas.toDataURL("image/png");
-                                        createThumbnail(node, canvas);
+                                        if (canvas && canvas.toDataURL){
+                                            node.preview = canvas.toDataURL("image/png");
+                                            createThumbnail(node, canvas);
+                                        }
                                         win.close();
                                         waitmask.hide();
                                     }, this);
@@ -2889,6 +2953,14 @@ bluewave.Explorer = function(parent, config) {
                         else if (node.type==="scatterChart"){
                             var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
                             scatterChart.update(chartConfig, data);
+                        }
+                        else if (node.type==="calendarChart"){
+                            var calendarChart = new bluewave.charts.CalendarChart(createChartContainer(),{});
+                            calendarChart.update(chartConfig, data);
+                        }
+                        else if (node.type==="treeMapChart"){
+                            var treeMapChart = new bluewave.charts.TreeMapChart(createChartContainer(),{});
+                            treeMapChart.update(chartConfig, data);
                         }
                         else if (node.type==="mapChart"){
 

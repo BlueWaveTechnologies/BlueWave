@@ -87,20 +87,9 @@ if(!bluewave.charts) bluewave.charts={};
         });
         panel.el.className = "";
         previewArea = panel.innerDiv;
-        onRender(previewArea, function(){
-            var width = previewArea.offsetWidth;
-            var height = previewArea.offsetHeight;
-
-            svg = d3.select(previewArea).append("svg");
-            svg.attr("width", width);
-            svg.attr("height", height);
-
-            mapChart = new bluewave.charts.MapChart(svg, {
-                margin: margin
-            });
-
+        mapChart = new bluewave.charts.MapChart(previewArea, {
+            margin: margin
         });
-
 
       //Allow users to change the title associated with the chart
         addTextEditor(panel.title, function(title){

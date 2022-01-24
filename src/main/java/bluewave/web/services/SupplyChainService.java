@@ -1,4 +1,5 @@
 package bluewave.web.services;
+import static bluewave.graph.Utils.*;
 
 import java.util.*;
 import java.io.IOException;
@@ -15,8 +16,6 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Value;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 //******************************************************************************
 //**  SupplyChainService
@@ -29,7 +28,7 @@ import com.google.gson.GsonBuilder;
 
 public class SupplyChainService extends WebService {
 
-    
+
   //**************************************************************************
   //** getCompany
   //**************************************************************************
@@ -317,7 +316,7 @@ public class SupplyChainService extends WebService {
         }
     }
 
-    
+
   //**************************************************************************
   //** getFacility
   //**************************************************************************
@@ -340,7 +339,7 @@ public class SupplyChainService extends WebService {
             "properties(f) as facility, " +
             "properties(n) as registration";
 
-            
+
             Result rs = session.run(query);
             if (rs.hasNext()){
                 Record record = rs.next();
@@ -366,7 +365,7 @@ public class SupplyChainService extends WebService {
         }
         return facility;
     }
-    
+
 
   //**************************************************************************
   //** getFacilities
@@ -664,7 +663,7 @@ public class SupplyChainService extends WebService {
             return new ServiceResponse(e);
         }
     }
-    
+
 
   //**************************************************************************
   //** getProduct
@@ -688,7 +687,7 @@ public class SupplyChainService extends WebService {
             "properties(p) as product, " +
             "n.fei_number as fei";
 
-            
+
             Result rs = session.run(query);
             if (rs.hasNext()){
                 Record record = rs.next();
@@ -705,13 +704,13 @@ public class SupplyChainService extends WebService {
             return new ServiceResponse(e);
         }
     }
-    
-    
+
+
     private JSONObject getProduct(Record record){
         JSONObject product = getJson(record.get("product"));
         return product;
     }
-    
+
 
   //**************************************************************************
   //** getProducts
@@ -1121,19 +1120,6 @@ public class SupplyChainService extends WebService {
 
 
   //**************************************************************************
-  //** getJson
-  //**************************************************************************
-    private static JSONObject getJson(Value val){
-        JSONObject json = new JSONObject();
-        if (!val.isNull()){
-            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-            json = new JSONObject(gson.toJson(val.asMap()));
-        }
-        return json;
-    }
-
-
-  //**************************************************************************
   //** getString
   //**************************************************************************
   /** Returns a string for the given value. Returns null if the string is
@@ -1150,8 +1136,8 @@ public class SupplyChainService extends WebService {
         }
         return str;
     }
-    
-    
+
+
   //**************************************************************************
   //** getSession
   //**************************************************************************
