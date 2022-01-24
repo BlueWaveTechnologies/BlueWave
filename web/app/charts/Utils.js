@@ -15,28 +15,23 @@ bluewave.chart.utils = {
             svg = d3.select(parent);
         }
         else{
-            svg = d3.select(parent).append("svg");
+
+
+            var p = d3.select(parent)
+            .append("div")
+            .classed("svg-container", true) ;
+
+            var svg = p.append("svg")
+            .attr("preserveAspectRatio", "xMinYMin meet")
+            .attr("viewBox", "0 0 600 400")
+            .classed("svg-content-responsive", true);
+
+
             javaxt.dhtml.utils.onRender(parent, function(){
                 var width = parent.offsetWidth;
                 var height = parent.offsetHeight;
-                // Responsive SVG needs these 2 attributes and no width and height attr.
-                svg.attr("preserveAspectRatio", "xMinYMin meet")
-                svg.attr("viewBox", `0 0 ${width} ${height}`)
-
-
-                // Class to make it responsive.
-                svg.classed("svg-content-responsive", true)
+                svg.attr("viewBox", `0 0 ${width} ${height}`);
             });
-
-            var callbackResize = function (){
-                var width = parent.offsetWidth;
-                var height = parent.offsetHeight;
-                // Responsive SVG needs these 2 attributes and no width and height attr.
-                svg.attr("preserveAspectRatio", "xMinYMin meet")
-                svg.attr("viewBox", `0 0 ${width} ${height}`)
-            }
-
-            javaxt.dhtml.utils.addResizeListener(parent, callbackResize)
 
         }
 
