@@ -1474,7 +1474,6 @@ bluewave.Explorer = function(parent, config) {
                 };
                 break;
             case "calendarChart" :
-                console.log("got to calendarchart case")
                 node.ondblclick = function(){
 
                     if (!calendarEditor){
