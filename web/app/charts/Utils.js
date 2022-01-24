@@ -324,7 +324,7 @@ bluewave.chart.utils = {
         var marginLeft = xExtents.left-left; //extra space for the left-most x-axis label
         if (marginLeft<0) marginLeft = 0;
 
-        var marginRight = (xExtents.right-left)-axisWidth; //extra space for the right-most x-axis label
+        var marginRight = (xExtents.right-right); //extra space for the right-most x-axis label
         if (marginRight<0) marginRight = 0;
 
 
@@ -489,7 +489,7 @@ bluewave.chart.utils = {
 
         var getType = bluewave.chart.utils.getType;
         if (!type) type = getType(domain[0]);
-        if (!scalingFactor) scalingFactor = 8;
+        if (!scalingFactor) scalingFactor = 1;
 
         if (type === 'date') {
             let endDate = domain[1];
@@ -498,7 +498,7 @@ bluewave.chart.utils = {
 
 
             let timeDiff = endDate - startDate;
-            let timetoAdd = timeDiff / scalingFactor;
+            let timetoAdd = timeDiff * scalingFactor;
             let extendedDate = new Date(dateinMilliseconds + timetoAdd);
 
             scale = d3
@@ -516,7 +516,7 @@ bluewave.chart.utils = {
 
         } else if (type === 'string') {
 
-            let numExtraTicks = domain.length / scalingFactor;
+            let numExtraTicks = Math.ceil(domain.length * scalingFactor);
             let spaceString = "";
             let ordinalDomain = domain;
             //Hackyest hack in ever - creates space strings of increasing length. Ordinal domain values must be unique
@@ -535,7 +535,7 @@ bluewave.chart.utils = {
 
         } else { //Number
 
-            let numDomain = [domain[0], domain[1]*(1/scalingFactor + 1)]
+            let numDomain = [domain[0], domain[1]*(scalingFactor + 1)]
 
             scale = d3.scaleLinear()
                     .domain(numDomain)

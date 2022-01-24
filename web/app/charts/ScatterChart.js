@@ -72,7 +72,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
     this.getPointLabel = function(d){
-        return "labeltestloooooooooong";
+        return "labeltest";
     };
 
     this.getPointRadius = function(d){
@@ -154,29 +154,26 @@ bluewave.charts.ScatterChart = function(parent, config) {
           //Update right margin as needed.
             if (config.pointLabels){
 
-                //The extension won't work here - not sure we've got a priori knowledge of scale here
-                x = extendScale({scale:axes.x, band:axes.xBand}, [0, axisWidth], 8).scale;
-                reDrawAxes(plotArea, axes.xAxis, x, null, null, axisHeight);
-                //Check boxes of all the labels and see if the right side of any of
-                //the boxes exceeds the right margin. Adjust accordingly
-                var maxLabelWidth = 0;
-                var labelBoxes = [];
-                var label = me.getPointLabel();
+              //Check boxes of all the labels and see if the right side of any of
+              //the boxes exceeds the right margin. Adjust accordingly
+              var maxLabelWidth = 0;
+              var label = me.getPointLabel();
 
-                //Will eventually check all labels
-                        var temp = plotArea.append("text")
-                            .attr("dy", ".35em")
-                            .attr("text-anchor", "start")
-                            .text(label);
-                        var box = temp.node().getBBox();
-                        temp.remove();
+              //Will eventually check last label
+              var temp = plotArea.append("text")
+                .attr("dy", ".35em")
+                .attr("text-anchor", "start")
+                .text(label);
+              var box = temp.node().getBBox();
+              temp.remove();
 
-                        var w = Math.max(box.width+8, 60)+5;
-                        labelHeight = box.height;
-                        maxLabelWidth = Math.max(w, maxLabelWidth);              
-                
-                        marginRight+=maxLabelWidth;
-            }
+              var w = box.width;
+              labelHeight = box.height;
+              maxLabelWidth = Math.max(w, maxLabelWidth);
+
+              // marginRight+=maxLabelWidth;
+
+            };
 
 
           //Rerender axis
@@ -211,7 +208,8 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
         //Just to show it works after final axes are set
         if (config.pointLabels) {
-            x = extendScale({ scale: axes.x, band: axes.xBand }, [0, axisWidth], 8).scale;
+            let scalingFactor = maxLabelWidth/axisWidth;
+            x = extendScale({ scale: axes.x, band: axes.xBand }, [0, axisWidth], scalingFactor).scale;
             reDrawAxes(plotArea, axes.xAxis, x, null, null, axisHeight);
         }
 
