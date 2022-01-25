@@ -38,7 +38,13 @@ public class DocumentService extends WebService {
             bluewave.app.User user = (bluewave.app.User) request.getUser();
 
             if (method.equals("GET")){
-                return getFile(request, user);
+                String fileName = request.getParameter("fileName").toString();
+                if (fileName!=null){
+                    return getFile(request, user);
+                }
+                else{
+                    return getFiles(request, user);
+                }
             }
             else if (method.equals("POST")){
                 return uploadFile(request, user);
@@ -49,6 +55,53 @@ public class DocumentService extends WebService {
         }
         else{
             return super.getServiceResponse(request, database);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getFiles
+  //**************************************************************************
+    private ServiceResponse getFiles(ServiceRequest request, bluewave.app.User user)
+        throws ServletException {
+
+        String q = request.getParameter("q").toString();
+        if (q==null){
+            StringBuilder str = new StringBuilder();
+            str.append("name,type,date,size");
+            javaxt.io.Directory dir = getUploadDir();
+            for (Object obj : dir.getChildren(true, "*.pdf")){
+
+                String name="";
+                String type="";
+                java.util.Date date = null;
+                Long size = null;
+                if (obj instanceof javaxt.io.File){
+                    javaxt.io.File f = (javaxt.io.File) obj;
+                    name = f.getName();
+                    type = "f";
+                    size = f.getSize();
+                    date = f.getDate();
+                }
+                else if (obj instanceof javaxt.io.Directory){
+                    javaxt.io.Directory d = (javaxt.io.Directory) obj;
+                    name = d.getName();
+                    type = "d";
+                    size = -1L;
+                    date = d.getDate();
+
+                    if (true) continue;
+                }
+
+
+
+                if (name.contains(",")) name = "\"" + name + "\"";
+                str.append("\n"+name+","+type+","+new javaxt.utils.Date(date).toISOString()+","+size);
+            }
+            return new ServiceResponse(str.toString());
+        }
+        else{
+            return new ServiceResponse(501);
         }
     }
 
@@ -243,12 +296,21 @@ public class DocumentService extends WebService {
     private static javaxt.io.Directory getUploadDir(){
         JSONObject config = Config.get("webserver").toJSONObject();
         javaxt.io.Directory jobDir = null;
-        if (config.has("jobDir")){
-            String dir = config.get("jobDir").toString().trim();
+        if (config.has("uploadDir")){
+            String dir = config.get("uploadDir").toString().trim();
             if (dir.length()>0){
                 jobDir = new javaxt.io.Directory(dir);
-                jobDir = new javaxt.io.Directory(jobDir.toString() + "uploads");
                 jobDir.create();
+            }
+        }
+        if (jobDir==null) {
+            if (config.has("jobDir")){
+                String dir = config.get("jobDir").toString().trim();
+                if (dir.length()>0){
+                    jobDir = new javaxt.io.Directory(dir);
+                    jobDir = new javaxt.io.Directory(jobDir.toString() + "uploads");
+                    jobDir.create();
+                }
             }
         }
         if (jobDir==null || !jobDir.exists()){

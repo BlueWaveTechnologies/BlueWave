@@ -228,7 +228,7 @@ public class WebServices extends WebService {
         else if (service.equals("import")){
             ws = importService;
         }
-        else if (service.equals("document")){
+        else if (service.equals("document") || service.equals("documents")){
             ws = documentService;
         }
         else if (service.equals("supplychain")){
