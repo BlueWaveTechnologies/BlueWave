@@ -15,13 +15,26 @@ bluewave.chart.utils = {
             svg = d3.select(parent);
         }
         else{
-            svg = d3.select(parent).append("svg");
+
+
+            var p = d3.select(parent)
+            .append("div")
+            .classed("svg-container", true) ;
+
+            var svg = p.append("svg")
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .attr("height","100%")
+                .attr("width","100%")
+                .attr("viewBox", "0 0 600 400")
+                .classed("svg-content-responsive", true);
+
+
             javaxt.dhtml.utils.onRender(parent, function(){
                 var width = parent.offsetWidth;
                 var height = parent.offsetHeight;
-                svg.attr("width", width);
-                svg.attr("height", height);
+                svg.attr("viewBox", `0 0 ${width} ${height}`);
             });
+
         }
 
         var g = svg.append("g");
@@ -481,7 +494,7 @@ bluewave.chart.utils = {
   //**************************************************************************
   //** extendScale
   //**************************************************************************
-    
+
     extendScale: function (scaleBandObj, axisRange, scalingFactor, type) {
 
         var domain = scaleBandObj.scale.domain();
@@ -512,7 +525,7 @@ bluewave.chart.utils = {
                     .rangeRound(axisRange)
                     .padding(0.2);
 
-            
+
 
         } else if (type === 'string') {
 
@@ -521,7 +534,7 @@ bluewave.chart.utils = {
             let ordinalDomain = domain;
             //Hackyest hack in ever - creates space strings of increasing length. Ordinal domain values must be unique
             for(let i=0; i<numExtraTicks; i++){
-                
+
                 spaceString = spaceString + " ";
                 ordinalDomain.push(spaceString);
             }
@@ -531,7 +544,7 @@ bluewave.chart.utils = {
                     .domain(ordinalDomain)
                     .range(axisRange)
                     .padding(0.2);
-           
+
 
         } else { //Number
 
@@ -554,7 +567,7 @@ bluewave.chart.utils = {
   //** reDrawAxes
   //**************************************************************************
     reDrawAxes: function(svg, xAxis, x, yAxis, y, axisHeight) {
-     
+
 
         if (xAxis){
             xAxis.remove();
@@ -572,7 +585,7 @@ bluewave.chart.utils = {
             yAxis = svg
             .append("g")
             .call(
-                d3.axisLeft(y) 
+                d3.axisLeft(y)
             );
 
         }
