@@ -1840,6 +1840,7 @@ bluewave.Explorer = function(parent, config) {
                 title: "Edit Pie Chart",
                 width: 1060,
                 height: 600,
+                resizable: true,
                 editor: bluewave.charts.PieEditor
             });
         }
