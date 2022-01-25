@@ -22,9 +22,11 @@ bluewave.chart.utils = {
             .classed("svg-container", true) ;
 
             var svg = p.append("svg")
-            .attr("preserveAspectRatio", "xMinYMin meet")
-            .attr("viewBox", "0 0 600 400")
-            .classed("svg-content-responsive", true);
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .attr("height","100%")
+                .attr("width","100%")
+                .attr("viewBox", "0 0 600 400")
+                .classed("svg-content-responsive", true);
 
 
             javaxt.dhtml.utils.onRender(parent, function(){
