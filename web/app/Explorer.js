@@ -1435,6 +1435,7 @@ bluewave.Explorer = function(parent, config) {
                             title: "Edit Scatter Chart",
                             width: 1060,
                             height: 600,
+                            resizable: true,
                             editor: bluewave.charts.ScatterEditor
                         });
                     }
