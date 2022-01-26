@@ -14,6 +14,8 @@ bluewave.Homepage = function(parent, config) {
     var mainDiv;
     var t = new Date().getTime();
     var dashboardItems = [];
+    var callout;
+    var waitmask;
 
 
   //**************************************************************************
@@ -21,6 +23,8 @@ bluewave.Homepage = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;
 
         var div = document.createElement("div");
         div.className = "dashboard-homepage";
@@ -214,7 +218,8 @@ bluewave.Homepage = function(parent, config) {
         var dashboardItem = createDashboardItem(parent, {
             width: 360,
             height: 230,
-            subtitle: title
+            subtitle: title,
+            settings: true
         });
         dashboardItem.dashboard = dashboard;
         dashboardItems.push(dashboardItem);
@@ -223,7 +228,37 @@ bluewave.Homepage = function(parent, config) {
         dashboardItem.innerDiv.style.cursor = "pointer";
         dashboardItem.innerDiv.style.textAlign = "center";
         dashboardItem.innerDiv.onclick = function(){
+            if (callout) callout.hide();
             me.onClick(dashboardItem);
+        };
+
+        dashboardItem.settings.style.opacity = 0;
+        dashboardItem.el.onmouseover = function(){
+            dashboardItem.settings.style.opacity = 1;
+            if (callout){
+                if (callout.dashboard.id!==dashboard.id){
+                    callout.dashboardItem.settings.style.opacity = 0;
+                    callout.hide();
+                }
+            }
+        };
+        dashboardItem.el.onmouseout = function(){
+            if (callout){
+                if (callout.isVisible()){
+                    if (callout.dashboard.id===dashboard.id) return;
+                }
+            }
+            dashboardItem.settings.style.opacity = 0;
+        };
+        dashboardItem.settings.onclick = function(e){
+            var callout = getCallout();
+            var rect = javaxt.dhtml.utils.getRect(this);
+            var x = rect.x + (rect.width/2) - 1;
+            var y = rect.y + rect.height - 2;
+            y = e.clientY;
+            callout.dashboard = dashboard;
+            callout.dashboardItem = dashboardItem;
+            callout.showAt(x, y, "below", "right");
         };
 
 
@@ -237,11 +272,11 @@ bluewave.Homepage = function(parent, config) {
         img.style.cursor = "pointer";
         img.onload = function() {
             dashboardItem.innerDiv.innerHTML = "";
-            var rect = javaxt.dhtml.utils.getRect(dashboardItem.innerDiv);            
+            var rect = javaxt.dhtml.utils.getRect(dashboardItem.innerDiv);
             dashboardItem.innerDiv.appendChild(this);
             this.style.border = "1px solid #ececec"; //this should be in the css
-            
-            
+
+
             var maxWidth = rect.width;
             var maxHeight = rect.height;
             var width = 0;
@@ -275,11 +310,11 @@ bluewave.Homepage = function(parent, config) {
                 }
 
                 if (width===0 || height===0) return;
-                
-                
+
+
                 img.width = width;
                 img.height = height;
-                
+
                 //TODO: Insert image into a canvas and do a proper resize
                 //ctx.putImageData(img, 0, 0);
                 //resizeCanvas(canvas, width, height, true);
@@ -288,7 +323,7 @@ bluewave.Homepage = function(parent, config) {
             };
 
             resize(this);
-            
+
         };
         img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
     };
@@ -314,10 +349,80 @@ bluewave.Homepage = function(parent, config) {
 
 
   //**************************************************************************
+  //** getCallout
+  //**************************************************************************
+    var getCallout = function(){
+        if (!callout){
+            callout = new javaxt.dhtml.Callout(document.body,{
+                style: config.style.callout
+            });
+
+            var div = document.createElement("div");
+            div.className = "dashboard-homepage-menu";
+
+
+            div.appendChild(createMenuOption("Delete", "trash", function(){
+                var dashboardID = callout.dashboard.id;
+                confirm("Are you sure you want to delete this dashboard?",{
+                    leftButton: {label: "Yes", value: true},
+                    rightButton: {label: "No", value: false},
+                    callback: function(yes){
+                        if (yes){
+                            waitmask.show();
+                            del("dashboard/"+dashboardID, {
+                                success: function(){
+                                    me.update();
+                                    waitmask.hide();
+                                },
+                                failure: function(request){
+                                    alert(request);
+                                    waitmask.hide();
+                                }
+                            });
+
+
+                        }
+                    }
+                });
+            }));
+
+
+            callout.getInnerDiv().appendChild(div);
+
+        }
+        return callout;
+    };
+
+
+  //**************************************************************************
+  //** createMenuOption
+  //**************************************************************************
+    var createMenuOption = function(label, icon, onClick){
+        var div = document.createElement("div");
+        div.className = "dashboard-homepage-menu-item noselect";
+        if (icon && icon.length>0){
+            div.innerHTML = '<i class="fas fa-' + icon + '"></i>' + label;
+        }
+        else{
+            div.innerHTML = label;
+        }
+        div.label = label;
+        div.onclick = function(){
+            callout.hide();
+            onClick.apply(this, [label]);
+        };
+        addShowHide(div);
+        return div;
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var get = bluewave.utils.get;
+    var del = javaxt.dhtml.utils.delete;
     var createDashboardItem = bluewave.utils.createDashboardItem;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();
 };
