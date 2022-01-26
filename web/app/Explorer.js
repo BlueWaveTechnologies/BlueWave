@@ -1743,21 +1743,34 @@ bluewave.Explorer = function(parent, config) {
         editor.getNode = function(){
             return node;
         };
-
+        console.log("node as its passed editchart")
+        console.log(node)
+        console.log("node inputs are editchart")
+        console.log(node.inputs)
 
       //Get data
         var data = [];
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
+
+                console.log("csv object here is")
+
+                console.log(csv)
+
                 data.push(csv);
             }
         }
 
+        console.log("data at this point in edit chart is")
+        console.log(data)
 
       //Get config
         var chartConfig = {};
         merge(chartConfig, node.config);
+
+        console.log("logging editor object")
+        console.log(editor)
 
         chartConfig.chartType = node.type; //is this used for anything?
         editor.update(chartConfig, data);
@@ -2599,11 +2612,14 @@ bluewave.Explorer = function(parent, config) {
    *  layout.
    */
     var updateLayout = function(){
+        console.log("updateLayout called")
         if (me.getView()!=="Edit"){
             dashboardPanel.resize();
             var dashboardItems = dashboardPanel.getDashboardItems();
             for (var i=0; i<dashboardItems.length; i++){
+                console.log("found a new dashboard Item .. trying to render it")
                 var dashboardItem = dashboardItems[i];
+                console.log(dashboardItem)
                 updateSVG(dashboardItem);
             }
         }
@@ -2617,11 +2633,29 @@ bluewave.Explorer = function(parent, config) {
    *  in s layout.
    */
     var updateSVG = function(dashboardItem){
+
+        console.log("updateSvg called here for dashboard item")
+        console.log(dashboardItem)
+
+
         var svgs = dashboardItem.getElementsByTagName("svg");
         if (svgs.length>0){
             var svg = svgs[0];
+            console.log("logging svg and chart container")
             var chartContainer = svg.parentNode;
+
+
+            console.log(svg)
+            console.log(chartContainer)
+
+
             var rect = javaxt.dhtml.utils.getRect(chartContainer.parentNode);
+
+
+            console.log("logging this rect object - not sure what its for - width and ehight after")
+            console.log(rect)
+            console.log(rect.width)
+            console.log(rect.height)
 
 
           //Update dimensions of the svg
@@ -2635,75 +2669,85 @@ bluewave.Explorer = function(parent, config) {
           //in this class. All chart types should have a outer "g" like this.
             var g = svg.getElementsByTagName("g")[0]; //reserved for explorer
             var g2 = g.getElementsByTagName("g")[0]; //used by individual charts
-            var box = g2.getBBox();
-            var width = box.width;
-            var height = box.height;
-            var scaleX = 1;
-            var scaleY = 1;
-            var translateX = 0;
-            var translateY = 0;
-            var transformList = g2.transform.baseVal;
-            for (var i=0; i<transformList.numberOfItems; i++){
-                var transform = transformList.getItem(i);
-                var m = transform.matrix;
-                switch (transform.type){
-                  case 2:
-                    translateX = m.e;
-                    translateY = m.f;
-                    break;
-                  case 3:
-                    scaleX = m.a;
-                    scaleY = m.d;
-                    break;
-                }
-            }
+
+
+            console.log("logging if we found anything here - g elements")
+
+            console.log(g)
+            console.log(g2)
+
+
+
+
+            // var box = g2.getBBox();
+            // var width = box.width;
+            // var height = box.height;
+            // var scaleX = 1;
+            // var scaleY = 1;
+            // var translateX = 0;
+            // var translateY = 0;
+            // var transformList = g2.transform.baseVal;
+            // for (var i=0; i<transformList.numberOfItems; i++){
+            //     var transform = transformList.getItem(i);
+            //     var m = transform.matrix;
+            //     switch (transform.type){
+            //       case 2:
+            //         translateX = m.e;
+            //         translateY = m.f;
+            //         break;
+            //       case 3:
+            //         scaleX = m.a;
+            //         scaleY = m.d;
+            //         break;
+            //     }
+            // }
 
 
 
           //Compute scale
-            var scale;
-            var scaledWidth = (width)*scaleX;
-            var scaledHeight = (height)*scaleY;
-            if (width>=height){
-                scale = rect.width/scaledWidth;
-                var h = scaledHeight*scale;
-                if (h>rect.height){
-                    scale = rect.height/scaledHeight;
-                }
-            }
-            else{
-                scale = rect.height/scaledHeight;
-                var w = scaledWidth*scale;
-                if (w>rect.width){
-                    scale = rect.width/scaledWidth;
-                }
-            }
+            // var scale;
+            // var scaledWidth = (width)*scaleX;
+            // var scaledHeight = (height)*scaleY;
+            // if (width>=height){
+            //     scale = rect.width/scaledWidth;
+            //     var h = scaledHeight*scale;
+            //     if (h>rect.height){
+            //         scale = rect.height/scaledHeight;
+            //     }
+            // }
+            // else{
+            //     scale = rect.height/scaledHeight;
+            //     var w = scaledWidth*scale;
+            //     if (w>rect.width){
+            //         scale = rect.width/scaledWidth;
+            //     }
+            // }
 
 
 
           //Compute x/y offset
             var x = 0;
             var y = 0;
-            if (translateX===0){ //center the chart
-                x = (rect.width/2)-((scaledWidth*scale)/2);
-            }
-            else{
-                //TODO: center chart using translateX
-            }
+            // if (translateX===0){ //center the chart
+            //     x = (rect.width/2)-((scaledWidth*scale)/2);
+            // }
+            // else{
+            //     //TODO: center chart using translateX
+            // }
 
-            if (translateY===0){ //center the chart
-                y = (rect.height/2)-((scaledHeight*scale)/2);
-            }
-            else{
-                //TODO: center chart using translateY
-            }
+            // if (translateY===0){ //center the chart
+            //     y = (rect.height/2)-((scaledHeight*scale)/2);
+            // }
+            // else{
+            //     //TODO: center chart using translateY
+            // }
 
 
-          //Apply transform to the first g
-            d3.select(g).attr("transform",
-                "translate(" + x + "," + y + ") " +
-                "scale(" + scale + ")"
-            );
+        //   //Apply transform to the first g
+        //     d3.select(g).attr("transform",
+        //         "translate(" + x + "," + y + ") " +
+        //         "scale(" + scale + ")"
+        //     );
 
         }
     };
@@ -2797,9 +2841,12 @@ bluewave.Explorer = function(parent, config) {
   //** updateDashboard
   //**************************************************************************
     var updateDashboard = function(){
+        console.log("update dashboard called")
 
       //Find layout node
         var layoutNode = getLayoutNode();
+        console.log("layout node printout")
+        console.log(layoutNode)
         if (!layoutNode) return;
 
 
@@ -2815,11 +2862,16 @@ bluewave.Explorer = function(parent, config) {
 
       //Render dashboard items
         for (var key in layoutNode.config) {
+            console.log("rendering new dashboard item")
+
             if (layoutNode.config.hasOwnProperty(key)){
 
-
+                console.log("logging layout and node and nodetype")
                 var layout = layoutNode.config[key];
                 var node = nodes[key];
+                console.log(layout)
+                console.log(node)
+                console.log(node.type)
                 var connected = checkConnection(layoutNode, node);
                 if (!connected) continue;
                 if (!node) continue;
@@ -2931,13 +2983,38 @@ bluewave.Explorer = function(parent, config) {
 
                     }
                     else{
+                        console.log("node as its passed other")
+                        console.log(node)
+                        console.log("node inputs are other")
+                        console.log(node.inputs)
+
+                        // var data = [];
+                        // for (var key in node.inputs) {
+                        //     if (node.inputs.hasOwnProperty(key)){
+                        //         var csv = node.inputs[key].csv;
+                        //         if (csv){
+                        //             data.push(d3.csvParse(csv));
+                        //             // data.push(csv);
+
+                        //         }
+                        //     }
+                        // }
+
+                        //Get data
                         var data = [];
                         for (var key in node.inputs) {
                             if (node.inputs.hasOwnProperty(key)){
                                 var csv = node.inputs[key].csv;
-                                if (csv){
-                                    data.push(d3.csvParse(csv));
-                                }
+                                console.log("csv object is printing out as")
+
+                                console.log(csv)
+
+                                data.push(d3.csvParse(csv));
+                                data = d3.csvParse(csv)
+                                console.log("return to this section later")
+                                console.log(d3.csvParse(csv))
+                                console.log(d3.csvParse(csv)[0])
+                                console.log(d3.csvParse(csv)[1])
                             }
                         }
                         if (node.type==="pieChart"){
@@ -2957,7 +3034,23 @@ bluewave.Explorer = function(parent, config) {
                             scatterChart.update(chartConfig, data);
                         }
                         else if (node.type==="calendarChart"){
-                            var calendarChart = new bluewave.charts.CalendarChart(createChartContainer(),{});
+                            console.log("rendering calendarChart")
+                            console.log("the data for this chart")
+                            console.log(data)
+                            console.log("the config")
+                            console.log(chartConfig)
+
+
+                            var chartContainer = createChartContainer()
+                            console.log(JSON.stringify(chartContainer, null, 2))
+                            // return
+
+                            var calendarChart = new bluewave.charts.CalendarChart(chartContainer,{});
+                            console.log("the chart container we added")
+                            console.log(chartContainer)
+                            // return
+                            console.log(JSON.stringify(chartContainer, null, 2))
+                            console.log("note that the chart container could be slightly different than our original container and could be causing this issue")
                             calendarChart.update(chartConfig, data);
                         }
                         else if (node.type==="treeMapChart"){
