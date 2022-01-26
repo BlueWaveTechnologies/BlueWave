@@ -67,7 +67,7 @@ public class ReportService extends WebService {
         java.util.Timer timer = new java.util.Timer();
         timer.scheduleAtFixedRate( new java.util.TimerTask(){
             public void run(){
-                long currTime = System.currentTimeMillis();
+                long currTime = DateUtils.getCurrentTime();
                 synchronized(activeUsers){
                     Iterator<Long> it = activeUsers.keySet().iterator();
                     while (it.hasNext()){

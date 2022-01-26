@@ -28,7 +28,7 @@ public class WebApp extends HttpServlet {
     private String appName;
     private String appStyle;
 
-    private boolean ntlm;    
+    private boolean ntlm;
 
   //**************************************************************************
   //** Constructor
@@ -42,7 +42,8 @@ public class WebApp extends HttpServlet {
 
 
       //Initialize config
-        Config.init(configFile, jar);
+        Config.load(configFile, jar);
+        Config.initDatabase();
 
 
       //Initialize this class
@@ -89,8 +90,8 @@ public class WebApp extends HttpServlet {
       //Instantiate authenticator
         String auth = config.get("auth").toString();
         ntlm = (auth!=null && auth.equalsIgnoreCase("NTLM"));
-        setAuthenticator(new Authenticator());     
-        
+        setAuthenticator(new Authenticator());
+
 
       //Get branding
         if (config.has("branding")){
@@ -122,7 +123,7 @@ public class WebApp extends HttpServlet {
         }
     }
 
-    
+
   //**************************************************************************
   //** processRequest
   //**************************************************************************
@@ -131,7 +132,7 @@ public class WebApp extends HttpServlet {
     public void processRequest(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
 
-                
+
       //Get path from url, excluding servlet path and leading "/" character
         String path = request.getPathInfo();
         if (path!=null) path = path.substring(1);
@@ -141,7 +142,7 @@ public class WebApp extends HttpServlet {
         String service = path==null ? "" : path.toLowerCase();
         if (service.contains("/")) service = service.substring(0, service.indexOf("/"));
 
-        
+
       //Get credentials
         String[] credentials = request.getCredentials();
 
@@ -151,10 +152,10 @@ public class WebApp extends HttpServlet {
         if (logger!=null) logger.log(requestHeaders);
         NotificationService.notify("WebRequest", requestHeaders);
 
-        
+
 
       //Send NTLM response as needed
-        boolean ntlm = this.ntlm;            
+        boolean ntlm = this.ntlm;
         if (ntlm){
             String ua = request.getHeader("user-agent");
             if (ua!=null){
@@ -164,11 +165,11 @@ public class WebApp extends HttpServlet {
                 else{
                     ntlm = false;
                 }
-            }                          
-        }  
+            }
+        }
 
 
-        
+
       //Generate response
         if (service.equals("login")){
             if (credentials==null){
@@ -181,7 +182,7 @@ public class WebApp extends HttpServlet {
                     response.setHeader("WWW-Authenticate", "Basic realm=\"Access Denied\""); //<--Prompt the user for thier credentials
                     response.setHeader("Cache-Control", "no-cache, no-transform");
                     response.setContentType("text/plain");
-                    response.write("Unauthorized");                    
+                    response.write("Unauthorized");
                 }
             }
             else{
@@ -200,8 +201,9 @@ public class WebApp extends HttpServlet {
         }
         else if (service.equals("logoff") || service.equalsIgnoreCase("logout")){
             String username = (credentials!=null) ? credentials[0] : null;
+            Authenticator.updateCache(username, null);
             NotificationService.notify("LogOff", username);
-            
+
             if (ntlm){
                 response.setStatus(401, "Access Denied");
                 response.setHeader("WWW-Authenticate", "NTLM");
@@ -216,7 +218,7 @@ public class WebApp extends HttpServlet {
                 response.setHeader("Cache-Control", "no-cache, no-transform");
                 response.setContentType("text/plain");
                 response.write("Unauthorized");
-            }            
+            }
         }
         else if (service.equals("whoami")){
             String username = (credentials!=null) ? credentials[0] : null;
@@ -228,6 +230,7 @@ public class WebApp extends HttpServlet {
             }
         }
         else if (service.equals("appinfo")){
+            response.setContentType("application/json");
             response.write("{\"name\":\"" + appName + "\"}");
         }
         else if (service.equals("data")){
@@ -285,7 +288,7 @@ public class WebApp extends HttpServlet {
             try{
                 request.authenticate();
                 User user = (User) request.getUserPrincipal();
-                if (user.getAccessLevel()<3) throw new Exception();
+                if (user.getAccessLevel()<2) throw new Exception();
             }
             catch(Exception e){
                 response.setStatus(403, "Not Authorized");

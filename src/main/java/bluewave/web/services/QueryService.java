@@ -1,17 +1,24 @@
 package bluewave.web.services;
 
 import bluewave.graph.Neo4J;
+import bluewave.utils.NotificationService;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Record;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.math.BigDecimal;
+import java.io.IOException;
 
 import javaxt.json.*;
 import javaxt.express.*;
 import javaxt.sql.Database;
+
+import javaxt.http.servlet.HttpServletRequest;
+import javaxt.http.servlet.HttpServletResponse;
+import javaxt.http.websocket.WebSocketListener;
 
 //******************************************************************************
 //**  QueryService
@@ -23,7 +30,6 @@ import javaxt.sql.Database;
 
 public class QueryService extends WebService {
 
-    private Neo4J graph;
     private javaxt.io.Directory jobDir;
     private javaxt.io.Directory logDir;
     private Map<String, QueryJob> jobs = new ConcurrentHashMap<>();
@@ -32,11 +38,14 @@ public class QueryService extends WebService {
 
     private ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
 
+    private ConcurrentHashMap<Long, WebSocketListener> listeners;
+    private static AtomicLong webSocketID;
+
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public QueryService(Neo4J graph, JSONObject webConfig){
+    public QueryService(JSONObject webConfig){
 
 
       //Set path to the jobs directory
@@ -62,20 +71,73 @@ public class QueryService extends WebService {
 
 
 
-      //Delete any orphan jobs
-        for (javaxt.io.Directory dir : jobDir.getSubDirectories()){
-            dir.delete();
+      //Populate cache with saved queries
+        HashMap<String, String> queries = new HashMap<>();
+        for (javaxt.io.File file : jobDir.getFiles("*.cypher", true)){
+            queries.put(file.getName(false), file.getText());
+        }
+        if (!queries.isEmpty()){
+            for (javaxt.io.File file : jobDir.getFiles(true)){
+                String format = file.getExtension();
+                if (format.equals("json") || format.equals("csv") || format.equals("tsv")){
+                    String query = queries.get(file.getName(false));
+                    if (query!=null){
+                        cache.put(format + "|" + query, file.toString());
+                    }
+                }
+            }
         }
 
 
-      //Set graph
-        this.graph = graph;
+      //Add listener to the NotificationService to update the cache
+        NotificationService.addListener(new NotificationService.Listener(){
+            public void processEvent(String event, String info, long timestamp){
+                if (event.equals("neo4J")){
+
+                    if (info.equals("newserver")){
+                        deleteCache();
+                    }
+                    else{
+                        JSONObject json = new JSONObject(info);
+                        synchronized(cache){
+                            ArrayList<String> deletions = new ArrayList<>();
+                            Iterator<String> it = cache.keySet().iterator();
+                            while (it.hasNext()){
+                                String key = it.next();
+                                String query = key.substring(key.indexOf("|")+1);
+                                String file = cache.get(key).toString();
+                                if (requiresUpdate(query, json)){
+                                    deletedCachedFiles(file);
+                                    deletions.add(key);
+                                }
+                            }
+
+                            if (!deletions.isEmpty()){
+                                for (String key : deletions){
+                                    console.log(key);
+                                    cache.remove(key);
+                                }
+                                cache.notifyAll();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+
+
+
+
+      //Websocket stuff
+        webSocketID = new AtomicLong(0);
+        listeners = new ConcurrentHashMap<>();
 
 
       //Spawn threads used to execute queries
         int numThreads = 1; //TODO: Make configurable...
         for (int i=0; i<numThreads; i++){
-            new Thread(new QueryProcessor()).start();
+            new Thread(new QueryProcessor(this)).start();
         }
     }
 
@@ -86,11 +148,11 @@ public class QueryService extends WebService {
     public ServiceResponse getServiceResponse(ServiceRequest request, Database database) {
         String path = request.getPath(0).toString();
         if (path!=null){
+            String method = request.getRequest().getMethod();
             if (path.equals("jobs")){
                 return list(request);
             }
             else if (path.equals("job")){
-                String method = request.getRequest().getMethod();
                 if (method.equals("GET")){
                     return getJob(request);
                 }
@@ -104,8 +166,16 @@ public class QueryService extends WebService {
                     return new ServiceResponse(501, "Not implemented");
                 }
             }
-            else if (path.equals("nodes")){
-                return getNodes();
+            else if (path.equals("cache")){
+                if (method.equals("GET")){
+                    return getCache(request);
+                }
+                else if (method.equals("DELETE")){
+                    return deleteCache(request);
+                }
+                else{
+                    return new ServiceResponse(501, "Not implemented");
+                }
             }
             else{
                 return new ServiceResponse(501, "Not implemented");
@@ -113,6 +183,46 @@ public class QueryService extends WebService {
         }
         else{
             return query(request, false);
+        }
+    }
+
+
+  //**************************************************************************
+  //** createWebSocket
+  //**************************************************************************
+    public void createWebSocket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        //if (!authorized(request)) throw new IOException("Not Authorized");
+
+        new WebSocketListener(request, response){
+            private Long id;
+            public void onConnect(){
+                id = webSocketID.incrementAndGet();
+                synchronized(listeners){
+                    listeners.put(id, this);
+                }
+            }
+            public void onDisconnect(int statusCode, String reason){
+                synchronized(listeners){
+                    listeners.remove(id);
+                }
+            }
+        };
+    }
+
+
+  //**************************************************************************
+  //** notify
+  //**************************************************************************
+    private void notify(QueryJob job){
+        String msg = job.id+","+job.getStatus();
+        synchronized(listeners){
+            Iterator<Long> it = listeners.keySet().iterator();
+            while(it.hasNext()){
+                Long id = it.next();
+                WebSocketListener ws = listeners.get(id);
+                ws.send(msg);
+            }
         }
     }
 
@@ -133,16 +243,18 @@ public class QueryService extends WebService {
             Long offset = getParameter("offset", request).toLong();
             Long limit = getParameter("limit", request).toLong();
             if (limit==null) limit = 25L;
+            if (limit<1) limit = null;
             if (offset==null){
                 Long page = getParameter("page", request).toLong();
-                if (page!=null) offset = (page*limit)-limit;
+                if (page!=null && limit!=null) offset = (page*limit)-limit;
             }
 
 
 
           //Collect misc params
             JSONObject params = new JSONObject();
-            params.set("format", getParameter("format",request).toString());
+            String format = getParameter("format",request).toString();
+            params.set("format", format);
             Boolean addMetadata = getParameter("metadata", request).toBoolean();
             if (addMetadata!=null && addMetadata==true){
                 params.set("metadata", true);
@@ -155,10 +267,11 @@ public class QueryService extends WebService {
 
 
           //Create job
-            User user = (User) request.getUser();
-            QueryJob job = new QueryJob(user.getID(), query, offset, limit, params);
+            bluewave.app.User user = (bluewave.app.User) request.getUser();
+            QueryJob job = new QueryJob(user, query, offset, limit, params);
             String key = job.getKey();
             job.log();
+            notify(job);
 
 
           //Update list of jobs
@@ -208,21 +321,27 @@ public class QueryService extends WebService {
     private class Writer {
 
         private String format;
-        private StringBuilder str;
         private long x = 0;
         private Long elapsedTime;
         private Long count;
         private JSONArray metadata;
         private boolean addMetadata = false;
         private boolean isClosed = false;
+        private java.io.BufferedWriter writer;
 
-        public Writer(String format, boolean addMetadata){
-            str = new StringBuilder();
-            this.format = format;
-            this.addMetadata = addMetadata;
+
+        public Writer(QueryJob job){
+
+            format = job.getOutputFormat();
+            addMetadata = job.addMetadata();
+
+            javaxt.io.File[] files = job.getOutputs();
+            writer = files[0].getBufferedWriter("UTF-8");
+            files[1].write(job.getQuery());
+
 
             if (format.equals("json")){
-                str.append("{\"rows\":[");
+                write("{\"rows\":[");
             }
         }
 
@@ -251,8 +370,8 @@ public class QueryService extends WebService {
                 }
 
 
-                if (x>0) str.append(",");
-                str.append(json.toString().replace("\"null\"", "null")); //<-- this is a bit of a hack...
+                if (x>0) write(",");
+                write(json.toString().replace("\"null\"", "null")); //<-- this is a bit of a hack...
 
             }
             else if (format.equals("tsv") || format.equals("csv")){
@@ -261,17 +380,19 @@ public class QueryService extends WebService {
                 if (x==0){
                     String s = format.equals("tsv") ? "\t" : ",";
                     for (int i=0; i<fields.size(); i++){
-                        if (i>0) str.append(s);
-                        str.append(fields.get(i));
+                        if (i>0) write(s);
+                        write(fields.get(i));
                     }
-                    str.append("\r\n");
+                    write("\r\n");
                 }
+
+                if (x>0) write("\r\n");
 
 
                 String s = format.equals("tsv") ? "\t" : ",";
                 for (int i=0; i<fields.size(); i++){
-                    if (i>0) str.append(s);
-                    String fieldName = fields.get(i).toString();
+                    if (i>0) write(s);
+                    String fieldName = fields.get(i);
                     Object value = r.get(fieldName).asObject();
                     if (value==null){
                         value = "";
@@ -298,9 +419,15 @@ public class QueryService extends WebService {
                         }
 
                     }
-                    str.append(value);
+                    write(value.toString());
                 }
-                str.append("\r\n");
+
+            }
+
+            try{
+                writer.flush();
+            }
+            catch(Exception e){
             }
 
             x++;
@@ -326,37 +453,42 @@ public class QueryService extends WebService {
             isClosed = true;
             if (format.equals("json")){
 
-                str.append("]");
+                write("]");
 
 
                 if (addMetadata){
                     if (metadata!=null){
-                        str.append(",\"metadata\":");
-                        str.append(metadata);
+                        write(",\"metadata\":");
+                        write(metadata.toString());
                     }
                 }
 
 
                 if (count!=null){
-                    str.append(",\"total_rows\":");
-                    str.append(count);
+                    write(",\"total_rows\":");
+                    write(count+"");
                 }
 
                 if (this.elapsedTime!=null){
                     double elapsedTime = (double)(this.elapsedTime)/1000d;
                     BigDecimal time = new BigDecimal(elapsedTime).setScale(3, BigDecimal.ROUND_HALF_UP);
-                    str.append(",\"time\":");
-                    str.append(time);
+                    write(",\"time\":");
+                    write(time.toPlainString());
                 }
 
-                str.append("}");
+                write("}");
             }
+            try{
+                writer.close();
+            }
+            catch(Exception e){}
         }
 
-
-        public String toString(){
-            if (!isClosed) close();
-            return str.toString();
+        private void write(String str){
+            try{
+                writer.write(str);
+            }
+            catch(Exception e){}
         }
     }
 
@@ -427,21 +559,57 @@ public class QueryService extends WebService {
    */
     private ServiceResponse getJobResponse(QueryJob job){
         ServiceResponse response;
-        if (job.status.equals("failed")){
-            javaxt.io.File file = job.getOutput();
+        String jobStatus = job.getStatus();
+        if (jobStatus.equals("failed")){
+            javaxt.io.File file = job.getOutputs()[0];
             String str = file.getText();
             response = new ServiceResponse(500, str);
-            deleteJob(job);
+            deleteJob(job, false);
         }
-        else if (job.status.equals("complete")){
-            javaxt.io.File file = job.getOutput();
-            String str = file.getText();
-            response = new ServiceResponse(str);
-            response.setContentType(file.getContentType());
-            deleteJob(job);
+        else if (jobStatus.equals("complete")){
+            javaxt.io.File file = job.getOutputs()[0];
+            String query = job.getQuery();
+
+          //Check whether to save output
+            boolean saveOutput = false;
+            long ellapsedTime = job.getEllapsedTime();
+            if (ellapsedTime>15000){
+                saveOutput = true;
+            }
+
+
+          //Update cache
+            if (saveOutput){
+                synchronized(cache){
+                    cache.put(job.getFormat() + "|" + query, file.toString());
+                    cache.notify();
+                }
+            }
+
+
+            boolean returnFile = false;
+            synchronized(cache) {
+                String path = (String) cache.get(job.getFormat()+"|"+query);
+                if (path!=null){
+                    returnFile = true;
+                    file = new javaxt.io.File(path);
+                }
+            }
+
+
+            if (returnFile){
+                response = new ServiceResponse(file);
+            }
+            else{
+                String str = file.getText();
+                response = new ServiceResponse(str);
+                response.setContentType(file.getContentType());
+            }
+
+            deleteJob(job, saveOutput);
         }
         else{
-            response = new ServiceResponse(job.status);
+            response = new ServiceResponse(jobStatus);
         }
         return response;
     }
@@ -453,7 +621,7 @@ public class QueryService extends WebService {
   /** Removes a job from the queue and deletes any output files that might
    *  have been created with the job.
    */
-    private void deleteJob(QueryJob job){
+    private void deleteJob(QueryJob job, boolean saveOutput){
 
         String key = job.getKey();
         synchronized(pendingJobs){
@@ -471,8 +639,11 @@ public class QueryService extends WebService {
             jobs.notify();
         }
 
-        javaxt.io.File file = job.getOutput();
-        file.delete();
+        if (!saveOutput){
+            for (javaxt.io.File file : job.getOutputs()){
+                file.delete();
+            }
+        }
     }
 
 
@@ -499,8 +670,8 @@ public class QueryService extends WebService {
         try{
 
           //Update job status
-            job.status = "canceled";
-            job.updated = new javaxt.utils.Date();
+            job.setStatus("canceled");
+            notify(job);
 
 
           //TODO: Figure out how to cancel a query
@@ -511,7 +682,7 @@ public class QueryService extends WebService {
 
 
           //Update queue
-            deleteJob(job);
+            deleteJob(job, false);
 
 
           //return response
@@ -519,65 +690,6 @@ public class QueryService extends WebService {
         }
         catch(Exception e){
             return new ServiceResponse(500, "failed to cancel query");
-        }
-    }
-
-
-  //**************************************************************************
-  //** getNodes
-  //**************************************************************************
-  /** Returns a list of nodes
-   */
-    public ServiceResponse getNodes() {
-
-        synchronized(cache){
-            Object obj = cache.get("nodes");
-            if (obj!=null){
-                return new ServiceResponse((JSONObject) obj);
-            }
-            else{
-                Session session = null;
-                try{
-
-                  //Execute query
-                    session = graph.getSession();
-                    TreeSet<String> nodes = new TreeSet<>();
-                    Result rs = session.run("MATCH (n) RETURN distinct labels(n)");
-                    while (rs.hasNext()){
-                        Record r = rs.next();
-                        List labels = r.get(0).asList();
-                        if (labels.isEmpty()) continue; //?
-                        String label = labels.get(0).toString();
-                        nodes.add(label);
-                    }
-                    session.close();
-
-
-                  //Generate json
-                    JSONArray arr = new JSONArray();
-                    Iterator<String> it = nodes.iterator();
-                    while (it.hasNext()){
-                        String label = it.next();
-                        JSONObject json = new JSONObject();
-                        json.set("name", label);
-                        arr.add(json);
-                    }
-                    JSONObject json = new JSONObject();
-                    json.set("tables", arr);
-
-
-                  //Update cache
-                    cache.put("nodes", json);
-                    cache.notify();
-
-                  //Return response
-                    return new ServiceResponse(json);
-                }
-                catch(Exception e){
-                    if (session!=null) session.close();
-                    return new ServiceResponse(e);
-                }
-            }
         }
     }
 
@@ -610,6 +722,7 @@ public class QueryService extends WebService {
     public class QueryJob {
 
         private String id;
+        private bluewave.app.User user;
         private long userID;
         private String query;
         private Long offset;
@@ -623,9 +736,10 @@ public class QueryService extends WebService {
 
 
 
-        public QueryJob(long userID, String query, Long offset, Long limit, JSONObject params) {
+        public QueryJob(bluewave.app.User user, String query, Long offset, Long limit, JSONObject params) {
             this.id = UUID.randomUUID().toString();
-            this.userID = userID;
+            this.user = user;
+            this.userID = user.getID();
 
             StringBuilder str = new StringBuilder();
             for (String row : query.split("\n")){
@@ -667,15 +781,46 @@ public class QueryService extends WebService {
                 addMetadata = params.get("metadata").toBoolean();
             }
         }
+        
+        public bluewave.app.User getUser(){
+            return user;
+        }
 
+        public Long getLimit(){
+            return limit;
+        }
 
+        public Long getOffset(){
+            return offset;
+        }
+
+        public String getFormat(){
+            return format;
+        }
+
+        public Long getEllapsedTime(){
+            return updated.getTime()-created.getTime();
+        }
 
         public String getKey(){
             return userID + ":" + id;
         }
 
+        public String getStatus(){
+            return status;
+        }
+
+        public void setStatus(String status){
+            this.status = status;
+            updated = new javaxt.utils.Date();
+        }
+
         public boolean isCanceled(){
             return status.equals("canceled");
+        }
+
+        public boolean isComplete(){
+            return status.equals("complete");
         }
 
         public String getQuery(){
@@ -785,8 +930,12 @@ public class QueryService extends WebService {
             return format;
         }
 
-        public javaxt.io.File getOutput(){
-            return new javaxt.io.File(jobDir.toString() + userID + "/" + id + "." + format);
+        public javaxt.io.File[] getOutputs(){
+            String path = jobDir.toString() + id + ".";
+            return new javaxt.io.File[]{
+                new javaxt.io.File(path + format),
+                new javaxt.io.File(path + "cypher")
+            };
         }
 
 
@@ -829,6 +978,12 @@ public class QueryService extends WebService {
    */
     private class QueryProcessor implements Runnable {
 
+        private QueryService queryService;
+
+        public QueryProcessor(QueryService queryService){
+            this.queryService = queryService;
+        }
+
         public void run() {
 
             while (true) {
@@ -858,87 +1013,108 @@ public class QueryService extends WebService {
                     }
 
                     if (job!=null && !job.isCanceled()){
-                        Session session = null;
-                        try{
 
-                          //Update job status and set start time
-                            job.status = "running";
-                            job.updated = new javaxt.utils.Date();
-                            long startTime = System.currentTimeMillis();
+                      //Get query
+                        String query = job.getQuery();
 
 
-                          //Open database connection
-                            session = graph.getSession(true);
-
-
-
-                          //Execute query and generate response
-                            String query = job.getQuery();
-                            Writer writer = new Writer(job.getOutputFormat(), job.addMetadata());
-                            Result rs = session.run(query);
-                            //rs.open("--" + job.getKey() + "\n" + query, conn);
-                            while (rs.hasNext()){
-                                Record r = rs.next();
-                                writer.write(r);
+                      //Check if the cache has results for the query
+                        synchronized(cache) {
+                            String path = (String) cache.get(job.getFormat()+"|"+query);
+                            if (path!=null){
+                                javaxt.io.File file = new javaxt.io.File(path);
+                                if (file.exists()){
+                                    job.setStatus("complete");
+                                    queryService.notify(job);
+                                }
                             }
+                        }
 
-                            if (job.isCanceled()) throw new Exception();
+
+                      //Execute query as needed
+                        if (!job.isComplete()){
+                            Session session = null;
+                            try{
+
+                              //Update job status and set start time
+                                job.setStatus("running");
+                                long startTime = System.currentTimeMillis();
+                                queryService.notify(job);
 
 
-                          //Count total records as needed
-                            if (job.countTotal()){
-                                rs = session.run(job.getCountQuery());
-                                if (rs.hasNext()){
+                              //Instantiate writer
+                                Writer writer = new Writer(job);
+
+
+                              //Open database connection and execute query
+                                Neo4J graph = bluewave.Config.getGraph(job.getUser());
+                                session = graph.getSession(true);
+                                Result rs = session.run(query);
+                                while (rs.hasNext()){
                                     Record r = rs.next();
-                                    Long ttl = r.get(0).asLong();
-                                    if (ttl!=null){
-                                        writer.setCount(ttl);
+                                    writer.write(r);
+                                }
+
+                                if (job.isCanceled()) throw new Exception();
+
+
+                              //Count total records as needed
+                                if (job.countTotal()){
+                                    rs = session.run(job.getCountQuery());
+                                    if (rs.hasNext()){
+                                        Record r = rs.next();
+                                        Long ttl = r.get(0).asLong();
+                                        if (ttl!=null){
+                                            writer.setCount(ttl);
+                                        }
                                     }
                                 }
+                                if (job.isCanceled()) throw new Exception();
+
+
+
+
+
+                              //Close database connection
+                                session.close();
+
+
+
+                              //Set elapsed time
+                                writer.setElapsedTime(System.currentTimeMillis()-startTime);
+                                writer.close();
+
+
+                              //Update job status
+                                job.setStatus("complete");
+                                queryService.notify(job);
                             }
-                            if (job.isCanceled()) throw new Exception();
+                            catch(Exception e){
+                                if (session!=null) session.close();
 
-
-
-
-
-                          //Close database connection
-                            session.close();
-
-
-
-                          //Set elapsed time
-                            writer.setElapsedTime(System.currentTimeMillis()-startTime);
-
-
-                          //Write output to a file
-                            javaxt.io.File file = job.getOutput();
-                            file.write(writer.toString());
-
-
-                          //Update job status
-                            job.status = "complete";
-                            job.updated = new javaxt.utils.Date();
-                        }
-                        catch(Exception e){
-                            if (session!=null) session.close();
-                            javaxt.io.File file = job.getOutput();
-                            if (job.isCanceled()){
-                                file.delete();
-                            }
-                            else{
-                                job.status = "failed";
-                                job.updated = new javaxt.utils.Date();
-
-
-                                java.io.PrintStream ps = null;
-                                try {
-                                    ps = new java.io.PrintStream(file.toFile());
-                                    e.printStackTrace(ps);
-                                    ps.close();
+                                if (job.isCanceled()){
+                                    for (javaxt.io.File file : job.getOutputs()){
+                                        file.delete();
+                                    }
                                 }
-                                catch (Exception ex) {
-                                    if (ps!=null) ps.close();
+                                else{
+                                    job.setStatus("failed");
+                                    queryService.notify(job);
+
+                                    javaxt.io.File file = job.getOutputs()[0];
+                                    file.delete();
+                                    java.io.PrintStream ps = null;
+                                    try {
+                                        file.create();
+                                        ps = new java.io.PrintStream(file.toFile());
+                                        e.printStackTrace(ps);
+                                        ps.close();
+                                    }
+                                    catch (Exception ex) {
+                                        if (ps!=null) ps.close();
+                                        file.write(e.getMessage());
+                                    }
+
                                 }
                             }
                         }
@@ -973,5 +1149,109 @@ public class QueryService extends WebService {
             fields.add(key);
         }
         return fields;
+    }
+
+
+  //**************************************************************************
+  //** getCache
+  //**************************************************************************
+    private ServiceResponse getCache(ServiceRequest request) {
+
+      //Prevent non-admin users from seeing the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+
+        JSONArray arr = new JSONArray();
+        synchronized(cache){
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                arr.add(it.next());
+            }
+        }
+        return new ServiceResponse(arr);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    private ServiceResponse deleteCache(ServiceRequest request){
+
+      //Prevent non-admin users from deleting the cache
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(403, "Not Authorized");
+
+        deleteCache();
+
+        return new ServiceResponse(200);
+    }
+
+
+  //**************************************************************************
+  //** deleteCache
+  //**************************************************************************
+    private void deleteCache(){
+        synchronized(cache){
+
+          //Deleted cached files
+            Iterator<String> it = cache.keySet().iterator();
+            while (it.hasNext()){
+                String key = it.next();
+                String file = cache.get(key).toString();
+                deletedCachedFiles(file);
+            }
+
+          //Clear hashmap
+            cache.clear();
+            cache.notifyAll();
+        }
+    }
+
+
+  //**************************************************************************
+  //** deletedCachedFiles
+  //**************************************************************************
+    private void deletedCachedFiles(String file){
+        javaxt.io.File f = new javaxt.io.File(file);
+        f.delete();
+        new javaxt.io.File(f.getDirectory(), f.getName(false) + ".cypher").delete();
+    }
+
+
+  //**************************************************************************
+  //** requiresUpdate
+  //**************************************************************************
+    private boolean requiresUpdate(String query, JSONObject info){
+        Long timestamp = info.get("timestamp").toLong();
+        String action = info.get("action").toString();
+        String type = info.get("type").toString();
+        JSONArray data = info.get("data").toJSONArray();
+        String username = info.get("user").toString();
+
+
+        if ((action.equals("create") || action.equals("delete")) && (type.equals("nodes"))){
+
+          //Check if query contains node
+            query = query.toLowerCase();
+            for (int i=0; i<data.length(); i++){
+                JSONArray entry = data.get(i).toJSONArray();
+                if (entry.isEmpty()) continue;
+
+
+                for (int j=1; j<entry.length(); j++){
+                    String label = entry.get(j).toString();
+                    if (label!=null){
+                        label = label.toLowerCase();
+                        if (query.contains(label)){
+                            return true;
+                        }
+                    }
+                }
+
+            }
+
+        }
+        return false;
     }
 }

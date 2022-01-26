@@ -143,7 +143,7 @@ bluewave.dashboards.SupplyChain = function(parent, config) {
                 var productType = productTypes[i];
                 productOptions.add(productType, productType);
             }
-            if (i>0) productOptions.setValue(productTypes[0]);
+            if (productTypes.length>0) productOptions.setValue(productTypes[0]);
         });
     };
 
@@ -456,10 +456,12 @@ bluewave.dashboards.SupplyChain = function(parent, config) {
   //** updatePieChart
   //**************************************************************************
     const updatePieChart = (parent, data) => {
-      // set the dimensions and margins of the graph
-      var margin = { top: 0, right: 0, bottom: 0, left: 0 },
-        width = 650 - margin.left - margin.right,
-        height = 250 - margin.top - margin.bottom;
+
+
+      //set the dimensions and margins of the graph
+        var margin = { top: 0, right: 0, bottom: 0, left: 0 };
+        var width = parent.offsetWidth;
+        var height = parent.offsetHeight;
 
       // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
       var radius = Math.min(width, height) / 2 - margin.left - margin.right;
@@ -471,7 +473,7 @@ bluewave.dashboards.SupplyChain = function(parent, config) {
         .attr("width", width)
         .attr("height", height)
         .append("g")
-        .attr("transform", "translate(" + width / 4 + "," + height / 2 + ")");
+        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
       // Compute the position of each group on the pie:
       var pie = d3

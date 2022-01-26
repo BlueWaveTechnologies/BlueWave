@@ -1,35 +1,35 @@
-if (!bluewave) var bluewave = {};
-if (!bluewave.dashboards) bluewave.dashboards = {};
+if(!bluewave) var bluewave={};
+if(!bluewave.dashboards) bluewave.dashboards={};
 
 //******************************************************************************
-//**  ProductPurchases Dashboard
+//**  ProductPurchases
 //******************************************************************************
 /**
- *   Used to visualize product purchases by region
+ *   Used to compare imports, RFI, and Premier data for specific products
  *
  ******************************************************************************/
 
-bluewave.dashboards.ProductPurchases = function (parent, config) {
-  var me = this;
-  var title = "Product Purchases By Region";
-  var monthOptions;
-  var slider;
-  var treemap, pieChart, lineGraph; //dashboard items
-  var grid;
-  var linechartTooltip, linechartTooltipLine;
-  var allData = {};
+bluewave.dashboards.ProductPurchases = function(parent, config) {
+
+    var me = this;
+    var title = "Product Purchases";
+    var lineGraph; //dashboard item
+    var tooltip, tooltipLine; //d3 svg nodes
+    var productOptions, sourceOptions, groupOptions; //comboboxes
+    var currProduct, currMonth; //strings
+    var data = {};
+    var callout;
+    var useLogScale = false;
+
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    var init = function () {
-
+    var init = function(){
 
       //Create main table
         var table = createTable();
         var tbody = table.firstChild;
-        parent.appendChild(table);
-        me.el = table;
         var tr, td;
 
 
@@ -37,7 +37,6 @@ bluewave.dashboards.ProductPurchases = function (parent, config) {
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
-        td.style.width = "100%";
         tr.appendChild(td);
         createToolbar(td);
 
@@ -46,1209 +45,954 @@ bluewave.dashboards.ProductPurchases = function (parent, config) {
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
-        td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-
-
-
         var div = document.createElement("div");
         div.style.height = "100%";
         div.style.textAlign = "center";
-        div.style.overflowY = "auto";
         td.appendChild(div);
 
         var innerDiv = document.createElement("div");
         innerDiv.style.height = "100%";
         innerDiv.style.display = "inline-block";
-        innerDiv.style.maxWidth = "1685px";
         div.appendChild(innerDiv);
 
 
-        treemap = createDashboardItem(innerDiv, {
-          width: 1200,
-          height: 800
-        });
+        createLineGraph(innerDiv);
+        createTooltip(div);
 
-        pieChart = createDashboardItem(innerDiv, {
-          width: 400,
-          height: 379,
-          title: "Sales Volume By Region"
-        });
-
-        lineGraph = createDashboardItem(innerDiv, {
-          width: 400,
-          height: 379,
-          title: "Total Purchases Per Month"
-        });
-        createLinechartTooltip(parent);
-
-        createGrid(innerDiv);
+        parent.appendChild(table);
+        me.el = table;
     };
+
+
+  //**************************************************************************
+  //** onUpdate
+  //**************************************************************************
+    this.onUpdate = function(){};
+
 
   //**************************************************************************
   //** getTitle
   //**************************************************************************
-  this.getTitle = function () {
-    return title;
-  };
+    this.getTitle = function(){
+        return title;
+    };
+
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function () {
-        monthOptions.clear();
-
-        getData("ProductPurchases", function (data) {
-
-          //Parse csv
-            var rows = parseCSV(data.csv);
+    this.update = function(){
+        productOptions.clear();
+        sourceOptions.clear();
+        data = {};
 
 
-          //Create data for the treemap
-            let monthKeys = [];
-            var months = {};
-            for (var i = 1; i < rows.length; i++) {
-              var col = rows[i];
-              var region = formatRegion(col[0]);
-              if(region ==="Aggregated"){
-                continue;
-              }
-              var period = col[1];
-              var year = period.substring(0, 4);
-              var month = period.substring(5);
-              var key = year + "-" + month;
+        getData("ImportSummary", function(json){
 
-              if (!months[key]) {
-                months[key] = {};
-              }
-              var arr = months[key][region];
-
-              if (!arr) {
-                arr = [];
-                months[key][region] = arr;
-              }
-
-              var productDesc = col[3];
-              if (productDesc !== null && productDesc !== "") {
-                arr.push(col);
-              }
+          //Generate list of productTypes
+            var productTypes = [];
+            for (var type in json) {
+                if (json.hasOwnProperty(type)){
+                    productTypes.push(type);
+                }
             }
-            let prices = {};
-            for (let key in months) {
-              monthKeys.push(key);
-              let newPrices = {};
-              for (let region in months[key]) {
-                let totalRegionValue = 0;
-                months[key][region] = months[key][region].map((val) => {
-                  let thisPrice = parseInt(val[4].replace(/[,$]/g, ""), 10);
-                  totalRegionValue += thisPrice;
-                  if (prices[region + val[3]]) {
-                    let pastPrice = parseInt(
-                      prices[region + val[3]].replace(/[,$]/g, ""),
-                      10
-                    );
-                    let percentage = (1 - thisPrice / pastPrice) * 100;
-                    val.push(percentage);
-                  } else {
-                    val.push(0);
-                  }
-                  newPrices[region + val[3]] = val[4];
-                  return {
-                    region: formatRegion(val[0]),
-                    name: val[3] || "delete",
-                    landedSpend: thisPrice,
-                    change: val[5],
-                  };
-                });
-                months[key][region]["totalValue"] = totalRegionValue;
-              }
-              prices = { ...newPrices };
+
+
+          //Parse data and update combobox
+            for (var type in productTypes){
+                var productType = productTypes[type];
+
+              //Update combobox
+                productOptions.add(productType, productType);
+
+
+
+              //Parse data and conflate csv
+                var _data = json[productType];
+                for (var i=0; i<_data.length; i++){
+                    var entry = _data[i];
+                    var name = entry.name;
+                    var csv = parseCSV(entry.csv, ",");
+
+                  //Parse csv
+                    var header = csv[0];
+                    var arr = [];
+                    for (var j=1; j<csv.length; j++){
+                        var row = csv[j];
+                        var date = formatDate(row[0]);
+
+                        for (var k=1; k<row.length; k++){
+                            var val = parseFloat(row[k]);
+                            if (isNaN(val)) val = 0.0;
+                            arr.push({
+                                date: date,
+                                type: header[k],
+                                value: val
+                            });
+                        }
+                    }
+
+
+
+                  //Group data
+                    var groups = {};
+                    var labelFunction = {};
+                    var updateGroups = function(name, entry){
+                        var arr = groups[name];
+                        if (arr==null){
+                            arr = [];
+                            groups[name] = arr;
+                        }
+                        arr.push(entry);
+                    };
+                    for (var j=0; j<arr.length; j++){
+                        const v = arr[j];
+                        const t = v.type;
+                        var groupName;
+                        if (name=="RFI"){
+                            if (t=="order_total" || t=="fill_total"){
+                                groupName = "order vs fill (total)";
+                                updateGroups(groupName, v);
+                                labelFunction[groupName] = function(str){
+                                    return str.replace("_total","");
+                                };
+                            }
+                            else{
+                                if (t.indexOf("total_fillRate_")==0){
+                                    groupName = "fill rate (by distributor)";
+                                    updateGroups(groupName, v);
+                                    labelFunction[groupName] = function(str){
+                                        return str.substring("total_fillRate_".length);
+                                    };
+                                }
+                                else if (
+                                    t.indexOf("total_order_")==0 ||
+                                    t.indexOf("total_fill_")==0){
+                                    groupName = "order vs fill (by distributor)";
+                                    updateGroups(groupName, v);
+                                    labelFunction[groupName] = function(str){
+                                        str = str.substring("total_".length);
+                                        var arr = str.split("_");
+                                        return arr[1] + " (" + arr[0] + ")";
+                                    };
+                                }
+                                else if (
+                                    t.indexOf("diff_fill_from_base_")==0 ||
+                                    t.indexOf("diff_order_from_base_")==0){
+                                    updateGroups("diff order vs fill from base (by distributor)", v);
+                                }
+                                else{
+                                    if ( //ends with
+                                        t.indexOf("_order_total")>0 ||
+                                        t.indexOf("_fill_total")>0){
+                                        groupName = "order vs fill (by product type)";
+                                        updateGroups(groupName, v);
+                                        labelFunction[groupName] = function(str){
+                                            str = str.substring(0, str.length-("_total".length));
+                                            var idx = str.lastIndexOf("_");
+                                            var supplier = str.substring(0, idx);
+                                            var type = str.substring(idx+1);
+                                            return supplier + " (" + type + ")";
+                                        };
+                                    }
+                                    else if ( //contains
+                                        t.indexOf("_order_")>0 ||
+                                        t.indexOf("_fill_")>0){
+                                        updateGroups("order vs fill (product type to distributor)", v);
+                                    }
+                                    else if ( //contains
+                                        t.indexOf("_fillRate_")>0){
+                                        updateGroups("fill rate (product type to distributor)", v);
+                                    }
+                                    else{
+                                        updateGroups("misc", v);
+                                    }
+                                }
+                            }
+                        }
+                        else if (name=="Imports"){
+                            if (t.indexOf("total")==0){
+                                updateGroups(t, v);
+                            }
+                            else if ( //start with
+                                t.indexOf("country_")==0 ||
+                                t.indexOf("manufacturer_")==0 ||
+                                t.indexOf("shipper_")==0 ||
+                                t.indexOf("consignee_")==0
+                            ){
+                                groupName = t.substring(0, t.indexOf("_"));
+                                updateGroups(groupName, v);
+                                labelFunction[groupName] = function(str){
+                                    return str.substring(str.indexOf("_")+1);
+                                };
+                            }
+                            else{
+                                updateGroups("misc", v);
+                            }
+                        }
+                        else if (name=="Premier"){
+                            if (t=="total"){
+                                updateGroups(t, v);
+                            }
+                            else{
+                                if ( //start with
+                                    t.indexOf("Manufacturer_")==0 ||
+                                    t.indexOf("Vendor_")==0
+                                ){
+                                    if (t.indexOf("_Top_")>1){
+                                        groupName = t.substring(0, t.indexOf("_Top_")+4);
+                                    }
+                                    else{
+                                        groupName = t.substring(0, t.indexOf("_"));
+                                    }
+                                    updateGroups(groupName, v);
+                                    labelFunction[groupName] = function(str){
+                                        str = str.substring(str.indexOf("_")+1);
+                                        return str.replace("Top_","");
+                                    };
+                                }
+                                else{
+                                    updateGroups("misc", v);
+                                }
+                            }
+
+                        }
+                    }
+                    //console.log(name, groups);
+                    entry.groups = groups;
+                    entry.labelFunction = labelFunction;
+                    entry.data = arr;
+                    delete entry.csv;
+                }
+                data[productType] = _data;
             }
-            allData = months;
 
-
-
-          //Create a sorted list of unique months
-            monthKeys = [...new Set(monthKeys)];
-            monthKeys.sort(function(a,b){
-                a = parseInt(a.split("-").join(""));
-                b = parseInt(b.split("-").join(""));
-                return b-a;
-            });
-
-
-          //Update slider
-            slider.setAttribute("max", monthKeys.length);
-
-
-          //Update combobox
-            for (var i = 0; i < monthKeys.length; i++) {
-                monthOptions.add(monthKeys[i], i);
-            }
-            var lastPeriod = "2020-11";
-            monthOptions.setValue(lastPeriod);
-
-
-          //Update lineGraph
-            var startDate = monthKeys[0];
-            var endDate = monthKeys[monthKeys.length - 1];
-            lineGraph.subtitle.innerHTML = formatDate(startDate) + " - " + formatDate(endDate);
-            updateLineGraph(rows);
+            if (i>0) productOptions.setValue(productTypes[0]);
         });
     };
 
 
   //**************************************************************************
-  //** updateCharts
+  //** createLineGraph
   //**************************************************************************
-    var updateCharts = function (month) {
-        pieChart.subtitle.innerHTML = formatDate(month);
-        let data = getMontlyData(month);
-        createTreemap(data);
-        updatePieChart(data);
-        updateGrid(data);
-    };
+    var createLineGraph = function(parent){
+
+      //Create dashboard item with a settings icon
+        lineGraph = createDashboardItem(parent, {
+            width: 1000,
+            height: 640,
+            settings: true
+        });
 
 
-  //**************************************************************************
-  //** Get Montly Data
-  //**************************************************************************
-  var getMontlyData = function (month) {
-    const treeMapData = [];
+      //Create menu callout for the settings icon
+        callout = new javaxt.dhtml.Callout(document.body,{
+            style: config.style.callout
+        });
+        var innerDiv = callout.getInnerDiv();
+        var menu = document.createElement("div");
+        menu.className = "app-menu";
+        innerDiv.appendChild(menu);
 
-    for (let region in allData[month]) {
-      if (
-        allData[month][region].length !== 0 &&
-        region !== "AGGREGATED TO FACILITY PRIMARY SERVICE TYPE"
-      ) {
-        let data = {
-          name: region,
-          children: allData[month][region],
-          totalValue: allData[month][region]["totalValue"],
+        var menuItem = document.createElement("div");
+        menuItem.className = "app-menu-item noselect";
+        menuItem.innerHTML = '<i class="fas fa-check"></i>' + "Linear Scale";
+        menuItem.onclick = function(){
+            menu.toggle(this);
         };
-        treeMapData.push(data);
-      }
-    }
-    return { children: treeMapData };
-  };
+        menu.appendChild(menuItem);
+
+        menuItem = document.createElement("div");
+        menuItem.className = "app-menu-item noselect";
+        menuItem.innerHTML = '<i class="fas"></i>' + "Logarithmic Scale";
+        menuItem.onclick = function(){
+            menu.toggle(this);
+        };
+        menu.appendChild(menuItem);
+
+        lineGraph.settings.onclick = function(){
+            var rect = javaxt.dhtml.utils.getRect(this);
+            var x = rect.x + (rect.width/2);
+            var y = rect.y + rect.height + 3;
+            callout.showAt(x, y, "below", "right");
+        };
 
 
-  //**************************************************************************
-  //** createGrid
-  //**************************************************************************
-    var createGrid = function(parent){
-        var div = document.createElement("div");
-        div.className = "dashboard-item";
-        div.style.width = "100%";
-        div.style.height = "400px";
-        div.style.padding = "0px";
-        div.style.maxWidth = "1664px";
-        parent.appendChild(div);
-
-        grid = new javaxt.dhtml.Table(div, {
-            style: javaxt.dhtml.style.default.table,
-            columns: [
-                {header: 'Name', width:'100%'},
-                {header: 'Region', width:'150'},
-                {header: 'Total Sales', width:'150', align:"right"},
-                {header: 'Weekly Change', width:'150', align:"center"}
-            ]
-        });
-    };
-
-
-  //**************************************************************************
-  //** updateGrid
-  //**************************************************************************
-    var updateGrid = function(data){
-        grid.clear();
-        if (data.children.length === 0) return;
-        setTimeout(function(){
-            var rows = [];
-            for (var i in data.children) {
-                var region = data.children[i];
-                for (var j in region.children) {
-                    var d = region.children[j];
-                    rows.push([d.name,d.region,d.landedSpend,d.change]);
+      //Add custom functions to toggle and select items in the menu
+        lineGraph.menu = menu;
+        menu.toggle = function(el){
+            if (el && el.firstChild.className.indexOf("check")>-1) return;
+            for (var i=0; i<menu.childNodes.length; i++){
+                var menuItem = menu.childNodes[i];
+                var isChecked = menuItem.firstChild.className.indexOf("check")>-1;
+                menuItem.firstChild.className = "fas" + (isChecked?"" : " fa-check");
+                if (!isChecked){
+                    useLogScale = menuItem.lastChild.textContent.indexOf("Log")>-1 ? true : false;
                 }
             }
-
-            rows.sort(function(a,b){
-                a = a[2];
-                b = b[2];
-                if (isNaN(a)) a = 0;
-                if (isNaN(b)) b = 0;
-                return b-a;
-            });
-
-
-
-            var rows = rows.slice(0,50);
-            for (var i in rows){
-                var change = rows[i][3];
-                var str = Math.round(change)+"%";
-                if (change>0){
-                    change = '<div style="color:#00ab37"><i class="fas fa-arrow-up" style="margin-right:5px"></i>' + str + "</div>";
-                }
-                else if (change<0){
-                    change = '<div style="color:#FF3C38"><i class="fas fa-arrow-down" style="margin-right:5px"></i>' + str + "</div>";
-                }
-                else{
-                    change = "-";
-                }
-                rows[i][3] = change;
-
-                rows[i][2] =  "$" + formatNumber(rows[i][2]+"");
+            if (el){ //user initiated menu click
+                updateLineGraph(lineGraph.data, lineGraph.groupName, lineGraph.labelFunction);
             }
+        };
+        menu.select = function(val){
+            useLogScale = val.indexOf("Log")>-1 ? true : false;
+            for (var i=0; i<menu.childNodes.length; i++){
+                var menuItem = menu.childNodes[i];
+                var isChecked = menuItem.firstChild.className.indexOf("check")>-1;
+                if (menuItem.lastChild.textContent.indexOf(val)>-1){
+                    if (isChecked) return;
+                }
+            }
+            menu.toggle();
+        };
 
-            grid.addRows(rows);
-
-        }, 1500);
     };
-
-
-  //**************************************************************************
-  //** numberWithCommas
-  //**************************************************************************
-    const formatNumber = (x) => {
-      return x.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    };
-
-
-  //**************************************************************************
-  //** createTreemap
-  //**************************************************************************
-  var createTreemap = function (data) {
-    if (data.children.length === 0) return;
-    treemap.innerDiv.innerHTML = "";
-
-    var margin = { top: 0, right: 5, bottom: 0, left: 5 },
-      width = treemap.innerDiv.offsetWidth - margin.left - margin.right,
-      height = treemap.innerDiv.offsetHeight - margin.top - margin.bottom;
-
-    var breaks = {};
-    for (var i in data.children) {
-      var region = data.children[i];
-      var name = region.name;
-      var negativeValues = [];
-      var positiveValues = [];
-      for (var j in region.children) {
-        var change = region.children[j].change;
-        if (change < 0) {
-          negativeValues.push(change);
-        } else if (change > 0) {
-          positiveValues.push(change);
-        }
-      }
-      breaks[name] = {};
-      breaks[name].negative = getNaturalBreaks(negativeValues, 3);
-      breaks[name].positive = getNaturalBreaks(positiveValues, 3);
-    }
-
-    var root = d3.hierarchy(data).sum(function (d) {
-      return d.landedSpend;
-    });
-
-    let d3Treemap = d3
-      .treemap()
-      .size([width, height])
-      .paddingTop(14)
-      .paddingRight(3)
-      .paddingInner(2)(root);
-
-    //d3.select("svg").remove();
-
-    var svg = d3
-      .select(treemap.innerDiv)
-      .append("svg")
-      .style("font-family", "sans-serif")
-      .style("margin-top", "-12px")
-      .attr("width", width)
-      .attr("height", height);
-
-    const g = svg.append("g").attr("class", "treemap-container");
-
-    // Place the labels for our countries
-    g.selectAll("text.region")
-      // The data is the first "generation" of children
-      .data(root.children)
-      .join("text")
-      .attr("class", "chart-title")
-      // The rest is just placement/styling
-      .attr("x", (d) => d.x0)
-      .attr("y", (d) => d.y0)
-      .attr("dy", "0.75em")
-      .attr("dx", 0)
-      .text((d) => {
-        var region = d.data.name;
-        // region = region.substring(0, region.indexOf(" "));
-        // region = region.substring(0, 1) + region.substring(1).toLowerCase();
-        return region;
-      });
-
-    // Now, we place the groups for all of the leaf nodes
-    const leaf = g
-      .selectAll("g.leaf")
-      // root.leaves() returns all of the leaf nodes
-      .data(root.leaves())
-      .join("g")
-      .attr("class", "leaf")
-      // position each group at the top left corner of the rect
-      .attr("transform", (d) => `translate(${d.x0},${d.y0})`);
-
-    // A title element tells the browser to display its text value
-    leaf
-      .append("title")
-      .text(
-        (d) =>
-          `${d.parent.data.name}-${d.data.name}\n${d.value.toLocaleString()}`
-      );
-
-    leaf
-      .append("rect")
-      .attr("fill", function (d) {
-        var name = d.data.region;
-        var change = d.data.change;
-
-        if (change < 0) {
-          var negativeBreaks = breaks[name].negative;
-          return getColor2(change, ["#f63538", "#f6f8f5"], negativeBreaks);
-        } else if (change > 0) {
-          var positiveBreaks = breaks[name].positive;
-          return getColor(change, ["#30cc5a", "#f6f8f5"], positiveBreaks);
-        } else {
-          return "#f6f8f5";
-        }
-      })
-      .attr("width", (d) => d.x1 - d.x0)
-      .attr("height", (d) => d.y1 - d.y0);
-
-    // This next section checks the width and height of each rectangle
-    // If it's big enough, it places labels. If not, it doesn't.
-    leaf.each((d, i, arr) => {
-      // The current leaf element
-      const current = arr[i];
-
-      const left = d.x0,
-        right = d.x1,
-        // calculate its width from the data
-        width = right - left,
-        top = d.y0,
-        bottom = d.y1,
-        // calculate its height from the data
-        height = d.y1 - d.y0;
-
-      let letterHeight = 25;
-      let str = d.data.name;
-      let textWidth = 6;
-
-      let letterWidth = str.length * textWidth;
-
-      var fontSize = 8; //9
-      if (width > 65) fontSize = 10; //11
-      if (width > 120) fontSize = 12; //14
-
-      var textHeight = 9;
-      if (fontSize == 10) textHeight = 11;
-      if (fontSize == 12) textHeight = 14;
-
-      var fontColor = "#2b2b2b";
-      var change = d.data.change;
-      if (change < 0) {
-        var name = d.data.region;
-        var negativeBreaks = breaks[name].negative;
-        if (change < negativeBreaks[2]) {
-          fontColor = "#dcdcdc";
-        }
-      }
-
-      // Short cut out of this if the width or height is too small.
-      // This saves us from the heavier appending and string manipulation below
-
-      //if (width < 20 || (letterWidth / width) * letterHeight > height) return;
-
-      if (width < letterWidth) {
-        let chunks = [];
-        chunks = splitText(str, width / textWidth);
-        if (chunks.length > 2) {
-          chunks = chunks.slice(0, 2);
-          var lastChunk = chunks[1];
-          if (lastChunk === "or") {
-            chunks = [chunks[0] + "..."];
-          } else {
-            chunks[1] = chunks[1] + "...";
-          }
-        }
-
-        var numRows = chunks.length + 2;
-        if (numRows * textHeight > height) {
-          fontSize = fontSize - 2;
-        }
-
-        letterWidth = Math.max(...chunks.map((el) => el.length)) * textWidth;
-        d.data["formattedName"] = chunks;
-        letterHeight = (chunks.length + 2) * textHeight;
-      } else {
-        d.data["formattedName"] = [str];
-      }
-
-      // too small to show text
-      var tooSmall = width < letterWidth || height < letterHeight;
-      tooSmall = false;
-
-      const text = d3
-        .select(current)
-        .append("text")
-        // If it's too small, don't show the text
-        .attr("opacity", tooSmall ? 0 : 0.9)
-        .style("font-size", fontSize + "px")
-        .style("fill", fontColor)
-        .selectAll("tspan")
-        .data((d) => {
-          return [
-            ...d.data.formattedName,
-            "$"+d.value.toLocaleString(),
-            Math.round(d.data.change, 2) + "%",
-          ];
-        })
-        .join("tspan")
-        .attr("x", 3)
-        .attr("y", (d, i) => {
-          let offset = i + 1;
-
-          return fontSize < 10 ? `${offset}.0em` : `${offset}.5em`;
-        })
-        .text((d) => {
-          return d;
-        });
-    });
-  };
-
-  //**************************************************************************
-  //** Colors for line and pie
-  //**************************************************************************
-
-
-
-
-
-
-    var colorRange = chroma.scale(["#98DFAF", "#FFB586"]);
 
 
   //**************************************************************************
   //** updateLineGraph
   //**************************************************************************
-  var updateLineGraph = function (rows) {
-      var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
+    var updateLineGraph = function(data, groupName, labelFunction){
 
 
-      //Create data for the line graph
-        var data = [];
-        const accumulator = {};
-        for (var i = rows.length - 1; i >= 1; i--) {
-          var reg = rows[i][0];
-          if (reg !== "AGGREGATED TO FACILITY PRIMARY SERVICE TYPE") {
-            reg = reg.split(' ')[0].toLowerCase();
-            reg = reg.charAt(0).toUpperCase() + reg.slice(1);
+      //Update panel
+        var subtitle = lineGraph.subtitle;
+        var innerDiv = lineGraph.innerDiv;
+        innerDiv.innerHTML = "";
 
-            const month = rows[i][1];
-            const valStr = rows[i][4];
-            const val = Number(valStr.replace(/[^0-9.-]+/g, ""));
-            if (!(month in accumulator)) {
-              accumulator[month] = {};
+
+      //Cache inputs
+        lineGraph.data = clone(data);
+        lineGraph.groupName = groupName;
+        lineGraph.labelFunction = labelFunction;
+
+
+      //Set the dimensions and margins of the graph
+        var margin = {top: 20, right: 100, bottom: 50, left: 85},
+        width = innerDiv.offsetWidth - margin.left - margin.right,
+        height = innerDiv.offsetHeight - margin.top - margin.bottom;
+
+
+
+      //set the ranges
+        var x = d3.scaleTime().range([0, width]);
+        var yScale = useLogScale ? d3.scaleLog() : d3.scaleLinear();
+        var y = yScale.range([height, 0]);
+
+
+      //create svg
+        var svg = d3.select(innerDiv).append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+      //Group the data by line type
+        var types = {};
+        data.forEach(function(d) {
+            var arr = types[d.type];
+            if (!arr){
+                arr = [];
+                types[d.type] = arr;
             }
-            if (!(reg in accumulator[month])) {
-              accumulator[month][reg] = 0;
+            arr.push(d);
+        });
+        data = [];
+
+
+
+      //Create lines for each type
+        var lines = {};
+        for (var type in types) {
+            if (types.hasOwnProperty(type)){
+
+
+              //Sort data for each type by date
+                var arr = types[type];
+                arr.sort((a, b) => (a.date > b.date) ? 1 : -1);
+
+
+              //Create line function for the type
+                lines[type] = d3.line()
+                    .defined(function(d) {return !isNaN(d.value);})
+                    .x(function(d) { return x(d.date); })
+                    .y(function(d) { return useLogScale? y(d.value+1):y(d.value); });
+
+
+              //Update data
+                data.push(...arr);
             }
-            accumulator[month][reg] = accumulator[month][reg] + val;
-          }
         }
 
-        for (month in accumulator) {
-          const y = Number(month.slice(0, 4));
-          const m = Number(month.slice(-2));
-          const monthDate = new Date(y, m);
-          var regions = accumulator[month];
-          if (Object.keys(regions).length<4) break;
-          for (var region in regions) {
-            data.push({
-              date: monthDate,
-              type: region,
-              value: accumulator[month][region]
+
+
+      //format the data
+        var minY = useLogScale ? 1e12 : 100;
+        var maxY = useLogScale ? -1e12 : -100;
+        var parseTime = d3.timeParse("%Y-%m-%d"); //2020-08-07
+        data.forEach(function(d) {
+          // Sometimes months are expressed as first of month, other times they
+          //  are expressed as last of month. Here we round always to the first.
+            d.date = roundToYM(parseTime(d.date));
+
+            minY = isNaN(d.value)? minY:Math.min(minY, d.value);
+            maxY = isNaN(d.value)? maxY:Math.max(maxY, d.value);
+        });
+        if (minY == maxY) {maxY = minY + 1;}
+        if (useLogScale) {
+            minY = Math.pow(10, Math.floor(Math.log10(minY+1)));
+            maxY = Math.pow(10, Math.ceil(Math.log10(maxY)));
+        }
+
+
+      //Scale the range of the data
+        x.domain(d3.extent(data, function(d) { return d.date; }));
+        y.domain([minY, maxY]);
+
+
+
+        var colors = [
+
+          //darker
+            '#6699CC', //blue
+            '#98DFAF', //green
+            '#FF3C38', //red
+            '#FF8C42', //orange
+            '#933ed5', //purple
+            '#bebcc1', //gray
+
+          //lighter
+            '#9DBEDE',
+            '#C6EDD3',
+            '#FF8280',
+            '#FFB586'
+        ];
+
+
+
+      //Add y-axis
+        svg.append("g")
+            .attr("class", "axis")
+            .call(useLogScale ? d3.axisLeft(y).ticks(5, ",") : d3.axisLeft(y).ticks(5));
+
+
+
+      //add the X gridlines
+        svg.append("g")
+            .attr("class", "grid")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x)
+              .ticks()
+              .tickSize(-height)
+              .tickFormat("")
+            );
+
+      //add the Y gridlines
+        svg.append("g")
+            .attr("class", "grid")
+            .call(d3.axisLeft(y)
+                .ticks(5)
+                .tickSize(-width)
+                .tickFormat("")
+              );
+
+
+      //Add x-axis
+        const allMonths = Object.values(types)
+            .map(arr => arr.map(d => d.date))
+            .flat();
+        const allUniqueMonths = getUniqueDates(allMonths);
+        svg.append("g")
+            .attr("class", "axis")
+            .attr("transform", "translate(0,"+height+")")
+            .call(d3.axisBottom(x)
+                .tickFormat(ymFormat)
+                .tickValues(allUniqueMonths)
+            );
+
+
+      //Extract types into a string array
+        var keys = [];
+        for (var type in types) {
+            if (types.hasOwnProperty(type)){
+                keys.push(type);
+            }
+        }
+
+
+      //Sort the types as needed
+        var hasOrdersAndFill = groupName.indexOf("order")>-1;
+        if (hasOrdersAndFill){
+            keys.sort(function(a, b){
+                var t1 = a.replace("order","").replace("fill","");
+                var t2 = b.replace("order","").replace("fill","");
+                if (t1==t2){
+                    return a.indexOf("fill") ? -1 : 1;
+                }
+                return -0;
             });
-          }
         }
 
 
 
-    var useLogScale = false;
-
-    // Select the inner div which will contain the d3, and clear it
-    var innerDiv = lineGraph.innerDiv;
-    innerDiv.innerHTML = "";
-
-
-    //Set the dimensions and margins of the graph
-    var margin = { top: 2, right: 60, bottom: 50, left: 40 },
-      width = innerDiv.offsetWidth - margin.left - margin.right,
-      height = innerDiv.offsetHeight - margin.top - margin.bottom;
-
-    //set the ranges
-    var x = d3.scaleTime().range([0, width]);
-    var yScale = useLogScale ? d3.scaleLog() : d3.scaleLinear();
-    var y = yScale.range([height, 0]);
-
-    //create svg
-    var svg = d3
-      .select(innerDiv)
-      .append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    //Group the data by line type
-    var types = {};
-    data.forEach(function (d) {
-      var arr = types[d.type];
-      if (!arr) {
-        arr = [];
-        types[d.type] = arr;
-      }
-      arr.push(d);
-    });
-    data = [];
-
-    //Create lines for each type
-    var lines = {};
-    for (var type in types) {
-      if (types.hasOwnProperty(type)) {
-        //Sort data for each type by date
-        var arr = types[type];
-        arr.sort((a, b) => (a.date > b.date ? 1 : -1));
-
-        //Create line function for the type
-        lines[type] = d3
-          .line()
-          .defined(function (d) {
-            return !isNaN(d.value);
+      //Create rectangle over the grid to watch for mouse events.
+      //Note that this is significantly faster than monitoring the svg node!
+        var d = clone(data);
+        svg.append('rect')
+          .attr('width', width)
+          .attr('height', height)
+          .attr('opacity', 0)
+          .on('mousemove', function() {
+            drawTooltip(this, x, d, labelFunction);
           })
-          .x(function (d) {
-            return x(d.date);
-          })
-          .y(function (d) {
-            return useLogScale ? y(d.value + 1) : y(d.value);
+          .on('mouseout', function(){
+            if (tooltip) tooltip.style('display', 'none');
+            if (tooltipLine) tooltipLine.attr('stroke', 'none');
           });
 
-        //Update data
-        data.push(...arr);
-      }
-    }
+      //Add vertical line for the tooltip
+        tooltipLine = svg.append('line')
+          .attr('stroke', 'black')
+          .attr('y1', 0)
+          .attr('y2', height);
 
-    //format the data
-    var minY = useLogScale ? 1e12 : 100;
-    var maxY = useLogScale ? -1e12 : -100;
-    data.forEach(function (d) {
-      minY = isNaN(d.value) ? minY : Math.min(minY, d.value);
-      maxY = isNaN(d.value) ? maxY : Math.max(maxY, d.value);
-    });
-    if (minY == maxY) {
-      maxY = minY + 1;
-    }
-    if (useLogScale) {
-      minY = Math.pow(10, Math.floor(Math.log10(minY + 1)));
-      maxY = Math.pow(10, Math.ceil(Math.log10(maxY)));
-    }
 
-    //Scale the range of the data
-    x.domain(
-      d3.extent(data, function (d) {
-        return d.date;
-      })
-    );
-    if (useLogScale) {
-      y.domain([minY, maxY]);
-    } else {
-      y.domain([minY, maxY]);
-    }
+      //Draw lines and tags
+        var tags = {};
+        var idx = 0;
+        for (var i=0; i<keys.length; i++) {
+            var type = keys[i];
+            var line = lines[type];
+            var arr = types[type];
+            var color = colors[idx];
+            var isFill = type.indexOf("fill")>-1 && hasOrdersAndFill;
+            if (isFill){
+                if (idx>0) idx--;
+                else idx = 0;
+                color = colors[idx];
+            }
 
-    //Add y-axis
-    svg
-      .append("g")
-      .attr("class", "axis")
-      .call(
-        useLogScale
-          ? d3
-              .axisLeft(y)
-              .ticks(5, ",")
-              .tickFormat((d) => "$" + d3.format("~s")(d).replace("G", "B"))
-          : d3
-              .axisLeft(y)
-              .ticks(5)
-              .tickFormat((d) => "$" + d3.format("~s")(d).replace("G", "B"))
-      );
 
-    //add the X gridlines
-    svg
-      .append("g")
-      .attr("class", "grid")
-      .attr("transform", "translate(0," + height + ")")
-      .call(d3.axisBottom(x).ticks().tickSize(-height).tickFormat(""));
+            idx++;
+            if (idx>colors.length) idx = 0;
 
-    //add the Y gridlines
-    svg
-      .append("g")
-      .attr("class", "grid")
-      .call(d3.axisLeft(y).ticks(5).tickSize(-width).tickFormat(""));
 
-    //Add x-axis
-    const allMonths = Object.values(types)
-      .map((arr) => arr.map((d) => d.date))
-      .flat();
-    const allUniqueMonths = getUniqueDates(allMonths);
-    svg
-      .append("g")
-      .attr("class", "axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(
-        d3.axisBottom(x).ticks(5).tickFormat(d3.timeFormat("%m/%y"))
-        // .tickValues(allUniqueMonths)
-      );
+            var raiseCorrespondingTag = function(d) {
+                  var tag = tags[d[0].type];
+                  var poly = tag.poly.node().cloneNode(true);
+                  var text = tag.text.node().cloneNode(true);
 
-    //Create rectangle over the grid to watch for mouse events.
-    //Note that this is significantly faster than monitoring the svg node!
-    var d = clone(data);
-    svg
-      .append("rect")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("opacity", 0)
-      .on("mousemove", function () {
-        drawLinechartTooltip(this, x, d);
-      })
-      .on("mouseout", function () {
-        if (linechartTooltip) linechartTooltip.style("display", "none");
-        if (linechartTooltipLine) linechartTooltipLine.attr("stroke", "none");
-      });
+                  tag.poly.remove();
+                  tag.text.remove();
 
-    //Add vertical line for the tooltip
-    linechartTooltipLine = svg
-      .append("line")
-      .attr("stroke", "black")
-      .attr("y1", 0)
-      .attr("y2", height);
+                  svg.node().appendChild(poly);
+                  svg.node().appendChild(text);
 
-    //Draw lines and tags
-    var tags = {};
-    for (type in types) {
-      // var type = keys[i];
-      var line = lines[type];
-      var arr = types[type];
-      var color = getColor(type);
+                  tag.poly = d3.select(poly);
+                  tag.text = d3.select(text);
+            }
 
-      var raiseCorrespondingTag = function (d) {
-        var tag = tags[d[0].type];
-        var poly = tag.poly.node().cloneNode(true);
-        var text = tag.text.node().cloneNode(true);
 
-        tag.poly.remove();
-        tag.text.remove();
-
-        svg.node().appendChild(poly);
-        svg.node().appendChild(text);
-
-        tag.poly = d3.select(poly);
-        tag.text = d3.select(text);
-      };
-
-      //Add thick transparent line for clicking purposes
-      svg
-        .append("path")
-        .data([arr])
-        .attr("class", "line")
-        .style("stroke-opacity", 0.0)
-        .style("stroke-width", "11px")
-        .attr("d", line)
-        .on("mousemove", function () {
-          //show tooltip
-          drawLinechartTooltip(this, x, d);
-        })
-        .on("click", function (d) {
-          raiseCorrespondingTag(d);
-        });
-
-      //Draw line
-      svg
-        .append("path")
-        .data([arr])
-        .attr("class", "line")
-        .style("stroke", color)
-        .attr("d", line)
-        .on("click", function (d) {
-          raiseCorrespondingTag(d);
-        });
-
-      //Add label to the end of the line
-      var label = type;
-      var lastItem = arr[arr.length - 1];
-      var lastVal = lastItem.value;
-      var lastDate = lastItem.date;
-      var tx = x(lastDate) + 3; //vs width+3
-      var ty = useLogScale ? y(lastVal + 1) : y(lastVal);
-
-      var temp = svg
-        .append("text")
-        .attr("dy", ".35em")
-        .attr("text-anchor", "start")
-        .attr("font-size", "10px")
-        .text(label);
-      var box = temp.node().getBBox();
-      temp.remove();
-
-      var w = Math.max(box.width + 8, 60);
-      var h = box.height;
-      var a = h / 2;
-      var vertices = [
-        [0, 0], //ul
-        [w, 0], //ur
-        [w, h], //11
-        [0, h], //lr
-        [-a, a], //arrow point
-      ];
-
-      //Add tag (rect)
-      var poly = svg
-        .append("polygon")
-        .attr("points", vertices.join(" "))
-        .attr("transform", "translate(" + (tx + a) + "," + (ty - a) + ")")
-        .style("fill", color);
-
-      //Add label
-      var text = svg
-        .append("text")
-        .attr("transform", "translate(" + (tx + a + 4) + "," + ty + ")")
-        .attr("dy", ".35em")
-        .attr("text-anchor", "start")
-        .attr("font-size", "10px")
-        .style("fill", "#fff")
-        .text(label);
-    }
-  };
+          //Add thick transparent line for clicking purposes
+            svg.append("path")
+              .data([arr])
+              .attr("class", "line")
+              .style("stroke-opacity", 0.0)
+              .style("stroke-width", "11px")
+              .attr("d", line)
+              .on('mousemove', function() { //show tooltip
+                  drawTooltip(this, x, d, labelFunction);
+              })
+              .on("click", function(d) { raiseCorrespondingTag(d) });
 
 
 
-  //**************************************************************************
-  //** updatePieChart
-  //**************************************************************************
-  const updatePieChart = (data) => {
-        pieChart.innerDiv.innerHTML = "";
+          //Draw line
+            svg.append("path")
+              .data([arr])
+              .attr("class", "line")
+              .style("stroke", color)
+              .style(isFill ? "stroke-dasharray" : "stroke", isFill ? ("3, 3") : color) //add dashes
+              .attr("d", line)
+              .on("click", function(d) { raiseCorrespondingTag(d) });
 
 
-      //Prep the data and get colors
-        var values = [];
-        var colors = {};
-        data.children.forEach((child) => {
-            values.push({
-                region: child.name,
-                value: child.totalValue
-            });
-        });
-        values.sort(function(a, b){
-            return b.value-a.value;
-        });
-        data = {};
-        for (var i in values){
-            var d = values[i];
-            data[d.region] = d.value;
-            colors[d.region] = colorRange(i/values.length);
+
+          //Add label to the end of the line
+            var label = type;
+            if (labelFunction) label = labelFunction(label);
+            var lastItem = arr[arr.length-1];
+            var lastVal = lastItem.value;
+            var lastDate = lastItem.date;
+            var tx = x(lastDate)+3; //vs width+3
+            var ty = useLogScale? y(lastVal+1):y(lastVal);
+
+
+            var temp = svg.append("text")
+                .attr("dy", ".35em")
+                .attr("text-anchor", "start")
+                .text(label);
+            var box = temp.node().getBBox();
+            temp.remove();
+
+            var w = Math.max(box.width+8, 60);
+            var h = box.height;
+            var a = h/2;
+            var vertices = [
+              [0, 0], //ul
+              [w, 0], //ur
+              [w, h], //11
+              [0, h], //lr
+              [-a,a] //arrow point
+            ];
+
+
+          //Add tag (rect)
+            var poly = svg.append("polygon")
+                .attr("points", vertices.join(" "))
+                .attr("transform", "translate("+ (tx+(a)) +","+ (ty-(a)) +")")
+                .style("fill", color);
+
+          //Add label
+            var text = svg.append("text")
+                .attr("transform", "translate("+ (tx+a+4) +","+ty +")")
+                .attr("dy", ".35em")
+                .attr("text-anchor", "start")
+                .style("fill", "#fff")
+                .text(label);
+
+
+          //Update tags
+            tags[type] = {
+                poly: poly,
+                text: text
+            };
         }
-
-
-
-
-      //set the dimensions and margins of the graph
-        var margin = { top: 0, right: 20, bottom: 0, left: 20 },
-          width = pieChart.innerDiv.clientWidth,
-          height = pieChart.innerDiv.clientHeight;
-
-
-
-    // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
-        var radius = Math.min(width, height) / 2 - margin.left - margin.right;
-
-        var svg = d3
-          .select(pieChart.innerDiv)
-          .append("svg")
-          .attr("style", "margin-top:-25px")
-          .attr("width", width)
-          .attr("height", height)
-          .append("g")
-          .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
-
-    // Compute the position of each group on the pie:
-    var pie = d3
-      .pie()
-      .sort(null) // Do not sort group by size
-      .value(function (d) {
-        return d.value;
-      });
-    var data_ready = pie(d3.entries(data));
-
-    // The arc generator
-    var arc = d3
-      .arc()
-      .innerRadius(radius * 0.5) // This is the size of the donut hole
-      .outerRadius(radius * 0.8);
-
-    // Another arc that won't be drawn. Just for labels positioning
-    var outerArc = d3
-      .arc()
-      .innerRadius(radius * 0.9)
-      .outerRadius(radius * 0.9);
-
-    // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
-    var path = svg
-      .selectAll("allSlices")
-      .data(data_ready)
-      .enter()
-      .append("path")
-      .attr("d", arc)
-      .attr("fill", function (d) {
-            return colors[d.data.key];
-      })
-      .attr("stroke", "white")
-      .style("stroke-width", "2px")
-      .style("opacity", 1);
-
-    d3.select('#purchase-pie').remove()
-
-    var tooltip = d3
-      .select(pieChart.innerDiv)
-      .append("div")
-      .attr("id", "purchase-pie")
-      .attr("class", "tooltip")
-      .attr("opacity", 0)
-    tooltip.append("div").attr("class", "count");
-
-    path.on("mouseover", function (d) {
-      tooltip.select(".count").html(
-        d.data.value.toLocaleString("en-US", {
-          style: "currency",
-          currency: "USD",
-        })
-      );
-      tooltip.style("display", "block");
-      tooltip.style("opacity", 2);
-      this.style.opacity = .7;
-    });
-
-    path.on("mousemove", function () {
-      tooltip
-        .style("top", event.offsetY + 10 + "px")
-        .style("left", event.offsetX + 12 + "px");
-    });
-
-    path.on("mouseout", function () {
-      tooltip.style("display", "none");
-      tooltip.style("opacity", 0);
-      this.style.opacity = 1;
-    });
-
-    // Add the polylines between chart and labels:
-    let cPositions = [];
-    svg
-      .selectAll("allPolylines")
-      .data(data_ready)
-      .enter()
-      .append("polyline")
-      .attr("stroke", "black")
-      .style("fill", "none")
-      .attr("stroke-width", 1)
-      .attr("points", function (d) {
-        var posA = arc.centroid(d); // line insertion in the slice
-        var posB = outerArc.centroid(d); // line break: we use the other arc generator that has been built only for that
-        var posC = outerArc.centroid(d); // Label position = almost the same as posB
-        cPositions.forEach((val) => {
-          if (posC[1] < val + 5 && posC[1] > val - 5) {
-            posC[1] -= 14;
-            posB[1] -= 14;
-          }
-        });
-        cPositions.push(posC[1]);
-        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; // we need the angle to see if the X position will be at the extreme right or extreme left
-        posC[0] = radius * 0.9 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
-        return [posA, posB, posC];
-      });
-
-    // Add the polylines between chart and labels:
-    var positions = [];
-    svg
-      .selectAll("allLabels")
-      .data(data_ready)
-      .enter()
-      .append("text")
-      .text(function (d) {
-        return d.data.key;
-      })
-      .attr("transform", function (d) {
-        var pos = outerArc.centroid(d);
-        positions.forEach((val) => {
-          if (pos[1] < val + 5 && pos[1] > val - 5) {
-            pos[1] -= 14;
-          }
-        });
-        positions.push(pos[1]);
-
-        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-        pos[0] = radius * 0.92 * (midangle < Math.PI ? 1 : -1);
-        return "translate(" + pos + ")";
-      })
-      .style("text-anchor", function (d) {
-        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
-        return midangle < Math.PI ? "start" : "end";
-      });
-  };
-
-  //**************************************************************************
-  //** Helper Word Wrap
-  //**************************************************************************
-  // Dynamic Width (Build Regex)
-  function splitText(str, w) {
-    return (
-      str
-        .split(/\s+/)
-
-        // Then join words so that each string section is less then 40
-        .reduce(function (prev, curr) {
-          if (prev.length && (prev[prev.length - 1] + " " + curr).length <= w) {
-            prev[prev.length - 1] += " " + curr;
-          } else {
-            prev.push(curr);
-          }
-          return prev;
-        }, [])
-    );
-  }
-
-  //**************************************************************************
-  //** createLinechartTooltip
-  //**************************************************************************
-  var createLinechartTooltip = function (parent) {
-    var div = document.createElement("div");
-    div.className = "tooltip noselect";
-    parent.appendChild(div);
-    linechartTooltip = d3.select(div);
-  };
-
-  //**************************************************************************
-  //** drawLinechartTooltip
-  //**************************************************************************
-  var drawLinechartTooltip = function (node, x, data) {
-    //Get date associated with the mouse position
-    const date = roundToYM(x.invert(d3.mouse(node)[0]));
-
-    //Update vertical line
-    const xOffset = x(date);
-    linechartTooltipLine
-      .attr("stroke", "black")
-      .attr("x1", xOffset)
-      .attr("x2", xOffset);
-
-    //Filter data by the selected date. Note that the data here is a clone
-    data = data.filter(
-      (d) => d.date.slice(0, 7) == d3.timeFormat("%Y-%m")(date)
-    );
-    //data.sort((a, b) => b.value - a.value);
-
-    var fmtDollars = function (val) {
-      val = Math.round(val).toLocaleString();
-      return '<div style="text-align:right">$' + val + "</div>";
     };
-
-    var fmtLabel = function (label) {
-      var s = label;
-      s = s.replaceAll("_", " ");
-      const words = s.split(" ");
-      var ucwords = words.map((w) => w.charAt(0).toUpperCase() + w.slice(1));
-      return ucwords.join(" ");
-    };
-
-    var bound = linechartTooltipLine.node().getBoundingClientRect();
-    var html = document.documentElement;
-    var minY = bound.left + window.pageXOffset - html.clientLeft;
-    //var left = d3.event.pageX;
-    //if (left<minY) left = minY;
-
-    linechartTooltip
-      .html("<strong>" + d3.timeFormat("%b %Y")(date) + "</strong>")
-      .style("display", "block")
-      //.style('left', left+20) //d3.event.pageX + 20
-      .style("top", d3.event.pageY - 170)
-      .append("table")
-      .selectAll("tr")
-      .data(data)
-      .enter()
-      .append("tr")
-      .selectAll("td")
-      .data((d) => [fmtLabel(d.type.split(" ")[0]), fmtDollars(d.value)])
-      .enter()
-      .append("td")
-      .html((d) => d);
-
-    //Position the tooltip to the left of the vertical line
-    var el = linechartTooltip.node();
-    var box = el.getBoundingClientRect();
-    linechartTooltip.style("left", minY - (box.width + 30));
-  };
 
 
   //**************************************************************************
   //** createToolbar
   //**************************************************************************
-  var createToolbar = function (parent) {
-    var div = document.createElement("div");
-    div.className = "dashboard-toolbar";
-    parent.appendChild(div);
+    var createToolbar = function(parent){
 
-    var table = createTable();
-    div.appendChild(table);
-    var tbody = table.firstChild;
-    var tr = document.createElement("tr");
-    tbody.appendChild(tr);
-    var td;
+        var div = document.createElement("div");
+        div.className = "dashboard-toolbar";
+        parent.appendChild(div);
 
-    td = document.createElement("td");
-    td.style.width = "55px";
-    td.innerHTML = "Month:";
-    tr.appendChild(td);
-    td = document.createElement("td");
-    td.style.width = "175px";
-    tr.appendChild(td);
-    monthOptions = new javaxt.dhtml.ComboBox(td, {
-      style: config.style.combobox,
-      readOnly: true
-    });
-    var sliding = false;
-    monthOptions.onChange = function (name, value) {
-      if (!sliding) {
-        var options = monthOptions.getOptions();
-        for (var i in options) {
-          var option = options[i];
-          if (option.value === value) {
-            slider.value = i;
-            break;
-          }
-        }
-      }
-      updateCharts(name);
+
+        var table = createTable();
+        div.appendChild(table);
+        var tbody = table.firstChild;
+        var tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        var td;
+
+
+
+        productOptions = createProductList(tr, config.style.combobox);
+        //productOptions.clear();
+        productOptions.onChange = function(name, value){
+            currProduct = value;
+            title = value + " Time Series Views";
+
+            var _data = data[currProduct];
+
+
+          //Populate source combobox
+            sourceOptions.clear();
+            sourceOptions.add("All", "All");
+            for (var i=0; i<_data.length; i++){
+                var entry = _data[i];
+                sourceOptions.add(entry.name, i);
+            }
+            sourceOptions.setValue("All");
+
+            me.onUpdate();
+        };
+
+
+
+        td = document.createElement("td");
+        td.style.paddingLeft = "15px";
+        td.style.width = "65px";
+        td.innerHTML = "Source:";
+        tr.appendChild(td);
+        td = document.createElement("td");
+        td.style.width = "200px";
+        tr.appendChild(td);
+        sourceOptions = new javaxt.dhtml.ComboBox(td, {
+            style: config.style.combobox,
+            readOnly: true
+        });
+
+        sourceOptions.onChange = function(name, value){
+            groupOptions.clear();
+            var _data = data[currProduct];
+
+            if (value=="All"){
+                groupOptions.hide();
+
+
+              //Render combined data
+                var arr = [];
+                for (var i=0; i<_data.length; i++){
+                    var entry = _data[i];
+                    var groups = entry.groups;
+                    var name = entry.name;
+                    if (name=="RFI"){
+                        var d = clone(groups["order vs fill (total)"]);
+                        if (d){
+                            for (var j=0; j<d.length; j++){
+                                var t = d[j].type;
+                                if (t=="order_total") t = "RFI Orders";
+                                if (t=="fill_total") t = "RFI Fill";
+                                d[j].type = t;
+                            }
+                            arr.push(...d);
+                        }
+                    }
+                    else{
+                        var d = clone(groups["total"]);
+                        if (d){
+                            for (var j=0; j<d.length; j++){
+                                d[j].type = name;
+                            }
+                            arr.push(...d);
+                        }
+                    }
+                }
+
+                lineGraph.menu.select("Logarithmic");
+                updateLineGraph(arr, "", null);
+
+            }
+            else{
+                groupOptions.show();
+
+              //Populate group options
+                var groups = _data[value].groups;
+                for (var name in groups) {
+                    if (groups.hasOwnProperty(name)){
+                        groupOptions.add(name, name);
+                    }
+                }
+
+
+              //Update settings
+                lineGraph.menu.select("Linear");
+
+
+              //Select default value in the combobox
+                var defaultView = "order vs fill (by distributor)";
+                var foundDefault = false;
+                var options = groupOptions.getOptions();
+                if (options.length==0) return;
+                for (var i=0; i<options.length; i++){
+                    if (options[i].value==defaultView){
+                        foundDefault = true;
+                        break;
+                    }
+                }
+                if (!foundDefault) defaultView = options[0].value;
+                groupOptions.setValue(defaultView);
+            }
+        };
+
+
+        td = document.createElement("td");
+        td.style.width = "65px";
+        td.style.paddingLeft = "15px";
+        td.innerHTML = "Group:";
+        var groupLabel = td;
+        tr.appendChild(td);
+        td = document.createElement("td");
+        td.style.width = "320px";
+        tr.appendChild(td);
+        groupOptions = new javaxt.dhtml.ComboBox(td, {
+            style: config.style.combobox,
+            readOnly: true
+        });
+        var _show = groupOptions.show;
+        var _hide = groupOptions.hide;
+
+        groupOptions.show = function(){
+            groupLabel.innerHTML = "Group:";
+            _show();
+        };
+
+        groupOptions.hide = function(){
+            groupLabel.innerHTML = "";
+            _hide();
+        };
+
+        groupOptions.onChange = function(name, value){
+            var groupName = value;
+            var _data = data[currProduct];
+            var entry = _data[sourceOptions.getValue()];
+            var groups = entry.groups;
+            var d = groups[groupName];
+            if (d==null) return;
+            var labelFunction = entry.labelFunction[groupName];
+            updateLineGraph(clone(d), groupName, labelFunction);
+        };
+
+
+        td = document.createElement("td");
+        tr.appendChild(td);
     };
 
-    td = document.createElement("td");
-    tr.appendChild(td);
-    slider = document.createElement("input");
-    slider.type = "range";
-    slider.className = "dashboard-slider";
-    slider.style.maxWidth = "500px";
-    slider.style.marginLeft = "25px";
-    slider.setAttribute("min", 1);
-    slider.setAttribute("max", 3);
-    slider.value = 1;
-    slider.onchange = function () {
-      sliding = true;
-      var val = this.value - 1;
-      monthOptions.setValue(val);
-      sliding = false;
+
+
+
+  //**************************************************************************
+  //** createTooltip
+  //**************************************************************************
+    var createTooltip = function(parent) {
+        var div = document.createElement("div");
+        div.className = "tooltip noselect";
+        parent.appendChild(div);
+        tooltip = d3.select(div);
     };
-    td.appendChild(slider);
-  };
+
 
   //**************************************************************************
-  //** getColor
+  //** drawTooltip
   //**************************************************************************
-  /** Returns a color for a descrete value using a precomputed classification
-   *  @param colors An array of colors. Example: ['#b6e4ff', '#ea442c']
-   *  @param breaks An array of classes (e.g. see getNaturalBreaks)
-   */
-  var getColor = function (n, colors, breaks) {
-    var val = 0;
-    while (n > breaks[val]) val++;
-    return chroma.scale(colors)(val / breaks.length);
-  };
+    var drawTooltip = function(node, x, data, labelFunction) {
 
-  var getColor2 = function (n, colors, breaks) {
-    var val = breaks.length - 1;
-    while (n < breaks[val]) val--;
-    return chroma.scale(colors)(val / breaks.length);
-  };
+      //Get date associated with the mouse position
+        const date = roundToYM(x.invert(d3.mouse(node)[0]));
+
+
+      //Update vertical line
+        const xOffset = x(date);
+        tooltipLine
+          .attr('stroke', 'black')
+          .attr('x1', xOffset)
+          .attr('x2', xOffset);
+
+
+      //Filter data by the selected date. Note that the data here is a clone
+        data = data.filter(d => (d.date.slice(0, 7))==ymFormat(date));
+        //data.sort((a, b) => b.value - a.value);
+
+
+
+        var fmtNum = function(val) {
+            val = Math.round(val).toLocaleString();
+            return '<div style="text-align:right">' + val + '</div>';
+        };
+
+        var fmtLabel = function(label) {
+            if (labelFunction) return labelFunction(label);
+            var s = label;
+            s = s.replaceAll('_', ' ');
+            const words = s.split(' ');
+            var ucwords = words.map(w => w.charAt(0).toUpperCase()+w.slice(1));
+            return ucwords.join(' ');
+        };
+
+
+        var bound = tooltipLine.node().getBoundingClientRect();
+        var html = document.documentElement;
+        var minY = bound.left + window.pageXOffset - html.clientLeft;
+        //var left = d3.event.pageX;
+        //if (left<minY) left = minY;
+
+        tooltip.html("<strong>"+ymFormat(date)+"</strong>")
+            .style('display', 'block')
+            //.style('left', left+20) //d3.event.pageX + 20
+            .style('top', d3.event.pageY - 170)
+            .append('table')
+            .selectAll('tr')
+            .data(data).enter()
+                .append('tr')
+                .selectAll('td')
+                .data(d => [fmtLabel(d.type), fmtNum(d.value)]).enter()
+                    .append('td')
+                    .html(d => d);
+
+
+      //Position the tooltip to the left of the vertical line
+        var el = tooltip.node();
+        var box = el.getBoundingClientRect();
+        tooltip.style('left', minY-(box.width+30));
+    };
+
 
   //**************************************************************************
   //** formatDate
   //**************************************************************************
-  var formatDate = function (str) {
-    var arr = str.split("-");
-    return arr[1] + "/" + arr[0];
-  };
+  /** Returns date in YYYY-MM-DD format
+   */
+    var formatDate = function(date) {
+        var d = new Date(date),
+            month = '' + (d.getMonth() + 1),
+            day = '' + d.getDate(),
+            year = d.getFullYear();
 
-  //**************************************************************************
-  //** formatRegion
-  //**************************************************************************
-  var formatRegion = function (region) {
-    region = region.substring(0, region.indexOf(" "));
-    region = region.substring(0,1) + region.substring(1).toLowerCase();
-    return region;
-  };
+        if (month.length < 2)
+            month = '0' + month;
+        if (day.length < 2)
+            day = '0' + day;
 
-  //**************************************************************************
-  //** clone
-  //**************************************************************************
-  var clone = function (json) {
-    if (json == null) return null;
-    return JSON.parse(JSON.stringify(json));
-  };
+        return [year, month, day].join('-');
+    };
 
-  //**************************************************************************
-  //** Date utils
-  //**************************************************************************
-
-  var roundToYM = function (timeStamp) {
-    const y = timeStamp.getFullYear();
-    const m = timeStamp.getMonth();
-    const result = new Date(y, m);
-    if (timeStamp.getDate() > 15) {
-      result.setMonth(result.getMonth() + 1);
-    }
-    return result;
-  };
-
-  var isDateInArray = function (needle, haystack) {
-    for (var i = 0; i < haystack.length; i++) {
-      if (needle.getTime() === haystack[i].getTime()) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  var getUniqueDates = function (dates) {
-    var uniqueDates = [];
-    for (var i = 0; i < dates.length; i++) {
-      if (!isDateInArray(dates[i], uniqueDates)) {
-        uniqueDates.push(dates[i]);
-      }
-    }
-    return uniqueDates;
-  };
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
-  var createTable = javaxt.dhtml.utils.createTable;
-  var createDashboardItem = bluewave.utils.createDashboardItem;
-  var getData = bluewave.utils.getData;
-  var parseCSV = bluewave.utils.parseCSV;
-  var getNaturalBreaks = bluewave.utils.getNaturalBreaks;
+    var createTable = javaxt.dhtml.utils.createTable;
+    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var createProductList = bluewave.utils.createProductList;
+    var getData = bluewave.utils.getData;
+    var parseCSV = bluewave.utils.parseCSV;
 
-  init();
+
+    var clone = function(json) {
+        if (json==null) return null;
+        return JSON.parse(JSON.stringify(json));
+    };
+
+
+    var ymFormat = d3.timeFormat("%Y-%m");
+    var roundToYM = function(timeStamp) {
+        const y = timeStamp.getFullYear();
+        const m = timeStamp.getMonth();
+        const result = new Date(y, m);
+        if (timeStamp.getDate() > 15) {
+            result.setMonth(result.getMonth()+1)
+        }
+        return result;
+    };
+
+
+    var isDateInArray = function(needle, haystack) {
+        for (var i = 0; i < haystack.length; i++) {
+            if (needle.getTime() === haystack[i].getTime()) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    var getUniqueDates = function(dates) {
+        var uniqueDates = [];
+        for (var i = 0; i < dates.length; i++) {
+            if (!isDateInArray(dates[i], uniqueDates)) {
+                uniqueDates.push(dates[i]);
+            }
+        }
+        return uniqueDates;
+    };
+
+
+    init();
 };

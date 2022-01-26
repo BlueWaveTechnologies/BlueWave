@@ -1,4 +1,6 @@
 package bluewave.graph;
+import bluewave.utils.StatusLogger;
+import static bluewave.utils.StatusLogger.*;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -14,9 +16,21 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.GZIPInputStream;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
+
+//******************************************************************************
+//**  Import
+//******************************************************************************
+/**
+ *  Used to create nodes in the graph using CSV and JSON files
+ *
+ ******************************************************************************/
 
 public class Import {
 
@@ -27,15 +41,42 @@ public class Import {
   //** importCSV
   //**************************************************************************
   /** Used to import a CSV file into a node/vertex in a Neo4J instance.
+   *  @param csvFile Accepts files with a .csv or .gz file extension. Assumes
+   *  that the first line in the file contains a header.
+   *  @param vertex Label for the nodes that will be created
+   *  @param keys Column IDs with unique values used to create a unique
+   *  constraint. Intended for upserts. Optional.
    */
-    public static void importCSV(File csvFile, String vertex, Integer[] keys, Neo4J database) throws Exception {
+    public static void importCSV(File csvFile, String vertex, Integer[] keys, int numThreads, Neo4J database) throws Exception {
+
+
+      //Count total records in the file
+        AtomicLong totalRecords = new AtomicLong(0);
+        if (true){
+            System.out.print("Analyzing File...");
+            long t = System.currentTimeMillis();
+            java.io.BufferedReader br = getBufferedReader(csvFile);
+            String row = br.readLine(); //skip header
+            while ((row = br.readLine()) != null){
+                totalRecords.incrementAndGet();
+            }
+            br.close();
+            System.out.print(" Done!");
+            System.out.println("\nFound " + format(totalRecords.get()) + " records in " + getElapsedTime(t));
+        }
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
+
 
 
       //Parse header and create query to insert records
         ArrayList<String> colNames = new ArrayList<>();
         String uniqueColName;
         StringBuilder query = new StringBuilder("CREATE (:" + vertex + " {");
-        java.io.BufferedReader br = csvFile.getBufferedReader("UTF-8");
+        java.io.BufferedReader br = getBufferedReader(csvFile);
         String row = br.readLine();
         if (row.startsWith(UTF8_BOM)) {
             row = row.substring(1);
@@ -44,9 +85,15 @@ public class Import {
         CSV.Columns columns = CSV.getColumns(row, ",");
         for (int i=0; i<columns.length(); i++){
             String colName = columns.get(i).toString();
-            colName = colName.replace("-", "N").replace("+", "P"); //custom replacement
+            while (colName.contains("  ")) colName = colName.replace("  ", " ");
+            colName = colName.toLowerCase().replace(" ", "_");
+            colName = colName.trim().toLowerCase();
+            
+          //Special case for HHS hospitilization data - should be removed in the future
+            colName = colName.replace("-", "N").replace("+", "P");           
+            
+            
             colNames.add(colName);
-
             header.put(colName, i);
             if (i>0) query.append(", ");
             query.append(colName);
@@ -107,7 +154,7 @@ public class Import {
 
 
       //Instantiate the ThreadPool
-        ThreadPool pool = new ThreadPool(20, 1000){
+        ThreadPool pool = new ThreadPool(numThreads, 1000){
             public void process(Object obj){
                 String row = (String) obj;
                 try{
@@ -136,8 +183,10 @@ public class Import {
                     getSession().writeTransaction( tx -> addRow( tx, query.toString(), params ) );
                 }
                 catch(Exception e){
-                    //console.log(e.getMessage());
+                    console.log(e.getMessage(), row);
                 }
+
+                recordCounter.incrementAndGet();
             }
 
 
@@ -168,6 +217,10 @@ public class Import {
       //Notify the pool that we have finished added records and Wait for threads to finish
         pool.done();
         pool.join();
+       
+        
+      //Clean up
+        statusLogger.shutdown();
     }
 
 
@@ -182,21 +235,22 @@ public class Import {
    *  @param database Connection info to the database
    */
     public static void importJSON(File jsonFile, String vertex, String target, Neo4J database) throws Exception {
+        JsonReader jr = new JsonReader(jsonFile.getBufferedReader());
+        importJSON(jr, vertex, target, database);
+    }
 
-        /*
-        Session session = null;
-        try {
-            session = database.getSession();
-            JsonReader jr = new JsonReader(jsonFile.getBufferedReader());
-            createNode(jr, vertex, target, null, new LinkedHashMap<>(), session);
-            jr.close();
-            session.close();
-        }
-        catch (Exception e) {
-            if (session != null) session.close();
-            throw e;
-        }
-        */
+    public static void importJSON(InputStream is, String vertex, String target, Neo4J database) throws Exception {
+        JsonReader jr = new JsonReader(new InputStreamReader(is));
+        importJSON(jr, vertex, target, database);
+    }
+
+    public static void importJSON(JsonReader jr, String vertex, String target, Neo4J database) throws Exception {
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
 
         ConcurrentHashMap<Long, Value> jobs = new ConcurrentHashMap<>();
         AtomicLong jobIDs = new AtomicLong(0);
@@ -568,6 +622,7 @@ public class Import {
                     jobs.put(jobID, new Value(obj));
                     jobs.notifyAll();
                 }
+                recordCounter.incrementAndGet();
             }
 
 
@@ -589,9 +644,12 @@ public class Import {
         }.start();
 
 
-        JsonReader jr = new JsonReader(jsonFile.getBufferedReader());
         pool.add(new Object[]{jr, vertex, target, null, new LinkedHashMap<>(), jobIDs.get()});
         pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
     }
 
 
@@ -654,8 +712,25 @@ public class Import {
   //**************************************************************************
   //** addRow
   //**************************************************************************
-    private static Result addRow(final Transaction tx, final String query, Map<String, Object> params){
+    public static Result addRow(final Transaction tx, final String query, Map<String, Object> params){
         return tx.run( query, params );
     }
+
+
+  //**************************************************************************
+  //** getBufferedReader
+  //**************************************************************************
+    private static java.io.BufferedReader getBufferedReader(File file) throws Exception {
+        String ext = file.getExtension();
+        if (ext.equals("gz")){
+            InputStream fileStream = file.getInputStream();
+            InputStream gzipStream = new GZIPInputStream(fileStream);
+            return new BufferedReader(new InputStreamReader(gzipStream, "UTF-8"));
+        }
+        else{
+            return file.getBufferedReader("UTF-8");
+        }
+    }
+
 
 }

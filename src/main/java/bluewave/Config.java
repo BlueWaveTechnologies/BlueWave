@@ -1,4 +1,6 @@
 package bluewave;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import javaxt.express.utils.DbUtils;
 import static javaxt.utils.Console.console;
 import javaxt.json.*;
@@ -17,17 +19,15 @@ import javaxt.sql.*;
 public class Config {
 
     private static javaxt.express.Config config = new javaxt.express.Config();
-
     private Config(){}
 
 
   //**************************************************************************
-  //** init
+  //** load
   //**************************************************************************
-  /** Used to load a config file (JSON) and initialize the database
+  /** Used to load a config file (JSON) and update config settings
    */
-    public static void init(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
-
+    public static void load(javaxt.io.File configFile, javaxt.io.Jar jar) throws Exception {
 
       //Parse config file
         JSONObject json = new JSONObject(configFile.getText());
@@ -47,13 +47,12 @@ public class Config {
 
 
       //Get schema
-        javaxt.io.File schema = null;
+        javaxt.io.File schemaFile = null;
         if (dbConfig.has("schema")){
             updateFile("schema", dbConfig, configFile);
-            schema = new javaxt.io.File(dbConfig.get("schema").toString());
+            schemaFile = new javaxt.io.File(dbConfig.get("schema").toString());
             dbConfig.remove("schema");
         }
-        if (schema==null || !schema.exists()) throw new Exception("Schema not found");
 
 
       //Update relative paths in the web config
@@ -61,19 +60,55 @@ public class Config {
         updateDir("webDir", webConfig, configFile, false);
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
+        updateDir("scriptDir", webConfig, configFile, false);
         updateFile("keystore", webConfig, configFile);
+
+
+      //Update relative paths in the graph config
+        JSONObject graphConfig = json.get("graph").toJSONObject();
+        updateDir("localLog", graphConfig, configFile, true);
+        updateDir("localCache", graphConfig, configFile, true);
 
 
       //Load config
         config.init(json);
 
 
-      //Get database connection info
-        Database database = getDatabase();
+      //Add additional properties to the config
+        config.set("jar", jar);
+        config.set("configFile", configFile);
+        Properties props = config.getDatabase().getProperties();
+        if (props==null){
+            props = new Properties();
+            config.getDatabase().setProperties(props);
+        }
+        props.put("schema", schemaFile);
+    }
+
+
+  //**************************************************************************
+  //** initDatabase
+  //**************************************************************************
+  /** Used to initialize the database
+   */
+    public static void initDatabase() throws Exception {
+        Database database = config.getDatabase();
+
+
+      //Get database schema
+        String schema = null;
+        Object obj = config.getDatabase().getProperties().get("schema");
+        if (obj!=null){
+            javaxt.io.File schemaFile = (javaxt.io.File) obj;
+            if (schemaFile.exists()){
+                schema = schemaFile.getText();
+            }
+        }
+        if (schema==null) throw new Exception("Schema not found");
 
 
       //Initialize schema (create tables, indexes, etc)
-        DbUtils.initSchema(database, schema.getText(), null);
+        DbUtils.initSchema(database, schema, null);
 
 
       //Inititalize connection pool
@@ -81,6 +116,7 @@ public class Config {
 
 
       //Initialize models
+        javaxt.io.Jar jar = (javaxt.io.Jar) config.get("jar").toObject();
         Model.init(jar, database.getConnectionPool());
     }
 
@@ -106,6 +142,91 @@ public class Config {
 
 
   //**************************************************************************
+  //** set
+  //**************************************************************************
+    public static void set(String key, Object value){
+        config.set(key, value);
+    }
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    public static void save(){
+        javaxt.io.File configFile = (javaxt.io.File) config.get("configFile").toObject();
+        configFile.write(toJson().toString(4));
+    }
+
+
+  //**************************************************************************
+  //** toJson
+  //**************************************************************************
+    public static JSONObject toJson(){
+
+      //Get config file path
+        javaxt.io.File configFile = (javaxt.io.File) config.get("configFile").toObject();
+        String configPath = configFile.getDirectory().toString().replace("\\", "/");
+        int len = configPath.length();
+
+
+      //Get json formatted config data
+        JSONObject json = config.toJson();
+
+
+      //Remove keys that should not be saved
+        json.remove("schema");
+        json.remove("jar");
+
+
+      //Update json for the database config
+        JSONObject database = json.get("database").toJSONObject();
+        if (database.get("driver").toString().equalsIgnoreCase("H2")){
+            String host = database.get("host").toString().replace("\\", "/");
+            if (host.startsWith(configPath)) host = host.substring(len);
+            database.set("path", host);
+            database.remove("host");
+            Object obj = config.getDatabase().getProperties().get("schema");
+            if (obj!=null){
+                javaxt.io.File schemaFile = (javaxt.io.File) obj;
+                String schema = schemaFile.toString().replace("\\", "/");
+                if (schema.startsWith(configPath)) schema = schema.substring(len);
+                database.set("schema", schema);
+            }
+        }
+
+
+      //Update json for the graph config
+        bluewave.graph.Neo4J graph = getGraph(null);
+        JSONObject db = new JSONObject();
+        db.set("host", graph.getHost() + ":" + graph.getPort());
+        db.set("username", graph.getUsername());
+        db.set("password", graph.getPassword());
+        Properties properties = graph.getProperties();
+        for (String key : new String[]{"localLog", "localCache"}){
+            String path = properties.get(key).toString().replace("\\", "/");
+            if (path.startsWith(configPath)) path = path.substring(len);
+            db.set(key, path);
+        }
+        json.set("graph", db);
+
+
+      //Update json for the web config
+        JSONObject webConfig = json.get("webserver").toJSONObject();
+        for (String key : new String[]{"webDir", "logDir", "jobDir", "keystore"}){
+            String path = webConfig.get(key).toString();
+            if (path!=null){
+                path = path.replace("\\", "/");
+                if (path.startsWith(configPath)) path = path.substring(len);
+                webConfig.set(key, path);
+            }
+        }
+
+
+        return json;
+    }
+
+
+  //**************************************************************************
   //** getDatabase
   //**************************************************************************
     public static javaxt.sql.Database getDatabase(){
@@ -116,21 +237,59 @@ public class Config {
   //**************************************************************************
   //** getGraph
   //**************************************************************************
-    public static bluewave.graph.Neo4J getGraph(){
+    public static bluewave.graph.Neo4J getGraph(bluewave.app.User user){
         String key = "graph";
         JSONValue val = get(key);
         if (val==null) return null;
-        if (val.toObject() instanceof bluewave.graph.Neo4J){
-            return (bluewave.graph.Neo4J) val.toObject();
+
+
+        String[] credentials;
+        if (user!=null) credentials = user.getGraphCredentials();
+        else credentials = new String[]{"neo4j"};
+        String username = credentials[0];
+
+
+        if (val.toObject() instanceof ConcurrentHashMap){
+            ConcurrentHashMap map = (ConcurrentHashMap) val.toObject();
+
+            Object obj = map.get(username);
+            if (obj==null){
+                bluewave.graph.Neo4J neo4j = ((bluewave.graph.Neo4J) map.get("neo4j")).clone();
+                neo4j.setUsername(username);
+                neo4j.setPassword(credentials[1]);
+                synchronized(map){
+                    map.put(username, neo4j);
+                    map.notify();
+                }
+                return neo4j;
+            }
+            else{
+                return (bluewave.graph.Neo4J) obj;
+            }
         }
         else{
-            bluewave.graph.Neo4J database = new bluewave.graph.Neo4J();
+
             JSONObject json = get(key).toJSONObject();
-            database.setHost(json.get("host").toString());
-            database.setUsername(json.get("username").toString());
-            database.setPassword(json.get("password").toString());
-            config.set(key, database);
-            return database;
+            bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
+            neo4j.setHost(json.get("host").toString());
+            neo4j.setUsername(json.get("username").toString());
+            neo4j.setPassword(json.get("password").toString());
+            Properties properties = neo4j.getProperties();
+            properties.put("localLog", json.get("localLog"));
+            properties.put("localCache", json.get("localCache"));
+
+            ConcurrentHashMap<String, bluewave.graph.Neo4J> map = new ConcurrentHashMap<>();
+            map.put("neo4j", neo4j);
+            config.set(key, map);
+
+            if (user!=null){
+                neo4j = neo4j.clone();
+                neo4j.setUsername(username);
+                neo4j.setPassword(credentials[1]);
+                map.put(username, neo4j);
+            }
+
+            return neo4j;
         }
     }
 
@@ -192,7 +351,21 @@ public class Config {
                 else{
 
                     javaxt.io.Directory dir = new javaxt.io.Directory(path);
-                    if (!dir.exists()) dir = new javaxt.io.Directory(configFile.MapPath(path));
+                    if (dir.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.Directory d = new javaxt.io.Directory(f.getCanonicalFile());
+                            if (!dir.toString().equals(d.toString())){
+                                dir = d;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        dir = new javaxt.io.Directory(new java.io.File(configFile.MapPath(path)));
+                    }
+
 
                     if (!dir.exists() && create) dir.create();
 
@@ -229,7 +402,20 @@ public class Config {
                 else{
 
                     javaxt.io.File file = new javaxt.io.File(path);
-                    if (!file.exists()) file = new javaxt.io.File(configFile.MapPath(path));
+                    if (file.exists()){
+                        try{
+                            java.io.File f = new java.io.File(path);
+                            javaxt.io.File _file = new javaxt.io.File(f.getCanonicalFile());
+                            if (!file.toString().equals(_file.toString())){
+                                file = _file;
+                            }
+                        }
+                        catch(Exception e){
+                        }
+                    }
+                    else{
+                        file = new javaxt.io.File(configFile.MapPath(path));
+                    }
 
                     config.set(key, file.toString());
 //                    if (file.exists()){

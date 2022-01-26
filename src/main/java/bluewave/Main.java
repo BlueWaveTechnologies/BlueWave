@@ -1,7 +1,9 @@
 package bluewave;
 import bluewave.app.User;
+import bluewave.data.*;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
+import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
 import java.net.InetSocketAddress;
@@ -12,7 +14,7 @@ import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.*;
-
+import javaxt.express.utils.CSV;
 
 //******************************************************************************
 //**  Main
@@ -32,7 +34,7 @@ public class Main {
    */
     public static void main(String[] arr) throws Exception {
         HashMap<String, String> args = console.parseArgs(arr);
-
+    
 
       //Get jar file and schema
         Jar jar = new Jar(Main.class);
@@ -61,20 +63,26 @@ public class Main {
 
 
       //Initialize config
-        Config.init(configFile, jar);
+        Config.load(configFile, jar);
 
 
       //Process command line args
         if (args.containsKey("-addUser")){
+            Config.initDatabase();
             addUser(args);
         }
+        else if (args.containsKey("-updatePassword")){
+            Config.initDatabase();
+            updatePassword(args);
+        }
+        else if (args.containsKey("-download")){
+            download(args);
+        }
         else if (args.containsKey("-import")){
-            importFile(args);
+            importData(args);
         }
         else if (args.containsKey("-delete")){
-            Neo4J graph = Config.getGraph();
-            bluewave.graph.Maintenance.deleteNodes(args.get("-delete"), graph);
-            graph.close();
+            delete(args);
         }
         else if (args.containsKey("-createIndex")){
             createIndex(args);
@@ -87,6 +95,7 @@ public class Main {
                 throw new Exception("Config file is missing \"webserver\" config information");
             }
             else{
+                Config.initDatabase();
                 JSONObject webConfig = Config.get("webserver").toJSONObject();
                 ArrayList<InetSocketAddress> addresses = new ArrayList<>();
                 Integer port = webConfig.get("port").toInteger();
@@ -185,12 +194,8 @@ public class Main {
         }
 
         System.out.println("Create new user \"" + name + "\"");
-        String pw = console.getPassword("Enter password >");
-        String pw2 = console.getPassword("Confirm password >");
-        if (!pw.equals(pw2)) {
-            System.out.println("Passwords do not match. Please try again");
-            addUser(args);
-        }
+        String pw = getPassword(args);
+
         User user = new User();
         user.setUsername(name);
         user.setPassword(pw);
@@ -202,6 +207,73 @@ public class Main {
 
 
   //**************************************************************************
+  //** updatePassword
+  //**************************************************************************
+    private static void updatePassword(HashMap<String, String> args) throws Exception {
+        String name = args.get("-updatePassword");
+
+        User user = User.get("username=", name);
+        if (user==null){
+            System.out.println("User not found");
+            return;
+        }
+
+//        String currentPassword = console.getPassword("Current password >");
+//        if (!user.authenticate(currentPassword)){
+//            System.out.println("Sorry, incorrect password");
+//            return;
+//        }
+
+        String pw = getPassword(args);
+        user.setPassword(pw);
+        user.save();
+        System.out.println("Password changed");
+    }
+
+
+  //**************************************************************************
+  //** getPassword
+  //**************************************************************************
+    private static String getPassword(HashMap<String, String> args) throws Exception {
+        String pw = console.getPassword("Enter password: ");
+        String pw2 = console.getPassword("Confirm password: ");
+        if (!pw.equals(pw2)) {
+            System.out.println("Passwords do not match. Please try again");
+            getPassword(args);
+        }
+        return pw;
+    }
+
+    
+  //**************************************************************************
+  //** importData
+  //**************************************************************************
+    private static void importData(HashMap<String, String> args) throws Exception {
+        String str = args.get("-import");
+        if (str.equalsIgnoreCase("Premier")){
+            importPremier(args);
+        }
+        else if (str.equalsIgnoreCase("Imports")){
+            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));            
+            //imports.exportSummary();
+            //imports.removeDuplicateEstablishments();
+        }     
+        else if (str.equalsIgnoreCase("Establishments")){
+            Neo4J database = Config.getGraph(null);
+            Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            database.close();
+        }
+        else{
+            java.io.File f = new java.io.File(str);
+            if (f.isFile()) importFile(args);
+            else{
+                //import directory?
+            }
+        }
+    }
+    
+
+  //**************************************************************************
   //** importFile
   //**************************************************************************
     private static void importFile(HashMap<String, String> args) throws Exception {
@@ -211,10 +283,15 @@ public class Main {
         javaxt.io.File file = new javaxt.io.File(filePath);
         if (!file.exists()) throw new IllegalArgumentException("-import file is invalid");
         String fileType = file.getExtension().toLowerCase();
+        if (fileType.equals("gz")){
+            String fileName = file.getName(false);
+            fileType = fileName.substring(fileName.lastIndexOf(".")+1);
+        }
 
 
       //Get node type
         String nodeType = args.get("-nodeType");
+        if (nodeType==null) nodeType = args.get("-node");
         if (nodeType==null) nodeType = args.get("-vertex");
         if (nodeType==null) throw new IllegalArgumentException("-nodeType or -vertex is required");
 
@@ -228,18 +305,63 @@ public class Main {
                 keys[i] = Integer.parseInt(arr[i]);
             }
         }
+        
+        
+      //Get number of threads
+        String numThreads = args.get("-threads");
+        if (numThreads==null) numThreads = args.get("-t");
+        if (numThreads==null) numThreads = "1";
 
-
+        
       //Import file
-        Neo4J graph = Config.getGraph();
+        Neo4J graph = Config.getGraph(null);
         if (fileType.equals("csv")){
-            bluewave.graph.Import.importCSV(file, nodeType, keys, graph);
+            bluewave.graph.Import.importCSV(file, nodeType, keys, Integer.parseInt(numThreads), graph);
         }
         else if (fileType.equals("json")){
             String target = args.get("-target");
             bluewave.graph.Import.importJSON(file, nodeType, target, graph);
         }
         graph.close();
+    }
+    
+    
+  //**************************************************************************
+  //** importPremier
+  //**************************************************************************
+    private static void importPremier(HashMap<String, String> args) throws Exception {
+        String localPath = args.get("-path");
+        javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
+        if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
+        
+        Neo4J graph = Config.getGraph(null);
+        Premier.importShards(dir, graph);
+        graph.close();
+    }
+    
+    
+  //**************************************************************************
+  //** delete
+  //**************************************************************************
+    private static void delete(HashMap<String, String> args) throws Exception {
+        String str = args.get("-delete").toLowerCase();
+        if (str.equals("nodes")){
+            Neo4J graph = Config.getGraph(null);
+            bluewave.graph.Maintenance.deleteNodes(args.get("-label"), graph);
+            graph.close();
+        }
+        else if (str.equals("dashboard")){
+            Config.initDatabase();
+            for (String s : args.get("-id").split(",")){
+                try{
+                    Long id = Long.parseLong(s);
+                    new bluewave.app.Dashboard(id).delete();
+                }
+                catch(Exception e){
+                    console.log("Failed to delete " + s);
+                }
+            }
+        }
     }
 
 
@@ -252,7 +374,7 @@ public class Main {
         String nodeName = arr[0];
         String field = arr[1];
 
-        Neo4J graph = Config.getGraph();
+        Neo4J graph = Config.getGraph(null);
         try{
             bluewave.graph.Maintenance.createIndex(nodeName, field, graph);
         }
@@ -268,8 +390,9 @@ public class Main {
   //**************************************************************************
     private static void test(HashMap<String, String> args) throws Exception {
         String test = args.get("-test");
+        if (test==null) test = "";
         if (test.equalsIgnoreCase("neo4j")){
-            Neo4J graph = Config.getGraph();
+            Neo4J graph = Config.getGraph(null);
             Session session = null;
             try{
                 session = graph.getSession();
@@ -287,6 +410,7 @@ public class Main {
                     while (rs.hasNext()){
                         org.neo4j.driver.Record r = rs.next();
                         List labels = r.get(0).asList();
+                        if (labels.isEmpty()) continue;
                         String label = labels.get(0).toString();
                         System.out.println(" -" + label);
                     }
@@ -311,11 +435,37 @@ public class Main {
             }
             graph.close();
         }
+        else if (test.equalsIgnoreCase("premier")){
+            bluewave.data.Premier.testConnect(args.get("-username"), args.get("-password"));
+        }
+        else if (test.equals("company")){
+
+            String name = args.get("-name");
+            console.log(name);            
+            console.log(getCompanyName(name));
+                
+        }
         else{
             console.log("Unsupported test: " + test);
         }
     }
-
+    
+    
+  //**************************************************************************
+  //** download
+  //**************************************************************************
+    private static void download(HashMap<String, String> args) throws Exception {
+        String download = args.get("-download");
+        if (download==null) download = "";
+        if (download.equalsIgnoreCase("Premier")){
+            new bluewave.data.Premier(args.get("-username"), args.get("-password"))
+                    .downloadShards(args.get("-path"));
+        }
+        else{
+            console.log("Unsupported download: " + download);
+        }
+    }
+    
 
   //**************************************************************************
   //** rtrim

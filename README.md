@@ -1,6 +1,7 @@
-# Project BlueWave
+# BlueWave
 
-Web application used visualize supply chain shortages and fraud analysis.
+Web application used to create charts and dashboards using a graph database.
+
 
 # Technology Stack
 
@@ -54,22 +55,27 @@ file should include connection information to the neo4j database
     "graph" : {
         "host" : "localhost:7687",
         "username" : "neo4j",
-        "password" : "password"
-    },
-
-    "ldap" : {
-        "host" : "localhost:389",
-        "domain" : "my.domain.com"
+        "password" : "password",
+        "localCache" : "temp/graph",
+        "localLog" : "temp/graph/logs"
     },
 
     "webserver" : {
         "webDir" : "web",
         "logDir" : "",
         "jobDir" : "temp",
+        "scriptDir" : "scripts",
         "keystore" : "",
         "keypass" : "",
         "port": 8080
     },
+
+    "basemaps": [
+        {
+            "name": "ESRI",
+            "url": "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        }
+    ],
 
     "google" : {
         "maps": {

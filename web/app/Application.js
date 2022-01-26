@@ -33,14 +33,13 @@ bluewave.Application = function(parent, config) {
 
 
   //Dashboard components
-    var dashboardPanel;
     var carousel;
-    var views = []; //panels in the carousel
-    var raisingPanel = false;
+    var apps = [];
+    var currApp, currDashboardItem;
 
 
-  //Plugins
-    var adminPanel, explorerPanel;
+  //Panels
+    var dashboardPanel, adminPanel, explorerPanel;
 
 
 
@@ -59,11 +58,12 @@ bluewave.Application = function(parent, config) {
         if (!config.dataStores) config.dataStores = {};
         appName = config.appName;
         if (!appName){
+            appName = "";
+            config.appName = appName;
             get("appinfo", {
                 success: function(appInfo){
                     appName = appInfo.name;
                     config.appName = appName;
-                    me.setTitle("");
                 }
             });
         }
@@ -140,11 +140,13 @@ bluewave.Application = function(parent, config) {
 
 
         var fn = function(){
-            if (currUser && views.length>0){
+            if (currUser){
                 if (adminPanel) adminPanel.hide();
-                if (explorerPanel) explorerPanel.hide();
                 dashboardPanel.show();
-                raisePanel(views[0].app); //might not be the homepage if standalone
+                raisePanel(bluewave.Homepage, true);
+            }
+            else{
+                raisePanel(apps[0].app, true); //might not be the homepage if standalone
             }
         };
 
@@ -231,13 +233,43 @@ bluewave.Application = function(parent, config) {
 
         backButton = createButton("dashboard-back");
         backButton.onclick = function(){
-            carousel.back();
+            var dashboardItems = getDashboardItems();
+            for (var i=0; i<dashboardItems.length; i++){
+                var dashboardItem = dashboardItems[i];
+                if (dashboardItem === currDashboardItem){
+                    var idx;
+                    if (i===0){
+                        idx = dashboardItems.length-1;
+                    }
+                    else{
+                        idx = i-1;
+                    }
+                    renderDashboard(dashboardItems[idx], true);
+                    break;
+                }
+            }
         };
+        backButton.hide();
 
         nextButton = createButton("dashboard-next");
         nextButton.onclick = function(){
-            carousel.next();
+            var dashboardItems = getDashboardItems();
+            for (var i=0; i<dashboardItems.length; i++){
+                var dashboardItem = dashboardItems[i];
+                if (dashboardItem === currDashboardItem){
+                    var idx;
+                    if (i+1===dashboardItems.length){
+                        idx = 0;
+                    }
+                    else{
+                        idx = i+1;
+                    }
+                    renderDashboard(dashboardItems[idx], false);
+                    break;
+                }
+            }
         };
+        nextButton.hide();
 
         titleDiv = document.createElement("div");
         titleDiv.className = "dashboard-title noselect";
@@ -251,25 +283,12 @@ bluewave.Application = function(parent, config) {
         td.style.height = "100%";
         tr.appendChild(td);
         body = td;
-    };
-
-
-  //**************************************************************************
-  //** createDashboardPanel
-  //**************************************************************************
-    var createDashboardPanel = function(){
-
-      //Create dashboardPanel
-        dashboardPanel = document.createElement("div");
-        dashboardPanel.style.height = "100%";
-        body.appendChild(dashboardPanel);
-        addShowHide(dashboardPanel);
 
 
       //Create carousel
-        carousel = new javaxt.dhtml.Carousel(dashboardPanel, {
+        carousel = new javaxt.dhtml.Carousel(body, {
             drag: false,
-            loop: false,
+            loop: true,
             animate: true,
             animationSteps: 600,
             transitionEffect: "easeInOutCubic",
@@ -277,47 +296,55 @@ bluewave.Application = function(parent, config) {
         });
 
 
+      //Create 2 panels for the carousel
+        for (var i=0; i<2; i++){
+            var panel = document.createElement("div");
+            panel.style.height = "100%";
+            carousel.add(panel);
+        }
+
+
       //Add event handlers
         carousel.beforeChange = function(){
-            if (raisingPanel) return;
             me.setTitle("");
             backButton.hide();
             nextButton.hide();
         };
-        carousel.onChange = function(){
-            if (raisingPanel) return;
-            var app = getVisibleApp();
-            if (!app.isRendered){
-                app.update();
-                app.isRendered = true;
-            }
-            me.setTitle(app.getTitle());
 
-            var panels = carousel.getPanels();
-            if (panels.length>1){
-                for (var i=0; i<panels.length; i++){
-                    var panel = panels[i];
-                    if (panel.isVisible){
-                        if (i==0){
-                            backButton.hide();
-                        }
-                        else{
-                            backButton.show();
-                        }
 
-                        if (i==panels.length-1){
-                            nextButton.hide();
-                        }
-                        else{
-                            nextButton.show();
-                        }
+        carousel.onChange = function(currPanel){
+            if (currApp){
 
-                        break;
-                    }
+              //Check if the currPanel is a clone created by the carousel.
+              //If so, replace content with the currApp
+                if (currApp.el.parentNode!==currPanel){
+                    currPanel.innerHTML = "";
+                    currApp.el.parentNode.removeChild(currApp.el);
+                    currPanel.appendChild(currApp.el);
                 }
-            }
 
+
+              //Update title
+                if (currApp.getTitle) me.setTitle(currApp.getTitle());
+
+
+              //Update buttons
+                if (apps.length>1){
+                    backButton.show();
+                    nextButton.show();
+                }
+                if (currApp instanceof bluewave.Homepage){
+                    backButton.hide();
+                }
+
+
+              //Trigger resize event for the app to ensure components render properly
+                if (currApp.resize) currApp.resize();
+
+            }
         };
+
+        dashboardPanel = carousel;
     };
 
 
@@ -326,7 +353,13 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
     this.setTitle = function(str){
         titleDiv.innerHTML = str;
-        document.title = appName + (str.length>0 ? (" - " + str) : "");
+        if (appName.length>0){
+            document.title = appName + (str.length>0 ? (" - " + str) : "");
+        }
+        else{
+            document.title = str;
+        }
+
     };
 
 
@@ -336,25 +369,43 @@ bluewave.Application = function(parent, config) {
     this.update = function(user){
         currUser = user;
         me.setTitle("");
-
-        if (!dashboardPanel) createDashboardPanel();
+        currDashboardItem = null;
 
 
       //If no user is supplied, then we are running in stand-alone mode
         if (!user){
             menuButton.hide();
             profileButton.hide();
+            dashboardPanel.show();
+
+          //Create dashboards
             var dashboards = [
             "SupplyChain", "ImportSummary", "EUAMap",
             "ProductPurchases", "GlobalSupplyChain"];
             for (var i in dashboards){
-                addPanel("bluewave.dashboards." + dashboards[i]);
+                dashboards[i] = {
+                    id: i,
+                    name: dashboards[i],
+                    className: "bluewave.dashboards." + dashboards[i]
+                };
             }
-            raisePanel(bluewave.dashboards.SupplyChain);
+
+          //Convert the dashboards array into a datastore
+            dashboards = new javaxt.dhtml.DataStore(dashboards);
+            config.dataStores["Dashboard"] = dashboards;
+
+
+          //Add homepage
+            var homepage = raisePanel(bluewave.Homepage);
+            homepage.onClick = function(dashboardItem){
+                renderDashboard(dashboardItem);
+            };
+            me.setTitle(homepage.getTitle());
+
             return;
         }
 
-
+        dashboardPanel.show();
         menuButton.show();
         profileButton.innerHTML = user.username.substring(0,1);
         waitmask.show();
@@ -369,7 +420,7 @@ bluewave.Application = function(parent, config) {
 
 
       //Create new panels
-        get("dashboards?fields=id,name,className&orderBy=name",{
+        get("dashboards?fields=id,name,className",{
             success: function(dashboards) {
 
               //Convert the dashboards array into a datastore
@@ -378,49 +429,15 @@ bluewave.Application = function(parent, config) {
 
 
               //Add homepage
-                var homepage = addPanel("bluewave.Homepage");
-
-
-              //Add dashboards
-                for (var i=0; i<dashboards.length; i++){
-                    var dashboard = dashboards.get(i);
-                    var className = dashboard.className;
-                    if (className.indexOf(".")===-1){
-                        dashboard.className = "bluewave.dashboards."+className;
-                    }
-                    dashboard.app = addPanel(dashboard.className);
-                }
-
-              //Add event handler
-                homepage.onClick = function(dashboard){
-                    if (!dashboard.app){
-                        dashboardPanel.hide();
-                        backButton.hide();
-                        nextButton.hide();
-                        getExplorerPanel().show();
-                        waitmask.show();
-                        get("dashboard?id="+dashboard.id,{
-                            success: function(dashboard){
-                                waitmask.hide();
-                                explorerPanel.update(dashboard, true);
-                                me.setTitle(explorerPanel.getTitle());
-                            },
-                            failure: function(){
-                                waitmask.hide();
-                            }
-                        });
-                    }
-                    else{
-                        raisePanel(dashboard.app);
-                    }
+                var homepage = raisePanel(bluewave.Homepage);
+                homepage.onClick = function(dashboardItem){
+                    renderDashboard(dashboardItem);
                 };
+                me.setTitle(homepage.getTitle());
 
 
-              //Switch to first page
-                setTimeout(function(){
-                    raisePanel(homepage);
-                    waitmask.hide();
-                }, 800);
+              //Hide waitmask
+                waitmask.hide();
             },
             failure: function(request){
                 alert(request);
@@ -438,136 +455,234 @@ bluewave.Application = function(parent, config) {
                 var arr = msg.split(",");
                 var op = arr[0];
                 var model = arr[1];
-                var store = config.dataStores[model];
-
-                if (op=="alert"){
-                    for (var i=0; i<views.length; i++){
-                        try{
-                            views[i].app.notify(msg);
-                        }
-                        catch(e){}
-                    }
-                    return;
-                }
-
-
-              //Update currUser as needed
-                if (model=="User" && (op=="update" || op=="delete")){
-                    var id = parseInt(arr[2]);
-                    if (id===currUser){
-                        if (op=="delete"){
-                            logoff();
-                            return;
-                        }
-                        else{
-                            get("user?id=" + id, {
-                                success: function(user){
-                                    if (user.accessLevel!==currUser.accessLevel){
-                                        logoff();
-                                    }
-                                    else{
-                                        for (var key in user) {
-                                            if (user.hasOwnProperty(key)){
-                                                currUser[key] = user[key];
-                                            }
-                                        }
-
-                                        if (store){
-                                            for (var i=0; i<store.length; i++){
-                                                var item = store.get(i);
-                                                if (item.id===id){
-                                                    store.set(i, user);
-                                                    break;
-                                                }
-                                            }
-                                        }
-
-                                    }
-                                }
-                            });
-                            return;
-                        }
-                    }
-                }
-
-
-
-
-
-              //Update stores
-                if (store){
-                    var id = parseInt(arr[2]);
-                    if (op=="delete"){
-                        for (var i=0; i<store.length; i++){
-                            var item = store.get(i);
-                            if (item.id===id){
-                                store.removeAt(i);
-                                break;
-                            }
-                        }
-                    }
-                    else{
-                        get(model + "?id=" + id, {
-                            success: function(obj){
-                                if (op=="create"){
-                                    store.add(obj);
-                                }
-                                else{
-                                    for (var i=0; i<store.length; i++){
-                                        var item = store.get(i);
-                                        if (item.id===id){
-                                            store.set(i, obj);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-                }
-
+                var id = parseInt(arr[2]);
+                var userID = parseInt(arr[3]);
+                onChange(op,model,id,userID);
             }
         });
     };
 
 
   //**************************************************************************
-  //** addPanel
+  //** onChange
   //**************************************************************************
-  /** Used to add an app to the carousel and update the list of "views"
-   *  @param className String used to represent a fully qualified class
-   *  name (e.g. "bluewave.dashboards.SupplyChain").
+  /** Used to manage updates by other users
    */
-    var addPanel = function(className){
-        var div = document.createElement('div');
-        div.style.height = "100%";
-        carousel.add(div);
-        var panels = carousel.getPanels();
-        var panel = panels[panels.length-1];
+    var onChange = function(op, model, id, userID){
 
-        try{
-            var cls = eval(className);
-            if (cls){
-                var instance = new cls(div, config);
-                instance.className = className;
-                instance.onUpdate = function(){
-                    var app = getVisibleApp();
-                    if (app==instance) me.setTitle(instance.getTitle());
-                };
 
-                views.push({
-                    app: instance,
-                    div: panel.div
-                });
-
-                return instance;
-            }
-            else{
-                console.log("Cannot instantiate " + className);
+      //Update currUser as needed
+        if (model=="User" && (op=="update" || op=="delete")){
+            if (id===currUser){
+                if (op=="delete"){
+                    logoff();
+                    return;
+                }
+                else{
+                    get("user?id=" + id, {
+                        success: function(user){
+                            if (user.accessLevel!==currUser.accessLevel){
+                                logoff();
+                                return;
+                            }
+                            else{
+                                for (var key in user) {
+                                    if (user.hasOwnProperty(key)){
+                                        currUser[key] = user[key];
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
             }
         }
-        catch(e){
-            console.log("Cannot instantiate " + className);
+
+
+
+      //Update stores
+        var store = config.dataStores[model];
+        if (store){
+            if (op=="delete"){
+                for (var i=0; i<store.length; i++){
+                    var item = store.get(i);
+                    if (item.id===id){
+                        store.removeAt(i);
+                        break;
+                    }
+                }
+            }
+            else{
+                get(model + "?id=" + id, {
+                    success: function(obj){
+                        if (op=="create"){
+                            store.add(obj);
+                        }
+                        else{
+                            for (var i=0; i<store.length; i++){
+                                var item = store.get(i);
+                                if (item.id===id){
+                                    store.set(i, obj);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+
+
+      //Update Explorer as needed
+        if (model==="Dashboard"){
+            if (explorerPanel){
+
+                if (id===explorerPanel.getDashboardID()){
+
+                    if (op==="delete"){
+                        explorerPanel.setReadOnly(true);
+                        explorerPanel.clear();
+                        explorerPanel.onDelete();
+                    }
+
+                    if (op==="update"){
+                        if (currUser.id!==userID){
+                            confirm("Dashboard has been modified by another user. Would you like to update?",{
+                                leftButton: {label: "Yes", value: true},
+                                rightButton: {label: "No", value: false},
+                                callback: function(yes){
+                                    if (yes){
+                                        waitmask.show();
+                                        var readOnly = explorerPanel.isReadOnly();
+                                        get("dashboard?id="+id,{
+                                            success: function(dashboard){
+                                                waitmask.hide();
+                                                explorerPanel.update(dashboard, readOnly, "Dashboard");
+                                                me.setTitle(explorerPanel.getTitle());
+                                            },
+                                            failure: function(){
+                                                waitmask.hide();
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+      //Update Homepage and Explorer as DashboardUsers are created, edited, or removed from the database
+        if (model==="DashboardUser"){
+            var dashboards = config.dataStores["Dashboard"];
+
+
+          //Update "dashboards" DataStore whenever DashboardUsers are created
+          //Views like the Homepage will update automatically
+            if (op==="create"){
+                get("DashboardUsers?userID="+currUser.id,{
+                    success: function(arr){
+                        var newDashboards = [];
+                        for (var i=0; i<arr.length; i++){
+                            var dashboardID = arr[i].dashboardID;
+                            var foundMatch = false;
+                            for (var j=0; j<dashboards.length; j++){
+                                var dashboard = dashboards.get(j);
+                                if (dashboard.id===dashboardID){
+                                    foundMatch = true;
+                                    break;
+                                }
+                            }
+                            if (!foundMatch){
+                                newDashboards.push(dashboardID);
+                                break;
+                            }
+                        }
+                        if (newDashboards.length>0){
+                            get("dashboards?fields=id,name,className&id="+newDashboards.join(","),{
+                                success: function(arr) {
+                                    for (var i=0; i<arr.length; i++){
+                                        dashboards.add(arr[i]);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+
+            if (explorerPanel){
+                var dashboardID = explorerPanel.getDashboardID();
+
+                if (!isNaN(dashboardID)){
+                    if (op==="update"){
+                        get("DashboardUsers?id="+id,{
+                            success: function(arr){
+                                if (arr.length===0){
+
+                                }
+                                else{
+                                    var dashboardUser = arr[0];
+                                    if (dashboardUser.userID===currUser.id &&
+                                        dashboardUser.dashboardID===dashboardID){
+                                        explorerPanel.setReadOnly(dashboardUser.readOnly);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    else if (op==="delete"){
+                        get("DashboardUsers?dashboardID="+id+"&userID="+currUser.id,{
+                            success: function(arr){
+                                if (arr.length===0){
+                                    explorerPanel.setReadOnly(true);
+                                    explorerPanel.clear();
+                                    explorerPanel.onDelete();
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+
+          //Update "dashboards" DataStore whenever DashboardUsers are deleted
+          //Views like the Homepage will update automatically
+            if (op==="delete"){
+                get("dashboards?fields=id",{
+                    success: function(arr) {
+                        var deletions = [];
+
+                        for (var i=0; i<dashboards.length; i++){
+                            var dashboard = dashboards.get(i);
+                            var foundMatch = false;
+                            for (var j=0; j<arr.length; j++){
+                                if (arr[j].id===dashboard.id){
+                                    foundMatch = true;
+                                    break;
+                                }
+                            }
+                            if (!foundMatch) deletions.push(dashboard.id);
+                        }
+
+
+                        for (var i=0; i<deletions.length; i++){
+                            for (var j=0; j<dashboards.length; j++){
+                                var dashboard = dashboards.get(j);
+                                if (dashboard.id===deletions[i]){
+                                    dashboards.removeAt(j);
+                                    break;
+                                }
+                            }
+                        }
+
+                    }
+                });
+            }
         }
     };
 
@@ -578,116 +693,181 @@ bluewave.Application = function(parent, config) {
   /** Used to bring a panel into view
    *  @param obj Either a class or an instance of a class
    */
-    var raisePanel = function(obj){
+    var raisePanel = function(obj, slideBack){
 
 
-      //Find view
-        var view;
-        for (var i in views){
-            var v = views[i];
-
-            if (typeof obj === 'function') {
-                if (v.app instanceof obj){
-                    view = v;
-                }
-            }
-            else{
-                if (v.app===obj){
-                    view = v;
-                }
-            }
-
-            if (view) break;
-        }
-        if (!view) return;
-
-
-      //Get index of the view and the visiblePanel
-        var visiblePanel = 0;
+      //Find panels in the carousel
+        var currPage, nextPage;
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
             var panel = panels[i];
+            var el = panel.div;
             if (panel.isVisible){
-                visiblePanel = i;
-            }
-            if (view.div===panel.div){
-                view = i;
-            }
-        }
-        //console.log(visiblePanel, view);
-
-
-
-      //Update carousel
-        if (visiblePanel!==view){
-            raisingPanel = true;
-            carousel.disableAnimation();
-            if (view>visiblePanel){
-                var diff = view-visiblePanel;
-                for (var i=0; i<diff; i++){
-                    carousel.next();
-                }
+                currPage = el;
             }
             else{
-                var diff = visiblePanel-view;
-                for (var i=0; i<diff; i++){
-                    carousel.back();
-                }
+                nextPage = el;
             }
-            carousel.enableAnimation();
-            raisingPanel = false;
+        }
+        if (!currPage) currPage = panels[0].div; //strange!
+
+
+      //Select panel to use
+        var div;
+        if (currPage.childNodes.length===0){
+            div = currPage;
+        }
+        else{
+            div = nextPage;
+            var el = nextPage.childNodes[0];
+            if (el) nextPage.removeChild(el);
         }
 
 
-      //Fire change events to show/hide nav buttons
-        carousel.beforeChange();
-        carousel.onChange();
-    };
+        var app, isNew=false;
+        if (typeof obj === 'function') { //obj is a class (vs instance of a class)
+
+          //Check if the class has been instantiated
+            for (var i=0; i<apps.length; i++){
+                if (apps[i].cls===obj){
+                    app = apps[i].app;
+                    break;
+                }
+            }
 
 
-  //**************************************************************************
-  //** getVisibleApp
-  //**************************************************************************
-  /** Returns the application associated with the current view
-   */
-    var getVisibleApp = function(){
-        var panels = carousel.getPanels();
-        for (var i=0; i<panels.length; i++){
-            var panel = panels[i];
-            if (panel.isVisible){
-                for (var j=0; j<views.length; j++){
-                    var view = views[j];
-                    if (view.div===panel.div){
-                        return view.app;
+          //Instantiate class as needed
+            if (!app){
+                app = new obj(div, config);
+                app.onUpdate = function(){
+                    if (app===currApp) me.setTitle(app.getTitle());
+                };
+                app.onDelete = function(){
+                    for (var i=0; i<apps.length; i++){
+                        if (apps[i].app===app){
+                            apps.splice(i, 1);
+                            break;
+                        }
                     }
-                }
-                break;
+                    raisePanel(bluewave.Homepage);
+                };
+                apps.push({
+                    app: app,
+                    cls: obj
+                });
+                app.update();
+                isNew = true;
             }
         }
+        else{
+            app = obj;
+        }
 
-        if (explorerPanel && explorerPanel.isVisible()) return explorerPanel;
-        if (adminPanel && adminPanel.isVisible()) return adminPanel;
 
-        return null;
+
+        if (app === currApp){
+            //console.log("Already in view!");
+            me.setTitle(app.getTitle());
+            return app;
+        }
+        else{
+
+            if (!isNew) div.appendChild(app.el);
+            if (div===nextPage){
+                if (slideBack===true) carousel.back();
+                else carousel.next();
+                //Note: title is updated in the carousel.onChange() function
+            }
+            else{
+                me.setTitle(app.getTitle());
+            }
+
+            currApp = app;
+            return app;
+        }
     };
 
 
   //**************************************************************************
-  //** getExplorerPanel
+  //** renderDashboard
   //**************************************************************************
-    var getExplorerPanel = function(){
-        if (!explorerPanel){
-            explorerPanel = new bluewave.Explorer(body, config);
-            explorerPanel.onUpdate = function(){
-                me.setTitle(explorerPanel.getTitle());
-            };
-            explorerPanel.onDelete = function(){
-                explorerPanel.hide();
-                dashboardPanel.show();
-                raisePanel(bluewave.Homepage);
-            };
+  /** Used to render a dashboard in the carousel
+   *  @param dashboardItem DashboardItem from the homepage
+   *  @param slideBack If true, slides the carousel back. Otherwise, slides
+   *  the carousel forward
+   */
+    var renderDashboard = function(dashboardItem, slideBack){
+        currDashboardItem = dashboardItem;
+        var dashboard = dashboardItem.dashboard;
+
+
+        if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
+            if (!dashboard.app){
+                dashboard.app = raisePanel(eval(dashboard.className), slideBack);
+            }
+            else{
+                raisePanel(dashboard.app, slideBack);
+            }
         }
-        return explorerPanel;
+        else{
+            waitmask.show();
+
+
+            get("dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly",{
+                success: function(arr){
+                    if (arr.length===0){
+                        waitmask.hide();
+                    }
+                    else{
+                        var readOnly = arr[0].readOnly;
+                        get("dashboard?id="+dashboard.id,{
+                            success: function(d){
+
+                              //Raise explorer panel
+                                var app = raisePanel(bluewave.Explorer, slideBack);
+                                if (!explorerPanel) explorerPanel = app;
+                                explorerPanel.hide();
+                                dashboard.app = app;
+
+
+                              //Update explorer panel after a slight delay giving
+                              //the carousel time to finish it's animation
+                                setTimeout(function(){
+                                    waitmask.hide();
+                                    explorerPanel.update(d, readOnly, "Dashboard");
+                                    explorerPanel.show();
+                                    me.setTitle(explorerPanel.getTitle());
+
+                                }, 800);
+
+                            },
+                            failure: function(){
+                                waitmask.hide();
+                            }
+                        });
+                    }
+                },
+                failure: function(){
+                    waitmask.hide();
+                }
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** getDashboardItems
+  //**************************************************************************
+  /** Returns dashboard items from the Homepage
+   */
+    var getDashboardItems = function(){
+        for (var i=0; i<apps.length; i++){
+            var app = apps[i].app;
+            if (app instanceof bluewave.Homepage){
+                return app.getDashboardItems();
+            }
+        }
+        return null;
     };
 
 
@@ -739,27 +919,44 @@ bluewave.Application = function(parent, config) {
 
 
             div.appendChild(createMenuOption("Create Dashboard", "plus-circle", function(label){
-                dashboardPanel.hide();
                 backButton.hide();
                 nextButton.hide();
                 if (adminPanel) adminPanel.hide();
+                dashboardPanel.show();
                 me.setTitle(label);
-                getExplorerPanel().show();
+                var app = raisePanel(bluewave.Explorer);
+                if (!explorerPanel) explorerPanel = app;
+                explorerPanel.show();
                 explorerPanel.update();
+                setTimeout(function(){ //update title again in case slider move
+                    me.setTitle(label);
+                }, 800);
             }));
 
 
             div.appendChild(createMenuOption("Edit Dashboard", "edit", function(){
-                explorerPanel.setReadOnly(false);
+                if (explorerPanel) explorerPanel.setView("Edit");
             }));
 
 
             div.appendChild(createMenuOption("Screenshot", "image", function(){
                 waitmask.show();
                 var delay = 1000;
-                var app = getVisibleApp();
-                if (app.beforeScreenshot){
-                    app.beforeScreenshot();
+
+
+
+              //Find dashboard associated with the app
+                var dashboard;
+                var dashboards = config.dataStores["Dashboard"];
+                for (var i=0; i<dashboards.length; i++){
+                    if (currApp === dashboards.get(i).app){
+                        dashboard = dashboards.get(i);
+                    }
+                }
+
+
+                if (currApp.beforeScreenshot){
+                    currApp.beforeScreenshot();
                     delay = 2000;
                 }
                 setTimeout(function(){
@@ -769,18 +966,17 @@ bluewave.Application = function(parent, config) {
                             waitmask.hide();
                             this.showSaveOptions({
                                 style: config.style,
-                                name: app.getTitle(),
-                                className: app.className,
+                                dashboard: dashboard,
                                 beforeSave: function(){
                                     waitmask.show();
                                 },
                                 onSave: function(){
                                     waitmask.hide();
-                                    if (app.afterScreenshot) app.afterScreenshot();
+                                    if (currApp.afterScreenshot) currApp.afterScreenshot();
                                 },
                                 onError: function(request){
                                     waitmask.hide();
-                                    if (app.afterScreenshot) app.afterScreenshot();
+                                    if (currApp.afterScreenshot) currApp.afterScreenshot();
                                     alert(request);
                                 }
                             });
@@ -795,7 +991,6 @@ bluewave.Application = function(parent, config) {
                 dashboardPanel.hide();
                 backButton.hide();
                 nextButton.hide();
-                if (explorerPanel) explorerPanel.hide();
                 me.setTitle(label);
                 if (!adminPanel) adminPanel = new bluewave.AdminPanel(body, config);
                 adminPanel.update();
@@ -811,7 +1006,6 @@ bluewave.Application = function(parent, config) {
 
 
       //Show/hide menu items based on current app
-        var currApp = getVisibleApp();
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
         var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
@@ -829,7 +1023,7 @@ bluewave.Application = function(parent, config) {
             }
 
             if (menuItem.label==="Edit Dashboard"){
-                if (isExplorerVisible && explorerPanel.isReadOnly()){
+                if (isExplorerVisible && explorerPanel.getView()==="Dashboard"){
                     menuItem.show();
                 }
                 else{
@@ -853,10 +1047,10 @@ bluewave.Application = function(parent, config) {
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
             if (menuItem.label==="Create Dashboard"){
-                if (currUser.accessLevel<=3) menuItem.hide();
+                if (currUser.accessLevel<3) menuItem.hide();
             }
             if (menuItem.label==="Edit Dashboard"){
-                if (currUser.accessLevel<=3) menuItem.hide();
+                if (currUser.accessLevel<3) menuItem.hide();
             }
             if (menuItem.label==="System Administration"){
                 if (currUser.accessLevel<5) menuItem.hide();
@@ -924,11 +1118,20 @@ bluewave.Application = function(parent, config) {
 
 
       //Delete dashboards
-        for (var i in views){
-            destroy(views[i].app);
+        for (var i in apps){
+            destroy(apps[i].app);
         }
-        views = [];
-        carousel.clear();
+        apps = [];
+        currApp = null;
+
+
+      //Clear carousel
+        carousel.hide();
+        var panels = carousel.getPanels();
+        for (var i=0; i<panels.length; i++){
+            var panel = panels[i];
+            panel.div.innerHTML = "";
+        }
 
 
       //Delete admin panel

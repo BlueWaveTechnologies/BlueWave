@@ -3,6 +3,7 @@ import bluewave.app.User;
 import javaxt.http.servlet.*;
 import javaxt.json.JSONObject;
 import java.util.concurrent.ConcurrentHashMap;
+import static javaxt.utils.Console.console;
 
 //******************************************************************************
 //**  ServiceAuthentication
@@ -28,8 +29,8 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
     private String[] credentials;
     private User user;
     private String authenticationScheme;
-    
-    
+
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -37,8 +38,8 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
    */
     public Authenticator(){
     }
-    
-    
+
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -54,10 +55,11 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
 
               //Parse credentials
                 String credentials = decode(authorization.substring(idx+1));
-                String username = credentials.substring(0, credentials.indexOf(":")).toLowerCase();
+                String username = credentials.substring(0, credentials.indexOf(":"));
                 String password = credentials.substring(credentials.indexOf(":")+1);
                 this.credentials = new String[]{username, password};
 
+                username = username.toLowerCase();
                 if (username.equals("logout") && password.equals("logout")) return;
 
 
@@ -89,31 +91,24 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
                 if (authenticate){
                     boolean authenticated = false;
                     try{
-                        user = getUser(username);
+                        user = getUser(this.credentials[0]);
                         if (user!=null){
                             authenticated = user.authenticate(password);
-                            this.user = user;
                         }
                     }
                     catch(Exception e){
-                        //e.printStackTrace();
                     }
 
 
                     if (authenticated){
+                        this.user = user;
                         JSONObject json = new JSONObject();
                         json.set("user", user);
                         json.set("lastUpdate", System.currentTimeMillis());
-                        synchronized(cache){
-                            cache.put(username, json);
-                            cache.notifyAll();
-                        }
+                        updateCache(username, json);
                     }
                     else{
-                        synchronized(cache){
-                            cache.remove(username);
-                            cache.notifyAll();
-                        }
+                        updateCache(username, null);
                     }
                 }
                 else{
@@ -122,7 +117,7 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
 
             }
             else if (authenticationScheme.equals("NTLM")){
-                byte[] msg = javaxt.utils.Base64.decode(authorization.substring(idx+1));                
+                byte[] msg = javaxt.utils.Base64.decode(authorization.substring(idx+1));
                 int off = 0, length, offset;
                 if (msg[8] == 3) {
                     off = 30;
@@ -130,7 +125,7 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
                     offset = msg[off+19]*256 + msg[off+8];
                     //String computerName = new String(msg, offset, length);
                     //System.out.println("computerName: " + computerName);
-                
+
 
                   //Get domain name
                     length = msg[off+1]*256 + msg[off];
@@ -140,19 +135,19 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
                     for (int i=0; i<str.length(); i++){
                         int c = str.charAt(i);
                         if (c!=0) domainName.append((char) c);
-                    }   
+                    }
                     if (domainName.length()==0) domainName = null;
 
 
                   //Get username
                     length = msg[off+9]*256 + msg[off+8];
-                    offset = msg[off+11]*256 + msg[off+10];                                
+                    offset = msg[off+11]*256 + msg[off+10];
                     str = new String(msg, offset, length);
                     StringBuilder username = new StringBuilder();
                     for (int i=0; i<str.length(); i++){
                         int c = str.charAt(i);
                         if (c!=0) username.append((char) c);
-                    }  
+                    }
                     if (username.length()==0) username = null;
 
 
@@ -166,6 +161,28 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
     }
 
 
+  //**************************************************************************
+  //** updateCache
+  //**************************************************************************
+  /** Used to remove a user from the cache
+   */
+    public static void updateCache(String username, JSONObject json){
+        if (username==null) return;
+        synchronized(cache){
+            if (json!=null){
+                cache.put(username, json);
+            }
+            else{
+                cache.remove(username);
+            }
+            cache.notifyAll();
+        }
+    }
+
+
+  //**************************************************************************
+  //** getUser
+  //**************************************************************************
     private User getUser(String username){
         User user;
         try{
@@ -246,50 +263,50 @@ public class Authenticator implements javaxt.http.servlet.Authenticator {
     static{
         byte z = 0;
 
-        
+
         byte[] msg1 = {
             (byte) 'N', (byte) 'T', (byte) 'L', (byte) 'M', //ntlm
             (byte) 'S', (byte) 'S', (byte) 'P', //ssp
             z, (byte) 2, //type 2
             z, z, z, z, z, z, z, (byte) 40, z, z, z,
-            (byte) 1, (byte) 130, 
+            (byte) 1, (byte) 130,
             (byte) 8, //super important!
             z, z, (byte) 2, (byte) 2,
-            (byte) 2, z, z, z, z, z, z, z, z, z, z, z, z 
-        };        
-        
+            (byte) 2, z, z, z, z, z, z, z, z, z, z, z, z
+        };
+
         NTLM_TYPE_2 = javaxt.utils.Base64.encode(msg1).trim();
     }
 
-    
+
   //**************************************************************************
   //** sendNTLMResponse
   //**************************************************************************
-  /** Returns true if an NTLM response was returned to the client 
-   */    
-    public static boolean sendNTLMResponse(HttpServletRequest request, HttpServletResponse response){            
+  /** Returns true if an NTLM response was returned to the client
+   */
+    public static boolean sendNTLMResponse(HttpServletRequest request, HttpServletResponse response){
         String authorization = request.getHeader("Authorization");
-        if (authorization==null){            
+        if (authorization==null){
             response.setStatus(response.SC_UNAUTHORIZED);
-            response.setHeader("WWW-Authenticate", "NTLM");                    
+            response.setHeader("WWW-Authenticate", "NTLM");
             response.setContentLength(0);
-            return true; 
+            return true;
         }
         else{
-            byte[] msg = javaxt.utils.Base64.decode(authorization.substring(5));                
+            byte[] msg = javaxt.utils.Base64.decode(authorization.substring(5));
             if (msg[8] == 1) {
 
               //Send NTLM type2 response
                 response.setStatus(response.SC_UNAUTHORIZED);
-                response.setHeader("WWW-Authenticate", "NTLM " + NTLM_TYPE_2);  
+                response.setHeader("WWW-Authenticate", "NTLM " + NTLM_TYPE_2);
                 response.setContentLength(0);
-                return true; 
+                return true;
             }
         }
         return false;
     }
-    
-    
+
+
     private String decode(String credentials){
         try{
             return new String(javaxt.utils.Base64.decode(credentials));

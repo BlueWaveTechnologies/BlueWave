@@ -8,8 +8,16 @@ bluewave.utils = {
   /** Used to execute http GET requests and generate json from the response
    */
     get: function(url, config){
+        var payload = null;
+        if (arguments.length>2){
+            payload = arguments[1];
+            config = arguments[2];
+        }
+
         var get = javaxt.dhtml.utils.get;
+
         get(url,{
+            payload: payload,
             success: function(response){
                 var s = response.substring(0,1);
                 if (s=="{" || s=="["){
@@ -97,7 +105,6 @@ bluewave.utils = {
   //** addOverflow
   //**************************************************************************
     addOverflow: function(parent, config){
-
       //Set default config options
         var defaultConfig = {
             style: {
@@ -212,13 +219,14 @@ bluewave.utils = {
         var td;
         if (tr){
             td = tr.childNodes[2];
+        }else{
+            td = field.el.parentNode;
         }
-        else{
+        if(td == null){
             td = field.el.parentNode;
         }
         var getRect = javaxt.dhtml.utils.getRect;
         var rect = getRect(td);
-
 
         var inputs = td.getElementsByTagName("input");
         if (inputs.length==0) inputs = td.getElementsByTagName("textarea");
@@ -303,13 +311,16 @@ bluewave.utils = {
             btn.className = "toggle-button";
             if (config.options[i]==config.defaultValue) btn.className+="-active";
             btn.innerHTML = config.options[i];
-            btn.onclick = function(){
-                if (this.className==="toggle-button-active") return;
+            var onClick = function(btn){
+                if (btn.className==="toggle-button-active") return;
                 for (var i=0; i<div.childNodes.length; i++){
                     div.childNodes[i].className = "toggle-button";
                 }
-                this.className="toggle-button-active";
-                if (config.onChange) config.onChange.apply(this, [this.innerHTML]);
+                btn.className="toggle-button-active";
+                if (config.onChange) config.onChange.apply(btn, [btn.innerHTML]);
+            };
+            btn.onclick = function(){
+                onClick(this);
             };
             div.appendChild(btn);
         }
@@ -317,11 +328,21 @@ bluewave.utils = {
         div.setValue = function(val){
             for (var i=0; i<div.childNodes.length; i++){
                 var btn = div.childNodes[i];
-                if (btn.innerHTML===val){
-                    btn.click();
+                if (btn.innerText===val){
+                    onClick(btn);
                     break;
                 }
             }
+        };
+
+        div.getValue = function(){
+            for (var i=0; i<div.childNodes.length; i++){
+                var btn = div.childNodes[i];
+                if (btn.className==="toggle-button-active"){
+                    return btn.innerText;
+                }
+            }
+            return null;
         };
 
         return div;
@@ -349,8 +370,8 @@ bluewave.utils = {
 
         var width = config.width+"";
         var height = config.height+"";
-        if (width.indexOf("%")===-1) parseInt(width) + "px";
-        if (height.indexOf("%")===-1) parseInt(height) + "px";
+        if (width.indexOf("%")===-1) width = parseInt(width) + "px";
+        if (height.indexOf("%")===-1) height = parseInt(height) + "px";
 
 
         var div = document.createElement("div");
@@ -505,7 +526,7 @@ bluewave.utils = {
   //**************************************************************************
   /** Creates a custom form input using a text field
    */
-    createSlider: function(inputName, form){
+    createSlider: function(inputName, form, endCharacter = "", min=0, max=100, interval=5){
 
       //Add row under the given input
         var input = form.findField(inputName);
@@ -515,6 +536,7 @@ bluewave.utils = {
             cols[i].innerHTML = "";
         }
         input.row.parentNode.insertBefore(row, input.row.nextSibling);
+        row.style.height = "20px";
 
 
       //Add slider to the last column of the new row
@@ -522,10 +544,19 @@ bluewave.utils = {
         cols[2].appendChild(slider);
         slider.type = "range";
         slider.className = "dashboard-slider";
-        slider.setAttribute("min", 1);
-        slider.setAttribute("max", 20);
+        min = parseInt(min);
+        if (min<0) min = 0;
+        max = parseInt(max);
+        if (max<min) max = 100;
+
+        interval = parseInt(interval);
+        if (interval<1) interval = 1;
+        max = Math.ceil(max/interval);
+
+        slider.setAttribute("min", min+1);
+        slider.setAttribute("max", max+1);
         slider.onchange = function(){
-            var val = (this.value-1)*5;
+            var val = (this.value-1)*interval;
             input.setValue(val);
         };
 
@@ -536,8 +567,8 @@ bluewave.utils = {
         var setValue = input.setValue;
         input.setValue = function(val){
             val = parseFloat(val);
-            setValue(val + "%");
-            slider.value = round(val/5)+1;
+            setValue(val + `${endCharacter}`);
+            slider.value = round(val/interval)+1;
         };
 
         var getValue = input.getValue;
@@ -550,11 +581,59 @@ bluewave.utils = {
         input.row.getElementsByTagName("input")[0].addEventListener('input', function(e) {
             var val = parseFloat(this.value);
             if (isNumber(val)){
-                if (val<0 || val>95){
-                    if (val<0) val = 0;
-                    else val = 95;
-                }
+                if (val<0) val = 0;
+                //if (val>=94) val = 100;
+
                 input.setValue(val);
+            }
+        });
+
+        return slider;
+    },
+
+
+  //**************************************************************************
+  //** createColorOptions
+  //**************************************************************************
+  /** Creates a custom form input using a combobox
+   */
+    createColorOptions: function(inputName, form, onClick){
+
+        var colorField = form.findField(inputName);
+        var colorPreview = colorField.getButton();
+        colorPreview.className = colorPreview.className.replace("pulldown-button-icon", "");
+        colorPreview.style.boxShadow = "none";
+        colorPreview.setColor = function(color){
+            colorPreview.style.backgroundColor = color;
+            //colorPreview.style.borderColor = color;
+        };
+        colorField.setValue = function(color){
+            //color = getHexColor(getColor(color));
+            colorPreview.setColor(color);
+            colorField.getInput().value = color;
+            form.onChange(colorField, color);
+        };
+        colorField.getValue = function(){
+            return colorField.getInput().value;
+        };
+        colorPreview.onclick = function(){
+            if (onClick) onClick.apply(this,[colorField]);
+        };
+    },
+
+
+  //**************************************************************************
+  //** getBasemap
+  //**************************************************************************
+    getBasemap: function(callback){
+        var baseURL = 'http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+        bluewave.utils.get("map/basemaps", {
+            success: function(basemaps){
+                if (basemaps.length>0) baseURL = basemaps[0].url;
+                callback.apply(this,[baseURL]);
+            },
+            failure: function(request){
+                callback.apply(this,[baseURL]);
             }
         });
     },
@@ -654,24 +733,42 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** formatNumber
+  //**************************************************************************
+  /** Adds commas and ensures that there are a maximum of 2 decimals if the
+   *  number has decimals
+   */
+    formatNumber: function(x){
+        if (x==null) return "";
+        if (typeof x !== "string") x+="";
+        var parts = x.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
+    },
+
+
+  //**************************************************************************
   //** getColorPalette
   //**************************************************************************
     getColorPalette: function(fixedColors){
         if (fixedColors===true)
         return [
-            ...[
-                //darker
-                "#6699CC", //blue
-                "#FF8C42", //orange
-                "#933ed5", //purple
-                "#bebcc1", //gray
-                //lighter
-                "#9DBEDE",
-                "#C6EDD3",
-                "#FF8280",
-                "#FFB586",
-            ],
-            ...d3.schemeCategory10,
+
+          //darker
+            "#6699CC", //blue
+            "#98DFAF", //green
+            "#FF3C38", //red
+            "#FF8C42", //orange
+            "#933ed5", //purple
+            "#bebcc1", //gray
+
+          //lighter
+            "#9DBEDE",
+            "#C6EDD3",
+            "#FF8280",
+            "#FFB586",
+            "#cda5eb",
+            "#dedde0"
         ];
 
 
@@ -694,175 +791,227 @@ bluewave.utils = {
 
 
   //**************************************************************************
-  //** getNaturalBreaks
+  //** createColorPicker
   //**************************************************************************
-  /** Used to classify data using Jenks natural breaks optimization
-   *  @param data An array of numbers
-   *  @param n_classes Number of classes
-   *  @return Array of values or null
+  /** Returns a panel used to select a color from the list of standard colors
+   *  or to define a new color using a color wheel
    */
-    getNaturalBreaks: function(data, n_classes) {
+    createColorPicker: function(parent, config){
+        if (!config) config = {};
+        if (!config.style) config.style = javaxt.dhtml.style.default;
+        var colors = config.colors;
+        if (!colors) colors = bluewave.utils.getColorPalette(true);
+
+        var colorPicker = {
+            onChange: function(c){},
+            setColor: function(c){},
+            colorWheel: null,
+            setColors: function(arr){}
+        };
 
 
-        // Adjust n_classes to reflect data
-        var numDistinctVals = [...new Set(data)].length;
-        n_classes = Math.min(n_classes, numDistinctVals-1);
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
 
 
-        // Compute the matrices required for Jenks breaks. These matrices
-        // can be used for any classing of data with `classes <= n_classes`
-        function getMatrices(data, n_classes) {
+        var checkbox = document.createElement("div");
+        checkbox.innerHTML = '<i class="fas fa-check"></i>';
 
-            // in the original implementation, these matrices are referred to
-            // as `LC` and `OP`
-            //
-            // * lower_class_limits (LC): optimal lower class limits
-            // * variance_combinations (OP): optimal variance combinations for all classes
-            var lower_class_limits = [],
-                variance_combinations = [],
-                // loop counters
-                i, j,
-                // the variance, as computed at each step in the calculation
-                variance = 0;
 
-            // Initialize and fill each matrix with zeroes
-            for (i = 0; i < data.length + 1; i++) {
-                var tmp1 = [], tmp2 = [];
-                for (j = 0; j < n_classes + 1; j++) {
-                    tmp1.push(0);
-                    tmp2.push(0);
+        var div = document.createElement("div");
+        div.className = "color-picker-header";
+        div.innerHTML = "Theme Colors";
+        td.appendChild(div);
+
+        var themeColors = td;
+        var blocks = [];
+        colorPicker.setColors = function(colors){
+
+            blocks.forEach((block)=>{
+                var p = block.parentNode;
+                p.removeChild(block);
+            });
+            blocks = [];
+
+            colors.forEach((c)=>{
+                div = document.createElement("div");
+                div.className = "color-picker-option";
+                div.style.backgroundColor = c;
+                div.onclick = function(){
+                    if (checkbox.parentNode === this) return;
+                    if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                    this.appendChild(checkbox);
+                    colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+                };
+                themeColors.appendChild(div);
+                blocks.push(div);
+            });
+        };
+        colorPicker.setColors(colors);
+
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+
+        var div = document.createElement("div");
+        div.className = "color-picker-header noselect";
+        div.innerHTML = "Custom Colors";
+        td.appendChild(div);
+
+        var createNewColor = function(){
+
+            div = document.createElement("div");
+            div.className = "color-picker-option";
+            div.onclick = function(){
+                if (checkbox.parentNode === this) return;
+                if (this.innerHTML === ""){
+                    if (checkbox.parentNode) checkbox.parentNode.removeChild(checkbox);
+                    this.appendChild(checkbox);
+                    colorPicker.onChange(new iro.Color(this.style.backgroundColor).hexString);
+                    return;
                 }
-                lower_class_limits.push(tmp1);
-                variance_combinations.push(tmp2);
-            }
 
-            for (i = 1; i < n_classes + 1; i++) {
-                lower_class_limits[1][i] = 1;
-                variance_combinations[1][i] = 0;
-                // in the original implementation, 9999999 is used but
-                // since Javascript has `Infinity`, we use that.
-                for (j = 2; j < data.length + 1; j++) {
-                    variance_combinations[j][i] = Infinity;
-                }
-            }
+                if (!colorPicker.colorWheel){
 
-            for (var l = 2; l < data.length + 1; l++) {
-
-                // `SZ` originally. this is the sum of the values seen thus
-                // far when calculating variance.
-                var sum = 0,
-                    // `ZSQ` originally. the sum of squares of values seen
-                    // thus far
-                    sum_squares = 0,
-                    // `WT` originally. This is the number of
-                    w = 0,
-                    // `IV` originally
-                    i4 = 0;
-
-                // in several instances, you could say `Math.pow(x, 2)`
-                // instead of `x * x`, but this is slower in some browsers
-                // introduces an unnecessary concept.
-                for (var m = 1; m < l + 1; m++) {
-
-                    // `III` originally
-                    var lower_class_limit = l - m + 1,
-                        val = data[lower_class_limit - 1];
-
-                    // here we're estimating variance for each potential classing
-                    // of the data, for each potential number of classes. `w`
-                    // is the number of data points considered so far.
-                    w++;
-
-                    // increase the current sum and sum-of-squares
-                    sum += val;
-                    sum_squares += val * val;
-
-                    // the variance at this point in the sequence is the difference
-                    // between the sum of squares and the total x 2, over the number
-                    // of samples.
-                    variance = sum_squares - (sum * sum) / w;
-
-                    i4 = lower_class_limit - 1;
-
-                    if (i4 !== 0) {
-                        for (j = 2; j < n_classes + 1; j++) {
-                            // if adding this element to an existing class
-                            // will increase its variance beyond the limit, break
-                            // the class at this point, setting the lower_class_limit
-                            // at this point.
-                            if (variance_combinations[l][j] >=
-                                (variance + variance_combinations[i4][j - 1])) {
-                                lower_class_limits[l][j] = lower_class_limit;
-                                variance_combinations[l][j] = variance +
-                                    variance_combinations[i4][j - 1];
-                            }
+                    var callout = new javaxt.dhtml.Callout(document.body,{
+                        style: {
+                            panel: "color-picker-callout-panel",
+                            arrow: "color-picker-callout-arrow"
                         }
-                    }
+                    });
+
+                    var innerDiv = callout.getInnerDiv();
+                    innerDiv.style.padding = "5px";
+                    innerDiv.style.backgroundColor = "#fff";
+                    var cp = new iro.ColorPicker(innerDiv, {
+                      width: 280,
+                      height: 280,
+                      anticlockwise: true,
+                      borderWidth: 1,
+                      borderColor: "#fff",
+                      css: {
+                        "#output": {
+                          "background-color": "$color"
+                        }
+                      }
+                    });
+
+                    colorPicker.colorWheel = callout;
+                    colorPicker.colorWheel.getColor = function(){
+                        return cp.color.hexString;
+                    };
+
+                    cp.on("color:change", function(c){
+                        var div = colorPicker.colorWheel.target;
+                        div.innerHTML = "";
+                        div.style.backgroundColor = colorPicker.colorWheel.getColor();
+                    });
+
                 }
 
-                lower_class_limits[l][1] = 1;
-                variance_combinations[l][1] = variance;
-            }
 
-            // return the two matrices. for just providing breaks, only
-            // `lower_class_limits` is needed, but variances can be useful to
-            // evaluage goodness of fit.
-            return {
-                lower_class_limits: lower_class_limits,
-                variance_combinations: variance_combinations
+                var div = this;
+                var rect = javaxt.dhtml.utils.getRect(div);
+                var x = rect.x + rect.width + 5;
+                var y = rect.y + (rect.height/2);
+                colorPicker.colorWheel.target = div;
+                colorPicker.colorWheel.showAt(x, y, "right", "middle");
+                colorPicker.colorWheel.onHide = function(){
+                    if (table.getElementsByClassName("color-picker-new-option").length>0) return;
+                    createNewColor();
+                };
+
             };
-        }
+            td.appendChild(div);
+            var innerDiv = document.createElement("div");
+            innerDiv.className = "color-picker-new-option";
+            innerDiv.innerHTML = "<i class=\"fas fa-plus\"></i>";
+            div.appendChild(innerDiv);
+
+        };
+
+        createNewColor();
+
+        parent.appendChild(table);
+        return colorPicker;
+    },
 
 
+  //**************************************************************************
+  //** createColorPickerCallout
+  //**************************************************************************
+  /** Returns a callout with a color picker
+   */
+    createColorPickerCallout: function(config){
 
-        // the second part of the jenks recipe: take the calculated matrices
-        // and derive an array of n breaks.
-        function breaks(data, lower_class_limits, n_classes) {
-
-            var k = data.length - 1,
-                kclass = [],
-                countNum = n_classes;
-
-            // the calculation of classes will never include the upper and
-            // lower bounds, so we need to explicitly set them
-            kclass[n_classes] = data[data.length - 1];
-            kclass[0] = data[0];
-
-            // the lower_class_limits matrix is used as indexes into itself
-            // here: the `k` variable is reused in each iteration.
-            while (countNum > 1) {
-                kclass[countNum - 1] = data[lower_class_limits[k][countNum] - 2];
-                k = lower_class_limits[k][countNum] - 1;
-                countNum--;
+      //Create popup
+        var popup = new javaxt.dhtml.Callout(document.body,{
+            style: {
+                panel: "color-picker-callout-panel",
+                arrow: "color-picker-callout-arrow"
             }
+        });
+        var innerDiv = popup.getInnerDiv();
 
-            return kclass;
-        }
 
-        if (n_classes > data.length) {
-            return null;
-        }
+      //Create title div
+        var title = "Select Color";
+        var titleDiv = document.createElement("div");
+        titleDiv.className = "window-header";
+        titleDiv.innerHTML = "<div class=\"window-title\">" + title + "</div>";
+        innerDiv.appendChild(titleDiv);
 
-        // sort data in numerical order, since this is expected
-        // by the matrices function
-        data = data.slice().sort(function (a, b) { return a - b; });
 
-        // get our basic matrices
-        var matrices = getMatrices(data, n_classes),
-            // we only need lower class limits here
-            lower_class_limits = matrices.lower_class_limits;
+      //Create content div
+        var contentDiv = document.createElement("div");
+        contentDiv.style.padding = "0 15px 15px";
+        contentDiv.style.width = "325px";
+        contentDiv.style.backgroundColor = "#fff";
+        innerDiv.appendChild(contentDiv);
 
-        // extract n_classes out of the computed matrices
-        var arr = [];
-        try{
-            arr = breaks(data, lower_class_limits, n_classes);
-            arr.unshift(0);
-            arr = [...new Set(arr)];
-        }
-        catch(e){
-            console.log(e);
-        }
-        return arr;
+
+        var table = javaxt.dhtml.utils.createTable();
+        var tbody = table.firstChild;
+        var tr = document.createElement('tr');
+        tbody.appendChild(tr);
+
+
+
+        var td = document.createElement('td');
+        tr.appendChild(td);
+        var cp = bluewave.utils.createColorPicker(td, config);
+
+        popup.onHide = function(){
+            if (cp.colorWheel && cp.colorWheel.isVisible()){
+                cp.colorWheel.hide();
+                popup.show();
+            }
+        };
+
+
+        popup.onChange = function(color){};
+        popup.setColor = function(color){
+            cp.setColor(color);
+        };
+        popup.setColors = function(colors){
+            cp.setColors(colors);
+        };
+
+        cp.onChange = function(color){
+            popup.onChange(color);
+        };
+
+        contentDiv.appendChild(table);
+        return popup;
     },
 
 

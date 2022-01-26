@@ -94,7 +94,8 @@ public class DataService extends WebService {
                 str = str.trim();
                 if (str.toUpperCase().startsWith("MATCH")){
                     sql = str;
-                    graph = bluewave.Config.getGraph();
+                    bluewave.app.User user = (bluewave.app.User) request.getUser();
+                    graph = bluewave.Config.getGraph(user);
                     break;
                 }
             }
@@ -154,7 +155,24 @@ public class DataService extends WebService {
                     keys.add("dates");
                 }
             }
-
+            if (sql.contains("{country}")){
+                String country = request.getParameter("country").toString();
+                if (country!=null){
+                    StringBuilder str = new StringBuilder();
+                    for (String cc : country.split(",")){
+                        cc = cc.trim();
+                        if (cc.isEmpty()) continue;
+                        if (cc.startsWith("'") && cc.endsWith("'")){
+                            cc = cc.substring(1, cc.length()-1);
+                        }
+                        if (str.length()>0) str.append(",");
+                        str.append("'" + cc + "'");
+                    }
+                    sql = sql.replace("{country}", str);
+                    keys.add("country");
+                }
+            }
+            
 
           //Generate response
             try{

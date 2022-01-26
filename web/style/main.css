@@ -1,4 +1,5 @@
 @import url(https://fonts.googleapis.com/css?family=Open+Sans);
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300&display=swap');
 
 html, body {
     height:100%;
@@ -20,7 +21,7 @@ body, textarea, input, select, td, th {
 /**************************************************************************/
 
 .app-header {
-    background-color: #007CBA;
+    background-color: #007cba;
     height: 86px;
     color: #fff;
 }
@@ -67,7 +68,7 @@ body, textarea, input, select, td, th {
  }
 
 .app-header-menu {
-    background-color: #2c7cba;
+    background-color: #007cba;
     margin-left: 0;
  }
 
@@ -191,6 +192,7 @@ body, textarea, input, select, td, th {
     border: 1px solid #e0e0e0;
     display: inline-block;
     float: left;
+    box-sizing: border-box;
 }
 
 
@@ -251,7 +253,7 @@ body, textarea, input, select, td, th {
 /** Dashboard Homepage
 /**************************************************************************/
 .dashboard-homepage {
-
+    background-color: #ececec;
 }
 
 .dashboard-homepage .dashboard-item {
@@ -263,6 +265,84 @@ body, textarea, input, select, td, th {
     font-size: 120px;
 }
 
+.dashboard-homepage .dashboard-item-settings {
+    transition: opacity .4s;
+}
+
+.dashboard-homepage .dashboard-item .fa-cog {
+    font-size: 18px;
+    color: #9a9a9a;
+}
+
+.dashboard-homepage-menu {
+    padding: 3px 2px;
+    min-width: 145px;
+}
+
+.dashboard-homepage-menu-item:hover {
+    background-color: #bee3ff;
+}
+
+.dashboard-homepage-menu-item {
+    line-height: 24px;
+    font-size: 13px;
+    padding: 0 7px 0 0;
+    white-space: nowrap;
+    color: #767676;
+}
+
+.dashboard-homepage-menu-item .fas {
+    color:#3876ad;
+    text-align:center;
+    width: 24px;
+    font-size: 16px;
+    vertical-align: middle;
+    margin-top: -3px;
+}
+
+
+.dashboard-group {
+    border: 1px solid #c7c7c7;
+    margin: 30px 15px 20px;
+    border-radius: 0 5px 5px 5px;
+    background-color: #f5f5f5;
+    padding: 15px 10px;
+    position: relative;
+}
+
+.dashboard-group-label {
+    display: inline-block;
+    top: -21px;
+    position: absolute;
+    left: -1px;
+    padding: 2px 7px 0 7px;
+    background-color: #f5f5f5;
+    color: #585858;
+    font-size: 13px;
+    border: 1px solid #c7c7c7;
+    border-radius: 5px 5px 0 0;
+    border-bottom: 0 none;
+}
+/*
+.dashboard-group-label:after {
+    content: "";
+    position: absolute;
+    right: -1;
+    height: 50%;
+    width: 1px;
+    background: #f5f5f5;
+    bottom: 0;
+}
+.dashboard-group-label:before {
+    content: "";
+    position: absolute;
+    left: -1;
+    height: 50%;
+    width: 1px;
+    background: #f5f5f5;
+    bottom: 0;
+}
+*/
 
 /**************************************************************************/
 /** Dashboard Layout
@@ -339,9 +419,11 @@ li.tree-node:hover {
     color: green;
 }
 
+/*
 .toolbar-button-icon.fas.fa-trash {
     color: #8c6c6c;
 }
+*/
 
 .toolbar-button-icon.fas.fa-copy {
     color: #b59d71;
@@ -460,6 +542,20 @@ li.tree-node:hover {
 }
 
 
+/**************************************************************************/
+/** Company Profile
+/**************************************************************************/
+
+.company-profile-title {
+    font-size: 20px;
+    color: #fff;
+    padding: 0 5px;
+}
+
+.company-profile li {
+    color: #777;
+}
+
 
 /**************************************************************************/
 /** Tooltip
@@ -497,7 +593,6 @@ li.tree-node:hover {
 
 .toggle-button, .toggle-button-active {
     display:inline-block;
-    padding: 1px 5px;
     border-radius: 0px;
     cursor: pointer;
     font-size: 12px;
@@ -531,7 +626,7 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
-/** Drawflow Overrides
+/** Drawflow
 /**************************************************************************/
 
 .drawflow-toolbar {
@@ -577,9 +672,35 @@ li.tree-node:hover {
     font-size: 30px;
     text-align: center;
     width: 30px;
+    overflow: hidden;
 }
 .drawflow-toolbar-button-icon.fas.fa-project-diagram {
     font-size: 22px;
+}
+
+.drawflow-toolbar-button-icon.far.fa-object-ungroup {
+    width: 34px;
+    margin-left: -2px;
+    margin-top: -4px;
+}
+
+
+.drawflow-toolbar-hint {
+    position: absolute;
+    left: 50px;
+    top: 5px;
+    background: url(../images/arrow.png) no-repeat;
+    width: 85px;
+    height: 120px;
+    color: #ef5646;
+    font-size: 32px;
+    font-family: 'Kalam', cursive;
+}
+.drawflow-toolbar-hint:after {
+    content:"Drag icon onto canvas";
+    line-height: 225px;
+    margin: 0 0 0 82px;
+    white-space: nowrap;
 }
 
 
@@ -596,8 +717,6 @@ li.tree-node:hover {
     width: 100%;
     height: 100%;
 }
-
-
 
 .drawflow .drawflow-node {
     background-color: #fff;
@@ -618,6 +737,7 @@ li.tree-node:hover {
 .drawflow .drawflow-node.selected .drawflow-node-title {
     color: #22598c;
 }
+
 
 .drawflow .connection .main-path {
     stroke: #4ea9ff;
@@ -643,7 +763,7 @@ li.tree-node:hover {
     background: white;
 }
 
-.drawflow > .drawflow-delete {
+.drawflow > .drawflow-delete{
     border: 2px solid #43b993;
     background: white;
     color: #43b993;
@@ -651,12 +771,37 @@ li.tree-node:hover {
     box-shadow: 0 2px 20px 2px #43b993;
 }
 
-.drawflow-delete {
+.drawflow-delete{
     border: 2px solid #ff4e4e;
     background: white;
     color: #ff4e4e;
     -webkit-box-shadow: 0 2px 20px 2px #ff4e4e;
     box-shadow: 0 2px 20px 2px #ff4e4e;
+    opacity: 0; /*controlled programatically*/
+}
+
+.drawflow-delete2 {
+
+    position: absolute;
+    display: block;
+    width: 30px;
+    height: 30px;
+    z-index: 4;
+    line-height: 30px;
+    font-weight: 700;
+    text-align: center;
+    border-radius: 50%;
+    font-family: monospace;
+    cursor: pointer;
+
+    border: 2px solid #ff4e4e;
+    background: white;
+    color: #ff4e4e;
+    -webkit-box-shadow: 0 2px 20px 2px #ff4e4e;
+    box-shadow: 0 2px 20px 2px #ff4e4e;
+
+    right: -15px;
+    top: -15px;
 }
 
 .drawflow-node-title {
@@ -669,21 +814,56 @@ li.tree-node:hover {
     overflow: hidden;
 }
 
-.drawflow-node-title .fas {
+.drawflow-node-overlay{
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+
+    text-align: left;
+    overflow: hidden;
+}
+
+.drawflow-node-overlay div {
+    background-color:rgba(255,255,255,0.5);
+    padding: 5px 10px 0 10px;
+    color: #5a5a5a;
+    text-shadow: 3px 3px 5px white;
+    font-size: 12px;
+}
+
+
+.drawflow-node-title .fas,
+.drawflow-node-title .far {
     margin: 0 5px 0 0;
     font-size: 16px;
 }
 
 .drawflow-node-body {
-    padding: 5px;
+    width: 100%;
     min-height: 100px;
     text-align: center;
+    position: relative;
 }
 
-.drawflow-node-body .fas {
+.drawflow-node-body .fas,
+.drawflow-node-body .far {
     color:#eaeaea;
     font-size:75px;
     margin-top:10px;
+}
+
+.drawflow-node-body .filename {
+    position: absolute;
+    word-wrap: break-word;
+    width: 90%;
+    font-size: 11px;
+    background-color: rgba(255,255,255,0.5);
+    color: #777;
+    padding: 5px 0 5px 10px;
+    text-align: left;
 }
 
 .drawflow-node-title svg {
@@ -701,8 +881,6 @@ li.tree-node:hover {
     margin-bottom: 5px;
 }
 
-
-
 .drawflow .connection .point {
     stroke: #cacaca;
     stroke-width: 2;
@@ -713,7 +891,6 @@ li.tree-node:hover {
 .drawflow .connection .point.selected, .drawflow .connection .point:hover {
     fill: #4ea9ff;
 }
-
 
 .drawflow-save {
     height: 32px;
@@ -805,17 +982,139 @@ li.tree-node:hover {
 }
 
 .chart-editor-options {
-    width: 200px;
-    height:100%;
-    background-color: #dcdcdc;
-    padding: 0px 12px;
+    width: 220px;
+    height: 100%;
+    padding: 0px 14px 0 6px;
     border-radius: 0 0 0 5px;
+    border-right: 1px solid #dcdcdc;
+}
+
+.chart-editor-options,
+.chart-editor-options .form-grouplabel {
+    background-color: #efefef;
+}
+
+.chart-editor-options .form-label {
+    height: 12px;
+    padding: 0;
+}
+
+
+/**************************************************************************/
+/** Document Comparison Panel
+/**************************************************************************/
+
+.doc-compare-title {
+    font-size: 40px;
+}
+
+.doc-compare-title .fas,
+.doc-compare-title .far {
+    margin: 0 10px;
+}
+
+.doc-compare-title .fa-exclamation-triangle {
+    color: red;
+}
+
+.doc-compare-title .fa-check-circle {
+    color:green;
+}
+
+.doc-compare-key {
+    padding: 0 5px;
+    font-weight: bold;
+}
+
+.doc-compare-background {
+    position: absolute;
+    opacity: 0.5;
+    font-size: 300px;
+    right: 92px;
+    color: #eaeaea;
+}
+
+.doc-compare-panel {
+    height: 100%;
+    border: 1px solid #dcdcdc;
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+    overflow-y:auto;
+}
+
+.doc-compare-panel img{
+    position:absolute;
+    left: 0;
+    top: 0;
+    border-radius:8px;
+    width:100%
+
+}
+
+.doc-compare-panel .fas {
+    color: #eaeaea;
+    font-size: 200px;
+    margin-top:50px;
+}
+
+.doc-compare-panel-title {
+    font-size: 20px;
+    padding: 5px 0 0 10px;
+}
+
+.doc-compare-panel-subtitle {
+    padding: 0 10px;
+    color: #777;
+}
+
+.doc-compare-panel-footer {
+    color: #777;
+    font-size: 11px;
+    padding: 0 0 0 12px;
 }
 
 
 /**************************************************************************/
 /** Admin Panel
 /**************************************************************************/
+
+.admin-panel {
+    border-top: 1px solid #dcdcdc;
+    width: 100%;
+    height: 100%;
+}
+
+.admin-sidebar {
+    width: 65px;
+    background-color: #19455a;
+}
+
+.admin-sidebar .fas {
+    color: #fff;
+    height: 65px;
+    width: 65px;
+    text-align: center;
+    font-size: 30px;
+    line-height: 65px;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.admin-sidebar .fas:hover{
+    background-color: #026698;
+}
+
+.admin-sidebar .selected {
+    background-color: #007cba;
+}
+
+.admin-landing-page {
+    text-align: center;
+    font-size: 200px;
+    color: #e6e6e6;
+}
+
 .user-status {
     display: inline-block;
     background-color: #ccc;
@@ -824,6 +1123,178 @@ li.tree-node:hover {
     border-radius: 50%;
     border: 1px solid #505050;
     margin: 0 3px;
+}
+
+.admin-header {
+    font-size: 24px;
+    line-height: 53px;
+    color: #007CBA;
+    height: 55px;
+    padding: 10px;
+}
+
+
+.admin-header .fas {
+    display: inline-block;
+    font-size: 35px;
+    padding: 10px;
+    color: #f5f5f5;
+    background-color: #0474ab;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    float: left;
+    margin-right: 10px;
+}
+
+.admin-map-table-col {
+    font-size: 14px;
+    white-space: nowrap;
+    color: #272727;
+    height: 120px;
+    line-height: 20px;
+    padding: 0 5px;
+}
+
+.admin-map-table-col img {
+    width: 93px;
+    margin: 10px 0 0 0;
+    box-shadow: 3px 4px 6px rgba(0, 0, 0, 0.6);
+    border:1px solid #d3d3d3;
+    border-right: 0 none;
+    border-bottom: 0 none;
+}
+
+.admin-map-url {
+    color: #8c8c8c;
+    font-size: 13px;
+}
+
+.admin-map-name {
+    padding: 10px 0 0 0;
+    font-weight: bold;
+}
+
+
+
+/**************************************************************************/
+/** Carousel Header
+/**************************************************************************/
+
+.carousel-header {
+    height: 60px;
+    background-color: #3f79ab;
+    background-color: #102b42;
+}
+
+.carousel-header-nav {
+  margin: 0px;
+  padding: 0px;
+  list-style: none;
+}
+
+.carousel-header-link {
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  margin: 0 20px;
+  color: #fff;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.carousel-header-link:after{
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  display: block;
+  margin-top: 5px;
+  right: 0;
+  background: #2e588d;
+  transition: width .15s ease;
+  -webkit-transition: width .15s ease;
+}
+
+
+.carousel-header-link:hover, .carousel-header-link:active, .carousel-header-link:focus, .carousel-header-link-selected{
+    opacity: 1.0;
+    transition: all .4s ease;
+    -webkit-transition: all .4s ease;
+    outline: 0 none;
+}
+
+
+.carousel-header-link-selected:after{
+    width: 100%;
+}
+
+
+.carousel-header-link:hover:after {
+  width: 100%;
+  left: 0;
+  background: #fff;
+  opacity: 0.6;
+}
+
+/**************************************************************************/
+/** Color Picker
+/**************************************************************************/
+
+.color-picker-header {
+    padding: 10px 0 4px;
+}
+
+.color-picker-option {
+    width: 50px;
+    height: 50px;
+    float: left;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.color-picker-option:hover {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+}
+
+.color-picker-option .fas.fa-check {
+    color:#fff;
+    font-size: 25px;
+    padding: 13px;
+}
+
+.color-picker-new-option {
+    background-color: #fff;
+    border: 2px dashed #ccc;
+    height: 46px;
+}
+
+.color-picker-new-option .fas.fa-plus {
+    font-size: 30px;
+    color: #ccc;
+    margin: 8px 0 0 10px;
+}
+
+.color-picker-callout-panel, .color-picker-callout-arrow {
+    border: 1px solid #adadad;
+    background: #fff;
+    cursor: pointer;
+}
+
+.color-picker-callout-panel {
+    overflow: hidden;
+    background: none;
+    border: 0px none;
+    border-radius: 5px;
+    box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.color-picker-callout-arrow {
+    width: 12px;
+    height: 12px;
+    padding: 12px;
 }
 
 
@@ -839,6 +1310,22 @@ svg text {
     -khtml-user-select: none;
     user-select: none;
 }
+
+
+.svg-container {
+  display: inline-block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  vertical-align: top;
+  overflow: hidden;
+}
+.svg-content-responsive {
+  display: inline-block;
+  position: absolute;
+  left: 0;
+}
+
 
 .line {
   fill: none;
@@ -871,6 +1358,15 @@ svg text {
     font-size: 13px;
 }
 
+.chart-axis-label{
+    fill: #000;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.tick {
+    font-size: 10px;
+}
 
 .countries {
     fill: #f9f9f9;

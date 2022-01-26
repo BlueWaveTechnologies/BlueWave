@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.app.Dashboard;
 import bluewave.app.DashboardUser;
+import bluewave.utils.SQLEditor;
 
 import javaxt.express.*;
 import javaxt.http.servlet.*;
@@ -34,7 +35,7 @@ public class DashboardService extends WebService {
 
 
         super.addClass(bluewave.app.Dashboard.class);
-        //super.addClass(bluewave.app.DashboardUser.class);
+        super.addClass(bluewave.app.DashboardUser.class);
         //super.addClass(bluewave.app.DashboardGroup.class);
 
 
@@ -49,8 +50,6 @@ public class DashboardService extends WebService {
             rs.open("select class_name from " + tableName, conn);
             while (rs.hasNext()){
                 String className = rs.getValue(0).toString();
-                int idx = className.lastIndexOf(".");
-                if (idx>0) className = className.substring(idx+1);
                 dashboards.add(className);
                 rs.moveNext();
             }
@@ -61,10 +60,11 @@ public class DashboardService extends WebService {
           //Add dashboards as needed
             javaxt.io.Directory dir = new javaxt.io.Directory(web + "app/dashboards/");
             for (javaxt.io.File file : dir.getFiles("*.js")){
-                String className = file.getName(false);
+                String fileName = file.getName(false);
+                String className = "bluewave.dashboards." + fileName;
                 if (!dashboards.contains(className)){
                     Dashboard dashboard = new Dashboard();
-                    dashboard.setName(className);
+                    dashboard.setName(fileName);
                     dashboard.setClassName(className);
                     dashboard.save();
                 }
@@ -80,24 +80,24 @@ public class DashboardService extends WebService {
   //**************************************************************************
   //** onCreate
   //**************************************************************************
-    public void onCreate(Object obj){
-        ws.onCreate(obj);
+    public void onCreate(Object obj, ServiceRequest request){
+        ws.onCreate(obj, request);
     };
 
 
   //**************************************************************************
   //** onUpdate
   //**************************************************************************
-    public void onUpdate(Object obj){
-        ws.onUpdate(obj);
+    public void onUpdate(Object obj, ServiceRequest request){
+        ws.onUpdate(obj, request);
     };
 
 
   //**************************************************************************
   //** onDelete
   //**************************************************************************
-    public void onDelete(Object obj){
-        ws.onDelete(obj);
+    public void onDelete(Object obj, ServiceRequest request){
+        ws.onDelete(obj, request);
     };
 
 
@@ -123,34 +123,31 @@ public class DashboardService extends WebService {
 
 
 
-        SQLEditor where = new SQLEditor(sql);
+        SQLEditor sqlEditor = new SQLEditor(sql, c);
         if (c.equals(bluewave.app.Dashboard.class)){
 
 
-            String filter = null;
             if (op.equals("get") || op.equals("list")){
-                filter = "id in (" +
+                sqlEditor.addConstraint("id in (" +
                 "select dashboard.id " +
                 "from APPLICATION.DASHBOARD left join APPLICATION.DASHBOARD_USER " +
                 "on APPLICATION.DASHBOARD.ID=APPLICATION.DASHBOARD_USER.dashboard_id " +
                 " where user_id=" + user.getID() + " or user_id is null" +
-                ")";
+                ")");
             }
-            else{
+            else{ //Delete requests (Save is handled by saveDashboard)
                 if (user.getAccessLevel()<5){
-                    filter = "id in (" +
+                    sqlEditor.addConstraint("id in (" +
                     "select dashboard_id from APPLICATION.DASHBOARD_USER " +
                     "where user_id=" + user.getID() + " and read_only=false" +
-                    ")";
+                    ")");
                 }
+                sqlEditor.addConstraint("class_name NOT LIKE 'bluewave.dashboards.%'");
             }
-
-
-            if (filter!=null) where.append(filter);
         }
 
 
-        sql = where.getSQL();
+        sql = sqlEditor.getSQL();
 
 
 
@@ -168,10 +165,10 @@ public class DashboardService extends WebService {
 
 
   //**************************************************************************
-  //** save
+  //** saveDashboard
   //**************************************************************************
     public ServiceResponse saveDashboard(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws ServletException {
 
       //Get user associated with the request
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -180,7 +177,6 @@ public class DashboardService extends WebService {
         }
 
 
-        Connection conn = null;
         try{
             JSONObject json = new JSONObject(new String(request.getPayload(), "UTF-8"));
             if (json.isEmpty()) throw new Exception("JSON is empty.");
@@ -192,8 +188,6 @@ public class DashboardService extends WebService {
             boolean isNew = false;
             if (id!=null){
                 dashboard = new Dashboard(id);
-
-
                 dashboard.update(json);
             }
             else{
@@ -203,16 +197,18 @@ public class DashboardService extends WebService {
 
 
 
-          //Apply filter
+          //Apply security filters
+            if (dashboard.getClassName().startsWith("bluewave.dashboards.")){
+                return new ServiceResponse(403, "Not Authorized");
+            }
             if (!isNew){
                 if (!isAuthorized(user, dashboard, database, false))
                     return new ServiceResponse(403, "Not Authorized");
             }
 
 
-          //Call the save method
+          //Save dashboard
             dashboard.save();
-
 
 
 
@@ -227,11 +223,141 @@ public class DashboardService extends WebService {
 
 
           //Fire event
-            if (isNew) onCreate(dashboard); else onUpdate(dashboard);
+            if (isNew) onCreate(dashboard, request); else onUpdate(dashboard, request);
 
 
           //Return response
             return new ServiceResponse(dashboard.getID()+"");
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getPermissions
+  //**************************************************************************
+    public ServiceResponse getPermissions(ServiceRequest request, Database database)
+        throws ServletException {
+        String dashboardID = request.getParameter("dashboardID").toString();
+        String sql = "SELECT APPLICATION.DASHBOARD.ID as id, class_name, read_only\n" +
+        "FROM application.dashboard left join APPLICATION.DASHBOARD_USER\n" +
+        "on APPLICATION.DASHBOARD.ID=APPLICATION.DASHBOARD_USER.dashboard_id\n" +
+        "where (user_id=1 or user_id is null)";
+        if (dashboardID!=null){
+            sql+= " AND APPLICATION.DASHBOARD.ID IN (" + dashboardID + ")";
+        }
+
+
+        Connection conn = null;
+        try{
+            conn = database.getConnection();
+            Recordset rs = new Recordset();
+            rs.open(sql, conn);
+            JSONArray arr = new JSONArray();
+            while (rs.hasNext()){
+
+                Long id = rs.getValue("id").toLong();
+                String className = rs.getValue("class_name").toString();
+                Boolean readOnly = rs.getValue("read_only").toBoolean();
+
+                String permissions = "w";
+                if (className.startsWith("bluewave.dashboards.")){
+                    permissions = "r";
+                }
+                else{
+                    if (readOnly!=null){
+                        if (readOnly==true) permissions = "r";
+                    }
+                }
+
+                JSONObject json = new JSONObject();
+                json.set("dashboardID", id);
+                json.set("permissions", permissions);
+                arr.add(json);
+
+                rs.moveNext();
+            }
+            rs.close();
+            conn.close();
+            return new ServiceResponse(arr);
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getGroups
+  //**************************************************************************
+  /** Returns a list of user-defined groupings for dashboards
+   */
+    public ServiceResponse getGroups(ServiceRequest request, Database database)
+        throws ServletException {
+
+      //Get user associated with the request
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+
+        Connection conn = null;
+        try{
+
+            LinkedHashMap<Long, JSONObject> groups = new LinkedHashMap<>();
+            String groupIDs = "";
+
+            conn = database.getConnection();
+            Recordset rs = new Recordset();
+            rs.open("select id, name, description, info from application.dashboard_group " +
+            "where user_id=" + user.getID() + " order by name", conn);
+            while (rs.hasNext()){
+                JSONObject json = new JSONObject();
+                json.set("id", rs.getValue("id"));
+                json.set("name", rs.getValue("name"));
+                json.set("description", rs.getValue("description"));
+                json.set("info", rs.getValue("info"));
+                json.set("dashboards", new JSONArray());
+
+                Long groupID = json.get("id").toLong();
+                groups.put(groupID, json);
+                if (!groupIDs.isEmpty()) groupIDs +=",";
+                groupIDs += groupID;
+                rs.moveNext();
+            }
+            rs.close();
+
+
+            if (!groups.isEmpty()){
+                rs.open("select * from application.dashboard_group_dashboard " +
+                "where dashboard_group_id in (" + groupIDs + ")", conn);
+                while (rs.hasNext()){
+                    Long dashboardID = rs.getValue("dashboard_id").toLong();
+                    Long groupID = rs.getValue("dashboard_group_id").toLong();
+
+                    JSONObject group = groups.get(groupID);
+                    JSONArray dashboards = group.get("dashboards").toJSONArray();
+                    dashboards.add(dashboardID);
+                    rs.moveNext();
+                }
+                rs.close();
+            }
+
+
+            conn.close();
+
+
+
+            JSONArray arr = new JSONArray();
+            Iterator<Long> it = groups.keySet().iterator();
+            while (it.hasNext()){
+                JSONObject group = groups.get(it.next());
+                arr.add(group);
+            }
+
+
+            return new ServiceResponse(arr);
         }
         catch(Exception e){
             if (conn!=null) conn.close();
@@ -433,7 +559,7 @@ public class DashboardService extends WebService {
             dashboard.setThumbnail(img.getByteArray(format));
             dashboard.save();
 
-            onUpdate(dashboard);
+            onUpdate(dashboard, request);
             return new ServiceResponse(200);
         }
         catch(Exception e){
@@ -490,33 +616,4 @@ public class DashboardService extends WebService {
             throw e;
         }
     }
-
-
-  //**************************************************************************
-  //** SQLEditor
-  //**************************************************************************
-    private class SQLEditor {
-        private javaxt.sql.Parser parser;
-        private String sql;
-        public SQLEditor(String sql){
-            this.sql = sql;
-        }
-        public void append(String whereClause){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            String where = parser.getWhereString();
-            if (where==null) where = "";
-            else where += " and ";
-            where += whereClause;
-            parser.setWhere(where);
-            sql = parser.toString();
-        }
-        public void remove(){
-            if (parser==null) parser = new javaxt.sql.Parser(sql);
-            parser.setWhere(null);
-        }
-        public String getSQL(){
-            return sql;
-        }
-    }
-
 }

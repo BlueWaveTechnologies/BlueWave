@@ -14,20 +14,20 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var me = this;
     var defaultConfig = {
         margin: { top: 10, right: 10, bottom: 10, left: 10 },
-        nodes: {
-            input: {
+        nodes: [ //order is important!
+            {
                 icon: "fas fa-sign-out-alt",
                 label: "Input"
             },
-            output: {
-                icon: "fas fa-sign-in-alt",
-                label: "Output"
-            },
-            distributor: {
+            {
                 icon: "fas fa-random",
                 label: "Distributor"
+            },
+            {
+                icon: "fas fa-sign-in-alt",
+                label: "Output"
             }
-        },
+        ],
         sankey: {
             style: {
                 links: {
@@ -35,6 +35,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     opacity: 0.3
                 }
             }
+        },
+        hidePreview: false,
+        renderers: {
+            drawflowNodes: createDrawflowNode
         }
     };
 
@@ -44,14 +48,18 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     var titleDiv;
     var button = {};
     var nodes = {};
+    var labels = {};
     var quantities = {};
     var drawflow, currModule;
     var button = {};
-    var nodeEditor;
+    var nodeEditor, linkEditor;
     var sankeyChart;
     var toggleButton;
     var styleEditor;
     var zoom = 0;
+
+    var callout;
+    var linkMenu;
 
 
   //**************************************************************************
@@ -141,6 +149,18 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** onChange
   //**************************************************************************
     this.onChange = function(){};
+    
+    
+  //**************************************************************************
+  //** onContextMenu
+  //**************************************************************************
+    this.onContextMenu = function(node){};
+
+
+  //**************************************************************************
+  //** onNodeImport
+  //**************************************************************************
+    this.onNodeImport = function(node){};
 
 
   //**************************************************************************
@@ -149,22 +169,22 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     this.clear = function(){
         drawflow.clear();
         drawflow.removeModule(currModule);
+        currModule = null;
         setTitle("Untitled", true);
         sankeyChart.clear();
         nodes = {};
         quantities = {};
-        setZoom(0);
+        zoom = 0;
     };
 
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(sankeyConfig){
+    this.update = function(sankeyConfig, inputs){
         me.clear();
 
         if (!sankeyConfig) sankeyConfig = {};
-
 
       //Clone the config so we don't modify the original config object
         sankeyConfig = JSON.parse(JSON.stringify(sankeyConfig));
@@ -179,10 +199,51 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         config.sankey.style = merge(sankeyConfig.style, defaultConfig.sankey.style);
 
 
-
-      //Update toggle button
+      //Set view
         toggleButton.setValue("Edit");
 
+
+      //Special case when inputs are present (e.g. from SupplyChain editor)
+        if (inputs && inputs.length){
+           
+          //Hide the toggle button
+            toggleButton.hide();
+            
+            
+          //Generate data to mimic what we need to generate a sankey using drawflow 
+            var input = inputs[0];
+            for (var nodeID in input.nodes) {
+                if (input.nodes.hasOwnProperty(nodeID)){
+                    var node = input.nodes[nodeID];
+                    node.inputs = {};
+                    nodes[nodeID] = node;
+                }
+            }
+            for (var linkID in input.links) {
+                if (input.links.hasOwnProperty(linkID)){
+                    var link = input.links[linkID];
+                    quantities[linkID] = link.quantity;
+                    
+                    var arr = linkID.split("->");
+                    var sourceID = arr[0];
+                    var targetID = arr[1];
+                    nodes[targetID].inputs[sourceID] = {};
+                }
+            }
+            
+            
+            
+          //Switch view and return early
+            toggleButton.setValue("Preview");            
+            return;
+        }
+
+
+
+      //Show/hide toggle button
+        if (config.hidePreview===true) toggleButton.hide(); 
+        else toggleButton.show();
+        
 
       //Set module
         currModule = "sankey_" + new Date().getTime();
@@ -211,7 +272,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-
+                
               //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
@@ -238,10 +299,11 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     }
                 }
 
-
               //Update nodes variable
                 nodes[nodeID] = node;
 
+              //Fire event
+                me.onNodeImport(node,props);
             }
         }
 
@@ -256,21 +318,13 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         }
 
 
-      //Update paths and quantities
+      //Update paths, quantities, and labels
         var connections = editPanel.getElementsByTagName("svg");
         for (var i=0; i<connections.length; i++){
             var connection = connections[i];
-            var classes = connection.className;
-            if (classes.baseVal) classes = classes.baseVal;
-            var inputID, outputID;
-            var arr = classes.split(" ");
-            for (var j=0; j<arr.length; j++){
-                var str = arr[j].trim();
-                var idx = str.indexOf("node_in_node");
-                if (idx===0) outputID = str.substring("node_in_node".length+1);
-                var idx = str.indexOf("node_out_node");
-                if (idx===0) inputID = str.substring("node_out_node".length+1);
-            }
+            var arr = getInputOutputID(connection);
+            var inputID = arr[0];
+            var outputID = arr[1];
 
             var key = inputID + "->" + outputID;
             var link = sankeyConfig.links[key];
@@ -281,11 +335,91 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
           //Update svg paths (drawflow doesn't import correctly)
-            connection.getElementsByTagName("path")[0].setAttribute("d", link.path);
+            var path = connection.getElementsByTagName("path")[0];
+            path.setAttribute("d", link.path);
+
+
+
+          //Add text
+            onSVGRender(path, function(){
+                addLabel(this);
+            });
+
+
+
+
             auditLinkages();
         }
 
         setZoom(sankeyConfig.zoom);
+    };
+
+
+  //**************************************************************************
+  //** addLabel
+  //**************************************************************************
+    var addLabel = function(path){
+
+        var connection = path.parentNode;
+        var arr = getInputOutputID(connection);
+        var key = arr[0] + "->" + arr[1];
+        var label = quantities[key];
+
+        var l = path.getTotalLength();
+        var p = path.getPointAtLength(l/2);
+
+        var svg = d3.select(path.parentNode);
+        var g = svg.append("g")
+        .attr("transform", "translate(-9999,-9999)")
+        .on("click", function() {
+            var menu = getLinkMenu();
+            menu.label = d3.select(this);
+            me.showMenu(menu, this);
+        });
+
+
+
+        var temp = svg.append("text")
+        .attr("text-anchor", "start")
+        .text(label);
+        var box = temp.node().getBBox();
+        temp.remove();
+
+
+
+        var w = Math.max(box.width+8, 60);
+        var h = box.height;
+        var a = h/2;
+
+        var x = p.x+a;
+        var y = p.y-a;
+
+
+        var vertices = [
+          [x, y], //ul
+          [x+w, y], //ur
+          [x+w, y+h], //1r
+          [x, y+h], //ll
+          [x-a,y+a] //arrow point
+        ];
+
+
+      //Add tag
+        g.append("polygon")
+        .attr("points", vertices.join(" "))
+        .style("fill", "#459db7");
+
+
+      //Add label
+        var a = h/3;
+        g.append("text")
+        .attr("x", x+a)
+        .attr("y", p.y+a)
+        .attr("text-anchor", "start")
+        .style("fill", "#fff")
+        .text(label);
+
+        labels[key] = g;
     };
 
 
@@ -304,7 +438,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
       //Create basic config
         var sankeyConfig = {
-            layout: drawflow.export().drawflow[currModule].data,
+            layout: currModule ? drawflow.export().drawflow[currModule].data : {},
             nodes: {},
             links: {},
             chartTitle: getTitle(),
@@ -365,20 +499,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         var connections = editPanel.getElementsByTagName("svg");
         for (var i=0; i<connections.length; i++){
             var connection = connections[i];
-            var classes = connection.className;
-            if (classes.baseVal) classes = classes.baseVal;
-            var inputID, outputID;
-            var arr = classes.split(" ");
-            for (var j=0; j<arr.length; j++){
-                var str = arr[j].trim();
-                var idx = str.indexOf("node_in_node");
-                if (idx===0) outputID = str.substring("node_in_node".length+1);
-                var idx = str.indexOf("node_out_node");
-                if (idx===0) inputID = str.substring("node_out_node".length+1);
-            }
+            var arr = getInputOutputID(connection);
             var path = connection.getElementsByTagName("path")[0];
             if (path) path = path.getAttribute("d");
-            var key = inputID + "->" + outputID;
+            var key = arr[0] + "->" + arr[1];
 
             sankeyConfig.links[key] = {
                 path: path,
@@ -392,13 +516,41 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** getInputOutputID
+  //**************************************************************************
+    var getInputOutputID = function(connection){
+        var classes = connection.className;
+        if (classes.baseVal) classes = classes.baseVal;
+        var inputID, outputID;
+        var arr = classes.split(" ");
+        for (var j=0; j<arr.length; j++){
+            var str = arr[j].trim();
+            var idx = str.indexOf("node_in_node");
+            if (idx===0) outputID = str.substring("node_in_node".length+1);
+            var idx = str.indexOf("node_out_node");
+            if (idx===0) inputID = str.substring("node_out_node".length+1);
+        }
+        return [inputID, outputID];
+    };
+
+
+  //**************************************************************************
   //** getChart
   //**************************************************************************
     this.getChart = function(){
         if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
     };
-
+    
+    
+  //**************************************************************************
+  //** getEditor
+  //**************************************************************************  
+    this.getEditor = function(){
+        if (previewPanel.isVisible()) toggleButton.setValue("Edit");
+        return editPanel;
+    };
+    
 
   //**************************************************************************
   //** setTitle
@@ -469,17 +621,11 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         };
 
 
-
       //Create buttons
-        createButton("input", config.nodes.input.icon, config.nodes.input.label);
-        createButton("distributor", config.nodes.distributor.icon, config.nodes.distributor.label);
-        createButton("output", config.nodes.output.icon, config.nodes.output.label);
-
-
-      //Enable addData button
-        button.input.enable();
-        button.distributor.enable();
-        button.output.enable();
+        for (var i=0; i<config.nodes.length; i++){
+            var n = config.nodes[i];
+            createButton(n.icon, n.label);
+        }
     };
 
 
@@ -496,10 +642,10 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 quantity = quantity + v;
             }
         }
-        if(quantity == 0){
+        if (quantity == 0){
             quantity = 1;
         }
-        return quantity
+        return quantity;
     };
 
 
@@ -521,7 +667,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
 
             }
-            for(i = 0; i < outputs.length; i++) {
+            for (var i = 0; i < outputs.length; i++) {
                 var k = outputs[i];
                 var n = nodes[k];
                 var v = quantities[key + "->" + k];
@@ -632,27 +778,58 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         drawflow.on('connectionCreated', function(info) {
             var outputID = info.output_id+"";
             var inputID = info.input_id+"";
+            var key = outputID + "->" + inputID;
             //console.log("Connected " + outputID + " to " + inputID);
+
 
           //Update nodes
             var node = nodes[inputID];
             node.inputs[outputID] = nodes[outputID];
             var value = getPreviousNodeValue(outputID);
 
+
           //Update quantities
-            quantities[outputID + "->" + inputID] = value;
+            quantities[key] = value;
+
+
+          //Add label
+            var connections = editPanel.getElementsByTagName("svg");
+            for (var i=0; i<connections.length; i++){
+                var connection = connections[i];
+                var arr = getInputOutputID(connection);
+                if (arr[1]===inputID && arr[0]===outputID){
+                    var path = connection.getElementsByTagName("path")[0];
+                    addLabel(path);
+                    break;
+                }
+            }
+
+
+          //Audit nodes
             auditNodes();
 
+
+          //Fire onChange event
             me.onChange();
         });
 
 
-      //Watch for link removals
+      //Watch for link removals. Fired when a user deletes a connection or a node.
         drawflow.on('connectionRemoved', function(info){
             var outputID = info.output_id+"";
             var inputID = info.input_id+"";
+            var key = outputID + "->" + inputID;
             //console.log("Removed connection " + outputID + " to " + inputID);
-            delete quantities[outputID + "->" + inputID];
+
+          //Update labels
+            var label = labels[key];
+            if (label) label.remove();
+            delete labels[key];
+
+
+          //Update quantities
+            delete quantities[key];
+
             auditNodes();
             me.onChange();
         });
@@ -666,41 +843,56 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         });
 
 
-      //Process link click events
-        drawflow.on('connectionSelected', function(info){
-            var outputID = info.output_id+"";
-            var inputID = info.input_id+"";
-            var currVal = quantities[outputID + "->" + inputID];
-            //console.log("Clicked link between " + outputID + " and " + inputID);
-
-            var div = document.createElement("div");
-            div.style.minWidth = "50px";
-            div.style.textAlign = "center";
-            div.innerHTML = currVal;
-            div.onclick = function(e){
-                if (this.childNodes[0].nodeType===1) return;
-                e.stopPropagation();
-                this.innerHTML = "";
-                var input = document.createElement("input");
-                input.className = "form-input";
-                input.type = "text";
-                input.value = currVal;
-                input.onkeydown = function(event){
-                    var key = event.keyCode;
-                    if (key === 13) {
-                        var val = parseFloat(this.value);
-                        div.innerHTML = val;
-                        quantities[outputID + "->" + inputID] = val;
-                        auditNodes();
+      //Watch for node moves
+        drawflow.on('nodeMoved', function(nodeID) {
+            for (var key in labels) {
+                if (labels.hasOwnProperty(key)){
+                    var arr = key.split("->");
+                    if (arr[0]===nodeID || arr[1]===nodeID){
+                        var label = labels[key];
+                        var path = label.node().previousSibling;
+                        if (label) label.remove();
+                        delete labels[key];
+                        addLabel(path);
                     }
-                };
-                this.appendChild(input);
-                input.focus();
-            };
+                }
+            }
+        });
 
-            tooltip.getInnerDiv().innerHTML = "";
-            tooltip.getInnerDiv().appendChild(div);
-            tooltip.showAt(x, y, "right", "center");
+        drawflow.on('contextmenu', function(e) {
+            setTimeout(function(){
+                for (var key in nodes) {
+                    if (nodes.hasOwnProperty(key)){
+                        var node = nodes[key];
+                        var parentNode = node.parentNode.parentNode;
+                        var deleteDiv = parentNode.getElementsByClassName("drawflow-delete")[0];
+                        if (deleteDiv){
+                            me.onContextMenu(node);
+                            parentNode.removeChild(deleteDiv);
+                            deleteDiv = document.createElement("div");
+                            deleteDiv.className = "drawflow-delete2";
+                            parentNode.appendChild(deleteDiv);
+                            deleteDiv.innerHTML = "&#x2715";
+                            deleteDiv.onclick = function(){
+                                var div = this;
+                                confirm("Are you sure you want to delete this node?",{
+                                    leftButton: {label: "Yes", value: true},
+                                    rightButton: {label: "No", value: false},
+                                    callback: function(yes){
+                                        if (yes){
+                                            drawflow.removeNodeId(div.parentNode.id);
+                                        }
+                                        else{
+                                            div.parentNode.removeChild(div);
+                                        }
+                                    }
+                                });
+
+                            };
+                        }
+                    }
+                }
+            },200);
         });
     };
 
@@ -828,7 +1020,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
                 var type = node.type;
-                console.log(node.name, node.type);
                 if (type===nodeType){
                     id++;
                 }
@@ -843,23 +1034,31 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         i.className = icon;
 
 
+      //Set input and outputs
         var numInputs = 0;
         var numOutputs = 0;
+        for (var x=0; x<config.nodes.length; x++){
+            var n = config.nodes[x];
+            if (n.label===nodeType){
 
-        switch (nodeType) {
-            case "input":
-                numOutputs = 1;
+
+                if (x==0){ //is first node type (e.g. input)
+                    numOutputs = 1;
+                }
+                else if (x==config.nodes.length-1){ //is last node type (e.g. output)
+                    numInputs = 1;
+                }
+                else{ //middleman (e.g. distributor)
+                    numInputs = 1;
+                    numOutputs = 1;
+                }
+
                 break;
-            case "output":
-                numInputs = 1;
-                break;
-            default:
-                numInputs = 1;
-                numOutputs = 1;
-                break;
+            }
         }
 
 
+      //Create node
         var node = createNode({
             name: name,
             type: nodeType,
@@ -884,17 +1083,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             editNode(this);
         };
     };
-
+    
 
   //**************************************************************************
-  //** createNode
+  //** createDrawflowNode
   //**************************************************************************
-    var createNode = function(node){
-
-      //Create content div for a drawflow node
-        var nodeID = new Date().getTime();
+    var createDrawflowNode = function(node){
         var div = document.createElement("div");
-        div.id = "drawflow_node_"+nodeID;
+        
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
@@ -911,6 +1107,26 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             }
         }
         div.appendChild(body);
+        return div;
+    };
+    
+
+  //**************************************************************************
+  //** createNode
+  //**************************************************************************
+    var createNode = function(node){
+
+      //Create content div for a drawflow node
+        var div;
+        if (config.renderers.drawflowNodes){
+            div = config.renderers.drawflowNodes(node);
+        }
+        else{
+            div = createDrawflowNode(node);
+        }
+        var nodeID = new Date().getTime();
+        div.id = "drawflow_node_"+nodeID;
+
 
 
       //Create drawflow node
@@ -1088,15 +1304,115 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** getLinkEditor
+  //**************************************************************************
+    this.getLinkEditor = function(){
+        if (!linkEditor){
+
+            var link = {};
+
+            linkEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Link",
+                width: 400,
+                valign: "top",
+                modal: true,
+                resizable: false,
+                style: config.style.window
+            });
+
+
+            var form = new javaxt.dhtml.Form(linkEditor.getBody(), {
+                style: config.style.form,
+                items: [
+                    {
+                        name: "quantity",
+                        label: "Quantity",
+                        type: "text"
+                    }
+                ],
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
+                            linkEditor.close();
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
+                            var inputs = form.getData();
+                            var quantity = inputs.quantity;
+                            if (quantity) quantity = parseFloat(quantity.trim());
+                            if (isNaN(quantity)) {
+                                warn("Quantity is required", quantityField);
+                                return;
+                            }
+
+                            quantities[link.from + "->" + link.to] = quantity;
+                            link.label.select("text").text(quantity);
+
+
+                            linkEditor.close();
+                            me.onChange();
+                        }
+                    }
+                ]
+            });
+
+            var quantityField = form.findField("quantity");
+
+
+            linkEditor.update = function(label){
+                form.clear();
+                if (quantityField.resetColor) quantityField.resetColor();
+
+                var connection = label.node().parentNode;
+                var arr = getInputOutputID(connection);
+
+                link.from = arr[0];
+                link.to = arr[1];
+                link.label = label;
+
+                var quantity = quantities[link.from + "->" + link.to];
+                quantityField.setValue(quantity);
+
+
+            };
+        }
+        return linkEditor;
+    };
+
+
+  //**************************************************************************
+  //** editLink
+  //**************************************************************************
+    var editLink = function(label){
+        var editor = me.getLinkEditor();
+        editor.update(label);
+        editor.show();
+    };
+
+
+  //**************************************************************************
+  //** removeLink
+  //**************************************************************************
+    var removeLink = function(label){
+        var connection = label.node().parentNode;
+        var arr = getInputOutputID(connection);
+        drawflow.removeSingleConnection(arr[0],arr[1],'output_1','input_1');
+    };
+
+
+  //**************************************************************************
   //** createButton
   //**************************************************************************
-    var createButton = function(nodeType, icon, title){
+    var createButton = function(icon, label){
 
 
       //Create button
         var btn = new javaxt.dhtml.Button(toolbar, {
             display: "table",
-            disabled: true,
+            disabled: false,
             style: {
                 button: "drawflow-toolbar-button",
                 select: "drawflow-toolbar-button-selected",
@@ -1108,9 +1424,9 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
       //Add drawflow specific properties
-        btn.el.dataset["node"] = nodeType;
+        btn.el.dataset["node"] = label;
         btn.el.dataset["icon"] = icon;
-        btn.el.dataset["title"] = title;
+        btn.el.dataset["title"] = label;
         btn.el.draggable = true;
         btn.el.ondragstart = function(e){
             if (btn.isDisabled()){
@@ -1161,7 +1477,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         };
 
 
-        button[nodeType] = btn;
+        button[label] = btn;
         return btn;
     };
 
@@ -1197,13 +1513,19 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** updateSankey
   //**************************************************************************
     var updateSankey = function(){
+        var data = me.getSankeyData();
+        sankeyChart.update(config.sankey.style, data);
+    };
 
+
+  //**************************************************************************
+  //** getSankeyData
+  //**************************************************************************  
+    this.getSankeyData = function(){
         var data = {
             nodes: [],
             links: []
         };
-
-
         for (var key in nodes) {
             if (nodes.hasOwnProperty(key)){
                 var node = nodes[key];
@@ -1220,8 +1542,6 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                     if (inputs.hasOwnProperty(k)){
                         var n = nodes[k];
                         var v = quantities[k + "->" + key];
-                        //console.log(k + "->" + key, );
-
                         data.links.push({
                             source: n.name,
                             target: name,
@@ -1231,9 +1551,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 }
             }
         }
-
-
-        sankeyChart.update(config.sankey.style, data);
+        return data;
     };
 
 
@@ -1342,6 +1660,125 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         });
 
         addShowHide(toggleButton);
+    };
+
+
+  //**************************************************************************
+  //** showMenu
+  //**************************************************************************
+    this.showMenu = function(menu, target){
+
+        var numVisibleItems = 0;
+        for (var i=0; i<menu.childNodes.length; i++){
+            var menuItem = menu.childNodes[i];
+            if (menuItem.isVisible()) numVisibleItems++;
+        }
+        if (numVisibleItems===0){
+            return;
+        }
+
+        var callout = me.getCallout();
+        var innerDiv = callout.getInnerDiv();
+        while (innerDiv.firstChild) {
+            innerDiv.removeChild(innerDiv.lastChild);
+        }
+        innerDiv.appendChild(menu);
+
+        var rect = javaxt.dhtml.utils.getRect(target);
+        var x = rect.x + (rect.width/2);
+        var y = rect.y + rect.height + 3;
+        callout.showAt(x, y, "below", "right");
+    };
+
+
+
+  //**************************************************************************
+  //** getLinkMenu
+  //**************************************************************************
+    var getLinkMenu = function(){
+        if (!linkMenu){
+            var div = document.createElement("div");
+            div.className = "app-menu";
+            div.appendChild(createMenuOption("Edit Quantity", "edit", function(){
+                editLink(linkMenu.label);
+            }));
+            div.appendChild(createMenuOption("Delete Link", "times", function(){
+                removeLink(linkMenu.label);
+            }));
+            linkMenu = div;
+        }
+        return linkMenu;
+    };
+
+
+  //**************************************************************************
+  //** createMenuOption
+  //**************************************************************************
+    var createMenuOption = function(label, icon, onClick){
+        var div = document.createElement("div");
+        div.className = "app-menu-item noselect";
+        if (icon && icon.length>0){
+            div.innerHTML = '<i class="fas fa-' + icon + '"></i>' + label;
+        }
+        else{
+            div.innerHTML = label;
+        }
+        div.label = label;
+        div.onclick = function(){
+            callout.hide();
+            onClick.apply(this, [label]);
+        };
+        addShowHide(div);
+        return div;
+    };
+
+
+  //**************************************************************************
+  //** getCallout
+  //**************************************************************************
+    this.getCallout = function(){
+        if (callout){
+            var parent = callout.el.parentNode;
+            if (!parent){
+                callout.el.innerHTML = "";
+                callout = null;
+            }
+        }
+        if (!callout) callout = new javaxt.dhtml.Callout(document.body,{
+            style: config.style.callout
+        });
+        return callout;
+    };
+
+
+
+  //**************************************************************************
+  //** onSVGRender
+  //**************************************************************************
+    var onSVGRender = function(el, callback){
+
+        var bbox = el.getBBox();
+        var w = bbox.width;
+        if (w===0 || isNaN(w)){
+            var timer;
+
+            var checkWidth = function(){
+                var bbox = el.getBBox();
+                var w = bbox.width;
+                if (w===0 || isNaN(w)){
+                    timer = setTimeout(checkWidth, 100);
+                }
+                else{
+                    clearTimeout(timer);
+                    if (callback) callback.apply(el, [bbox]);
+                }
+            };
+
+            timer = setTimeout(checkWidth, 100);
+        }
+        else{
+            if (callback) callback.apply(el, [bbox]);
+        }
     };
 
 

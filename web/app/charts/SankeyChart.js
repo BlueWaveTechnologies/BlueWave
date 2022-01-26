@@ -35,17 +35,11 @@ bluewave.charts.SankeyChart = function(parent, config) {
         config = merge(config, defaultConfig);
 
 
-        if (parent instanceof d3.selection){
-            svg = parent;
-        }
-        else if (parent instanceof SVGElement) {
-            svg = d3.select(parent);
-        }
-        else{
-            svg = d3.select(parent).append("svg");
-        }
+        initChart(parent, function(s, g){
+            svg = s;
+            sankeyArea = g;
+        });
 
-        sankeyArea = svg.append("g");
     };
 
 
@@ -108,6 +102,35 @@ bluewave.charts.SankeyChart = function(parent, config) {
             var getColor = d3.scaleOrdinal(d3.schemeCategory10);
 
 
+
+          //Add the links
+            var link = sankeyArea
+              .append("g")
+              .selectAll(".link")
+              .data(graph.links)
+              .enter()
+              .append("path")
+              .attr("class", "sankey-link")
+              .attr("d", d3.sankeyLinkHorizontal())
+              .attr("stroke-width", function (d) {
+                return d.width;
+              })
+              .style("stroke-opacity", function (d) {
+                return (d.opacity=config.links.opacity);
+              })
+              .style("stroke", function (d) {
+                  return config.links.color;
+              })
+              .on('mouseover', function(d){
+                  var opacity = Math.min(1, config.links.opacity*1.3);
+                  d3.select(this).style("stroke-opacity", opacity);
+              })
+              .on('mouseout', function(d){
+                d3.select(this).style("stroke-opacity", d.opacity);
+              });
+
+
+
           //Add the nodes
             var node = sankeyArea
               .append("g")
@@ -145,33 +168,15 @@ bluewave.charts.SankeyChart = function(parent, config) {
 
 
 
-          //Add the links
-            var link = sankeyArea
-              .append("g")
-              .selectAll(".link")
-              .data(graph.links)
-              .enter()
-              .append("path")
-              .attr("class", "sankey-link")
-              .attr("d", d3.sankeyLinkHorizontal())
-              .attr("stroke-width", function (d) {
-                return d.width;
-              })
-              .style("stroke-opacity", function (d) {
-                return (d.opacity=config.links.opacity);
-              })
-              .style("stroke", function (d) {
-                  var color = config.links.color;
-                  if (color==="source") return d.source.color;
-                  return color;
-              })
-              .on('mouseover', function(d){
-                  var opacity = Math.min(1, config.links.opacity*1.3);
-                  d3.select(this).style("stroke-opacity", opacity);
-              })
-              .on('mouseout', function(d){
-                d3.select(this).style("stroke-opacity", d.opacity);
-              });
+          //Update link color AFTER node color is set
+            if (config.links.color==="source"){
+                link.each(function() {
+                    var path = d3.select(this);
+                    path.style("stroke", function (d) {
+                        return d.source.color;
+                    });
+                });
+            }
 
 
 
@@ -212,6 +217,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
+    var initChart = bluewave.chart.utils.initChart;
 
     init();
 };

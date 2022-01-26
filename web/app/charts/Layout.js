@@ -19,9 +19,9 @@ bluewave.charts.Layout = function(parent, config) {
     };
     var titleDiv, body;
     var mainDiv;
-
     var width = 350; //360
     var height = 250; //260
+
     var mask;
 
 
@@ -121,7 +121,6 @@ bluewave.charts.Layout = function(parent, config) {
                 if (inputs.hasOwnProperty(key)){
                     var input = inputs[key];
 
-
                     var dashboardItem = createDashboardItem(mainDiv,{
                         width: width,
                         height: height,
@@ -132,9 +131,6 @@ bluewave.charts.Layout = function(parent, config) {
 
                     var div = dashboardItem.el;
                     addResizeHandle(div);
-
-
-
                     div.inputID = key;
 
 
@@ -158,8 +154,8 @@ bluewave.charts.Layout = function(parent, config) {
 
           //Instantiate Packery
             var packery = new Packery(mainDiv, {
-                columnWidth: 25,
-                gutter: 25,
+                columnWidth: 5,
+                gutter: 5,
                 initLayout: false // disable initial layout
             });
 
@@ -195,10 +191,45 @@ bluewave.charts.Layout = function(parent, config) {
     };
 
 
+
   //**************************************************************************
   //** getConfig
   //**************************************************************************
     this.getConfig = function(){
+
+      //Compute bounding coordinates of all the dashboard items
+        var minX = Number.MAX_VALUE;
+        var maxX = 0;
+        var minY = Number.MAX_VALUE;
+        var maxY = 0;
+        for (var i in mainDiv.childNodes){
+            var dashboardItem = mainDiv.childNodes[i];
+            if (dashboardItem.nodeType===1){
+                var rect = javaxt.dhtml.utils.getRect(dashboardItem);
+                minX = Math.min(rect.left, minX);
+                maxX = Math.max(rect.right, maxX);
+                minY = Math.min(rect.top, minY);
+                maxY = Math.max(rect.bottom, maxY);
+            }
+        }
+        var width = maxX - minX;
+        var height = maxY - minY;
+
+
+      //Compute max width/height as a ratio of the bounding coordinate
+        var maxWidth, maxHeight;
+        if (width>=height){
+            maxWidth = 1;
+            maxHeight = height/width;
+        }
+        else{
+            maxHeight = 1;
+            maxWidth = width/height;
+        }
+
+
+
+      //Generate layout config
         var layout = {};
         for (var i in mainDiv.childNodes){
             var dashboardItem = mainDiv.childNodes[i];
@@ -217,12 +248,21 @@ bluewave.charts.Layout = function(parent, config) {
                 var y = parseInt(dashboardItem.style.top);
                 if (isNaN(y)) y = rect.y;
 
+                var img = dashboardItem.getElementsByTagName("img")[0];
+
                 layout[dashboardItem.inputID] = {
                     x: x,
                     y: y,
                     w: w,
-                    h: h
+                    h: h,
+                    left: round(((rect.x-minX)/width)*maxWidth*100, 4)+"%",
+                    top: round(((rect.y-minY)/height)*maxHeight*100, 4)+"%",
+                    width: round((rect.width/width)*maxWidth*100, 4)+"%",
+                    height: round((rect.height/height)*maxHeight*100, 4)+"%",
+                    imageWidth: img.naturalWidth,
+                    imageHeight: img.naturalHeight
                 };
+
             }
         }
         return layout;
@@ -550,6 +590,7 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var round = javaxt.dhtml.utils.round;
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
     var createDashboardItem = bluewave.utils.createDashboardItem;
