@@ -11,9 +11,11 @@ import java.nio.channels.WritableByteChannel;
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
+import javaxt.utils.ThreadPool;
 import javaxt.express.*;
 import javaxt.sql.*;
 import javaxt.json.*;
+
 
 
 //******************************************************************************
@@ -25,6 +27,41 @@ import javaxt.json.*;
  ******************************************************************************/
 
 public class DocumentService extends WebService {
+
+    private ThreadPool pool;
+
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
+    public DocumentService(){
+
+      //Start the thread pool
+        int numThreads = 20;
+        int poolSize = 1000;
+        pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                javaxt.io.File file = (javaxt.io.File) obj;
+                //console.log(file);
+
+                //TODO: check if the file is in the index
+
+                //TODO: if file is missing from index, add it
+            }
+        }.start();
+
+
+      //Add files to the index (use separate thread so the server can start without delay)
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
+                    pool.add(file);
+                }
+            }
+        }).start();
+    }
+
 
   //**************************************************************************
   //** getServiceResponse
@@ -165,6 +202,9 @@ public class DocumentService extends WebService {
 
                             inputChannel.close();
                             outputChannel.close();
+
+                          //Index the file
+                            pool.add(file);
 
                             json.set("result", "uploaded");
                         }
