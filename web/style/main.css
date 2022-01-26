@@ -265,6 +265,42 @@ body, textarea, input, select, td, th {
     font-size: 120px;
 }
 
+.dashboard-homepage .dashboard-item-settings {
+    transition: opacity .4s;
+}
+
+.dashboard-homepage .dashboard-item .fa-cog {
+    font-size: 18px;
+    color: #9a9a9a;
+}
+
+.dashboard-homepage-menu {
+    padding: 3px 2px;
+    min-width: 145px;
+}
+
+.dashboard-homepage-menu-item:hover {
+    background-color: #bee3ff;
+}
+
+.dashboard-homepage-menu-item {
+    line-height: 24px;
+    font-size: 13px;
+    padding: 0 7px 0 0;
+    white-space: nowrap;
+    color: #767676;
+}
+
+.dashboard-homepage-menu-item .fas {
+    color:#3876ad;
+    text-align:center;
+    width: 24px;
+    font-size: 16px;
+    vertical-align: middle;
+    margin-top: -3px;
+}
+
+
 .dashboard-group {
     border: 1px solid #c7c7c7;
     margin: 30px 15px 20px;
