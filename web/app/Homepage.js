@@ -15,6 +15,7 @@ bluewave.Homepage = function(parent, config) {
     var t = new Date().getTime();
     var dashboardItems = [];
     var callout;
+    var menu = {};
     var waitmask;
 
 
@@ -258,7 +259,32 @@ bluewave.Homepage = function(parent, config) {
             y = e.clientY;
             callout.dashboard = dashboard;
             callout.dashboardItem = dashboardItem;
-            callout.showAt(x, y, "below", "right");
+            if (dashboard.permissions){
+                callout.updateMenu(dashboard.permissions);
+                if (callout.hasMenuItems()){
+                    callout.showAt(x, y, "below", "right");
+                }
+            }
+            else{
+                get("dashboard/permissions?dashboardID="+dashboard.id,{
+                    success: function(permissions) {
+                        permissions = permissions[0];
+                        if (permissions.dashboardID===callout.dashboard.id){
+                            callout.dashboard.permissions = permissions.permissions;
+                            callout.updateMenu(callout.dashboard.permissions);
+                            if (callout.hasMenuItems()){
+                                callout.showAt(x, y, "below", "right");
+                            }
+                        }
+                        else{
+                            callout.hide();
+                        }
+                    },
+                    failure: function(){
+                        callout.hide();
+                    }
+                });
+            }
         };
 
 
@@ -360,8 +386,7 @@ bluewave.Homepage = function(parent, config) {
             var div = document.createElement("div");
             div.className = "dashboard-homepage-menu";
 
-
-            div.appendChild(createMenuOption("Delete", "trash", function(){
+            menu.delete = createMenuOption("Delete", "trash", function(){
                 var dashboardID = callout.dashboard.id;
                 confirm("Are you sure you want to delete this dashboard?",{
                     leftButton: {label: "Yes", value: true},
@@ -384,10 +409,31 @@ bluewave.Homepage = function(parent, config) {
                         }
                     }
                 });
-            }));
+            });
 
 
+            div.appendChild(menu.delete);
             callout.getInnerDiv().appendChild(div);
+
+
+            callout.updateMenu = function(permissions){
+                if (!permissions) permissions = "r";
+                if (permissions=="r"){
+                    menu.delete.hide();
+                }
+                else{
+                    menu.delete.show();
+                }
+            };
+
+            callout.hasMenuItems = function(){
+                for (var key in menu) {
+                    if (menu.hasOwnProperty(key)){
+                        if (menu[key].isVisible()) return true;
+                    }
+                }
+                return false;
+            };
 
         }
         return callout;
