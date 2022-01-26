@@ -17,6 +17,8 @@ bluewave.Homepage = function(parent, config) {
     var callout;
     var menu = {};
     var waitmask;
+    var groupEditor;
+    var windows = [];
 
 
   //**************************************************************************
@@ -99,33 +101,126 @@ bluewave.Homepage = function(parent, config) {
 
 
   //**************************************************************************
+  //** createGroup
+  //**************************************************************************
+    this.createGroup = function(callback){
+        me.editGroup(null, callback);
+    };
+
+
+  //**************************************************************************
+  //** editGroup
+  //**************************************************************************
+    this.editGroup = function(group, callback){
+        if (!groupEditor){
+            var win = createWindow({
+                width: 450,
+                valign: "top",
+                modal: true,
+                style: config.style.window
+            });
+
+            var form = new javaxt.dhtml.Form(win.getBody(), {
+                style: config.style.form,
+                items: [
+                    {
+                        name: "name",
+                        label: "Name",
+                        type: "text"
+                    },
+                    {
+                        name: "description",
+                        label: "Description",
+                        type: "textarea"
+                    }
+                ],
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
+                            form.clear();
+                            win.close();
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
+
+                            var inputs = form.getData();
+                            var name = inputs.name;
+                            if (name) name = name.trim();
+                            if (name==null || name==="") {
+                                warn("Name is required", form.findField("name"));
+                                return;
+                            }
+
+                            waitmask.show();
+                            checkGroupName(name, function(isValid){
+                                waitmask.hide();
+                                if (!isValid){
+                                    warn("Name is not unique", form.findField("name"));
+                                }
+                                else{
+                                    win.close();
+                                    groupEditor.onSubmit(inputs);
+                                }
+                            });
+                        }
+                    }
+                ]
+
+            });
+
+            groupEditor = form;
+            groupEditor.show = function(){
+                win.show();
+            };
+            groupEditor.setTitle = function(title){
+                win.setTitle(title);
+            };
+        }
+
+        groupEditor.clear();
+        var nameField = groupEditor.findField("name");
+        if (nameField.resetColor) nameField.resetColor();
+        if (group){
+            groupEditor.setTitle("Edit Group");
+            if (group.name) groupEditor.setValue("name", group.name);
+        }
+        else{
+            groupEditor.setTitle("New Group");
+        }
+
+        groupEditor.onSubmit = function(inputs){
+            if (!group) group = {};
+            for (var key in inputs) {
+                if (inputs.hasOwnProperty(key)){
+                    group[key] = inputs[key];
+                }
+            }
+
+
+
+
+            getGroups(function(groups){
+                groups.insert(group, 0);
+                saveGroup(group, refresh);
+            });
+
+        };
+
+        waitmask.hide();
+        groupEditor.show();
+    };
+
+
+  //**************************************************************************
   //** refresh
   //**************************************************************************
     var refresh = function(){
         dashboardItems = [];
         mainDiv.innerHTML = "";
-        var dashboards = config.dataStores["Dashboard"];
-        var groups = config.dataStores["DashboardGroup"];
-
-        if (dashboards && groups){
-            render();
-        }
-        else{
-            get("dashboard/groups",{
-                success: function(groups) {
-                    groups = new javaxt.dhtml.DataStore(groups);
-                    config.dataStores["DashboardGroup"] = groups;
-                    render();
-                },
-                failure: function(){
-                    if (!document.user){ //standalone mode
-                        groups = new javaxt.dhtml.DataStore(groups);
-                        config.dataStores["DashboardGroup"] = groups;
-                        render();
-                    }
-                }
-            });
-        }
+        getGroups(render);
     };
 
 
@@ -216,6 +311,7 @@ bluewave.Homepage = function(parent, config) {
         var title = dashboard.name;
 
 
+      //Create dashboardItem
         var dashboardItem = createDashboardItem(parent, {
             width: 360,
             height: 230,
@@ -226,6 +322,13 @@ bluewave.Homepage = function(parent, config) {
         dashboardItems.push(dashboardItem);
 
 
+      //Make the dashboardItem draggable
+        dashboardItem.el.draggable = true;
+        dashboardItem.el.dataset["dashboard"] = dashboard.id;
+        dashboardItem.el.ondragstart = onDragStart;
+
+
+      //Update dashboardItem
         dashboardItem.innerDiv.style.cursor = "pointer";
         dashboardItem.innerDiv.style.textAlign = "center";
         dashboardItem.innerDiv.onclick = function(){
@@ -233,6 +336,8 @@ bluewave.Homepage = function(parent, config) {
             me.onClick(dashboardItem);
         };
 
+
+      //Show/hide callout and setting wheel using the mouse over and out events
         dashboardItem.settings.style.opacity = 0;
         dashboardItem.el.onmouseover = function(){
             dashboardItem.settings.style.opacity = 1;
@@ -251,6 +356,9 @@ bluewave.Homepage = function(parent, config) {
             }
             dashboardItem.settings.style.opacity = 0;
         };
+
+
+      //Watch for settings onClick events
         dashboardItem.settings.onclick = function(e){
             var callout = getCallout();
             var rect = javaxt.dhtml.utils.getRect(this);
@@ -359,9 +467,14 @@ bluewave.Homepage = function(parent, config) {
   //** createGroupBox
   //**************************************************************************
     var createGroupBox = function(group){
+
         var div = document.createElement("div");
         div.className = "dashboard-group";
         div.style.position = "relative";
+        div.addEventListener('dragover', onDragOver, false);
+        div.addEventListener('drop', onDrop, false);
+        div.group = group;
+
 
         var label = document.createElement("div");
         label.className = "dashboard-group-label";
@@ -371,6 +484,85 @@ bluewave.Homepage = function(parent, config) {
 
         mainDiv.appendChild(div);
         return div;
+    };
+
+
+  //**************************************************************************
+  //** onDragStart
+  //**************************************************************************
+    var onDragStart = function(e) {
+        e.dataTransfer.setData(
+            "dashboard",
+            e.target.getAttribute("data-dashboard")
+        );
+    };
+
+
+  //**************************************************************************
+  //** onDragOver
+  //**************************************************************************
+  /** Called when the client drags something over a groupbox
+   */
+    var onDragOver = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy
+    };
+
+
+  //**************************************************************************
+  //** onDrop
+  //**************************************************************************
+  /** Called when the client drops something onto a groupbox
+   */
+    var onDrop = function(e){
+        e.stopPropagation();
+        e.preventDefault();
+
+
+      //Get dashboard ID from the data transfer
+        var dashboardID = parseInt(e.dataTransfer.getData("dashboard"));
+
+
+      //Get orginal and new groups
+        var groupBox = this;
+        var newGroup = groupBox.group;
+        var orgGroup, idx;
+        config.dataStores["DashboardGroup"].forEach((group)=>{
+            if (group.dashboards){
+                idx = -1;
+                group.dashboards.forEach((id, i)=>{
+                   if (id===dashboardID) idx = i;
+                });
+                if (idx>-1){
+                    orgGroup = group;
+                    return true;
+                }
+            }
+        });
+
+
+      //Do some sanity checking to prevent dragging/dropping into the same group
+        if (!orgGroup) return;
+        if (orgGroup.id===newGroup.id && !isNaN(orgGroup.id) && !isNaN(newGroup.id)) return;
+        if (orgGroup===newGroup) return;
+
+
+      //Remove dashboard from it's original group
+        orgGroup.dashboards.splice(idx, 1);
+
+
+      //Add dashboard to the new group
+        if (!newGroup.dashboards) newGroup.dashboards = [];
+        newGroup.dashboards.push(dashboardID);
+
+
+
+        saveGroup(newGroup, function(){
+            saveGroup(orgGroup, function(){
+                refresh();
+            });
+        });
     };
 
 
@@ -411,8 +603,13 @@ bluewave.Homepage = function(parent, config) {
                 });
             });
 
+            menu.move = createMenuOption("Move", "share", function(){
+
+            });
+
 
             div.appendChild(menu.delete);
+            div.appendChild(menu.move);
             callout.getInnerDiv().appendChild(div);
 
 
@@ -463,10 +660,121 @@ bluewave.Homepage = function(parent, config) {
 
 
   //**************************************************************************
+  //** getGroups
+  //**************************************************************************
+    var getGroups = function(callback){
+
+        var createGroups = function(groups){
+            var dashboards = config.dataStores["Dashboard"];
+            var myDashboards = [];
+            var sharedDashboards = [];
+            for (var i=0; i<dashboards.length; i++){
+                var dashboard = dashboards.get(i);
+                if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
+                    sharedDashboards.push(dashboard.id);
+                }
+                else{
+                    myDashboards.push(dashboard.id);
+                }
+            }
+            if (myDashboards.length>0){
+                if (!groups) groups = new javaxt.dhtml.DataStore();
+                groups.add({
+                    name: "My Dashboards",
+                    dashboards: myDashboards
+                });
+                groups.add({
+                    name: "Shared Dashboards",
+                    dashboards: sharedDashboards
+                });
+                return groups;
+            }
+        };
+
+        var groups = config.dataStores["DashboardGroup"];
+        if (groups){
+            if (groups.length==0) createGroups(groups);
+            callback.apply(me,[groups]);
+            return;
+        }
+
+        groups = createGroups();
+        config.dataStores["DashboardGroup"] = groups;
+        get("dashboard/groups",{
+            success: function(arr) {
+                arr.forEach((g)=>{
+                    groups.add(g);
+                });
+                if (callback) callback.apply(me,[groups]);
+            },
+            failure: function(){
+                if (!document.user){ //standalone mode
+                    if (callback) callback.apply(me,[groups]);
+                }
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** saveGroup
+  //**************************************************************************
+    var saveGroup = function(group, callback){
+
+        if (callback) callback.apply(me,[]);
+
+        /*
+        post("dashboard/group", group, {
+            success: function(){},
+            failure: function(){}
+        });
+        */
+    };
+
+
+  //**************************************************************************
+  //** checkGroupName
+  //**************************************************************************
+    var checkGroupName = function(name, callback){
+        get("dashboard/groups?fields=id,name",{
+            success: function(groups) {
+                var isValid = true;
+                for (var i in groups){
+                    var group = groups[i];
+                    if (group.name.toLowerCase()===name.toLowerCase()){
+                        //if (group.id!==id){
+                            isValid = false;
+                            break;
+                        //}
+                    }
+                }
+                callback.apply(me,[isValid]);
+            },
+            failure: function(request){
+                alert(request);
+                callback.apply(me,[false]);
+            }
+        });
+    };
+
+
+
+  //**************************************************************************
+  //** createWindow
+  //**************************************************************************
+    var createWindow = function(config){
+        var win = new javaxt.dhtml.Window(document.body, config);
+        windows.push(win);
+        return win;
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var get = bluewave.utils.get;
     var del = javaxt.dhtml.utils.delete;
+    var post = javaxt.dhtml.utils.post;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
 
