@@ -16,10 +16,18 @@ import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexFileNames;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
@@ -27,6 +35,7 @@ import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import bluewave.Config;
+import javaxt.io.File;
 import javaxt.json.JSONObject;
 import javaxt.utils.Console;
 
@@ -34,11 +43,13 @@ public class FileIndexService {
 
     private String indexDirectoryPath;
     private Console console = new javaxt.utils.Console();
-    private static Object monitor = new Object();
+    private static Object wmonitor = new Object();
+    private static Object smonitor = new Object();
     private static IndexWriter _indexWriter;
+    private static IndexSearcher _indexSearcher;
 
     public IndexWriter instanceOfIndexWriter() {
-        synchronized (monitor) {
+        synchronized (wmonitor) {
             if (_indexWriter == null) {
                 JSONObject config = Config.get("webserver").toJSONObject();
                 javaxt.io.Directory jobDir = null;
@@ -63,6 +74,31 @@ public class FileIndexService {
             }
         }
         return _indexWriter;
+    }
+
+    public IndexSearcher instanceOfIndexSearcher() {
+        synchronized (smonitor) {
+            if (_indexSearcher == null) {
+                JSONObject config = Config.get("webserver").toJSONObject();
+                javaxt.io.Directory jobDir = null;
+                if (config.has("indexDir")) {
+                    String dir = config.get("indexDir").toString().trim();
+                    if (dir.length() > 0) {
+                        indexDirectoryPath = dir;
+                        jobDir = new javaxt.io.Directory(dir);
+                        jobDir.create();
+                    }
+                }
+                try {
+                    org.apache.lucene.store.Directory dir =
+                            FSDirectory.open(Paths.get(indexDirectoryPath));
+                    _indexSearcher = new IndexSearcher(DirectoryReader.open(dir));
+                } catch (Exception e) {
+                    console.log("ERROR: " + e);
+                }
+            }
+        }
+        return _indexSearcher;
     }
 
     public void indexDocument(javaxt.io.File file) {
@@ -97,7 +133,9 @@ public class FileIndexService {
             // field that is indexed (i.e. searchable), but don't tokenize
             // the field into separate words and don't index term frequency
             // or positional information:
-            Field pathField = new StringField("path", file.toString(), Field.Store.YES);
+            console.log("indexDoc: path: " + file.getFileName().toString());
+            Field pathField =
+                    new StringField("path", file.getFileName().toString(), Field.Store.YES);
             doc.add(pathField);
 
             // Add the last modified date of the file a field named "modified".
@@ -142,4 +180,45 @@ public class FileIndexService {
         }
     }
 
+    public boolean hasDocumentBeenIndexed(String fileName) {
+        console.log("hasDocumentBeenIndexed: " + fileName);
+        if (FileIndexService.indexExists()) {
+            IndexSearcher searcher = instanceOfIndexSearcher();
+
+            if (searcher != null) {
+                try {
+                    TopDocs results = searcher.search(new TermQuery(new Term("path", fileName)), 1);
+                    console.log("results: " + results.totalHits);
+                    for (int i = 0; i < results.scoreDocs.length; i++) {
+                        ScoreDoc tempDoc = results.scoreDocs[i];
+                        console.log("docId: " + tempDoc.doc + " doc score: " + tempDoc.score);
+                    }
+                    if (results.totalHits.value > 0) {
+                        return true;
+                    }
+                } catch (Exception e) {
+
+                }
+            } else {
+                console.log("hasDocumentBeenIndexed: searcher == null");
+            }
+        }
+        return false;
+    }
+
+    public static boolean indexExists() {
+        try {
+            JSONObject config = Config.get("webserver").toJSONObject();
+            if (config.has("indexDir")) {
+                String dir = config.get("indexDir").toString().trim();
+                if (dir != null && dir.length() > 0 && new javaxt.io.Directory(dir).exists()) {
+                    Directory directory = FSDirectory.open(Paths.get(dir));
+                    return DirectoryReader.indexExists(directory);
+                }
+            }
+        } catch (Exception e) {
+            new Console().log("indexExists: " + e);
+        }
+        return false;
+    }
 }
