@@ -25,16 +25,16 @@ public class Contact extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
     public Contact(){
-        super("application.contact", new java.util.HashMap<String, String>() {{
+        super("application.contact", java.util.Map.ofEntries(
             
-            put("firstName", "first_name");
-            put("lastName", "last_name");
-            put("fullName", "full_name");
-            put("gender", "gender");
-            put("dob", "dob");
-            put("info", "info");
+            java.util.Map.entry("firstName", "first_name"),
+            java.util.Map.entry("lastName", "last_name"),
+            java.util.Map.entry("fullName", "full_name"),
+            java.util.Map.entry("gender", "gender"),
+            java.util.Map.entry("dob", "dob"),
+            java.util.Map.entry("info", "info")
 
-        }});
+        ));
         
     }
 
