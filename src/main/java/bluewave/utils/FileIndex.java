@@ -34,33 +34,25 @@ import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import bluewave.Config;
-import javaxt.io.File;
-import javaxt.json.JSONObject;
 import static javaxt.utils.Console.console;
 
 public class FileIndex {
 
-    private static String indexDirectoryPath;
+    private String indexDirectoryPath;
 
-    private static Object wmonitor = new Object();
-    private static Object smonitor = new Object();
-    private static IndexWriter _indexWriter;
-    private static IndexSearcher _indexSearcher;
+    private Object wmonitor = new Object();
+    private Object smonitor = new Object();
+    private IndexWriter _indexWriter;
+    private IndexSearcher _indexSearcher;
 
-    public static IndexWriter instanceOfIndexWriter() {
+    public FileIndex(String path){
+        indexDirectoryPath = path;
+    }
+
+
+    private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
             if (_indexWriter == null) {
-                JSONObject config = Config.get("webserver").toJSONObject();
-                javaxt.io.Directory jobDir = null;
-                if (config.has("indexDir")) {
-                    String dir = config.get("indexDir").toString().trim();
-                    if (dir.length() > 0) {
-                        indexDirectoryPath = dir;
-                        jobDir = new javaxt.io.Directory(dir);
-                        jobDir.create();
-                    }
-                }
                 try {
                     org.apache.lucene.store.Directory dir =
                             FSDirectory.open(Paths.get(indexDirectoryPath));
@@ -76,19 +68,9 @@ public class FileIndex {
         return _indexWriter;
     }
 
-    public static IndexSearcher instanceOfIndexSearcher() {
+    public IndexSearcher instanceOfIndexSearcher() {
         synchronized (smonitor) {
             if (_indexSearcher == null) {
-                JSONObject config = Config.get("webserver").toJSONObject();
-                javaxt.io.Directory jobDir = null;
-                if (config.has("indexDir")) {
-                    String dir = config.get("indexDir").toString().trim();
-                    if (dir.length() > 0) {
-                        indexDirectoryPath = dir;
-                        jobDir = new javaxt.io.Directory(dir);
-                        jobDir.create();
-                    }
-                }
                 try {
                     org.apache.lucene.store.Directory dir =
                             FSDirectory.open(Paths.get(indexDirectoryPath));
@@ -101,7 +83,7 @@ public class FileIndex {
         return _indexSearcher;
     }
 
-    public static void indexDocument(javaxt.io.File file) {
+    public void addFile(javaxt.io.File file) {
         try {
 
             Path path = file.toFile().toPath();
@@ -180,9 +162,10 @@ public class FileIndex {
         }
     }
 
-    public static boolean hasDocumentBeenIndexed(String fileName) {
+    public boolean hasDocumentBeenIndexed(String fileName) {
         console.log("hasDocumentBeenIndexed: " + fileName);
-        if (FileIndex.indexExists()) {
+
+        if (indexExists()) {
             IndexSearcher searcher = instanceOfIndexSearcher();
 
             if (searcher != null) {
@@ -206,16 +189,10 @@ public class FileIndex {
         return false;
     }
 
-    public static boolean indexExists() {
+    private boolean indexExists() {
         try {
-            JSONObject config = Config.get("webserver").toJSONObject();
-            if (config.has("indexDir")) {
-                String dir = config.get("indexDir").toString().trim();
-                if (dir != null && dir.length() > 0 && new javaxt.io.Directory(dir).exists()) {
-                    Directory directory = FSDirectory.open(Paths.get(dir));
-                    return DirectoryReader.indexExists(directory);
-                }
-            }
+            Directory directory = FSDirectory.open(Paths.get(indexDirectoryPath));
+            return DirectoryReader.indexExists(directory);
         } catch (Exception e) {
             console.log("indexExists: " + e);
         }

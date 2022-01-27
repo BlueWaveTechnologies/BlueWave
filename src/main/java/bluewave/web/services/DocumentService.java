@@ -37,13 +37,16 @@ public class DocumentService extends WebService {
   //**************************************************************************
     public DocumentService(){
 
+        FileIndex index = new FileIndex(getUploadDir().toString());
+
+
       //Start the thread pool
         int numThreads = 20;
         int poolSize = 1000;
         pool = new ThreadPool(numThreads, poolSize){
             public void process(Object obj){
                 javaxt.io.File file = (javaxt.io.File) obj;
-                FileIndex.indexDocument(file);
+                index.addFile(file);
 
 
                 //TODO: check if the file is in the index
