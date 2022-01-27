@@ -45,6 +45,7 @@ bluewave.Homepage = function(parent, config) {
       //Add listeners to the "Dashboard" store
         var dashboards = config.dataStores["Dashboard"];
         dashboards.addEventListener("add", function(dashboard){
+            deleteGroupStore();
             refresh();
         }, me);
 
@@ -54,6 +55,7 @@ bluewave.Homepage = function(parent, config) {
         }, me);
 
         dashboards.addEventListener("remove", function(dashboard){
+            deleteGroupStore();
             refresh();
         }, me);
 
@@ -910,8 +912,7 @@ bluewave.Homepage = function(parent, config) {
         waitmask.show();
         del("dashboard/group/"+group.id, {
             success: function(){
-                config.dataStores["DashboardGroup"].destroy();
-                delete config.dataStores["DashboardGroup"];
+                deleteGroupStore();
                 waitmask.hide();
                 refresh();
             },
@@ -920,6 +921,20 @@ bluewave.Homepage = function(parent, config) {
                 waitmask.hide();
             }
         });
+    };
+
+
+  //**************************************************************************
+  //** deleteGroupStore
+  //**************************************************************************
+  /** Destroys the DashboardGroup store. Required for the refresh method to
+   *  work correctly.
+   */
+    var deleteGroupStore = function(){
+        if (config.dataStores["DashboardGroup"]){
+            config.dataStores["DashboardGroup"].destroy();
+            delete config.dataStores["DashboardGroup"];
+        }
     };
 
 
