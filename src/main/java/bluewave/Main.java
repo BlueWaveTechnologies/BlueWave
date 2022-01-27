@@ -34,7 +34,7 @@ public class Main {
    */
     public static void main(String[] arr) throws Exception {
         HashMap<String, String> args = console.parseArgs(arr);
-    
+
 
       //Get jar file and schema
         Jar jar = new Jar(Main.class);
@@ -244,7 +244,7 @@ public class Main {
         return pw;
     }
 
-    
+
   //**************************************************************************
   //** importData
   //**************************************************************************
@@ -254,10 +254,10 @@ public class Main {
             importPremier(args);
         }
         else if (str.equalsIgnoreCase("Imports")){
-            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));            
+            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
             //imports.exportSummary();
             //imports.removeDuplicateEstablishments();
-        }     
+        }
         else if (str.equalsIgnoreCase("Establishments")){
             Neo4J database = Config.getGraph(null);
             Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
@@ -271,7 +271,7 @@ public class Main {
             }
         }
     }
-    
+
 
   //**************************************************************************
   //** importFile
@@ -305,14 +305,14 @@ public class Main {
                 keys[i] = Integer.parseInt(arr[i]);
             }
         }
-        
-        
+
+
       //Get number of threads
         String numThreads = args.get("-threads");
         if (numThreads==null) numThreads = args.get("-t");
         if (numThreads==null) numThreads = "1";
 
-        
+
       //Import file
         Neo4J graph = Config.getGraph(null);
         if (fileType.equals("csv")){
@@ -324,8 +324,8 @@ public class Main {
         }
         graph.close();
     }
-    
-    
+
+
   //**************************************************************************
   //** importPremier
   //**************************************************************************
@@ -333,13 +333,13 @@ public class Main {
         String localPath = args.get("-path");
         javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
         if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
-        
+
         Neo4J graph = Config.getGraph(null);
         Premier.importShards(dir, graph);
         graph.close();
     }
-    
-    
+
+
   //**************************************************************************
   //** delete
   //**************************************************************************
@@ -441,16 +441,21 @@ public class Main {
         else if (test.equals("company")){
 
             String name = args.get("-name");
-            console.log(name);            
+            console.log(name);
             console.log(getCompanyName(name));
-                
+
+        }
+        else if (test.equalsIgnoreCase("document")){
+            bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(args.get("-path"));
+            index.findFiles(args.get("-query"));
+            console.log("done!");
         }
         else{
             console.log("Unsupported test: " + test);
         }
     }
-    
-    
+
+
   //**************************************************************************
   //** download
   //**************************************************************************
@@ -465,7 +470,7 @@ public class Main {
             console.log("Unsupported download: " + download);
         }
     }
-    
+
 
   //**************************************************************************
   //** rtrim
