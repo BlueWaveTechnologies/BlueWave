@@ -1,7 +1,7 @@
 package bluewave.web.services;
-
 import bluewave.Config;
 import static bluewave.utils.Python.*;
+import bluewave.utils.FileIndex;
 
 import java.util.*;
 import java.io.FileOutputStream;
@@ -46,7 +46,7 @@ public class DocumentService extends WebService {
         pool = new ThreadPool(numThreads, poolSize) {
             public void process(Object obj) {
                 javaxt.io.File file = (javaxt.io.File) obj;
-                index(file);
+                FileIndex.indexDocument(file);
             }
         }.start();
 
@@ -81,12 +81,12 @@ public class DocumentService extends WebService {
                             obj = events.remove(0);
                         }
                         if (obj != null) {
-                            if (FileIndexService.indexExists()) {
+                            if (FileIndex.indexExists()) {
                                 javaxt.io.Directory.Event event = (javaxt.io.Directory.Event) obj;
 
                                 if (event.getEventID() == event.CREATE) {
                                     File newFile = new File(event.getFile());
-                                    index(newFile);
+                                    FileIndex.indexDocument(newFile);
                                 }
                             }
                         }
@@ -100,10 +100,7 @@ public class DocumentService extends WebService {
     }
 
 
-    private void index(File file) {
-        FileIndexService fileIndexService = new FileIndexService();
-        fileIndexService.indexDocument(file);
-    }
+
 
 
     // **************************************************************************

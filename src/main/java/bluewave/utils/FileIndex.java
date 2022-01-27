@@ -1,4 +1,4 @@
-package bluewave.web.services;
+package bluewave.utils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -37,18 +37,18 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import bluewave.Config;
 import javaxt.io.File;
 import javaxt.json.JSONObject;
-import javaxt.utils.Console;
+import static javaxt.utils.Console.console;
 
-public class FileIndexService {
+public class FileIndex {
 
-    private String indexDirectoryPath;
-    private Console console = new javaxt.utils.Console();
+    private static String indexDirectoryPath;
+
     private static Object wmonitor = new Object();
     private static Object smonitor = new Object();
     private static IndexWriter _indexWriter;
     private static IndexSearcher _indexSearcher;
 
-    public IndexWriter instanceOfIndexWriter() {
+    public static IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
             if (_indexWriter == null) {
                 JSONObject config = Config.get("webserver").toJSONObject();
@@ -76,7 +76,7 @@ public class FileIndexService {
         return _indexWriter;
     }
 
-    public IndexSearcher instanceOfIndexSearcher() {
+    public static IndexSearcher instanceOfIndexSearcher() {
         synchronized (smonitor) {
             if (_indexSearcher == null) {
                 JSONObject config = Config.get("webserver").toJSONObject();
@@ -101,7 +101,7 @@ public class FileIndexService {
         return _indexSearcher;
     }
 
-    public void indexDocument(javaxt.io.File file) {
+    public static void indexDocument(javaxt.io.File file) {
         try {
 
             Path path = file.toFile().toPath();
@@ -124,7 +124,7 @@ public class FileIndexService {
     }
 
     /** Indexes a single document */
-    private void indexDoc(IndexWriter writer, Path file, long lastModified) throws IOException {
+    private static void indexDoc(IndexWriter writer, Path file, long lastModified) throws IOException {
         try (InputStream stream = Files.newInputStream(file)) {
             // make a new, empty document
             Document doc = new Document();
@@ -180,9 +180,9 @@ public class FileIndexService {
         }
     }
 
-    public boolean hasDocumentBeenIndexed(String fileName) {
+    public static boolean hasDocumentBeenIndexed(String fileName) {
         console.log("hasDocumentBeenIndexed: " + fileName);
-        if (FileIndexService.indexExists()) {
+        if (FileIndex.indexExists()) {
             IndexSearcher searcher = instanceOfIndexSearcher();
 
             if (searcher != null) {
@@ -217,7 +217,7 @@ public class FileIndexService {
                 }
             }
         } catch (Exception e) {
-            new Console().log("indexExists: " + e);
+            console.log("indexExists: " + e);
         }
         return false;
     }
