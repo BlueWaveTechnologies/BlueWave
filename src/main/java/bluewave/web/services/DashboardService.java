@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.app.Dashboard;
 import bluewave.app.DashboardUser;
+import bluewave.app.DashboardGroup;
 import bluewave.utils.SQLEditor;
 
 import javaxt.express.*;
@@ -361,6 +362,88 @@ public class DashboardService extends WebService {
         }
         catch(Exception e){
             if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** saveGroup
+  //**************************************************************************
+  /** Used to create or update a DashboardGroup
+   */
+    public ServiceResponse saveGroup(ServiceRequest request, Database database)
+        throws ServletException {
+
+      //Parse payload
+        JSONObject json = request.getJson();
+        JSONArray dashboardIDs = json.get("dashboards").toJSONArray();
+        json.remove("dashboards");
+
+
+      //Get user associated with the request
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+
+
+        Connection conn = null;
+        try{
+
+          //Save DashboardGroup
+            DashboardGroup group = new DashboardGroup(json);
+            group.setUser(user);
+            group.setDashboards(new Dashboard[0]);
+            group.save();
+            Long groupID = group.getID();
+
+
+          //Add Dashboards to the DashboardGroup
+            conn = database.getConnection();
+            conn.execute("delete from application.dashboard_group_dashboard where dashboard_group_id=" + groupID);
+            if (dashboardIDs!=null){
+                Recordset rs = new Recordset();
+                rs.open("select * from application.dashboard_group_dashboard where dashboard_group_id=" + groupID, conn, false);
+                for (int i=0; i<dashboardIDs.length(); i++){
+                    long dashboardID = dashboardIDs.get(i).toLong();
+                    rs.addNew();
+                    rs.setValue("dashboard_group_id", groupID);
+                    rs.setValue("dashboard_id", dashboardID);
+                    rs.update();
+                }
+                rs.close();
+            }
+            conn.close();
+
+
+          //Return response
+            return new ServiceResponse(200, groupID+"");
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** deleteGroup
+  //**************************************************************************
+  /** Used to delete a DashboardGroup
+   */
+    public ServiceResponse deleteGroup(ServiceRequest request, Database database)
+        throws ServletException {
+
+      //Get group ID
+        Long groupID = request.getID();
+        if (groupID==null) return new ServiceResponse(400, "groupID is required");
+
+
+      //Delete group
+        try{
+            new DashboardGroup(groupID).delete();
+            return new ServiceResponse(200);
+        }
+        catch(Exception e){
             return new ServiceResponse(e);
         }
     }
