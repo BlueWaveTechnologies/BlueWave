@@ -395,8 +395,6 @@ public class DashboardService extends WebService {
             group.setDashboards(new Dashboard[0]);
             group.save();
             Long groupID = group.getID();
-            if (groupID==null) console.log(group.toJson().toString(4));
-            if (groupID==null) throw new Exception("WTF!");
 
 
           //Add Dashboards to the DashboardGroup
@@ -422,6 +420,30 @@ public class DashboardService extends WebService {
         }
         catch(Exception e){
             if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** deleteGroup
+  //**************************************************************************
+  /** Used to delete a DashboardGroup
+   */
+    public ServiceResponse deleteGroup(ServiceRequest request, Database database)
+        throws ServletException {
+
+      //Get group ID
+        Long groupID = request.getID();
+        if (groupID==null) return new ServiceResponse(400, "groupID is required");
+
+
+      //Delete group
+        try{
+            new DashboardGroup(groupID).delete();
+            return new ServiceResponse(200);
+        }
+        catch(Exception e){
             return new ServiceResponse(e);
         }
     }
