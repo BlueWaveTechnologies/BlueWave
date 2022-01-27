@@ -1,6 +1,5 @@
 if(!bluewave) var bluewave={};
 if(!bluewave.charts) bluewave.charts={};
-
 //******************************************************************************
 //**  CalendarChart
 //******************************************************************************
@@ -8,10 +7,7 @@ if(!bluewave.charts) bluewave.charts={};
  *   Panel used to create calendar charts
  *
  ******************************************************************************/
-
 bluewave.charts.CalendarChart = function(parent, config) {
-
-
     var me = this;
     var defaultConfig = {
         dayLabel: true,
@@ -23,25 +19,17 @@ bluewave.charts.CalendarChart = function(parent, config) {
         colors: ["#fff","#ebf5dc","#cbe9a5","#2a671a"], //green colors
         showTooltip: false
     };
-    var svg, calendarArea;
-
-
-
+    var svg, chart, calendarArea;
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
-
         me.setConfig(config);
-
         initChart(parent, function(s, g){
             svg = s;
-            calendarArea = g;
+            chart = g;
         });
-
     };
-
-
   //**************************************************************************
   //** setConfig
   //**************************************************************************
@@ -49,53 +37,44 @@ bluewave.charts.CalendarChart = function(parent, config) {
         if (!chartConfig) config = defaultConfig;
         else config = merge(chartConfig, defaultConfig);
     };
-
-
   //**************************************************************************
   //** getTooltipLabel
   //**************************************************************************
     this.getTooltipLabel = function(d){
         return d3.utcFormat("%m/%d/%Y")(d.date) + "<br/>" + d3.format(",")(d.value);
     };
-
-
   //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (calendarArea) calendarArea.selectAll("*").remove();
+        if (chart) chart.selectAll("*").remove();
     };
-
-
   //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
-
         me.clear();
 
-        config = merge(chartConfig, defaultConfig);
+        if (isArray(data) && isArray(data[0])) data = data[0];
 
+        if (!config.date || !config.value) return;
+
+        config = merge(chartConfig, defaultConfig);
         var parent = svg.node().parentNode;
         onRender(parent, function(){
             renderChart(data);
         });
     };
-
-
   //**************************************************************************
   //** renderChart
   //**************************************************************************
     var renderChart = function(data){
-
         var chartConfig = config;
 
         var
          cellSize = config.cellSize,
          weekday = config.weekday,
          formatDay = i => "SMTWTFS"[i]; // given a day number in [0, 6], the day-of-week label
-
-
       //Update date and value fields in the data
         data.forEach((d)=>{
             var date = d[config.date];
@@ -103,13 +82,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
             d[config.date] = new Date(date);
             d[config.value] = parseFloat(value);
         });
-
-
       //Sort array in reverse chronological order
         data.sort(function(a, b){
             return b[config.date].getTime()-a[config.date].getTime();
         });
-
 
       //Create an array of dates and values
         var dates = [];
@@ -120,7 +96,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
             var value = d[config.value];
             dates.push(date);
             values.push(value);
-
             var year = date.getUTCFullYear();
             years[year+""] = year;
         });
@@ -129,14 +104,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
             return b - a;
         });
 
-
-
         const countDay = weekday === "sunday" ? i => i : i => (i + 6) % 7;
         const timeWeek = weekday === "sunday" ? d3.utcSunday : d3.utcMonday;
         const weekDays = weekday === "weekday" ? 5 : 7;
         const height = cellSize * (weekDays + 2);
-
-
       //Create color function using natural breaks
         var numClasses = 10;
         var breaks = getNaturalBreaks(values, numClasses);
@@ -146,7 +117,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
                 var currBreak = breaks[i];
                 var nextBreak = breaks[i+1];
                 var color = colors[i];
-
                 if (value>=currBreak && value<nextBreak){
                     return color;
                 }
@@ -157,8 +127,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
                 }
             }
         };
-
-
       //Create tooltip
         var tooltip;
         if (config.showTooltip===true){
@@ -171,20 +139,14 @@ bluewave.charts.CalendarChart = function(parent, config) {
                 .attr("class", "tooltip");
             }
         }
-
-
         var mouseover = function(d, i) {
             if (tooltip){
-
-
               //Get label
                 var label = me.getTooltipLabel({date: d, value: values[i]});
-
               //Get zIndex
                 var highestElements = getHighestElements();
                 var zIndex = highestElements.zIndex;
                 if (!highestElements.contains(tooltip.node())) zIndex++;
-
               //Update tooltip
                 tooltip
                 .html(label)
@@ -192,36 +154,33 @@ bluewave.charts.CalendarChart = function(parent, config) {
                 .style("display", "block")
                 .style("z-index", zIndex);
             }
-
             d3.select(this).transition().duration(100).attr("opacity", "0.8");
         };
-
         var mousemove = function() {
             var e = d3.event;
             if (tooltip) tooltip
             .style('top', (e.clientY) + "px")
             .style('left', (e.clientX + 20) + "px");
         };
-
         var mouseleave = function() {
             if (tooltip) tooltip
             .style("opacity", 0)
             .style("display", "none");
-
             d3.select(this).transition().duration(100).attr("opacity", "1");
         };
 
 
+        calendarArea = chart.append("g");
+        calendarArea.attr("width",parent.offsetWidth);
+        calendarArea.attr("height",parent.offsetHeight);
 
       //Create groups for every year
         var yearGroup = calendarArea.selectAll("*")
           .data(years)
           .join("g")
             .attr("transform", (d, i) => `translate(40.5,${height * i + cellSize * 1.5})`);
-
       //Add year label if option is checked
         if (chartConfig.yearLabel){
-
           //Add year label to every group
               yearGroup.append("text")
               .attr("class", "chart-axis-label")
@@ -230,11 +189,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
               .attr("text-anchor", "end")
               .text(year => year);
         }
-
-
       //Add day label if option is checked
         if (chartConfig.dayLabel){
-
           //Add day of week abbreviation on the left side of each group
             yearGroup.append("g")
             .attr("class", "tick")
@@ -259,7 +215,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
                 .text(function(d){
                     var dayOfWeek = d.day;
                     var year = d.year;
-
                     var hasData = false;
                     dates.every(function(date){
                         if (date.getUTCFullYear()===year){
@@ -271,14 +226,11 @@ bluewave.charts.CalendarChart = function(parent, config) {
                         }
                         return true;
                     });
-
                     if (hasData || (dayOfWeek>0 && dayOfWeek<6)){
                         return formatDay(dayOfWeek);
                     }
                 });
         };
-
-
       //Create table and cells
         yearGroup.append("g")
           .selectAll("*")
@@ -301,12 +253,10 @@ bluewave.charts.CalendarChart = function(parent, config) {
         .on("mouseover", mouseover)
         .on("mousemove", mousemove)
         .on("mouseleave", mouseleave);
-
       //Create month group
         var monthGroup = yearGroup.append("g")
           .selectAll("g")
           .data(function(year){
-
               var firstDay, lastDate;
               dates.forEach(function(date){
                   if (date.getUTCFullYear()===year){
@@ -314,17 +264,13 @@ bluewave.charts.CalendarChart = function(parent, config) {
                       firstDay = date;
                   }
               });
-
               firstDay = new Date(firstDay.getTime());
               lastDate = new Date(lastDate.getTime());
-
               firstDay.setMonth(firstDay.getMonth()-1);
               lastDate.setMonth(lastDate.getMonth()+1);
               return d3.utcMonths(firstDay, lastDate);
           })
           .join("g");
-
-
       //Add thick line to seperate months in the grid
         monthGroup.filter((d, i) => i).append("path")
             .attr("fill", "none")
@@ -337,8 +283,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
                     : d === weekDays ? `M${(w + 1) * cellSize},0`
                     : `M${(w + 1) * cellSize},0V${d * cellSize}H${w * cellSize}`}V${weekDays * cellSize}`;
             });
-
-
       //Add month labels
         var renderedMonths = {};
         monthGroup.append("text")
@@ -349,10 +293,8 @@ bluewave.charts.CalendarChart = function(parent, config) {
                 var month = d3.utcFormat("%b")(date);
                 var year = d3.utcFormat("%Y")(date);
                 var key = year+"-"+month;
-
                 var dateInRange = false;
                 dates.every(function(d){
-
                     var m = d3.utcFormat("%b")(d);
                     var y = d3.utcFormat("%Y")(d);
                     var k = y+"-"+m;
@@ -362,8 +304,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
                     }
                     return true;
                 });
-
-
                 if (dateInRange){
                     if (!renderedMonths[key]){
                         renderedMonths[key]=true;
@@ -373,8 +313,6 @@ bluewave.charts.CalendarChart = function(parent, config) {
             });
 
     };
-
-
    //**************************************************************************
    //** Utils
    //**************************************************************************
@@ -384,8 +322,7 @@ bluewave.charts.CalendarChart = function(parent, config) {
     var getColorRange = bluewave.chart.utils.getColorRange;
     var getNaturalBreaks = bluewave.chart.utils.getNaturalBreaks;
     var getHighestElements = javaxt.dhtml.utils.getHighestElements;
-
+    var isArray = javaxt.dhtml.utils.isArray;
 
     init();
-
-};
+}

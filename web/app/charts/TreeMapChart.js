@@ -19,10 +19,10 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         valueLabel: true,
         key: "name",
         value: "value",
-        groupBy: null, 
+        groupBy: null,
         colors: [ "#0d90f2","#14e8eb","#1ce35b", "#402D54", "#D18975", "#8FD175","#cc0a12", "#b8eb14"], //first set of colors
     };
-    var svg, treeMapArea;
+    var svg, chart, treeMapArea;
 
 
 
@@ -35,7 +35,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         initChart(parent, function(s, g){
             svg = s;
-            treeMapArea = g;
+            chart = g;
         });
 
     };
@@ -54,7 +54,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (treeMapArea) treeMapArea.selectAll("*").remove();
+        if (chart) chart.selectAll("*").remove();
     };
 
 
@@ -104,8 +104,8 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             function onlyUnique(value, index, self) { // returns only unique values from an array
                 return self.indexOf(value) === index;
             }
-    
-    
+
+
             var groupsToUse = groupNames.filter(onlyUnique);
         }
 
@@ -118,7 +118,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
 
 
-        var dataHierarchy = 
+        var dataHierarchy =
         {"children":
             [],
 
@@ -143,7 +143,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                             var userRecord = getNestedObject(objectToInsertTo["children"],"name", userValue);
                             userRecord["value"] = userRecord["value"] + value;
                         }
-                        else {    // create new user record 
+                        else {    // create new user record
                             objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value});
                         };
                     };
@@ -165,10 +165,10 @@ bluewave.charts.TreeMapChart = function(parent, config) {
                     userRecord["value"] = userRecord["value"] + value;
                 }
 
-                else {    // create new user record 
+                else {    // create new user record
                     objectToInsertTo["children"].push({"name": userValue,"group": groupByValue, "colname":"level3","value":value});
                 };
-                
+
             });
 
         };
@@ -183,6 +183,9 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     this.update = function(chartConfig, data){
 
         me.clear();
+        if (isArray(data) && isArray(data[0])) data = data[0];
+
+        if (!config.key || !config.value) return;
 
         config = merge(chartConfig, defaultConfig);
         var data = setDataHierarchy(data);
@@ -204,12 +207,18 @@ bluewave.charts.TreeMapChart = function(parent, config) {
     var renderChart = function(data){
 
         var chartConfig = config;
-        
+
 
         // set the dimensions of the graph
         var
         width = parent.offsetWidth,
         height = parent.offsetHeight;
+
+        treeMapArea = chart.append("g");
+        treeMapArea
+            .attr("width", width)
+            .attr("height", height);
+
 
         // Give the data to this cluster layout:
         var root = d3.hierarchy(data).sum((d) => d.value ); // Here the size of each leave is given in the 'value' field in input data
@@ -228,7 +237,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
         if (typeof(groupNames) !== "undefined"){
             var color = d3.scaleOrdinal()
                 .domain(groupNames)
-                .range(chartConfig.colors)   
+                .range(chartConfig.colors)
         }
         else{
             var color = d3.scaleOrdinal()
@@ -238,7 +247,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
 
         // opacity scale
         var opacity = function(currValue, groupName){
-            
+
             var parsingObject = getNestedObject(data["children"],"name",groupName);
             var values = new Array();
             parsingObject["children"].forEach(d => {
@@ -248,7 +257,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             var calculatedScale = d3.scaleLinear()
             .domain([d3.min(values), d3.max(values)])
             .range([.5, 1]);
-            
+
             return calculatedScale(currValue);
         };
 
@@ -262,7 +271,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
             .enter()
             .append("rect")
             .attr('x', (d) => d.x0 )
-            .attr('y', (d) => d.y0 )   
+            .attr('y', (d) => d.y0 )
             .attr('width', (d) => d.x1 - d.x0 )
             .attr('height', (d) => d.y1 - d.y0 )
             .style("stroke", "black")
@@ -330,6 +339,7 @@ bluewave.charts.TreeMapChart = function(parent, config) {
    var getColorRange = bluewave.chart.utils.getColorRange;
    var getNaturalBreaks = bluewave.chart.utils.getNaturalBreaks;
    var getHighestElements = javaxt.dhtml.utils.getHighestElements;
+   var isArray = javaxt.dhtml.utils.isArray;
 
 
    init();

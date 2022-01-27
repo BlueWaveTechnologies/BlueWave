@@ -2679,75 +2679,75 @@ bluewave.Explorer = function(parent, config) {
 
 
 
-            // var box = g2.getBBox();
-            // var width = box.width;
-            // var height = box.height;
-            // var scaleX = 1;
-            // var scaleY = 1;
-            // var translateX = 0;
-            // var translateY = 0;
-            // var transformList = g2.transform.baseVal;
-            // for (var i=0; i<transformList.numberOfItems; i++){
-            //     var transform = transformList.getItem(i);
-            //     var m = transform.matrix;
-            //     switch (transform.type){
-            //       case 2:
-            //         translateX = m.e;
-            //         translateY = m.f;
-            //         break;
-            //       case 3:
-            //         scaleX = m.a;
-            //         scaleY = m.d;
-            //         break;
-            //     }
-            // }
+            var box = g2.getBBox();
+            var width = box.width;
+            var height = box.height;
+            var scaleX = 1;
+            var scaleY = 1;
+            var translateX = 0;
+            var translateY = 0;
+            var transformList = g2.transform.baseVal;
+            for (var i=0; i<transformList.numberOfItems; i++){
+                var transform = transformList.getItem(i);
+                var m = transform.matrix;
+                switch (transform.type){
+                  case 2:
+                    translateX = m.e;
+                    translateY = m.f;
+                    break;
+                  case 3:
+                    scaleX = m.a;
+                    scaleY = m.d;
+                    break;
+                }
+            }
 
 
 
-          //Compute scale
-            // var scale;
-            // var scaledWidth = (width)*scaleX;
-            // var scaledHeight = (height)*scaleY;
-            // if (width>=height){
-            //     scale = rect.width/scaledWidth;
-            //     var h = scaledHeight*scale;
-            //     if (h>rect.height){
-            //         scale = rect.height/scaledHeight;
-            //     }
-            // }
-            // else{
-            //     scale = rect.height/scaledHeight;
-            //     var w = scaledWidth*scale;
-            //     if (w>rect.width){
-            //         scale = rect.width/scaledWidth;
-            //     }
-            // }
+        //   Compute scale
+            var scale;
+            var scaledWidth = (width)*scaleX;
+            var scaledHeight = (height)*scaleY;
+            if (width>=height){
+                scale = rect.width/scaledWidth;
+                var h = scaledHeight*scale;
+                if (h>rect.height){
+                    scale = rect.height/scaledHeight;
+                }
+            }
+            else{
+                scale = rect.height/scaledHeight;
+                var w = scaledWidth*scale;
+                if (w>rect.width){
+                    scale = rect.width/scaledWidth;
+                }
+            }
 
 
 
           //Compute x/y offset
             var x = 0;
             var y = 0;
-            // if (translateX===0){ //center the chart
-            //     x = (rect.width/2)-((scaledWidth*scale)/2);
-            // }
-            // else{
-            //     //TODO: center chart using translateX
-            // }
+            if (translateX===0){ //center the chart
+                x = (rect.width/2)-((scaledWidth*scale)/2);
+            }
+            else{
+                //TODO: center chart using translateX
+            }
 
-            // if (translateY===0){ //center the chart
-            //     y = (rect.height/2)-((scaledHeight*scale)/2);
-            // }
-            // else{
-            //     //TODO: center chart using translateY
-            // }
+            if (translateY===0){ //center the chart
+                y = (rect.height/2)-((scaledHeight*scale)/2);
+            }
+            else{
+                //TODO: center chart using translateY
+            }
 
 
-        //   //Apply transform to the first g
-        //     d3.select(g).attr("transform",
-        //         "translate(" + x + "," + y + ") " +
-        //         "scale(" + scale + ")"
-        //     );
+          //Apply transform to the first g
+            d3.select(g).attr("transform",
+                "translate(" + x + "," + y + ") " +
+                "scale(" + scale + ")"
+            );
 
         }
     };
@@ -2988,18 +2988,6 @@ bluewave.Explorer = function(parent, config) {
                         console.log("node inputs are other")
                         console.log(node.inputs)
 
-                        // var data = [];
-                        // for (var key in node.inputs) {
-                        //     if (node.inputs.hasOwnProperty(key)){
-                        //         var csv = node.inputs[key].csv;
-                        //         if (csv){
-                        //             data.push(d3.csvParse(csv));
-                        //             // data.push(csv);
-
-                        //         }
-                        //     }
-                        // }
-
                         //Get data
                         var data = [];
                         for (var key in node.inputs) {
@@ -3010,11 +2998,7 @@ bluewave.Explorer = function(parent, config) {
                                 console.log(csv)
 
                                 data.push(d3.csvParse(csv));
-                                data = d3.csvParse(csv)
-                                console.log("return to this section later")
-                                console.log(d3.csvParse(csv))
-                                console.log(d3.csvParse(csv)[0])
-                                console.log(d3.csvParse(csv)[1])
+
                             }
                         }
                         if (node.type==="pieChart"){
