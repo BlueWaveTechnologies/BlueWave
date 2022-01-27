@@ -30,17 +30,17 @@ public class User extends javaxt.sql.Model
   //** Constructor
   //**************************************************************************
     public User(){
-        super("application.user", new java.util.HashMap<String, String>() {{
+        super("application.user", java.util.Map.ofEntries(
 
-            put("username", "username");
-            put("password", "password");
-            put("accessLevel", "access_level");
-            put("active", "active");
-            put("contact", "contact_id");
-            put("auth", "auth");
-            put("info", "info");
+            java.util.Map.entry("username", "username"),
+            java.util.Map.entry("password", "password"),
+            java.util.Map.entry("accessLevel", "access_level"),
+            java.util.Map.entry("active", "active"),
+            java.util.Map.entry("contact", "contact_id"),
+            java.util.Map.entry("auth", "auth"),
+            java.util.Map.entry("info", "info")
 
-        }});
+        ));
 
     }
 
@@ -124,7 +124,7 @@ public class User extends javaxt.sql.Model
         this.info = json.get("info").toJSONObject();
     }
 
-    
+
     public String getName(){
         return username;
     }
@@ -184,15 +184,15 @@ public class User extends javaxt.sql.Model
     public void setInfo(JSONObject info){
         this.info = info;
     }
-    
-    
+
+
   //**************************************************************************
   //** save
   //**************************************************************************
   /** Custom save method
    */
     public void save() throws SQLException {
-        
+
       //Check whether we need to update the graph
         boolean updateGraph = false;
         User user = null;
@@ -207,12 +207,12 @@ public class User extends javaxt.sql.Model
                 updateGraph = true;
             }
         }
-        
-        
+
+
       //Save user in the app database
         super.save();
-        
-        
+
+
       //Update the graph as needed
         if (updateGraph){
             String[] credentials = getGraphCredentials();
@@ -235,7 +235,7 @@ public class User extends javaxt.sql.Model
                         bluewave.graph.Maintenance.setPassword(username, password, graph);
                     }
                 }
-                
+
                 graph.close();
             }
             catch(Exception e){
@@ -243,8 +243,8 @@ public class User extends javaxt.sql.Model
             }
         }
     }
-    
-    
+
+
   //**************************************************************************
   //** delete
   //**************************************************************************
@@ -254,7 +254,7 @@ public class User extends javaxt.sql.Model
         Long id = getID();
         super.delete();
         if (id!=null){
-            
+
             String[] credentials = getGraphCredentials();
             String username = credentials[0];
 
@@ -269,8 +269,8 @@ public class User extends javaxt.sql.Model
             }
         }
     }
-    
-    
+
+
   //**************************************************************************
   //** getGraphRole
   //**************************************************************************
@@ -290,15 +290,15 @@ public class User extends javaxt.sql.Model
         }
         return role;
     }
-    
-    
+
+
   //**************************************************************************
   //** getGraphCredentials
   //**************************************************************************
   /** Returns graph username/password associated with this user
    */
     public String[] getGraphCredentials() {
-        String hostname = ""; 
+        String hostname = "";
         try{ hostname = java.net.InetAddress.getLocalHost().getHostName() + "_";}
         catch(Exception e){};
         String username = "bw_" + hostname + getID();
