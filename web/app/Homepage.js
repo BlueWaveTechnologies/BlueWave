@@ -16,7 +16,7 @@ bluewave.Homepage = function(parent, config) {
     var dashboardItems = [];
     var dashboardMenu, groupMenu; //callouts
     var waitmask;
-    var groupEditor;
+    var groupEditor, moveOptions; //windows
     var windows = [];
 
 
@@ -490,8 +490,7 @@ bluewave.Homepage = function(parent, config) {
         label.innerText = group.name;
         header.appendChild(label);
 
-        if (isNaN(group.id) && (group.name=="My Dashboards" || group.name=="Shared Dashboards")){}
-        else{
+        if (!isDefaultGroup(group)){
 
             var settings = document.createElement("div");
             settings.className = "dashboard-group-settings";
@@ -684,6 +683,7 @@ bluewave.Homepage = function(parent, config) {
 
             menu.move = createMenuOption("Move", "share", function(){
                 dashboardMenu.hide();
+                showMoveOptions(dashboardMenu.dashboard);
             });
 
 
@@ -700,6 +700,16 @@ bluewave.Homepage = function(parent, config) {
                 else{
                     menu.delete.show();
                 }
+
+                var numGroups = 0;
+                var groups = config.dataStores["DashboardGroup"];
+                if (groups){
+                    groups.forEach((group=>{
+                        if (!isDefaultGroup(group)) numGroups++;
+                    }));
+                }
+                if (numGroups>0) menu.move.show();
+                else menu.move.hide();
             };
 
             dashboardMenu.hasMenuItems = function(){
@@ -841,7 +851,7 @@ bluewave.Homepage = function(parent, config) {
 
               //Remove items from the default "My Dashboards" and "Shared Dashboards" groups
                 groups.forEach((group)=>{
-                    if (isNaN(group.id) && (group.name=="My Dashboards" || group.name=="Shared Dashboards")){
+                    if (isDefaultGroup(group)){
                         var dashboards = [];
                         group.dashboards.forEach((dashboardID)=>{
                             var addDashboard = true;
@@ -865,6 +875,14 @@ bluewave.Homepage = function(parent, config) {
                 }
             }
         });
+    };
+
+
+  //**************************************************************************
+  //** isDefaultGroup
+  //**************************************************************************
+    var isDefaultGroup = function(group){
+        return (isNaN(group.id) && (group.name=="My Dashboards" || group.name=="Shared Dashboards"));
     };
 
 
@@ -930,6 +948,153 @@ bluewave.Homepage = function(parent, config) {
         });
     };
 
+
+  //**************************************************************************
+  //** showMoveOptions
+  //**************************************************************************
+    var showMoveOptions = function(dashboard){
+        if (!moveOptions){
+
+          //Create window
+            var win = createWindow({
+                title: "Select Group",
+                width: 600,
+                height: 400,
+                valign: "top",
+                modal: true,
+                style: config.style.window
+            });
+
+
+          //Create buttons
+            var buttonDiv = document.createElement("div");
+            buttonDiv.className = "button-div";
+            win.setFooter(buttonDiv);
+            var createButton = function(label, callback){
+                var input = document.createElement("input");
+                input.type = "button";
+                input.className = "form-button";
+                input.name = label;
+                input.value = label;
+                input.onclick = function(){
+                    if (callback) callback();
+                    else win.close();
+                };
+                buttonDiv.appendChild(input);
+                return input;
+            };
+            createButton("OK", function(){
+                var group;
+                grid.forEachRow((r)=>{
+                    if (r.record.checked===true){
+                        group = r.record;
+                        return true;
+                    }
+                });
+                if (!group.hasDashboard){
+                    var groupID = group.id;
+                    var dashboardID = moveOptions.dashboard.id;
+                    config.dataStores["DashboardGroup"].forEach((group)=>{
+                        if (group.id===groupID){
+                            moveDashboard(dashboardID, group);
+                            return true;
+                        }
+                    });
+                }
+                win.close();
+            });
+            createButton("Cancel");
+
+
+
+
+          //Create grid
+            var grid = new javaxt.dhtml.DataGrid(win.getBody(), {
+                style: config.style.table,
+                localSort: true,
+                columns: [
+                    {header: '', width:'24', sortable: true},
+                    {header: 'Group', width:'100%', sortable: true}
+
+                ],
+                update: function(row, record){
+                    if (record.checked){
+                        row.set(0, createIcon());
+                    }
+                    row.set("Group", record.name);
+                }
+            });
+
+
+          //Hide header in grid
+            var headerRow = grid.el.getElementsByClassName("table-header")[0];
+            headerRow.style.display = "none";
+
+
+          //Create icon method
+            var createIcon = function(){
+                var icon = document.createElement("i");
+                icon.className = "fas fa-check";
+                icon.style.marginTop = "10px";
+                return icon;
+            };
+
+
+          //Create update method
+            var update = function(dashboard){
+                moveOptions.dashboard = dashboard;
+                var data = [];
+                var groups = config.dataStores["DashboardGroup"];
+                groups.forEach((group=>{
+
+                    var hasDashboard = false;
+                    if (group.dashboards){
+                        group.dashboards.forEach((dashboardID)=>{
+                            if (dashboard.id===dashboardID){
+                                hasDashboard = true;
+                            }
+                        });
+                    }
+
+
+                    var addRecord = true;
+                    if (isDefaultGroup(group)){
+                        addRecord = hasDashboard;
+                    }
+
+                    if (addRecord){
+                        data.push({
+                            id: group.id,
+                            name: group.name,
+                            checked: hasDashboard,
+                            hasDashboard: hasDashboard
+                        });
+                    }
+
+                }));
+
+                grid.load(data);
+                grid.onRowClick = function(row, e){
+                    grid.forEachRow((r)=>{
+                        r.record.checked = false;
+                        r.set(0, '');
+                    });
+                    row.record.checked = true;
+                    row.set(0, createIcon());
+                };
+            };
+
+
+          //Create moveOptions object
+            moveOptions = {
+                show: win.show,
+                update: update
+            };
+        }
+
+        moveOptions.update(dashboard);
+        moveOptions.show();
+    };
 
 
   //**************************************************************************
