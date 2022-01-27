@@ -30,14 +30,14 @@ import javaxt.json.*;
 public class DocumentService extends WebService {
 
     private ThreadPool pool;
-
+    private FileIndex index;
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     public DocumentService(){
 
-        FileIndex index = new FileIndex(getUploadDir().toString());
+        index = new FileIndex(getUploadDir().toString());
 
 
       //Start the thread pool
@@ -143,7 +143,12 @@ public class DocumentService extends WebService {
             return new ServiceResponse(str.toString());
         }
         else{
-            return new ServiceResponse(501);
+
+            JSONArray arr = new JSONArray();
+            ArrayList<Object> results = index.findFiles(q);
+            if (results!=null){
+            }
+            return new ServiceResponse(arr);
         }
     }
 

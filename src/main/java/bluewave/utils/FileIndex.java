@@ -1,5 +1,5 @@
 package bluewave.utils;
-
+import java.util.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,6 +49,9 @@ public class FileIndex {
         indexDirectoryPath = path;
     }
 
+    public ArrayList<Object> findFiles(String q){
+        return null;
+    }
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
