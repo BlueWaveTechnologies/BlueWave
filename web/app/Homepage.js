@@ -204,7 +204,10 @@ bluewave.Homepage = function(parent, config) {
 
             getGroups(function(groups){
                 groups.insert(group, 0);
-                saveGroup(group, refresh);
+                saveGroup(group, function(){
+                    if (callback) callback.apply(me,[group]);
+                    refresh();
+                });
             });
 
         };
@@ -523,10 +526,19 @@ bluewave.Homepage = function(parent, config) {
       //Get dashboard ID from the data transfer
         var dashboardID = parseInt(e.dataTransfer.getData("dashboard"));
 
+      //Move dashboard
+        moveDashboard(dashboardID, this.group);
+    };
 
-      //Get orginal and new groups
-        var groupBox = this;
-        var newGroup = groupBox.group;
+
+  //**************************************************************************
+  //** moveDashboard
+  //**************************************************************************
+  /** Used to move a dashboard from it's current group to a new one
+   */
+    var moveDashboard = function(dashboardID, newGroup){
+
+      //Find original group
         var orgGroup, idx;
         config.dataStores["DashboardGroup"].forEach((group)=>{
             if (group.dashboards){
@@ -558,11 +570,37 @@ bluewave.Homepage = function(parent, config) {
 
 
 
-        saveGroup(newGroup, function(){
-            saveGroup(orgGroup, function(){
+      //Save orginal and new groups as needed
+        if (isNaN(newGroup.id)){
+            if (isNaN(orgGroup.id)){
                 refresh();
+            }
+            else{
+                saveGroup(orgGroup, function(){
+                    refresh();
+                });
+            }
+        }
+        else{
+            saveGroup(newGroup, function(){
+                if (isNaN(orgGroup.id)){
+                    refresh();
+                }
+                else{
+                    saveGroup(orgGroup, function(){
+                        refresh();
+                    });
+                }
             });
-        });
+        }
+    };
+
+
+  //**************************************************************************
+  //** deleteGroup
+  //**************************************************************************
+    var deleteGroup = function(){
+
     };
 
 
@@ -721,14 +759,16 @@ bluewave.Homepage = function(parent, config) {
   //**************************************************************************
     var saveGroup = function(group, callback){
 
-        if (callback) callback.apply(me,[]);
-
-        /*
-        post("dashboard/group", group, {
-            success: function(){},
-            failure: function(){}
+        post("dashboard/group", JSON.stringify(group), {
+            success: function(id){
+                group.id = parseInt(id);
+                if (callback) callback.apply(me,[]);
+            },
+            failure: function(request){
+                alert(request);
+                //if (callback) callback.apply(me,[]);
+            }
         });
-        */
     };
 
 
