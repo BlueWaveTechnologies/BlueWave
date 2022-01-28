@@ -434,6 +434,101 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** createSearchBar
+  //**************************************************************************
+    createSearchBar: function(parent){
+
+        var searchBar = {};
+
+      //Create outer div
+        var div = document.createElement("div");
+        div.className = "search-bar";
+        div.style.position = "relative";
+        parent.appendChild(div);
+        searchBar.el = div;
+
+
+      //Create search icon
+        var searchIcon = document.createElement("div");
+        searchIcon.className = "search-bar-icon noselect";
+        searchIcon.innerHTML = '<i class="fas fa-search"></i>';
+        searchIcon.show = function(){
+            this.style.opacity = "";
+            input.style.paddingLeft = "26px";
+        };
+        searchIcon.hide = function(){
+            this.style.opacity = 0;
+            input.style.paddingLeft = "8px";
+        };
+        div.appendChild(searchIcon);
+
+
+      //Create input
+        var input = document.createElement("input");
+        input.type = "text";
+        input.className = "search-bar-input";
+        input.style.width = "100%";
+        input.placeholder = "Search";
+        div.appendChild(input);
+        input.oninput = function(e){
+            var q = searchBar.getValue();
+            if (q){
+                searchIcon.hide();
+                cancelButton.show();
+            }
+            else{
+                searchIcon.show();
+                cancelButton.hide();
+            }
+            searchBar.onChange(q);
+        };
+        input.onkeydown = function(event){
+            var key = event.keyCode;
+            if (key === 9 || key === 13) {
+                input.oninput();
+                input.blur();
+                var q = searchBar.getValue();
+                searchBar.onSearch(q);
+            }
+        };
+
+
+      //Cancel button
+        var cancelButton = document.createElement("div");
+        cancelButton.className = "search-bar-cancel noselect";
+        cancelButton.innerHTML = '<i class="fas fa-times"></i>';
+        javaxt.dhtml.utils.addShowHide(cancelButton);
+        cancelButton.hide();
+        div.appendChild(cancelButton);
+        cancelButton.onclick = function(){
+            searchBar.clear();
+        };
+
+        searchBar.clear = function(){
+            input.value = "";
+            cancelButton.hide();
+            searchIcon.show();
+            searchBar.onClear();
+        };
+
+        searchBar.getValue = function(){
+            var q = input.value;
+            if (q){
+                q = q.trim();
+                if (q.length===0) q = null;
+            }
+            return q;
+        };
+
+        searchBar.onSearch= function(q){};
+        searchBar.onChange = function(q){};
+        searchBar.onClear = function(){};
+
+        return searchBar;
+    },
+
+
+  //**************************************************************************
   //** addTextEditor
   //**************************************************************************
     addTextEditor: function(div, callback){
