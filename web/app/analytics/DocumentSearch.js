@@ -12,6 +12,10 @@ if(!bluewave.analytics) bluewave.analytics={};
 bluewave.analytics.DocumentSearch = function(parent, config) {
 
     var me = this;
+    var defaultConfig = {
+        dateFormat: "M/D/YYYY h:mm A",
+        showCheckboxes: false
+    };
     var waitmask;
     var searchBar;
     var grid;
@@ -23,6 +27,9 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
     var init = function(){
 
         if (!config) config = {};
+        config = merge(config, defaultConfig);
+
+
         if (!config.fx) config.fx = new javaxt.dhtml.Effects();
         if (!config.style) config.style = javaxt.dhtml.style.default;
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
@@ -147,17 +154,21 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
     var createGrid = function(parent){
 
-        var df = d3.timeFormat(getDateFormat("M/D/YYYY h:mm A"));
+        var df = d3.timeFormat(getDateFormat(config.dateFormat));
+        var columnConfig = [
+            {header: 'Name', width:'100%', sortable: true},
+            {header: 'Date', width:'150', sortable: true, align:'right'},
+            {header: 'Type', width:'140', sortable: true},
+            {header: 'Size', width:'115', sortable: true, align:'right'}
+        ];
+        if (config.showCheckboxes===true){
+            columnConfig.unshift({header: 'x', width:30});
+        }
 
         grid = new javaxt.dhtml.DataGrid(parent, {
             style: config.style.table,
             localSort: true,
-            columns: [
-                {header: 'Name', width:'100%', sortable: true},
-                {header: 'Date', width:'150', sortable: true, align:'right'},
-                {header: 'Type', width:'140', sortable: true},
-                {header: 'Size', width:'115', sortable: true, align:'right'}
-            ],
+            columns: columnConfig,
             update: function(row, record){
                 row.set("Name", record.name);
 
@@ -218,11 +229,14 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
-    var createTable = javaxt.dhtml.utils.createTable;
+
     var get = bluewave.utils.get;
     var parseCSV = bluewave.utils.parseCSV;
     var formatNumber = bluewave.utils.formatNumber;
     var getDateFormat = bluewave.chart.utils.getDateFormat;
+
+    var merge = javaxt.dhtml.utils.merge;
+    var createTable = javaxt.dhtml.utils.createTable;
 
     init();
 };
