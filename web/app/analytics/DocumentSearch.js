@@ -180,7 +180,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         waitmask.show();
         grid.update = function(q){
             grid.clear();
-            get("/documents" + (q ? "?q="+q : ""), {
+            get("/documents?" + (q ? "q="+q+ "&limit=50" : "&limit=100"), {
                 success: function(csv){
                     var rows = parseCSV(csv, ",");
                     var header = rows.shift();
