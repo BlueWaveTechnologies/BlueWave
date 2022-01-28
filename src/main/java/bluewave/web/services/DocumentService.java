@@ -41,7 +41,6 @@ public class DocumentService extends WebService {
         int poolSize = 1000;
         pool = new ThreadPool(numThreads, poolSize){
             public void process(Object obj){
-
                 try{
                     Object[] arr = (Object[]) obj;
                     javaxt.io.File file = (javaxt.io.File) arr[0];
@@ -50,7 +49,7 @@ public class DocumentService extends WebService {
                     bluewave.app.File f = getOrCreateFile(file, path);
                     bluewave.app.Document doc = getOrCreateDocument(f);
                     String indexStatus = doc.getIndexStatus();
-                    if (index!=null){ //indexStatus==null &&
+                    if (indexStatus==null && index!=null){
                         try{
                             index.addDocument(doc, file);
                             doc.setIndexStatus("indexed");
@@ -133,20 +132,20 @@ public class DocumentService extends WebService {
     private ServiceResponse getDocuments(ServiceRequest request, Database database)
         throws ServletException {
 
+      //Parse request
         Long offset = request.getOffset();
         Long limit = request.getLimit();
         if (limit==null || limit<1) limit = 50L;
+        String orderBy = request.getParameter("orderby").toString();
+        if (orderBy==null) orderBy = "name";
+        String q = request.getParameter("q").toString();
 
 
+      //Compile sql statement
         StringBuilder sql = new StringBuilder();
         sql.append("select document.id, file.name, file.type, file.date, file.size ");
         sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
         sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
-
-        StringBuilder str = new StringBuilder();
-        str.append("id,name,type,date,size");
-
-        String q = request.getParameter("q").toString();
         if (q!=null){
             try{
 
@@ -178,11 +177,14 @@ public class DocumentService extends WebService {
             }
         }
 
+        if (orderBy!=null) sql.append(" ORDER BY " + orderBy);
         if (offset!=null) sql.append(" OFFSET " + offset);
         sql.append(" LIMIT " + limit);
 
-        //console.log(sql);
 
+      //Execute query and generate response
+        StringBuilder str = new StringBuilder();
+        str.append("id,name,type,date,size");
         Connection conn = null;
         try{
             conn = database.getConnection();
@@ -278,8 +280,11 @@ public class DocumentService extends WebService {
                             inputChannel.close();
                             outputChannel.close();
 
-                            //Index the file
-                            pool.add(file);
+
+                          //Index the file
+                            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+                            pool.add(new Object[]{file, path});
+
 
                             json.set("result", "uploaded");
                         }
