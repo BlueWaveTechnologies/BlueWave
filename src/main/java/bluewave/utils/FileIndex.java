@@ -74,9 +74,61 @@ public class FileIndex {
     }
 
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(ArrayList<String> searchTerms, Integer limit) throws Exception {
+        TreeMap<Float, ArrayList<javaxt.io.File>> searchResults = new TreeMap<>();
+        IndexSearcher searcher = instanceOfIndexSearcher();
+        if (searcher != null) {
+            TopDocs results = getTopDocs(searchTerms, limit);
+            if (results != null) {
+                for (int i = 0; i < results.scoreDocs.length; i++) {
+                    ScoreDoc scoreDoc = results.scoreDocs[i];
+                    Document doc = searcher.doc(scoreDoc.doc);
+                    float score = scoreDoc.score;
+                    javaxt.io.File file = new javaxt.io.File(doc.get("path"));
+                    ArrayList<javaxt.io.File> files = searchResults.get(score);
+                    if (files==null){
+                        files = new ArrayList<>();
+                        searchResults.put(score, files);
+                    }
+                    files.add(file);
+                }
+            }
+        }
+        return searchResults;
+    }
+
+
+    public TreeMap<Float, ArrayList<bluewave.app.Document>> findDocuments(ArrayList<String> searchTerms, Integer limit) throws Exception {
+        TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
+        IndexSearcher searcher = instanceOfIndexSearcher();
+        if (searcher != null) {
+            TopDocs results = getTopDocs(searchTerms, limit);
+            if (results != null) {
+                for (int i = 0; i < results.scoreDocs.length; i++) {
+                    ScoreDoc scoreDoc = results.scoreDocs[i];
+
+                    Document doc = searcher.doc(scoreDoc.doc);
+
+                    float score = scoreDoc.score;
+
+                    Long documentID = Long.parseLong(doc.get("documentID"));
+                    bluewave.app.Document d = new bluewave.app.Document(documentID);
+                    ArrayList<bluewave.app.Document> documents = searchResults.get(score);
+                    if (documents==null){
+                        documents = new ArrayList<>();
+                        searchResults.put(score, documents);
+                    }
+                    documents.add(d);
+                }
+            }
+        }
+        return searchResults;
+    }
+
+
+    public TopDocs getTopDocs(ArrayList<String> searchTerms, Integer limit) throws Exception {
         if (limit==null || limit<1) limit = 10;
 
-        TreeMap<Float, ArrayList<javaxt.io.File>> searchResults = new TreeMap<>();
+        TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher != null) {
 
@@ -94,25 +146,11 @@ public class FileIndex {
                 bqBuilder.add(fbc);
             }
             BooleanQuery bbq = bqBuilder.build();
-
-            TopDocs results = searcher.search(bbq, limit);
-
-            for (int i = 0; i < results.scoreDocs.length; i++) {
-                ScoreDoc scoreDoc = results.scoreDocs[i];
-                Document doc = searcher.doc(scoreDoc.doc);
-                float score = scoreDoc.score;
-                javaxt.io.File file = new javaxt.io.File(doc.get("path"));
-                ArrayList<javaxt.io.File> files = searchResults.get(score);
-                if (files==null){
-                    files = new ArrayList<>();
-                    searchResults.put(score, files);
-                }
-                files.add(file);
-            }
+            return searcher.search(bbq, limit);
         }
-
-        return searchResults;
+        return null;
     }
+
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
@@ -143,6 +181,10 @@ public class FileIndex {
     }
 
     public void addFile(javaxt.io.File file) throws Exception {
+        addDocument(null, file);
+    }
+
+    public void addDocument(bluewave.app.Document d, javaxt.io.File file) throws Exception {
         if (hasFile(file)) return;
 
         // make a new, empty document
@@ -162,6 +204,10 @@ public class FileIndex {
         // For example the long value 2011021714 would mean
         // February 17, 2011, 2-3 PM.
         doc.add(new LongPoint("modified", file.getDate().getTime()));
+
+
+        if (d!=null) doc.add(new StringField("documentID", d.getID()+"", Field.Store.YES));
+
 
         if (file.getExtension().equalsIgnoreCase("pdf")) {
 
