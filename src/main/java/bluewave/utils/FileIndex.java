@@ -68,6 +68,14 @@ public class FileIndex {
     }
 
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(String... searchTerms) throws Exception {
+        ArrayList<String> arr = new ArrayList<>();
+        for (String term : searchTerms) arr.add(term);
+        return findFiles(arr, 10);
+    }
+
+    public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(ArrayList<String> searchTerms, Integer limit) throws Exception {
+        if (limit==null || limit<1) limit = 10;
+
         TreeMap<Float, ArrayList<javaxt.io.File>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher != null) {
@@ -87,7 +95,7 @@ public class FileIndex {
             }
             BooleanQuery bbq = bqBuilder.build();
 
-            TopDocs results = searcher.search(bbq, 10);
+            TopDocs results = searcher.search(bbq, limit);
 
             for (int i = 0; i < results.scoreDocs.length; i++) {
                 ScoreDoc scoreDoc = results.scoreDocs[i];
