@@ -13,6 +13,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
     var me = this;
     var waitmask;
+    var searchBar;
     var grid;
 
 
@@ -71,14 +72,30 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
   //**************************************************************************
-  //** createBody
+  //** createHeader
   //**************************************************************************
     var createHeader = function(parent){
 
-
+        createSearchBar(parent);
 
     };
 
+
+  //**************************************************************************
+  //** createSearchBar
+  //**************************************************************************
+    var createSearchBar = function(parent){
+        searchBar = bluewave.utils.createSearchBar(parent);
+        searchBar.onChange = function(q){
+            console.log(q);
+        };
+        searchBar.onSearch = function(q){
+            grid.update(q);
+        };
+        searchBar.onClear = function(){
+            grid.update();
+        };
+    };
 
 
   //**************************************************************************
@@ -161,9 +178,9 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         });
 
         waitmask.show();
-        grid.update = function(){
-
-            get("/documents", {
+        grid.update = function(q){
+            grid.clear();
+            get("/documents" + (q ? "?q="+q : ""), {
                 success: function(csv){
                     var rows = parseCSV(csv, ",");
                     var header = rows.shift();
