@@ -23,14 +23,14 @@ public class Dashboard extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
     public Dashboard(){
-        super("application.dashboard", new java.util.HashMap<String, String>() {{
+        super("application.dashboard", java.util.Map.ofEntries(
             
-            put("name", "name");
-            put("className", "class_name");
-            put("thumbnail", "thumbnail");
-            put("info", "info");
+            java.util.Map.entry("name", "name"),
+            java.util.Map.entry("className", "class_name"),
+            java.util.Map.entry("thumbnail", "thumbnail"),
+            java.util.Map.entry("info", "info")
 
-        }});
+        ));
         
     }
 

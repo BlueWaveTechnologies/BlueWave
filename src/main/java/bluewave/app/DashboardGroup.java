@@ -24,15 +24,15 @@ public class DashboardGroup extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
     public DashboardGroup(){
-        super("application.dashboard_group", new java.util.HashMap<String, String>() {{
+        super("application.dashboard_group", java.util.Map.ofEntries(
             
-            put("name", "name");
-            put("description", "description");
-            put("user", "user_id");
-            put("info", "info");
-            put("dashboards", "dashboards");
+            java.util.Map.entry("name", "name"),
+            java.util.Map.entry("description", "description"),
+            java.util.Map.entry("user", "user_id"),
+            java.util.Map.entry("info", "info"),
+            java.util.Map.entry("dashboards", "dashboards")
 
-        }});
+        ));
         dashboards = new ArrayList<Dashboard>();
     }
 
@@ -207,17 +207,16 @@ public class DashboardGroup extends javaxt.sql.Model {
                 obj.save();
                 dashboardIDs.add(obj.getID());
             }
+
+            conn.execute("delete from application.dashboard_group_dashboard where dashboard_group_id=" + id);
+            rs.open("select * from application.dashboard_group_dashboard where dashboard_group_id=" + id, conn, false);
             for (long dashboardID : dashboardIDs){
-                rs.open("select * from application.dashboard_group_dashboard where dashboard_group_id=" + id + 
-                " and dashboard_id=" + dashboardID, conn, false);
-                if (rs.EOF){
-                    rs.addNew();
-                    rs.setValue("dashboard_group_id", id);
-                    rs.setValue("dashboard_id", dashboardID);
-                    rs.update();
-                }
-                rs.close();
+                rs.addNew();
+                rs.setValue("dashboard_group_id", id);
+                rs.setValue("dashboard_id", dashboardID);
+                rs.update();
             }
+            rs.close();
 
 
             conn.close();

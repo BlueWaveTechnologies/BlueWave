@@ -934,6 +934,13 @@ bluewave.Application = function(parent, config) {
             }));
 
 
+            div.appendChild(createMenuOption("Create Group", "folder-plus", function(){
+                if (currApp instanceof bluewave.Homepage){
+                    currApp.createGroup();
+                }
+            }));
+
+
             div.appendChild(createMenuOption("Edit Dashboard", "edit", function(){
                 if (explorerPanel) explorerPanel.setView("Edit");
             }));
@@ -1021,6 +1028,12 @@ bluewave.Application = function(parent, config) {
             if (menuItem.label==="Dashboard Home" && isHomepageVisible){
                 menuItem.hide();
             }
+
+
+            if (menuItem.label==="Create Group" && !isHomepageVisible){
+                menuItem.hide();
+            }
+
 
             if (menuItem.label==="Edit Dashboard"){
                 if (isExplorerVisible && explorerPanel.getView()==="Dashboard"){

@@ -22,13 +22,13 @@ public class DashboardUser extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
     public DashboardUser(){
-        super("application.dashboard_user", new java.util.HashMap<String, String>() {{
+        super("application.dashboard_user", java.util.Map.ofEntries(
             
-            put("user", "user_id");
-            put("dashboard", "dashboard_id");
-            put("readOnly", "read_only");
+            java.util.Map.entry("user", "user_id"),
+            java.util.Map.entry("dashboard", "dashboard_id"),
+            java.util.Map.entry("readOnly", "read_only")
 
-        }});
+        ));
         
     }
 

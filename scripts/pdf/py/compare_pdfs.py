@@ -2,6 +2,7 @@
 python3 py/compare_pdfs.py -f data/test_pdfs/00026_04_fda-K071597_test_data.pdf data/test_pdfs/small_test/copied_data.pdf
 """
 
+import os
 import re
 import sys
 import json
@@ -9,8 +10,10 @@ import math
 import pickle
 import time
 import argparse
+from pathlib import Path
 
 import itertools
+import numpy as np
 from itertools import groupby
 from itertools import combinations
 from operator import itemgetter
@@ -29,14 +32,11 @@ from pydivsufsort import divsufsort, kasai
 #-------------------------------------------------------------------------------
 # UTILS
 #-------------------------------------------------------------------------------
+def get_datadir():
+    currdir = os.path.dirname(os.path.realpath(__file__))
+    parentdir = str(Path(currdir).parent)
+    return parentdir + os.path.sep + 'data'
 
-datadir = '' 
-def get_datadir(): 
-    import os 
-    from pathlib import Path 
-    currdir = os.path.dirname(os.path.realpath(__file__)) 
-    parentdir = str(Path(currdir).parent) 
-    return parentdir + os.path.sep + 'data' + os.path.sep 
 
 def list_of_unique_dicts(L):
     # https://stackoverflow.com/questions/11092511/python-list-of-unique-dictionaries
@@ -82,46 +82,51 @@ def find_common_substrings(text1, text2, min_len):
     sa = divsufsort(text_combined)
     lcp = kasai(text_combined, sa)
     lcp = list(lcp)
-    lcp = [lcp[-1]] + lcp[:-1]
+    lcp = np.array(lcp[:-1])
 
     # Collect candidates
     candidates = []
-    for i in range(1, len(sa)):
-        is_long_enough = lcp[i] >= min_len;
-        if is_long_enough:
-            j1 = sa[i-1]
-            j2 = sa[i]
-            h = lcp[i]
-            j_min = min(j1, j2)
-            j_max = max(j1, j2)
-            is_in_both = j_min < len(text1) and j_max > len(text1)
-            does_not_cross = not (j_min < len(text1) and j_min+h > len(text1))
-            if is_in_both and does_not_cross:
-                substring = text_combined[j1:j1+h]
-                candidates.append((substring, j1, j1+h))
-    
+    l = len(text1)
+    j1s = np.array(sa[:-1])
+    j2s = np.array(sa[1:])
+    j_min = np.minimum(j1s, j2s)
+    j_max = np.maximum(j1s, j2s)
+
+    is_long_enough = lcp > min_len
+    is_in_both = (j_min < l) & (j_max > l)
+    does_not_cross = ~((j_min < l) & (j_min + lcp > l))
+
+    is_ok = is_long_enough & is_in_both & does_not_cross
+
+    my_j1 = j1s[is_ok]
+    my_h = lcp[is_ok]
+
     # Remove candidates that are a substring of other candidates
 
     # Sort by length, descending
-    candidates = sorted(candidates, key=lambda tup: -len(tup[0]))
-    non_overlapping = []
+    sorted_idxs = np.argsort(-my_h)
+    my_j1 = my_j1[sorted_idxs]
+    my_h = my_h[sorted_idxs]
+
+    # Go through and take out overlapping substrings
+
     def is_subset_of_any_existing(new, existing):
-        # for existing_str in existing:
-        #     if new in existing:
-        #         return True
-        new_str, new_start, new_end = new
-        for ex_str, ex_start, ex_end in existing:
+        new_start, new_end = new
+        for ex_start, ex_end in existing:
             if ex_start <= new_start and new_end <= ex_end:
                 return True
         return False
 
-    # Go through and take out overlapping substrings
-    for new in candidates:
-        if not is_subset_of_any_existing(new=new, existing=non_overlapping):
-            non_overlapping.append(new)
-    
-    result = [i[0] for i in non_overlapping]
-    
+    non_overlapping = []
+    LIMIT = 100000
+    for j1, h in zip(my_j1[:LIMIT], my_h[:LIMIT]):
+        start = j1
+        end = j1 + h
+        if not is_subset_of_any_existing(new=(start, end), existing=non_overlapping):
+            non_overlapping.append((start, end))
+
+    result = [text1[start:end] for start, end in non_overlapping]
+
     return result
 
 #-------------------------------------------------------------------------------
@@ -249,7 +254,7 @@ def find_page_of_sus_substr(pages, sus_substr):
 
             substr_a, substr_b = sus_substr.split('|')[:2]
             if substr_a in page_text_a and substr_b in page_text_b:
-                return page_num_a            
+                return page_num_a
     else:
         for page_num, page_text in pages:
             if sus_substr in page_text:
@@ -278,9 +283,9 @@ def filter_sus_pairs(suspicious_pairs):
         return suspicious_pairs
 
     datadir = get_datadir()
-    with open(datadir+'vectorizer.p', 'rb') as f:
+    with open(f'{datadir}/vectorizer.p', 'rb') as f:
         vectorizer = pickle.load(f)
-    with open(datadir+'text_clf.p', 'rb') as f:
+    with open(f'{datadir}/text_clf.p', 'rb') as f:
         clf = pickle.load(f)
 
     text_strs = [p['string'] for p in common_text_sus_pairs]
@@ -326,7 +331,7 @@ def get_file_info(file_data, suspicious_pairs):
     for filename, data in file_data.items():
         file_sus_pages = list(filename_sus_pages.get(filename, []))
         fi = {
-            'filename': filename, 
+            'filename': filename,
             'n_pages': len(data['page_texts']),
             'n_suspicious_pages': len(file_sus_pages),
             'suspicious_pages': file_sus_pages,
@@ -373,9 +378,9 @@ def main(filenames, pretty_print, verbose=False):
         # Compare numbers
         if verbose: print('Comparing numbers...')
         com_num_substrs = compare_texts(
-            full_text_a=a['full_digits'], 
-            full_text_b=b['full_digits'], 
-            min_len=20
+            full_text_a=a['full_digits'],
+            full_text_b=b['full_digits'],
+            min_len=40
         )
         numbers_are_sus = len(com_num_substrs) > 0
         if numbers_are_sus:
@@ -446,7 +451,7 @@ def main(filenames, pretty_print, verbose=False):
 
     file_info = get_file_info(file_data, suspicious_pairs)
     total_page_pairs = math.prod(f['n_pages'] for f in file_info)
-    
+
     dt = time.time() - t0
 
     result = {
@@ -469,8 +474,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-f',
-        '--filenames', 
-        help='PDF filenames to compare', 
+        '--filenames',
+        help='PDF filenames to compare',
         required=True,
         nargs='+',
     )
@@ -487,9 +492,9 @@ if __name__ == '__main__':
         action='store_true'
     )
     args = parser.parse_args()
-    
+
     main(
-        filenames=args.filenames, 
+        filenames=args.filenames,
         pretty_print=args.pretty_print,
         verbose=args.verbose,
         )

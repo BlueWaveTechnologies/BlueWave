@@ -243,7 +243,8 @@ public class WebServices extends WebService {
                 ws = dashboardService;
                 String p = serviceRequest.getPath(1).toString();
                 if (p!=null){
-                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups")){
+                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups") ||
+                        p.equalsIgnoreCase("group") || p.equalsIgnoreCase("permissions")){
                         serviceRequest = new ServiceRequest(service, request);
                     }
                 }
