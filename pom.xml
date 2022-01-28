@@ -3,8 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <lucene.version>9.0.0</lucene.version>
+        <lucene.analyzers.version>8.11.1</lucene.analyzers.version>
     </properties>
 
   <!-- =========================================================== -->
@@ -131,7 +133,41 @@
             <artifactId>geodesy</artifactId>
             <version>1.1.3</version>
         </dependency>
+        
+        <!-- PDFBox -->
+        <dependency>
+          <groupId>org.apache.pdfbox</groupId>
+          <artifactId>pdfbox</artifactId>
+          <version>2.0.25</version>
+        </dependency>
 
+        <!-- Lucene -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>${lucene.version}</version>
+        </dependency>
+
+        <!-- Lucene Query Parser -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-queryparser</artifactId>
+          <version>${lucene.version}</version>
+        </dependency>
+
+        <!-- Lucene Analyzers -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-analyzers-common</artifactId>
+          <version>${lucene.analyzers.version}</version>
+        </dependency>
+
+        <!-- Lucene Analyzers ICU --> 
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-analyzers-icu</artifactId>
+          <version>${lucene.analyzers.version}</version>
+        </dependency>
     </dependencies>
 
 

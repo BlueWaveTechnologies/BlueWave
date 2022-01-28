@@ -316,6 +316,29 @@ public class Config {
 
 
   //**************************************************************************
+  //** getDirectory
+  //**************************************************************************
+  /** Simple helper class used to get a directory specified in the config file
+   *  javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
+   */
+    public static javaxt.io.Directory getDirectory(String... keys){
+        try{
+            JSONValue config = null;
+            for (String key : keys){
+                if (config==null) config = Config.get(key);
+                else config = config.get(key);
+            }
+
+            String dir = config.toString().trim();
+            return new javaxt.io.Directory(dir);
+        }
+        catch(Exception e){
+            return null;
+        }
+    }
+
+
+  //**************************************************************************
   //** getFile
   //**************************************************************************
   /** Returns a File for a given path
