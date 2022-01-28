@@ -102,64 +102,51 @@ public class DocumentService extends WebService {
     }
 
 
-    //**************************************************************************
-    //** getFiles
-    //**************************************************************************
+  //**************************************************************************
+  //** getFiles
+  //**************************************************************************
+  /** Returns a csv document with a list of files
+   */
     private ServiceResponse getFiles(ServiceRequest request, bluewave.app.User user)
-            throws ServletException {
+        throws ServletException {
+
+        StringBuilder str = new StringBuilder();
+        str.append("name,type,date,size");
 
         String q = request.getParameter("q").toString();
         if (q==null){
-            StringBuilder str = new StringBuilder();
-            str.append("name,type,date,size");
+
             javaxt.io.Directory dir = getUploadDir();
             for (Object obj : dir.getChildren(true, "*.pdf")){
-
-                String name="";
-                String type="";
-                java.util.Date date = null;
-                Long size = null;
                 if (obj instanceof javaxt.io.File){
                     javaxt.io.File f = (javaxt.io.File) obj;
-                    name = f.getName();
-                    type = "f";
-                    size = f.getSize();
-                    date = f.getDate();
+                    str.append("\n");
+                    str.append(getString(f));
                 }
                 else if (obj instanceof javaxt.io.Directory){
                     javaxt.io.Directory d = (javaxt.io.Directory) obj;
-                    name = d.getName();
-                    type = "d";
-                    size = -1L;
-                    date = d.getDate();
-
-                    if (true) continue;
+                    String name=d.getName();
+                    String type="d";
+                    java.util.Date date = d.getDate();
+                    Long size = -1L;
                 }
-
-
-
-                if (name.contains(",")) name = "\"" + name + "\"";
-                str.append("\n"+name+","+type+","+new javaxt.utils.Date(date).toISOString()+","+size);
             }
             return new ServiceResponse(str.toString());
         }
         else{
-
             try{
-                JSONArray arr = new JSONArray();
+
                 TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(q);
                 Iterator<Float> it = results.descendingKeySet().iterator();
                 while (it.hasNext()){
                     float score = it.next();
                     ArrayList<javaxt.io.File> files = results.get(score);
                     for (javaxt.io.File file : files){
-                        JSONObject json = new JSONObject();
-                        json.set("score", score);
-                        json.set("file", file.getName());
-                        arr.add(json);
+                        str.append("\n");
+                        str.append(getString(file));
                     }
                 }
-                return new ServiceResponse(arr);
+                return new ServiceResponse(str.toString());
             }
             catch(Exception e){
                 return new ServiceResponse(e);
@@ -167,10 +154,19 @@ public class DocumentService extends WebService {
         }
     }
 
+    private String getString(javaxt.io.File f){
+        String name=f.getName();
+        String type="f";
+        java.util.Date date = f.getDate();
+        Long size = f.getSize();
+        if (name.contains(",")) name = "\"" + name + "\"";
+        return name+","+type+","+new javaxt.utils.Date(date).toISOString()+","+size;
+    }
 
-    //**************************************************************************
-    //** getFile
-    //**************************************************************************
+
+  //**************************************************************************
+  //** getFile
+  //**************************************************************************
     private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
             throws ServletException {
 
