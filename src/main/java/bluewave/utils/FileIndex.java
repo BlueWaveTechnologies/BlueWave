@@ -67,8 +67,8 @@ public class FileIndex {
         dir = FSDirectory.open(Paths.get(path.toString()));
     }
 
-    public TreeMap<Float, javaxt.io.File> findFiles(String... searchTerms) throws Exception {
-        TreeMap<Float, javaxt.io.File> searchResults = new TreeMap<>();
+    public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(String... searchTerms) throws Exception {
+        TreeMap<Float, ArrayList<javaxt.io.File>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher != null) {
 
@@ -92,7 +92,14 @@ public class FileIndex {
             for (int i = 0; i < results.scoreDocs.length; i++) {
                 ScoreDoc scoreDoc = results.scoreDocs[i];
                 Document doc = searcher.doc(scoreDoc.doc);
-                searchResults.put(scoreDoc.score, new javaxt.io.File(doc.get("path")));
+                float score = scoreDoc.score;
+                javaxt.io.File file = new javaxt.io.File(doc.get("path"));
+                ArrayList<javaxt.io.File> files = searchResults.get(score);
+                if (files==null){
+                    files = new ArrayList<>();
+                    searchResults.put(score, files);
+                }
+                files.add(file);
             }
         }
 
