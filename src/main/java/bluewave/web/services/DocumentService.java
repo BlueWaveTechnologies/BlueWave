@@ -110,18 +110,23 @@ public class DocumentService extends WebService {
     private ServiceResponse getFiles(ServiceRequest request, bluewave.app.User user)
         throws ServletException {
 
+        Integer limit = Math.toIntExact(request.getLimit());
+        if (limit==null || limit<1) limit = 50;
+
         StringBuilder str = new StringBuilder();
         str.append("name,type,date,size");
 
         String q = request.getParameter("q").toString();
         if (q==null){
 
+            int numItems = 0;
             javaxt.io.Directory dir = getUploadDir();
             for (Object obj : dir.getChildren(true, "*.pdf")){
                 if (obj instanceof javaxt.io.File){
                     javaxt.io.File f = (javaxt.io.File) obj;
                     str.append("\n");
                     str.append(getString(f));
+                    numItems++;
                 }
                 else if (obj instanceof javaxt.io.Directory){
                     javaxt.io.Directory d = (javaxt.io.Directory) obj;
@@ -130,13 +135,18 @@ public class DocumentService extends WebService {
                     java.util.Date date = d.getDate();
                     Long size = -1L;
                 }
+
+                if (numItems==limit) break;
             }
             return new ServiceResponse(str.toString());
         }
         else{
             try{
 
-                TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(q);
+                ArrayList<String> searchTerms = new ArrayList<>();
+                searchTerms.add(q);
+
+                TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(searchTerms, limit);
                 Iterator<Float> it = results.descendingKeySet().iterator();
                 while (it.hasNext()){
                     float score = it.next();
