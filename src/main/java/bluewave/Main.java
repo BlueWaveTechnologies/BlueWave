@@ -2,7 +2,6 @@ package bluewave;
 import bluewave.app.User;
 import bluewave.data.*;
 import bluewave.graph.Neo4J;
-import bluewave.utils.SearchResults;
 import bluewave.web.WebApp;
 import static bluewave.utils.StringUtils.*;
 
@@ -448,14 +447,38 @@ public class Main {
 
         }
         else if (test.equalsIgnoreCase("document")){
-            bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(args.get("-path"));
-            SearchResults results = index.findFiles(args.get("-query"));
+            javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
+            javaxt.io.Directory indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
+            javaxt.io.Directory searchDir = Config.getDirectory("webserver", "uploadDir");
+            if (searchDir==null) searchDir = new javaxt.io.Directory(jobDir.toString()+"uploads");
 
-            console.log("done! hits: " + results.getHits());
-            for (Object obj : results.getResultList()) {
-                JSONObject hit = (JSONObject)obj;
-                console.log(hit.get("score") + " : " + hit.get("path"));
+            console.log("Searching:", searchDir);
+            console.log("Using Index:", indexDir);
+
+            bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(indexDir);
+            for (javaxt.io.File file : searchDir.getFiles("*.pdf", true)){
+                try{
+                    index.addFile(file);
+                }
+                catch(Exception e){
+                    //e.printStackTrace();
+                }
             }
+
+
+            int totalHits = 0;
+            TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(args.get("-query"));
+            Iterator<Float> it = results.descendingKeySet().iterator();
+            while (it.hasNext()){
+                float score = it.next();
+                ArrayList<javaxt.io.File> files = results.get(score);
+                for (javaxt.io.File file : files){
+                    console.log(score, file);
+                    totalHits++;
+                }
+            }
+
+            console.log("done! hits: " + totalHits);
         }
         else{
             console.log("Unsupported test: " + test);

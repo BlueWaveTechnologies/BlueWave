@@ -147,15 +147,17 @@ public class DocumentService extends WebService {
 
             try{
                 JSONArray arr = new JSONArray();
-                TreeMap<Float, javaxt.io.File> results = index.findFiles(q);
+                TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(q);
                 Iterator<Float> it = results.descendingKeySet().iterator();
                 while (it.hasNext()){
                     float score = it.next();
-                    javaxt.io.File file = results.get(score);
-                    JSONObject json = new JSONObject();
-                    json.set("score", score);
-                    json.set("file", file.getName());
-                    arr.add(json);
+                    ArrayList<javaxt.io.File> files = results.get(score);
+                    for (javaxt.io.File file : files){
+                        JSONObject json = new JSONObject();
+                        json.set("score", score);
+                        json.set("file", file.getName());
+                        arr.add(json);
+                    }
                 }
                 return new ServiceResponse(arr);
             }
