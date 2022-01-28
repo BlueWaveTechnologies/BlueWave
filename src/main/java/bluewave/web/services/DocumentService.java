@@ -46,7 +46,7 @@ public class DocumentService extends WebService {
                     if (index!=null) index.addFile(file);
                 }
                 catch(Exception e){
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
         }.start();
