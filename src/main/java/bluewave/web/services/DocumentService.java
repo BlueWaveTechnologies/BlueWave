@@ -41,9 +41,25 @@ public class DocumentService extends WebService {
         int poolSize = 1000;
         pool = new ThreadPool(numThreads, poolSize){
             public void process(Object obj){
+
                 try{
-                    javaxt.io.File file = (javaxt.io.File) obj;
-                    if (index!=null) index.addFile(file);
+                    Object[] arr = (Object[]) obj;
+                    javaxt.io.File file = (javaxt.io.File) arr[0];
+                    bluewave.app.Path path = (bluewave.app.Path) arr[1];
+
+                    bluewave.app.File f = getOrCreateFile(file, path);
+                    bluewave.app.Document doc = getOrCreateDocument(f);
+                    String indexStatus = doc.getIndexStatus();
+                    if (indexStatus==null && index!=null){
+                        try{
+                            index.addFile(file);
+                            doc.setIndexStatus("indexed");
+                        }
+                        catch(Exception e){
+                            doc.setIndexStatus("failed");
+                        }
+                        doc.save();
+                    }
                 }
                 catch(Exception e){
                     //e.printStackTrace();
@@ -58,8 +74,15 @@ public class DocumentService extends WebService {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
+                    HashMap<javaxt.io.Directory, bluewave.app.Path> paths = new HashMap<>();
                     for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
-                        pool.add(file);
+                        javaxt.io.Directory dir = file.getDirectory();
+                        bluewave.app.Path path = paths.get(dir);
+                        if (path==null) path = getOrCreatePath(dir);
+                        if (path!=null){
+                            paths.put(dir, path);
+                            pool.add(new Object[]{file, path});
+                        }
                     }
                 }
             }).start();
@@ -399,5 +422,87 @@ public class DocumentService extends WebService {
             throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
         }
         return jobDir;
+    }
+
+
+  //**************************************************************************
+  //** getOrCreatePath
+  //**************************************************************************
+    private bluewave.app.Path getOrCreatePath(javaxt.io.Directory dir){
+        String p = dir.toString();
+
+        try{
+            return bluewave.app.Path.find("dir=", p)[0];
+        }
+        catch(Exception e){
+        }
+
+        try{
+            bluewave.app.Path path = new bluewave.app.Path();
+            path.setDir(p);
+            path.save();
+            path.getID();
+            return path;
+        }
+        catch(Exception e){
+        }
+
+        return null;
+    }
+
+
+  //**************************************************************************
+  //** getOrCreateFile
+  //**************************************************************************
+    private bluewave.app.File getOrCreateFile(javaxt.io.File file, bluewave.app.Path path){
+        try{
+            return bluewave.app.File.find(
+                "name=", file.getName(),
+                "path_id=", path.getID()
+            )[0];
+        }
+        catch(Exception e){
+        }
+
+        try{
+            bluewave.app.File f = new bluewave.app.File();
+            f.setName(file.getName());
+            f.setSize(file.getSize());
+            f.setDate(new javaxt.utils.Date(file.getDate()));
+            f.setType(file.getContentType());
+            f.setPath(path);
+            f.save();
+            return f;
+        }
+        catch(Exception e){
+        }
+        return null;
+    }
+
+
+  //**************************************************************************
+  //** getOrCreateDocument
+  //**************************************************************************
+    private bluewave.app.Document getOrCreateDocument(bluewave.app.File f){
+
+        try{
+            return bluewave.app.Document.find(
+                "file_id=", f.getID()
+            )[0];
+        }
+        catch(Exception e){
+        }
+
+
+        try{
+            bluewave.app.Document doc = new bluewave.app.Document();
+            doc.setFile(f);
+            doc.save();
+            return doc;
+        }
+        catch(Exception e){
+        }
+
+        return null;
     }
 }
