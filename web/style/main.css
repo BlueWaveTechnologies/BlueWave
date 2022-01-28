@@ -1016,15 +1016,15 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
-/** Search Panel
+/** Search Bar
 /**************************************************************************/
 
-.node-search-bar {
+.search-bar {
     height: 42px;
     padding: 5px 0 0 0;
 }
 
-.node-search-bar-icon {
+.search-bar-icon {
     position: absolute;
     top: 14px;
     left: 6px;
@@ -1033,7 +1033,7 @@ li.tree-node:hover {
     transition: all 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
 }
 
-.node-search-bar-cancel {
+.search-bar-cancel {
     top: 12px;
     right: 6px;
     position: absolute;
@@ -1045,7 +1045,7 @@ li.tree-node:hover {
     cursor: pointer;
 }
 
-.node-search-bar-input {
+.search-bar-input {
     border-radius: 4px;
     color: #363636;
     display: inline-block;
@@ -1065,7 +1065,7 @@ li.tree-node:hover {
     box-sizing: border-box;
 }
 
-.node-search-bar-input:focus {
+.search-bar-input:focus {
     border-color: rgba(82, 168, 236, 0.8);
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
     outline: 0 none;
@@ -1073,11 +1073,15 @@ li.tree-node:hover {
 }
 
 
-.node-search-bar-input::placeholder {
+.search-bar-input::placeholder {
     color: #b9b9b9;
     font-size: 14px;
 }
 
+
+/**************************************************************************/
+/** NodeSearch
+/**************************************************************************/
 
 /* Main panel in the NodeSearch */
 
