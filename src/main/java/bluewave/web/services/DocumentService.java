@@ -139,12 +139,12 @@ public class DocumentService extends WebService {
 
 
         StringBuilder sql = new StringBuilder();
-        sql.append("select file.name, file.type, file.date, file.size ");
+        sql.append("select document.id, file.name, file.type, file.date, file.size ");
         sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
         sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
 
         StringBuilder str = new StringBuilder();
-        str.append("name,type,date,size");
+        str.append("id,name,type,date,size");
 
         String q = request.getParameter("q").toString();
         if (q!=null){
@@ -206,23 +206,16 @@ public class DocumentService extends WebService {
     }
 
     private String getString(Recordset rs){
+        Long id = rs.getValue("id").toLong();
         String name=rs.getValue("name").toString();
         String type=rs.getValue("type").toString();
         javaxt.utils.Date date = rs.getValue("date").toDate();
         String dt = date==null ? "" : date.toISOString();
         Long size = rs.getValue("size").toLong();
         if (name.contains(",")) name = "\"" + name + "\"";
-        return name+","+type+","+dt+","+size;
+        return id+","+name+","+type+","+dt+","+size;
     }
 
-    private String getString(javaxt.io.File f){
-        String name=f.getName();
-        String type="f";
-        java.util.Date date = f.getDate();
-        Long size = f.getSize();
-        if (name.contains(",")) name = "\"" + name + "\"";
-        return name+","+type+","+new javaxt.utils.Date(date).toISOString()+","+size;
-    }
 
 
   //**************************************************************************
