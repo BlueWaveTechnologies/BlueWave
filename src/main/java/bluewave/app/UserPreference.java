@@ -22,13 +22,13 @@ public class UserPreference extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
     public UserPreference(){
-        super("application.user_preference", new java.util.HashMap<String, String>() {{
+        super("application.user_preference", java.util.Map.ofEntries(
             
-            put("key", "key");
-            put("value", "value");
-            put("user", "user_id");
+            java.util.Map.entry("key", "key"),
+            java.util.Map.entry("value", "value"),
+            java.util.Map.entry("user", "user_id")
 
-        }});
+        ));
         
     }
 

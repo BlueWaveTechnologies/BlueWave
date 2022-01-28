@@ -2,6 +2,7 @@ package bluewave.data;
 import bluewave.utils.GeoCoder;
 import bluewave.graph.Neo4J;
 import bluewave.utils.StatusLogger;
+import static bluewave.graph.Utils.*;
 import static bluewave.utils.StatusLogger.*;
 
 import java.util.*;
@@ -9,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.math.BigDecimal;
 
+import javaxt.json.*;
 import javaxt.utils.ThreadPool;
 import javaxt.express.utils.CSV;
 import static javaxt.utils.Console.console;
@@ -19,6 +21,8 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Cell;
 
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
 
@@ -36,7 +40,8 @@ public class Imports {
     private LinkedHashMap<String, Integer> header;
     private GeoCoder geocoder;
     private int sheetID;
-    private String[] establishmentTypes = new String[]{"Manufacturer","Shipper","Importer","Consignee","DII"};
+    private static String[] establishmentTypes = new String[]{
+    "Manufacturer","Shipper","Importer","Consignee","DII"};
 
 
   //**************************************************************************
@@ -88,6 +93,375 @@ public class Imports {
 
 
         geocoder = new GeoCoder();
+    }
+
+
+  //**************************************************************************
+  //** loadLines
+  //**************************************************************************
+  /** Used to create "import_line" nodes using select fields from the input
+   *  xlsx file. Creates relationships to the "import_establishment" and
+   *  "port_of_entry" nodes. Obviously these nodes need to be created BEFORE
+   *  calling this function.
+   */
+    public void loadLines(Neo4J database) throws Exception {
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+
+      //Generate list of fields
+        ArrayList<String> fields = new ArrayList<>(Arrays.asList(
+        "Entry","DOC","Line","Date","Port of Entry","Unladed Port","Country of Origin",
+        "Shipment Method","Product Code","Product Name","Quantity","Value"));
+        for (String establishment : establishmentTypes){
+            fields.add(establishment);
+        }
+        fields.add("Affirmations");
+        fields.add("Final Disposition");
+        fields.add("Predict Risk");
+        fields.add("Predict Score");
+        fields.add("unique_key");
+
+
+      //Set node name
+        String node = "import_line";
+
+
+      //Compile query used to create nodes
+        StringBuilder query = new StringBuilder("CREATE (a:" + node + " {");
+        Iterator<String> it = fields.iterator();
+        while (it.hasNext()){
+            String param = it.next().replace(" ","_").toLowerCase();
+            query.append(param);
+            query.append(": $");
+            query.append(param);
+            if (it.hasNext()) query.append(" ,");
+        }
+        query.append("}) RETURN id(a)");
+
+
+
+      //Create unique key constraint and index
+        Session session = null;
+        try{
+            session = database.getSession();
+            try{ session.run("CREATE CONSTRAINT ON (n:" + node + ") ASSERT n.unique_key IS UNIQUE"); }
+            catch(Exception e){}
+            try{ session.run("CREATE INDEX idx_" + node + " IF NOT EXISTS FOR (n:" + node + ") ON (n.unique_key)"); }
+            catch(Exception e){}
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }
+
+
+
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                JSONObject json = (JSONObject) obj;
+
+                Map<String, Object> params = new LinkedHashMap<>();
+                for (String field : fields){
+                    String param = field.replace(" ","_").toLowerCase();
+                    params.put(param, null);
+                }
+
+
+                String uniqueKey = json.get("entry").toString() + "_" + json.get("doc").toString() + "_" + json.get("line").toString();
+                params.put("unique_key", uniqueKey);
+
+                Iterator<String> it = json.keys();
+                while (it.hasNext()){
+                    String key = it.next();
+                    JSONValue val = json.get(key);
+                    if (val.isNull()){
+                        params.put(key, null);
+                    }
+                    else{
+
+                        boolean fei = false;
+                        for (String establishment : establishmentTypes){
+                            if (key.equalsIgnoreCase(establishment)){
+                                fei = true;
+                                break;
+                            }
+                        }
+
+                        if (fei){
+                            params.put(key, val.toLong());
+                        }
+                        else{
+                            switch(key) {
+//                                case "date":
+//                                    javaxt.utils.Date d = val.toDate();
+//                                    if (d!=null) d.setTimeZone("America/New York");
+//                                    params.put(key, d==null ? null : d.getDate());
+//                                    break;
+                                case "quantity":
+                                case "value":
+                                case "predict_risk":
+                                    params.put(key, val.toDouble());
+                                    break;
+                                default:
+                                    String str = val.toString();
+                                    if (str!=null){
+                                        str = str.trim();
+                                        if (str.isEmpty()) str = null;
+                                    }
+                                    params.put(key, str);
+                                    break;
+                            }
+                        }
+
+                    }
+                }
+
+
+                Long nodeID;
+                try{
+                    nodeID = getSession().run(query.toString(), params).single().get(0).asLong();
+                }
+                catch(Exception e){
+                    //e.printStackTrace();
+                    nodeID = getIdFromError(e);
+                }
+                //console.log(nodeID);
+
+
+
+                for (String establishmentType : establishmentTypes){
+                    establishmentType = establishmentType.toLowerCase();
+                    String fei = json.get(establishmentType).toString();
+                    if (fei==null) continue;
+
+                    String link = "MATCH (r), (n:import_establishment) WHERE id(r)=" + nodeID +
+                    " and n.fei="+fei+" MERGE(r)-[:" + establishmentType + "]->(n)";
+
+                    try{
+                        getSession().run(link);
+                    }
+                    catch(Exception e){
+                        console.log(e.getMessage());
+                    }
+                }
+
+                for (String port : new String[]{"port_of_entry","unladed_port"}){
+
+
+                    Integer portID = json.get(port).toInteger();
+                    if (portID!=null){
+                        String link = "MATCH (r), (n:port_of_entry) WHERE id(r)=" + nodeID +
+                        " and n.id="+portID+" MERGE(r)-[:" + port + "]->(n)";
+
+                        try{
+                            getSession().run(link);
+                        }
+                        catch(Exception e){
+                            console.log(e.getMessage());
+                        }
+                    }
+                }
+
+                recordCounter.incrementAndGet();
+            }
+
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+
+      //Parse records and add them to the pool
+        java.io.InputStream is = file.getInputStream();
+        Workbook workbook = StreamingReader.builder()
+            .rowCacheSize(10)
+            .bufferSize(4096)
+            .open(is);
+
+        int rowID = 0;
+        for (Row row : workbook.getSheetAt(sheetID)){
+            if (rowID>0){
+
+                try{
+
+                    JSONObject json = new JSONObject();
+
+
+                  //Get entry
+                    String entry = "";
+                    String doc = "";
+                    String line = "";
+                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                    if (id!=null){
+                        id = id.trim();
+                        if (!id.isEmpty()){
+                            String[] arr = id.split("/");
+                            if (arr.length>0) entry = arr[0];
+                            if (arr.length>1) doc = arr[1];
+                            if (arr.length>2) line = arr[2];
+                        }
+                    }
+                    json.set("entry",entry);
+                    json.set("doc",doc);
+                    json.set("line",line);
+
+
+
+                  //Get date
+                    String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
+                    if (date!=null) date = date.trim();
+                    if (date.isEmpty()) date = row.getCell(header.get("Submission Date")).getStringCellValue();
+                    json.set("date",date);
+
+
+
+                  //Get port of entry code
+                    String port = row.getCell(header.get("Port of Entry Code & Name")).getStringCellValue();
+                    if (port!=null){
+                        port = port.trim();
+                        if (!port.isEmpty()){
+                            int idx = port.indexOf(" - ");
+                            if (idx>-1){
+                                port = port.substring(0, idx).trim();
+                            }
+                        }
+                    }
+                    json.set("port_of_entry",port);
+
+
+
+                  //Unladed Thru Port Code
+                    String thruPort = row.getCell(header.get("Unladed Thru Port Code")).getStringCellValue();
+                    json.set("unladed_port",thruPort);
+
+
+
+                  //Country of Origin
+                    json.set("country_of_origin", row.getCell(header.get("Country Of Origin")).getStringCellValue());
+
+
+
+                  //Carrier Type
+                    String carrierType = row.getCell(header.get("Carrier Type")).getStringCellValue();
+                    if (carrierType==null) carrierType = "";
+                    carrierType = carrierType.trim().toLowerCase();
+                    if (carrierType.contains("rail") || carrierType.contains("road") || carrierType.contains("truck")){
+                        carrierType = "land";
+                    }
+                    else if (carrierType.contains("air")){
+                        carrierType = "air";
+                    }
+                    else if (carrierType.contains("sea")){
+                        carrierType = "sea";
+                    }
+                    else{
+                        if (!carrierType.isEmpty()) carrierType = "other";
+                    }
+                    json.set("shipment_method",carrierType);
+
+
+
+                  //Product code
+                    String productCode = row.getCell(header.get("Product Code")).getStringCellValue();
+                    String industryCode = row.getCell(header.get("Industry Code")).getStringCellValue();
+                    if (productCode!=null){
+                        if (productCode.startsWith(industryCode)){
+                            productCode = productCode.substring(industryCode.length());
+                        }
+                    }
+                    json.set("product_code",productCode);
+
+
+
+                  //Product name
+                    String productName = row.getCell(header.get("Brand Name")).getStringCellValue();
+                    if (productName!=null){
+                        //if (productName.contains(",")) productName = "\"" + productName + "\"";
+                        json.set("product_name",productName);
+                    }
+
+
+
+                  //Total reported quantity
+                    json.set("quantity",row.getCell(header.get("Reported Total Quantity")).getStringCellValue());
+
+
+
+                  //Declared value in USD
+                    String value = row.getCell(header.get("Value of Goods")).getStringCellValue();
+                    if (value!=null) value = value.replace("$", "").replace(",", "");
+                    json.set("value",value);
+
+
+
+                  //FEI
+                    for (int i=0; i<establishmentTypes.length; i++){
+                        Integer feiField = header.get(establishmentTypes[i] + " FEI Number");
+                        String fei = row.getCell(feiField).getStringCellValue();
+                        json.set(establishmentTypes[i].toLowerCase(),fei);
+                    }
+
+
+
+                  //Affirmations
+                    json.set("affirmations",row.getCell(header.get("All Affirmations")).getStringCellValue());
+
+
+                  //Final Disposition
+                    json.set("final_disposition",row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue());
+
+
+                  //PREDICT Risk
+                    json.set("predict_risk",row.getCell(header.get("PREDICT Risk Percentile")).getStringCellValue());
+
+
+                  //PREDICT Score
+                    json.set("predict_score",row.getCell(header.get("PREDICT Total Risk Score")).getStringCellValue());
+
+
+                    pool.add(json);
+
+                }
+                catch(Exception e){
+                    console.log("Failed to parse row " + rowID);
+                }
+
+            }
+            rowID++;
+        }
+
+
+        workbook.close();
+        is.close();
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
+
     }
 
 
@@ -221,7 +595,11 @@ public class Imports {
 
 
                   //Product name
-                    writer.write(row.getCell(header.get("Brand Name")).getStringCellValue());
+                    String productName = row.getCell(header.get("Brand Name")).getStringCellValue();
+                    if (productName!=null){
+                        if (productName.contains(",")) productName = "\"" + productName + "\"";
+                        writer.write(productName);
+                    }
                     writer.write(",");
 
 
@@ -255,34 +633,6 @@ public class Imports {
                   //Final Disposition
                     writer.write(row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue());
                     writer.write(",");
-
-
-//                  //Final Disposition
-//                    String finalDisposition = row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue();
-//                    if (finalDisposition.equals("OASIS MPro Issued"))
-//                        finalDisposition = "OASIS MPro Issued";
-//                    else if(finalDisposition.equals("MPro Issued"))
-//                        finalDisposition = "MPro Issued";
-//                    else if(Arrays.asList("Rel after Detain",
-//                                         "Rel/IB", "Refuse (MB)",
-//                                         "Released").contains(finalDisposition))
-//                        finalDisposition = "Good";
-//                    else if(Arrays.asList("Rel w/Cmnt after Detain",
-//                                         "Released w/Comment",
-//                                         "Refuse Inform After Export",
-//                                         "Refuse Inform Before Export",
-//                                         "Refuse (MB)",
-//                                         "Recon Matls Rel/Rem Refuse IA",
-//                                         "Recon Matls Rel/Rem Refuse IB",
-//                                         "Recon Matls Released").contains(finalDisposition))
-//                        finalDisposition = "Bad";
-//                    else
-//                        finalDisposition = "Other";
-//
-//                    writer.write(",");
-//                    writer.write(finalDisposition);
-
-
 
 
                   //PREDICT Risk
@@ -454,7 +804,7 @@ public class Imports {
                 CSV.Columns columns = CSV.getColumns(row, ",");
                 String address = columns.get(2).toString();
                 String lat = columns.get(3).toString();
-                String lon = columns.get(3).toString();
+                String lon = columns.get(4).toString();
                 addresses.put(address, new String[]{lat,lon});
             }
             br.close();
@@ -492,7 +842,7 @@ public class Imports {
                     if (x>-1) min = Math.min(min, x);
                 }
 
-                console.log(address);
+                //console.log(address);
 
 
                 try{
@@ -654,16 +1004,6 @@ public class Imports {
             }
 
 
-            private Long getIdFromError(Exception e){
-              //Parse error string (super hacky)
-              //Node(4846531) already exists
-                String err = e.getMessage().trim();
-                if (err.contains("Node(") && err.contains(") already exists")){
-                    err = err.substring(err.indexOf("(")+1, err.indexOf(")"));
-                    return Long.parseLong(err);
-                }
-                return null;
-            }
 
 
             private String getQuery(String node, Map<String, Object> params){
@@ -725,9 +1065,150 @@ public class Imports {
 
 
   //**************************************************************************
+  //** linkEstablishments
+  //**************************************************************************
+  /** Used to link "import_line" nodes to "import_establishment" nodes
+   */
+    public static void linkEstablishments(Neo4J database)
+    throws Exception {
+
+
+      //Count unlinked establishments
+        AtomicLong totalRecords = new AtomicLong();
+        Session session = null;
+        try {
+            session = database.getSession();
+
+            String query = "MATCH (n:import_line)\n" +
+            "WHERE NOT (n)-[]->(:import_establishment)\n" +
+            "RETURN count(n)";
+
+            Result rs = session.run(query);
+            if (rs.hasNext()){
+                Record record = rs.next();
+                totalRecords.set(record.get(0).asLong());
+            }
+            session.close();
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+        }
+
+
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
+
+
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(10, 1000){
+            public void process(Object obj){
+                JSONObject json = (JSONObject) obj;
+                Long nodeID = json.get("nodeID").toLong();
+
+
+                for (String establishmentType : establishmentTypes){
+                    establishmentType = establishmentType.toLowerCase();
+                    String fei = json.get(establishmentType).toString();
+
+                    String query = "MATCH (r), (n:import_establishment) WHERE id(r)=" + nodeID +
+                    " and n.fei="+fei+" MERGE(r)-[:" + establishmentType + "]->(n)";
+
+                    try{
+                        getSession().run(query);
+                    }
+                    catch(Exception e){
+                        console.log(e.getMessage());
+                    }
+                }
+
+                recordCounter.incrementAndGet();
+            }
+
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+
+
+      //Add records to the pool
+        try {
+            session = database.getSession();
+
+
+            String query = "MATCH (n:import_line)\n" +
+            "WHERE NOT (n)-[]->(:import_establishment)\n" +
+            "RETURN id(n) as id";
+
+            for (String establishmentType : establishmentTypes){
+                establishmentType = establishmentType.toLowerCase();
+                query+=", n."+establishmentType+" as " + establishmentType;
+            }
+
+
+            Result rs = session.run(query);
+            while (rs.hasNext()){
+                Record record = rs.next();
+                Long nodeID = record.get(0).asLong();
+                JSONObject json = new JSONObject();
+                json.set("nodeID", nodeID);
+                boolean hasErrors = false;
+                for (String establishmentType : establishmentTypes){
+                    establishmentType = establishmentType.toLowerCase();
+                    Long fei = new javaxt.utils.Value(record.get(establishmentType).asObject()).toLong();
+                    if (fei==null){
+                        hasErrors = true;
+                    }
+                    else{
+                        json.set(establishmentType, fei);
+                    }
+                }
+                if (hasErrors){
+                    console.log(nodeID);
+                }
+                else{
+                    pool.add(json);
+                }
+            }
+            session.close();
+        }
+        catch (Exception e) {
+
+            if (session != null) session.close();
+        }
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
+    }
+
+
+  //**************************************************************************
   //** loadExams
   //**************************************************************************
-  /** Used to update import_entry nodes with exam details from an input xlsx
+  /** Used to update import_line nodes with exam details from an input xlsx
    */
     public static void loadExams(javaxt.io.File file, Neo4J database) throws Exception {
 
@@ -747,7 +1228,7 @@ public class Imports {
 
 
 
-                String node = "import_entry";
+                String node = "import_line";
                 StringBuilder query = new StringBuilder();
                 query.append("MATCH (n:" + node + ") WHERE ");
                 query.append("n.entry='" + entry + "' AND ");
@@ -859,6 +1340,172 @@ public class Imports {
                         colName = colName.trim().toLowerCase();
 
                         params.put(colName, val);
+                    }
+
+
+                    pool.add(new Object[]{entry,doc,line,params});
+                    totalRecords++;
+                }
+                catch(Exception e){
+                    console.log("Failed to parse row " + rowID);
+                }
+
+            }
+            rowID++;
+        }
+
+
+      //Update statusLogger
+        statusLogger.setTotalRecords(totalRecords);
+
+
+      //Close workbook
+        workbook.close();
+        is.close();
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
+    }
+
+
+  //**************************************************************************
+  //** loadSamples
+  //**************************************************************************
+  /** Used to update import_line nodes with sample details from an input xlsx
+   */
+    public static void loadSamples(javaxt.io.File file, Neo4J database) throws Exception {
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                Object[] arr = (Object[]) obj;
+                String entry = (String) arr[0];
+                String doc = (String) arr[1];
+                String line = (String) arr[2];
+                Map<String, Object> params = (Map<String, Object>) arr[3];
+
+
+
+                String node = "import_line";
+                StringBuilder query = new StringBuilder();
+                query.append("MATCH (n:" + node + ") WHERE ");
+                query.append("n.entry='" + entry + "' AND ");
+                query.append("n.doc='" + doc + "' AND ");
+                query.append("n.line='" + line + "' ");
+                query.append("SET n+= {");
+
+
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String key = it.next();
+                    query.append(key);
+                    query.append(": $");
+                    query.append(key);
+                    if (it.hasNext()) query.append(", ");
+                }
+
+                query.append("}");
+
+                try{
+                    getSession().run(query.toString(), params);
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+
+
+                recordCounter.incrementAndGet();
+            }
+
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+
+
+        java.io.InputStream is = file.getInputStream();
+        Workbook workbook = StreamingReader.builder()
+            .rowCacheSize(10)
+            .bufferSize(4096)
+            .open(is);
+
+        LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+
+        int rowID = 0;
+        int totalRecords = 0;
+        for (Row row : workbook.getSheetAt(1)){
+            if (rowID==0){
+
+              //Parse header
+                int idx = 0;
+                for (Cell cell : row) {
+                    header.put(cell.getStringCellValue(), idx);
+                    idx++;
+                }
+
+            }
+            else{
+                try{
+
+                  //Get entry
+                    String entry = "";
+                    String doc = "";
+                    String line = "";
+                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                    if (id!=null){
+                        id = id.trim();
+                        if (!id.isEmpty()){
+                            String[] arr = id.split("/");
+                            if (arr.length>0) entry = arr[0];
+                            if (arr.length>1) doc = arr[1];
+                            if (arr.length>2) line = arr[2];
+                        }
+                    }
+
+
+                    Map<String, Object> params = new LinkedHashMap<>();
+
+                    String[] fields = new String[]{
+                        "Sample Lab Classification"
+                    };
+
+                    for (String field : fields){
+                        String val = row.getCell(header.get(field)).getStringCellValue();
+
+                        String colName = field;
+                        while (colName.contains("  ")) colName = colName.replace("  ", " ");
+                        colName = colName.toLowerCase().replace(" ", "_");
+                        colName = colName.trim().toLowerCase();
+
+                        params.put(colName, val);
+
                     }
 
 

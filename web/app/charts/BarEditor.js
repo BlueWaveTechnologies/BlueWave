@@ -13,7 +13,6 @@ bluewave.charts.BarEditor = function(parent, config) {
     var me = this;
     var panel;
     var inputData = [];
-    var svg;
     var previewArea;
     var barChart;
     var optionsDiv;
@@ -90,10 +89,12 @@ bluewave.charts.BarEditor = function(parent, config) {
         };
 
 
-      //Initialize chart area when ready
-        onRender(previewArea, function(){
-            initializeChartSpace();
-        });
+      //Initialize chart
+        barChart = new bluewave.charts.BarChart(previewArea, {});
+        barChart.onClick = function(bar, barID){
+            // chartConfig.barColor = d3.select(bar).attr("fill");
+            editBar(barID);
+        };
     };
 
 
@@ -274,27 +275,6 @@ bluewave.charts.BarEditor = function(parent, config) {
 
 
   //**************************************************************************
-  //** initializeChartSpace
-  //**************************************************************************
-    var initializeChartSpace = function(){
-        var width = previewArea.offsetWidth;
-        var height = previewArea.offsetHeight;
-
-        svg = d3.select(previewArea).append("svg");
-        svg.attr("width", width);
-        svg.attr("height", height);
-
-
-        barChart = new bluewave.charts.BarChart(svg, {});
-        barChart.onClick = function(bar, barID){
-            // chartConfig.barColor = d3.select(bar).attr("fill");
-            editBar(barID);
-
-        };
-    };
-
-
-  //**************************************************************************
   //** createBarPreview
   //**************************************************************************
     var createBarPreview = function(){
@@ -339,18 +319,6 @@ bluewave.charts.BarEditor = function(parent, config) {
                             name: "layout",
                             label: "Chart Layout",
                             type: chartLayout
-                        },
-                        {
-                            name: "legend",
-                            label: "Display Legend",
-                            type: "checkbox",
-                            options: [
-                                {
-                                    label: "",
-                                    value: true
-                                }
-
-                            ]
                         },
                         {
                             name: "stack",
@@ -448,23 +416,19 @@ bluewave.charts.BarEditor = function(parent, config) {
         var yGrid = chartConfig.yGrid;
         yGridField.setValue(yGrid===true ? true : false);
 
-        //Set intial value for legend display
-        var legendField = form.findField("legend");
-        var legend = chartConfig.barLegend;
-        legendField.setValue(legend===true ? true : false);
-
-        //Set intial value for xLabel
+      //Set intial value for xLabel
         var xLabelField = form.findField("xLabel");
         var xLabel = chartConfig.xLabel;
         xLabelField.setValue(xLabel===true ? true : false);
 
-        //Set intial value for yLabel
+      //Set intial value for yLabel
         var yLabelField = form.findField("yLabel");
         var yLabel = chartConfig.yLabel;
         yLabelField.setValue(yLabel===true ? true : false);
 
+
         var stackField = form.findField("stack");
-        var stack = chartConfig.stack;
+        var stack = chartConfig.stackValues;
         stackField.setValue(stack===true ? true : false);
 
 
@@ -472,15 +436,12 @@ bluewave.charts.BarEditor = function(parent, config) {
         form.onChange = function(){
             var settings = form.getData();
 
-
+          //Update form data
             if (settings.xGrid==="true") settings.xGrid = true;
             else settings.xGrid = false;
 
             if (settings.yGrid==="true") settings.yGrid = true;
             else settings.yGrid = false;
-
-            if (settings.legend==="true") settings.legend = true;
-            else settings.legend = false;
 
             if (settings.xLabel==="true") settings.xLabel = true;
             else settings.xLabel = false;
@@ -488,18 +449,28 @@ bluewave.charts.BarEditor = function(parent, config) {
             if (settings.yLabel==="true") settings.yLabel = true;
             else settings.yLabel = false;
 
-            if (settings.stack==="true") settings.stack = true;
-            else settings.stack = false;
+            if (settings.stackValues==="true") settings.stackValues = true;
+            else settings.stackValues = false;
 
 
+          //Update chartConfig
             chartConfig.barLayout = settings.layout;
-            chartConfig.barLegend = settings.legend;
             chartConfig.xGrid = settings.xGrid;
             chartConfig.yGrid = settings.yGrid;
             chartConfig.xLabel = settings.xLabel;
             chartConfig.yLabel = settings.yLabel;
-            chartConfig.stack = settings.stack;
+            chartConfig.stackValues = settings.stackValues;
+
+
+          //Disable animation
+            var animationSteps = chartConfig.animationSteps;
+            chartConfig.animationSteps = 0;
+
+          //Render preview
             createBarPreview();
+
+          //Restore animation
+            chartConfig.animationSteps = animationSteps;
         };
 
 
