@@ -360,15 +360,22 @@ public class DocumentService extends WebService {
   //** getSimilarity
   //**************************************************************************
     public ServiceResponse getSimilarity(ServiceRequest request, Database database)
-            throws ServletException {
+        throws ServletException {
 
         bluewave.app.User user = (bluewave.app.User) request.getUser();
 
       //Get files
         ArrayList<javaxt.io.File> files = new ArrayList<>();
-        for (String fileName : request.getParameter("files").toString().split(",")){
-            javaxt.io.File file = getFile(fileName, user);
-            if (file.exists()) files.add(file);
+        for (String documentID : request.getParameter("documents").toString().split(",")){
+            try{
+                bluewave.app.Document document = new bluewave.app.Document(Long.parseLong(documentID));
+                bluewave.app.File file = document.getFile();
+                bluewave.app.Path path = file.getPath();
+                javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
+                files.add(new javaxt.io.File(dir, file.getName()));
+            }
+            catch(Exception e){
+            }
         }
         if (files.size()<2) return new ServiceResponse(400,
             "At least 2 documents are required");
