@@ -123,7 +123,6 @@ bluewave.graph.NodeSearch = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        searchBar.clear();
         nodeList.disable();
         nodeView.clear();
         gridPanel.clear();
@@ -160,87 +159,16 @@ bluewave.graph.NodeSearch = function(parent, config) {
   //** createSearchBar
   //**************************************************************************
     var createSearchBar = function(parent){
-
-        searchBar = {};
-
-      //Create outer div
-        var div = document.createElement("div");
-        div.className = "node-search-bar";
-        div.style.position = "relative";
-        parent.appendChild(div);
-
-
-      //Create search icon
-        var searchIcon = document.createElement("div");
-        searchIcon.className = "node-search-bar-icon noselect";
-        searchIcon.innerHTML = '<i class="fas fa-search"></i>';
-        searchIcon.show = function(){
-            this.style.opacity = "";
-            input.style.paddingLeft = "26px";
+        searchBar = bluewave.utils.createSearchBar(parent);
+        searchBar.onChange = function(q){
+            //console.log(q);
         };
-        searchIcon.hide = function(){
-            this.style.opacity = 0;
-            input.style.paddingLeft = "8px";
+        searchBar.onSearch = function(q){
+            findNodes(q);
         };
-        div.appendChild(searchIcon);
-
-
-      //Create input
-        var input = document.createElement("input");
-        input.type = "text";
-        input.className = "node-search-bar-input";
-        input.style.width = "100%";
-        input.placeholder = "Search";
-        div.appendChild(input);
-        input.oninput = function(e){
-            var q = searchBar.getValue();
-            if (q){
-                searchIcon.hide();
-                cancelButton.show();
-            }
-            else{
-                searchIcon.show();
-                cancelButton.hide();
-            }
-        };
-        input.onkeydown = function(event){
-            var key = event.keyCode;
-            if (key === 9 || key === 13) {
-                input.oninput();
-                input.blur();
-                var q = searchBar.getValue();
-                findNodes(q);
-            }
-        };
-
-
-      //Cancel button
-        var cancelButton = document.createElement("div");
-        cancelButton.className = "node-search-bar-cancel noselect";
-        cancelButton.innerHTML = '<i class="fas fa-times"></i>';
-        addShowHide(cancelButton);
-        cancelButton.hide();
-        div.appendChild(cancelButton);
-        cancelButton.onclick = function(){
+        searchBar.onClear = function(){
             me.clear();
         };
-
-        searchBar.clear = function(){
-            input.value = "";
-            cancelButton.hide();
-            searchIcon.show();
-        };
-
-        searchBar.getValue = function(){
-            var q = input.value;
-            if (q){
-                q = q.trim();
-                if (q.length===0) q = null;
-            }
-            return q;
-        };
-
-        return div;
     };
 
 
