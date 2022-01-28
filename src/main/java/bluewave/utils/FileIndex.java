@@ -1,5 +1,6 @@
 package bluewave.utils;
-import java.util.*;
+
+import static javaxt.utils.Console.console;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,7 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.LowerCaseFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.icu.ICUNormalizer2Filter;
+import org.apache.lucene.analysis.icu.segmentation.ICUTokenizer;
+import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.Store;
@@ -17,16 +23,17 @@ import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexFileNames;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.pdfbox.cos.COSDocument;
@@ -34,7 +41,7 @@ import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import static javaxt.utils.Console.console;
+import javaxt.json.JSONObject;
 
 public class FileIndex {
 
@@ -44,13 +51,65 @@ public class FileIndex {
     private Object smonitor = new Object();
     private IndexWriter _indexWriter;
     private IndexSearcher _indexSearcher;
+    private Analyzer customAnalyzer = new Analyzer() {
+        @Override
+        protected TokenStreamComponents createComponents(String fieldName) {
+            final Tokenizer source = new ICUTokenizer();
+            TokenStream tokenStream = source;
+            tokenStream = new LowerCaseFilter(tokenStream);
+            tokenStream = new ICUNormalizer2Filter(tokenStream);
+            tokenStream = new ASCIIFoldingFilter(tokenStream);
+            return new TokenStreamComponents(source, tokenStream);
+        }
+    };
 
-    public FileIndex(String path){
+    public FileIndex(String path) {
         indexDirectoryPath = path;
     }
 
-    public ArrayList<Object> findFiles(String q){
-        return null;
+    public SearchResults findFiles(String q) {
+        console.log("findFiles: " + q);
+        SearchResults searchResult = null;
+        IndexSearcher searcher = instanceOfIndexSearcher();
+        if (searcher != null) {
+            try {
+                TopDocs results = null;
+                if (q != null) {
+                    String[] searchTerms = q.split(" ");
+                    BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
+                    for (String term : searchTerms) {
+
+                        QueryParser contentsParser = new QueryParser("contents", customAnalyzer);
+                        BooleanClause bc = new BooleanClause(contentsParser.parse(term),
+                                BooleanClause.Occur.SHOULD);
+                        bqBuilder.add(bc);
+
+                        QueryParser pathParser = new QueryParser("path", customAnalyzer);
+                        BooleanClause fbc = new BooleanClause(pathParser.parse(term),
+                                BooleanClause.Occur.SHOULD);
+                        bqBuilder.add(fbc);
+                    }
+                    BooleanQuery bbq = bqBuilder.build();
+
+                    results = searcher.search(bbq, 10);
+                }
+                JSONObject searchHit = null;
+                searchResult = new SearchResults(results.totalHits.value);
+                for (int i = 0; i < results.scoreDocs.length; i++) {
+                    ScoreDoc scoreDoc = results.scoreDocs[i];
+                    Document doc = searcher.doc(scoreDoc.doc);
+                    searchHit = new JSONObject();
+                    searchHit.set("id", scoreDoc.doc);
+                    searchHit.set("score", scoreDoc.score);
+                    searchHit.set("path", doc.get("path"));
+                    searchResult.add(searchHit);
+                }
+            } catch (Exception e) {
+                console.log("ERROR findFiles: " + e);
+            }
+        }
+
+        return searchResult;
     }
 
     private IndexWriter instanceOfIndexWriter() {
@@ -59,8 +118,7 @@ public class FileIndex {
                 try {
                     org.apache.lucene.store.Directory dir =
                             FSDirectory.open(Paths.get(indexDirectoryPath));
-                    Analyzer analyzer = new StandardAnalyzer();
-                    IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
+                    IndexWriterConfig iwc = new IndexWriterConfig(customAnalyzer);
                     iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
                     _indexWriter = new IndexWriter(dir, iwc);
                 } catch (Exception e) {
@@ -118,7 +176,6 @@ public class FileIndex {
             // field that is indexed (i.e. searchable), but don't tokenize
             // the field into separate words and don't index term frequency
             // or positional information:
-            console.log("indexDoc: path: " + file.getFileName().toString());
             Field pathField =
                     new StringField("path", file.getFileName().toString(), Field.Store.YES);
             doc.add(pathField);

@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.Config;
 import bluewave.utils.FileIndex;
+import bluewave.utils.SearchResults;
 import static bluewave.utils.Python.*;
 
 import java.util.*;
@@ -37,10 +38,10 @@ public class DocumentService extends WebService {
   //**************************************************************************
     public DocumentService(){
 
-        index = new FileIndex(getUploadDir().toString());
+        index = new FileIndex(getIndexDir().toString());
 
 
-      //Start the thread pool
+        //Start the thread pool
         int numThreads = 20;
         int poolSize = 1000;
         pool = new ThreadPool(numThreads, poolSize){
@@ -56,7 +57,7 @@ public class DocumentService extends WebService {
         }.start();
 
 
-      //Add files to the index (use separate thread so the server can start without delay)
+        //Add files to the index (use separate thread so the server can start without delay)
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -68,11 +69,11 @@ public class DocumentService extends WebService {
     }
 
 
-  //**************************************************************************
-  //** getServiceResponse
-  //**************************************************************************
+    //**************************************************************************
+    //** getServiceResponse
+    //**************************************************************************
     public ServiceResponse getServiceResponse(ServiceRequest request, Database database)
-        throws ServletException {
+            throws ServletException {
 
         String method = request.getMethod();
         if (method.isBlank()){
@@ -101,11 +102,11 @@ public class DocumentService extends WebService {
     }
 
 
-  //**************************************************************************
-  //** getFiles
-  //**************************************************************************
+    //**************************************************************************
+    //** getFiles
+    //**************************************************************************
     private ServiceResponse getFiles(ServiceRequest request, bluewave.app.User user)
-        throws ServletException {
+            throws ServletException {
 
         String q = request.getParameter("q").toString();
         if (q==null){
@@ -124,7 +125,7 @@ public class DocumentService extends WebService {
                     type = "f";
                     size = f.getSize();
                     date = f.getDate();
-                }
+                } 
                 else if (obj instanceof javaxt.io.Directory){
                     javaxt.io.Directory d = (javaxt.io.Directory) obj;
                     name = d.getName();
@@ -145,36 +146,37 @@ public class DocumentService extends WebService {
         else{
 
             JSONArray arr = new JSONArray();
-            ArrayList<Object> results = index.findFiles(q);
-            if (results!=null){
+            SearchResults results = index.findFiles(q);
+            if (results != null) {
+                arr = results.getResultList();
             }
             return new ServiceResponse(arr);
         }
     }
 
 
-  //**************************************************************************
-  //** getFile
-  //**************************************************************************
+    //**************************************************************************
+    //** getFile
+    //**************************************************************************
     private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
-        throws ServletException {
+            throws ServletException {
 
         String fileName = request.getParameter("fileName").toString();
         javaxt.io.File file = getFile(fileName, user);
         if (file.exists()){
             return new ServiceResponse(file);
-        }
+        } 
         else{
             return new ServiceResponse(404);
         }
     }
 
 
-  //**************************************************************************
-  //** uploadFile
-  //**************************************************************************
+    //**************************************************************************
+    //** uploadFile
+    //**************************************************************************
     private ServiceResponse uploadFile(ServiceRequest request, bluewave.app.User user)
-        throws ServletException {
+            throws ServletException {
         if (user==null || user.getAccessLevel()<3) return new ServiceResponse(403, "Not Authorized");
 
         try{
@@ -213,15 +215,15 @@ public class DocumentService extends WebService {
                             inputChannel.close();
                             outputChannel.close();
 
-                          //Index the file
+                            //Index the file
                             pool.add(file);
 
                             json.set("result", "uploaded");
-                        }
+                        } 
                         catch(Exception e){
                             json.set("result", "error");
                         }
-                    }
+                    } 
                     else{
                         json.set("result", "exists");
                     }
@@ -231,44 +233,44 @@ public class DocumentService extends WebService {
                 }
             }
             return new ServiceResponse(results);
-        }
+        } 
         catch(Exception e){
             return new ServiceResponse(e);
         }
     }
 
 
-  //**************************************************************************
-  //** getThumbnail
-  //**************************************************************************
+    //**************************************************************************
+    //** getThumbnail
+    //**************************************************************************
     public ServiceResponse getThumbnail(ServiceRequest request, Database database)
-        throws ServletException {
+            throws ServletException {
 
-      //Get user
+        //Get user
         bluewave.app.User user = (bluewave.app.User) request.getUser();
 
-      //Get file
+        //Get file
         String fileName = request.getParameter("fileName").toString();
         if (fileName==null || fileName.isBlank()) fileName = request.getParameter("file").toString();
         if (fileName==null || fileName.isBlank()) return new ServiceResponse(400, "file or fileName is required");
         javaxt.io.File file = getFile(fileName, user);
         if (!file.exists()) return new ServiceResponse(404);
 
-      //Get pages
+        //Get pages
         String pages = request.getParameter("pages").toString();
         if (pages==null || pages.isBlank()) pages = request.getParameter("page").toString();
         if (pages==null || pages.isBlank()) return new ServiceResponse(400, "page or pages are required");
 
-      //Get output directory
+        //Get output directory
         javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
         if (!outputDir.exists()) outputDir.create();
 
-      //Get script
+        //Get script
         javaxt.io.File[] scripts = getScriptDir().getFiles("pdf_to_img.py", true);
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
 
 
-      //Compile command line options
+        //Compile command line options
         ArrayList<String> params = new ArrayList<>();
         params.add("-f");
         params.add(file.toString());
@@ -278,13 +280,13 @@ public class DocumentService extends WebService {
         params.add(outputDir.toString());
 
 
-      //Execute script
+        //Execute script
         try{
             executeScript(scripts[0], params);
             String[] arr = pages.split(",");
             javaxt.io.File f = new javaxt.io.File(outputDir, arr[0]+".png");
             return new ServiceResponse(f);
-        }
+        } 
         catch(Exception e){
             return new ServiceResponse(e);
         }
@@ -295,7 +297,7 @@ public class DocumentService extends WebService {
   //** getSimilarity
   //**************************************************************************
     public ServiceResponse getSimilarity(ServiceRequest request, Database database)
-        throws ServletException {
+            throws ServletException {
 
         bluewave.app.User user = (bluewave.app.User) request.getUser();
 
@@ -314,7 +316,7 @@ public class DocumentService extends WebService {
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
 
 
-      //Compile command line options
+        //Compile command line options
         ArrayList<String> params = new ArrayList<>();
         params.add("-f");
         for (javaxt.io.File file : files){
@@ -325,7 +327,7 @@ public class DocumentService extends WebService {
       //Execute script
         try{
             return new ServiceResponse(executeScript(scripts[0], params));
-        }
+        } 
         catch(Exception e){
             return new ServiceResponse(e);
         }
@@ -369,4 +371,26 @@ public class DocumentService extends WebService {
         return jobDir;
     }
 
+
+
+    // **************************************************************************
+    // ** getIndexDir
+    // **************************************************************************
+    private static javaxt.io.Directory getIndexDir() {
+        JSONObject config = Config.get("webserver").toJSONObject();
+        javaxt.io.Directory jobDir = null;
+        if (config.has("indexDir")) {
+            String dir = config.get("indexDir").toString().trim();
+            if (dir.length() > 0) {
+                jobDir = new javaxt.io.Directory(dir);
+                jobDir.create();
+            }
+        }
+
+        if (jobDir == null || !jobDir.exists()) {
+            throw new IllegalArgumentException(
+                    "Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
+        }
+        return jobDir;
+    }
 }

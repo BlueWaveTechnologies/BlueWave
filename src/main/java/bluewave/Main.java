@@ -2,10 +2,12 @@ package bluewave;
 import bluewave.app.User;
 import bluewave.data.*;
 import bluewave.graph.Neo4J;
+import bluewave.utils.SearchResults;
 import bluewave.web.WebApp;
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
+import com.google.gson.JsonObject;
 import java.net.InetSocketAddress;
 
 import javaxt.sql.*;
@@ -447,8 +449,13 @@ public class Main {
         }
         else if (test.equalsIgnoreCase("document")){
             bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(args.get("-path"));
-            index.findFiles(args.get("-query"));
-            console.log("done!");
+            SearchResults results = index.findFiles(args.get("-query"));
+
+            console.log("done! hits: " + results.getHits());
+            for (Object obj : results.getResultList()) {
+                JSONObject hit = (JSONObject)obj;
+                console.log(hit.get("score") + " : " + hit.get("path"));
+            }
         }
         else{
             console.log("Unsupported test: " + test);

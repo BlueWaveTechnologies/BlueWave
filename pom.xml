@@ -5,6 +5,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <lucene.version>9.0.0</lucene.version>
+        <lucene.analyzers.version>8.11.1</lucene.analyzers.version>
     </properties>
 
   <!-- =========================================================== -->
@@ -143,9 +145,29 @@
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
-            <version>9.0.0</version>
+            <version>${lucene.version}</version>
         </dependency>
 
+        <!-- Lucene Query Parser -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-queryparser</artifactId>
+          <version>${lucene.version}</version>
+        </dependency>
+
+        <!-- Lucene Analyzers -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-analyzers-common</artifactId>
+          <version>${lucene.analyzers.version}</version>
+        </dependency>
+
+        <!-- Lucene Analyzers ICU --> 
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-analyzers-icu</artifactId>
+          <version>${lucene.analyzers.version}</version>
+        </dependency>
     </dependencies>
 
 
