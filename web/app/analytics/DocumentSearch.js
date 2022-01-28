@@ -156,28 +156,54 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
         var df = d3.timeFormat(getDateFormat(config.dateFormat));
         var columnConfig = [
-            {header: 'Name', width:'100%', sortable: true},
-            {header: 'Date', width:'150', sortable: true, align:'right'},
-            {header: 'Type', width:'140', sortable: true},
-            {header: 'Size', width:'115', sortable: true, align:'right'}
+            {header: 'Name', width:'100%', field: 'name', sortable: true},
+            {header: 'Date', width:'150', field: 'date', sortable: true, align:'right'},
+            {header: 'Type', width:'140', field: 'type', sortable: true},
+            {header: 'Size', width:'115', field: 'size', sortable: true, align:'right'}
         ];
         if (config.showCheckboxes===true){
-            columnConfig.unshift({header: 'x', width:30});
+            columnConfig.unshift({header: 'x', field: 'id', width:30});
         }
 
+        var params = {};
+
         grid = new javaxt.dhtml.DataGrid(parent, {
-            style: config.style.table,
-            localSort: true,
             columns: columnConfig,
+            style: config.style.table,
+            url: "/documents",
+            params: params,
+            parseResponse: function(request){
+                var csv = request.responseText;
+                var rows = parseCSV(csv, ",");
+                var header = rows.shift();
+                var createRecord = function(row){
+                    var r = {};
+                    header.forEach((field, i)=>{
+                        r[field] = row[i];
+                    });
+                    return r;
+                };
+
+                var data = [];
+                rows.forEach((row)=>{
+                    data.push(createRecord(row));
+                });
+
+                return data;
+            },
             update: function(row, record){
+                if (config.showCheckboxes===true) row.set("x", record.id);
                 row.set("Name", record.name);
 
-                var date = new Date(record.date);
-                var label = df(date);
-                if (label.indexOf("0")===0) label = label.substring(1);
-                label = label.replaceAll("/0", "/");
-                label = label.replaceAll(" 0", " ");
-                row.set("Date", label);
+                var d = Date.parse(record.date);
+                if (!isNaN(d)){
+                    var date = new Date(d);
+                    var label = df(date);
+                    if (label.indexOf("0")===0) label = label.substring(1);
+                    label = label.replaceAll("/0", "/");
+                    label = label.replaceAll(" 0", " ");
+                    row.set("Date", label);
+                }
 
                 var size = parseInt(record.size);
                 if (size<1024) size = "1 KB";
@@ -188,39 +214,23 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             }
         });
 
-        waitmask.show();
+        grid.onBeforeLoad = function(){
+            waitmask.show();
+        };
+
+        grid.onLoad = function(){
+            waitmask.hide();
+        };
+
+
         grid.update = function(q){
+
+            if (q) params.q = q;
+            else delete params.q;
+
             grid.clear();
-            get("/documents?" + (q ? "q="+q+ "&limit=50" : "&limit=100"), {
-                success: function(csv){
-                    var rows = parseCSV(csv, ",");
-                    var header = rows.shift();
-                    var createRecord = function(row){
-                        var r = {};
-                        header.forEach((field, i)=>{
-                            r[field] = row[i];
-                        });
-                        return r;
-                    };
-
-                    var data = [];
-                    rows.forEach((row)=>{
-                        data.push(createRecord(row));
-                    });
-
-
-                    waitmask.hide();
-
-
-                    grid.load(data);
-                    grid.setSortIndicator(0, "DESC");
-                },
-                failure: function(request){
-                    alert(request);
-                    waitmask.hide();
-                }
-            });
-
+            grid.load();
+            grid.setSortIndicator(0, "DESC");
 
         };
     };
