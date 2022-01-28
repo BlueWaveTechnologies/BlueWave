@@ -50,9 +50,9 @@ public class DocumentService extends WebService {
                     bluewave.app.File f = getOrCreateFile(file, path);
                     bluewave.app.Document doc = getOrCreateDocument(f);
                     String indexStatus = doc.getIndexStatus();
-                    if (indexStatus==null && index!=null){
+                    if (index!=null){ //indexStatus==null &&
                         try{
-                            index.addFile(file);
+                            index.addDocument(doc, file);
                             doc.setIndexStatus("indexed");
                         }
                         catch(Exception e){
@@ -92,9 +92,9 @@ public class DocumentService extends WebService {
     }
 
 
-    //**************************************************************************
-    //** getServiceResponse
-    //**************************************************************************
+  //**************************************************************************
+  //** getServiceResponse
+  //**************************************************************************
     public ServiceResponse getServiceResponse(ServiceRequest request, Database database)
             throws ServletException {
 
@@ -109,7 +109,7 @@ public class DocumentService extends WebService {
                     return getFile(request, user);
                 }
                 else{
-                    return getFiles(request, user);
+                    return getDocuments(request, database);
                 }
             }
             else if (method.equals("POST")){
@@ -126,65 +126,93 @@ public class DocumentService extends WebService {
 
 
   //**************************************************************************
-  //** getFiles
+  //** getDocuments
   //**************************************************************************
-  /** Returns a csv document with a list of files
+  /** Returns a csv document with a list of documents in the database
    */
-    private ServiceResponse getFiles(ServiceRequest request, bluewave.app.User user)
+    private ServiceResponse getDocuments(ServiceRequest request, Database database)
         throws ServletException {
 
-        Integer limit = Math.toIntExact(request.getLimit());
-        if (limit==null || limit<1) limit = 50;
+        Long offset = request.getOffset();
+        Long limit = request.getLimit();
+        if (limit==null || limit<1) limit = 50L;
+
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("select file.name, file.type, file.date, file.size ");
+        sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
+        sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
 
         StringBuilder str = new StringBuilder();
         str.append("name,type,date,size");
 
         String q = request.getParameter("q").toString();
-        if (q==null){
-
-            int numItems = 0;
-            javaxt.io.Directory dir = getUploadDir();
-            for (Object obj : dir.getChildren(true, "*.pdf")){
-                if (obj instanceof javaxt.io.File){
-                    javaxt.io.File f = (javaxt.io.File) obj;
-                    str.append("\n");
-                    str.append(getString(f));
-                    numItems++;
-                }
-                else if (obj instanceof javaxt.io.Directory){
-                    javaxt.io.Directory d = (javaxt.io.Directory) obj;
-                    String name=d.getName();
-                    String type="d";
-                    java.util.Date date = d.getDate();
-                    Long size = -1L;
-                }
-
-                if (numItems==limit) break;
-            }
-            return new ServiceResponse(str.toString());
-        }
-        else{
+        if (q!=null){
             try{
 
                 ArrayList<String> searchTerms = new ArrayList<>();
                 searchTerms.add(q);
 
-                TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(searchTerms, limit);
-                Iterator<Float> it = results.descendingKeySet().iterator();
-                while (it.hasNext()){
-                    float score = it.next();
-                    ArrayList<javaxt.io.File> files = results.get(score);
-                    for (javaxt.io.File file : files){
-                        str.append("\n");
-                        str.append(getString(file));
+                TreeMap<Float, ArrayList<bluewave.app.Document>> results =
+                    index.findDocuments(searchTerms, Math.toIntExact(limit));
+
+                if (!results.isEmpty()){
+                    String documentIDs = "";
+                    Iterator<Float> it = results.descendingKeySet().iterator();
+                    while (it.hasNext()){
+                        float score = it.next();
+                        ArrayList<bluewave.app.Document> documents = results.get(score);
+                        for (bluewave.app.Document document : documents){
+                            if (documentIDs.length()>0) documentIDs += ",";
+                            documentIDs += document.getID() + "";
+                        }
                     }
+                    sql.append("WHERE document.id in (");
+                    sql.append(documentIDs);
+                    sql.append(")");
                 }
-                return new ServiceResponse(str.toString());
             }
             catch(Exception e){
+                e.printStackTrace();
                 return new ServiceResponse(e);
             }
         }
+
+        if (offset!=null) sql.append(" OFFSET " + offset);
+        sql.append(" LIMIT " + limit);
+
+        //console.log(sql);
+
+        Connection conn = null;
+        try{
+            conn = database.getConnection();
+            Recordset rs = new Recordset();
+            rs.open(sql.toString(), conn);
+            JSONArray arr = new JSONArray();
+            while (rs.hasNext()){
+                str.append("\n");
+                str.append(getString(rs));
+                rs.moveNext();
+            }
+            rs.close();
+            conn.close();
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+
+        return new ServiceResponse(str.toString());
+    }
+
+    private String getString(Recordset rs){
+        String name=rs.getValue("name").toString();
+        String type=rs.getValue("type").toString();
+        javaxt.utils.Date date = rs.getValue("date").toDate();
+        String dt = date==null ? "" : date.toISOString();
+        Long size = rs.getValue("size").toLong();
+        if (name.contains(",")) name = "\"" + name + "\"";
+        return name+","+type+","+dt+","+size;
     }
 
     private String getString(javaxt.io.File f){
@@ -421,7 +449,7 @@ public class DocumentService extends WebService {
         if (indexDir==null || !indexDir.exists()){
             throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
         }
-        return jobDir;
+        return indexDir;
     }
 
 
