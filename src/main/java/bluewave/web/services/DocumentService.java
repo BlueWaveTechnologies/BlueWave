@@ -1,7 +1,6 @@
 package bluewave.web.services;
 import bluewave.Config;
 import bluewave.utils.FileIndex;
-import bluewave.utils.SearchResults;
 import static bluewave.utils.Python.*;
 
 import java.util.*;
@@ -17,7 +16,6 @@ import javaxt.utils.ThreadPool;
 import javaxt.express.*;
 import javaxt.sql.*;
 import javaxt.json.*;
-
 
 
 //******************************************************************************
@@ -38,34 +36,36 @@ public class DocumentService extends WebService {
   //**************************************************************************
     public DocumentService(){
 
-        index = new FileIndex(getIndexDir().toString());
-
-
-        //Start the thread pool
+      //Start thread pool used to index files
         int numThreads = 20;
         int poolSize = 1000;
         pool = new ThreadPool(numThreads, poolSize){
             public void process(Object obj){
-                javaxt.io.File file = (javaxt.io.File) obj;
-                index.addFile(file);
-
-
-                //TODO: check if the file is in the index
-
-                //TODO: if file is missing from index, add it
+                try{
+                    javaxt.io.File file = (javaxt.io.File) obj;
+                    if (index!=null) index.addFile(file);
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
             }
         }.start();
 
 
-        //Add files to the index (use separate thread so the server can start without delay)
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
-                    pool.add(file);
+      //Create index of existing files. Use separate thread so the server doesn't hang
+        try{
+            index = new FileIndex(getIndexDir().toString());
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
+                        pool.add(file);
+                    }
                 }
-            }
-        }).start();
+            }).start();
+        }
+        catch(Exception e){
+        }
     }
 
 
@@ -125,7 +125,7 @@ public class DocumentService extends WebService {
                     type = "f";
                     size = f.getSize();
                     date = f.getDate();
-                } 
+                }
                 else if (obj instanceof javaxt.io.Directory){
                     javaxt.io.Directory d = (javaxt.io.Directory) obj;
                     name = d.getName();
@@ -145,12 +145,23 @@ public class DocumentService extends WebService {
         }
         else{
 
-            JSONArray arr = new JSONArray();
-            SearchResults results = index.findFiles(q);
-            if (results != null) {
-                arr = results.getResultList();
+            try{
+                JSONArray arr = new JSONArray();
+                TreeMap<Float, javaxt.io.File> results = index.findFiles(q);
+                Iterator<Float> it = results.descendingKeySet().iterator();
+                while (it.hasNext()){
+                    float score = it.next();
+                    javaxt.io.File file = results.get(score);
+                    JSONObject json = new JSONObject();
+                    json.set("score", score);
+                    json.set("file", file.getName());
+                    arr.add(json);
+                }
+                return new ServiceResponse(arr);
             }
-            return new ServiceResponse(arr);
+            catch(Exception e){
+                return new ServiceResponse(e);
+            }
         }
     }
 
@@ -165,7 +176,7 @@ public class DocumentService extends WebService {
         javaxt.io.File file = getFile(fileName, user);
         if (file.exists()){
             return new ServiceResponse(file);
-        } 
+        }
         else{
             return new ServiceResponse(404);
         }
@@ -219,11 +230,11 @@ public class DocumentService extends WebService {
                             pool.add(file);
 
                             json.set("result", "uploaded");
-                        } 
+                        }
                         catch(Exception e){
                             json.set("result", "error");
                         }
-                    } 
+                    }
                     else{
                         json.set("result", "exists");
                     }
@@ -233,7 +244,7 @@ public class DocumentService extends WebService {
                 }
             }
             return new ServiceResponse(results);
-        } 
+        }
         catch(Exception e){
             return new ServiceResponse(e);
         }
@@ -286,7 +297,7 @@ public class DocumentService extends WebService {
             String[] arr = pages.split(",");
             javaxt.io.File f = new javaxt.io.File(outputDir, arr[0]+".png");
             return new ServiceResponse(f);
-        } 
+        }
         catch(Exception e){
             return new ServiceResponse(e);
         }
@@ -327,7 +338,7 @@ public class DocumentService extends WebService {
       //Execute script
         try{
             return new ServiceResponse(executeScript(scripts[0], params));
-        } 
+        }
         catch(Exception e){
             return new ServiceResponse(e);
         }
@@ -346,50 +357,38 @@ public class DocumentService extends WebService {
   //** getUploadDir
   //**************************************************************************
     private static javaxt.io.Directory getUploadDir(){
-        JSONObject config = Config.get("webserver").toJSONObject();
-        javaxt.io.Directory jobDir = null;
-        if (config.has("uploadDir")){
-            String dir = config.get("uploadDir").toString().trim();
-            if (dir.length()>0){
-                jobDir = new javaxt.io.Directory(dir);
-                jobDir.create();
+
+        javaxt.io.Directory uploadDir = Config.getDirectory("webserver", "uploadDir");
+        if (uploadDir==null) {
+            javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
+            if (jobDir!=null){
+                uploadDir = new javaxt.io.Directory(jobDir.toString() + "uploads");
+                uploadDir.create();
             }
         }
-        if (jobDir==null) {
-            if (config.has("jobDir")){
-                String dir = config.get("jobDir").toString().trim();
-                if (dir.length()>0){
-                    jobDir = new javaxt.io.Directory(dir);
-                    jobDir = new javaxt.io.Directory(jobDir.toString() + "uploads");
-                    jobDir.create();
-                }
-            }
+        else{
+            uploadDir.create();
         }
-        if (jobDir==null || !jobDir.exists()){
+
+        if (uploadDir==null || !uploadDir.exists()){
             throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
         }
-        return jobDir;
+        return uploadDir;
     }
 
 
-
-    // **************************************************************************
-    // ** getIndexDir
-    // **************************************************************************
+  //**************************************************************************
+  //** getIndexDir
+  //**************************************************************************
     private static javaxt.io.Directory getIndexDir() {
-        JSONObject config = Config.get("webserver").toJSONObject();
-        javaxt.io.Directory jobDir = null;
-        if (config.has("indexDir")) {
-            String dir = config.get("indexDir").toString().trim();
-            if (dir.length() > 0) {
-                jobDir = new javaxt.io.Directory(dir);
-                jobDir.create();
-            }
+        javaxt.io.Directory indexDir = null;
+        javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
+        if (jobDir!=null){
+            indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
+            indexDir.create();
         }
-
-        if (jobDir == null || !jobDir.exists()) {
-            throw new IllegalArgumentException(
-                    "Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
+        if (indexDir==null || !indexDir.exists()){
+            throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
         }
         return jobDir;
     }
