@@ -374,6 +374,9 @@ public class DocumentService extends WebService {
       //Get files
         ArrayList<javaxt.io.File> files = new ArrayList<>();
         String[] documentIDs = request.getParameter("documents").toString().split(",");
+        if(documentIDs == null || documentIDs.length <2)  
+            return new ServiceResponse(400, "At least 2 documents are required");
+
         String cacheQuery = "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON "
                 +"where (A_ID="+documentIDs[0]+" AND B_ID="+documentIDs[1]+") OR (A_ID="+documentIDs[1]+" AND B_ID="+documentIDs[0]+")";
      
