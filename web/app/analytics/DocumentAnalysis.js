@@ -16,7 +16,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
-
+    var similarityView;
+    var windows = [];
 
     var defaultConfig = {
         dateFormat: "M/D/YYYY h:mm A",
@@ -35,8 +36,12 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         if (!config) config = {};
         config = merge(config, defaultConfig);
         if (!config.fx) config.fx = new javaxt.dhtml.Effects();
-        if (!config.style) config.style = javaxt.dhtml.style.default;
 
+
+        if (!config.style) config.style = javaxt.dhtml.style.default;
+        if (!config.style.table) config.style.table = javaxt.dhtml.style.default.table;
+        if (!config.style.window) config.style.window = javaxt.dhtml.style.default.window;
+        if (!config.style.toolbarButton) config.style.toolbarButton = javaxt.dhtml.style.default.toolbarButton;
 
 
       //Create main table
@@ -377,6 +382,12 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             button["run"].disable();
             button["run"].onClick = function(){
 
+                grid.forEachRow((row)=>{
+                    row.record.similarities = null;
+                    row.set("Similarities", "");
+                });
+
+
                 var jobs = [];
                 selectedDocuments.forEach((document)=>{
                     var arr = [];
@@ -388,6 +399,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         otherDocs: arr
                     });
                 });
+
 
                 jobs.forEach((job)=>{
                     grid.forEachRow((row)=>{
@@ -418,20 +430,37 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             tr.appendChild(td);
 
 
-            var gridStyle = config.style.table;
-            if (!gridStyle) gridStyle = javaxt.dhtml.style.default.table;
+          //Create data grid
             grid = new javaxt.dhtml.DataGrid(td, {
-                style: gridStyle,
+                style: config.style.table,
                 localSort: true,
                 columns: [
                     {header: 'Name', width:'100%', sortable: true},
-                    {header: 'Similarities', width:'140', sortable: true}
+                    {header: 'Similarities', width:'215', sortable: true}
                 ],
                 update: function(row, record){
                     row.set("Name", record.name);
                     row.set("Similarities", record.similarities);
                 }
             });
+
+
+          //Watch for row click events
+            grid.onRowClick = function(row, e){
+                var document = row.record;
+                if (e.detail === 2) { //double click
+                    if (document.similarities){
+                        var numSimilarities = 0;
+                        document.similarities.forEach((similarity)=>{
+                            if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
+                        });
+                        if (numSimilarities>0){
+                            showSimilarDocuments(document);
+                        }
+                    }
+                }
+            };
+
         };
 
 
@@ -556,6 +585,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** compareDocuments
+  //**************************************************************************
     var compareDocuments = function(jobs, onCompletion){
 
         var runJob = function(){
@@ -563,15 +595,28 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 if (onCompletion) onCompletion.apply(me, []);
                 return;
             }
-            
+
             var job = jobs.shift();
+            job.row.set("Similarities", "Pending...");
             getSimilarities(job.doc, job.otherDocs,
                 function(step, totalSteps, success){
                     job.row.set("Similarities", Math.round((step/totalSteps)*100) + "%");
                 },
                 function(similarities){
+                    var numSimilarities = 0;
+                    similarities.forEach((similarity)=>{
+                        if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
+                    });
                     job.row.record.similarities = similarities;
-                    job.row.set("Similarities", "Done!");
+                    var summary;
+                    if (numSimilarities==0){
+                        summary = "No similarities found";
+                    }
+                    else{
+                        summary = "Found " + numSimilarities + " matching document";
+                        if (numSimilarities>1) summary+="s";
+                    }
+                    job.row.set("Similarities", summary);
                     runJob();
                 }
             );
@@ -580,6 +625,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** getSimilarities
+  //**************************************************************************
     var getSimilarities = function(doc, otherDocs, onStep, onCompletion){
 
         var similarities = [];
@@ -618,6 +666,95 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
 
   //**************************************************************************
+  //** showSimilarDocuments
+  //**************************************************************************
+    var showSimilarDocuments = function(document){
+        if (!similarityView){
+
+            var win = createWindow({
+                width: 800,
+                height: 600,
+                valign: "top",
+                modal: true,
+                style: config.style.window
+            });
+
+
+          //Create data grid
+            var grid = new javaxt.dhtml.DataGrid(win.getBody(), {
+                style: config.style.table,
+                localSort: true,
+                columns: [
+                    {header: 'Similar Document', width:'100%', sortable: true},
+                    {header: 'Digit Similarity', width:'120', sortable: true},
+                    {header: 'Text Similarity', width:'120', sortable: true},
+                    {header: 'Suspicious Pairs', width:'120', sortable: true}
+                ],
+                update: function(row, record){
+                    row.set("Similar Document", record.name);
+                    row.set("Suspicious Pairs", record.suspicious_pages);
+                }
+            });
+
+
+          //Watch for row click events
+            grid.onRowClick = function(row, e){
+                var document = row.record;
+                if (e.detail === 2) { //double click
+                    console.log(document.id);
+                }
+            };
+
+
+            similarityView = {
+                update: function(document){
+                    win.setTitle(document.name);
+                    grid.clear();
+
+                    var documentID = document.id;
+
+                  //Create records for the grid
+                    var data = [];
+                    document.similarities.forEach((similarity)=>{
+                        console.log(similarity.results);
+
+
+                      //Find "file" entry
+                        var file;
+                        similarity.results.files.every((f)=>{
+                            if (f.document_id!==documentID){
+                                file = f;
+                                return false;
+                            }
+                            return true;
+                        });
+
+
+                      //Create record
+                        data.push({
+                            id: file.document_id,
+                            name: file.filename,
+                            suspicious_pages: file.n_suspicious_pages
+                        });
+
+                    });
+
+
+                  //Load records
+                    grid.load(data);
+
+                },
+                show: win.show
+            };
+
+        }
+
+        similarityView.update(document);
+        similarityView.show();
+    };
+
+
+  //**************************************************************************
   //** removeChild
   //**************************************************************************
   /** Used to remove the first child from a carousel panel
@@ -647,15 +784,21 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** createButton
   //**************************************************************************
     var createButton = function(parent, btn){
-        if (!config.style.toolbarButton){
-            config.style.toolbarButton = javaxt.dhtml.style.default.toolbarButton;
-        }
-
         var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
         if (btn.style) btn.style = merge(btn.style, defaultStyle);
         else btn.style = defaultStyle;
 
         return bluewave.utils.createButton(parent, btn);
+    };
+
+
+  //**************************************************************************
+  //** createWindow
+  //**************************************************************************
+    var createWindow = function(config){
+        var win = new javaxt.dhtml.Window(document.body, config);
+        windows.push(win);
+        return win;
     };
 
 
