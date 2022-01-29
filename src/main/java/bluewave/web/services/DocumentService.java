@@ -142,6 +142,11 @@ public class DocumentService extends WebService {
         String q = request.getParameter("q").toString();
 
 
+      //Start compileing response
+        StringBuilder str = new StringBuilder();
+        str.append("id,name,type,date,size");
+
+
       //Compile sql statement
         StringBuilder sql = new StringBuilder();
         sql.append("select document.id, file.name, file.type, file.date, file.size ");
@@ -156,7 +161,10 @@ public class DocumentService extends WebService {
                 TreeMap<Float, ArrayList<bluewave.app.Document>> results =
                     index.findDocuments(searchTerms, Math.toIntExact(limit));
 
-                if (!results.isEmpty()){
+                if (results.isEmpty()){
+                    return new ServiceResponse(str.toString());
+                }
+                else{
                     String documentIDs = "";
                     Iterator<Float> it = results.descendingKeySet().iterator();
                     while (it.hasNext()){
@@ -183,9 +191,7 @@ public class DocumentService extends WebService {
         sql.append(" LIMIT " + limit);
 
 
-      //Execute query and generate response
-        StringBuilder str = new StringBuilder();
-        str.append("id,name,type,date,size");
+      //Execute query and update response
         Connection conn = null;
         try{
             conn = database.getConnection();
@@ -369,54 +375,66 @@ public class DocumentService extends WebService {
         throws ServletException {
 
         bluewave.app.User user = (bluewave.app.User) request.getUser();
-        JSONObject result = null;
 
-      //Get files
-        ArrayList<javaxt.io.File> files = new ArrayList<>();
+
+      //Get requested document IDs
         String[] documentIDs = request.getParameter("documents").toString().split(",");
-        if(documentIDs == null || documentIDs.length <2)  
+        if (documentIDs == null || documentIDs.length<2)
             return new ServiceResponse(400, "At least 2 documents are required");
 
-        String cacheQuery = "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON "
-                +"where (A_ID="+documentIDs[0]+" AND B_ID="+documentIDs[1]+") OR (A_ID="+documentIDs[1]+" AND B_ID="+documentIDs[0]+")";
-     
-        Connection conn = null;
-        try {
-            conn = database.getConnection();
-            Generator<Recordset> recordset = conn.getRecordset(cacheQuery);
-            for (Recordset record : recordset) {
-                result = new JSONObject(record.getField("INFO").getValue().toString());
-                return new ServiceResponse(result);
+
+      //Check cache
+        if (documentIDs.length==2){
+            String cacheQuery =
+            "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON " +
+            "where (A_ID="+documentIDs[0]+" AND B_ID="+documentIDs[1]+") " +
+               "OR (A_ID="+documentIDs[1]+" AND B_ID="+documentIDs[0]+")";
+            Connection conn = null;
+            try {
+                conn = database.getConnection();
+                Generator<Recordset> recordset = conn.getRecordset(cacheQuery);
+                for (Recordset record : recordset) {
+                    JSONObject result = new JSONObject(record.getField("INFO").getValue().toString());
+                    //TODO: Check version
+                    return new ServiceResponse(result);
+                }
+            }
+            catch(Exception e) {
+                return new ServiceResponse(e);
+            }
+            finally {
+                if(conn != null) conn.close();
             }
         }
-        catch(Exception e) {
-            console.log("ERROR: " + e);
-        }
-        finally {
-            if(conn != null) conn.close();
-        }
-        
-        for(int i=0; i<documentIDs.length; i++) {
+
+
+      //Generate list of files and documents
+        ArrayList<javaxt.io.File> files = new ArrayList<>();
+        ArrayList<bluewave.app.Document> documents = new ArrayList<>();
+        for (String str : documentIDs){
             try{
-                bluewave.app.Document document = new bluewave.app.Document(Long.parseLong(documentIDs[i]));
+                Long documentID = Long.parseLong(str);
+                bluewave.app.Document document = new bluewave.app.Document(documentID);
                 bluewave.app.File file = document.getFile();
                 bluewave.app.Path path = file.getPath();
                 javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
                 files.add(new javaxt.io.File(dir, file.getName()));
+                documents.add(document);
             }
             catch(Exception e){
+                return new ServiceResponse(e);
             }
         }
-        if (files.size()<2) return new ServiceResponse(400,
-            "At least 2 documents are required");
+        if (files.size()<2) return new ServiceResponse(400, "At least 2 documents are required");
 
 
-      //Get script
+
+      //Get python script
         javaxt.io.File[] scripts = getScriptDir().getFiles("compare_pdfs.py", true);
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
 
 
-        //Compile command line options
+      //Compile command line options
         ArrayList<String> params = new ArrayList<>();
         params.add("-f");
         for (javaxt.io.File file : files){
@@ -424,23 +442,24 @@ public class DocumentService extends WebService {
         }
 
 
-      //Execute script
+      //Execute script and return response
         try{
-            result = executeScript(scripts[0], params);
-            String query = "INSERT into APPLICATION.DOCUMENT_COMPARISON(A_ID, B_ID, INFO) "
-            + "VALUES ( "+documentIDs[0]+","+documentIDs[1]+", '"+ result.toString() +"'  )";
 
-            try {
-                conn = database.getConnection();
-                conn.execute(query);
-                conn.commit();
+          //Execute script
+            JSONObject result = executeScript(scripts[0], params);
+
+
+          //Cache the results
+            if (documents.size()==2){
+                bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
+                dc.setA(documents.get(0));
+                dc.setB(documents.get(1));
+                dc.setInfo(result);
+                dc.save();
             }
-            catch(Exception e) {
-                console.log("ERROR: " + e);
-            }
-            finally {
-                if(conn != null) conn.close();
-            }
+
+
+          //Return response
             return new ServiceResponse(result);
         }
         catch(Exception e){
