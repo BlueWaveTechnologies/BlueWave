@@ -42,7 +42,6 @@ public class DocumentService extends WebService {
         int poolSize = 1000;
         pool = new ThreadPool(numThreads, poolSize){
             public void process(Object obj){
-
                 try{
                     Object[] arr = (Object[]) obj;
                     javaxt.io.File file = (javaxt.io.File) arr[0];
@@ -51,7 +50,7 @@ public class DocumentService extends WebService {
                     bluewave.app.File f = getOrCreateFile(file, path);
                     bluewave.app.Document doc = getOrCreateDocument(f);
                     String indexStatus = doc.getIndexStatus();
-                    if (index!=null){ //indexStatus==null &&
+                    if (indexStatus==null && index!=null){
                         try{
                             index.addDocument(doc, file);
                             doc.setIndexStatus("indexed");
@@ -134,20 +133,20 @@ public class DocumentService extends WebService {
     private ServiceResponse getDocuments(ServiceRequest request, Database database)
         throws ServletException {
 
+      //Parse request
         Long offset = request.getOffset();
         Long limit = request.getLimit();
         if (limit==null || limit<1) limit = 50L;
+        String orderBy = request.getParameter("orderby").toString();
+        if (orderBy==null) orderBy = "name";
+        String q = request.getParameter("q").toString();
 
 
+      //Compile sql statement
         StringBuilder sql = new StringBuilder();
         sql.append("select document.id, file.name, file.type, file.date, file.size ");
         sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
         sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
-
-        StringBuilder str = new StringBuilder();
-        str.append("id,name,type,date,size");
-
-        String q = request.getParameter("q").toString();
         if (q!=null){
             try{
 
@@ -179,11 +178,14 @@ public class DocumentService extends WebService {
             }
         }
 
+        if (orderBy!=null) sql.append(" ORDER BY " + orderBy);
         if (offset!=null) sql.append(" OFFSET " + offset);
         sql.append(" LIMIT " + limit);
 
-        //console.log(sql);
 
+      //Execute query and generate response
+        StringBuilder str = new StringBuilder();
+        str.append("id,name,type,date,size");
         Connection conn = null;
         try{
             conn = database.getConnection();
@@ -279,8 +281,11 @@ public class DocumentService extends WebService {
                             inputChannel.close();
                             outputChannel.close();
 
-                            //Index the file
-                            pool.add(file);
+
+                          //Index the file
+                            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+                            pool.add(new Object[]{file, path});
+
 
                             json.set("result", "uploaded");
                         }
@@ -361,21 +366,44 @@ public class DocumentService extends WebService {
   //** getSimilarity
   //**************************************************************************
     public ServiceResponse getSimilarity(ServiceRequest request, Database database)
-            throws ServletException {
+        throws ServletException {
 
         bluewave.app.User user = (bluewave.app.User) request.getUser();
+        JSONObject result = null;
 
       //Get files
         ArrayList<javaxt.io.File> files = new ArrayList<>();
+        String[] documentIDs = request.getParameter("documents").toString().split(",");
+        String cacheQuery = "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON "
+                +"where (A_ID="+documentIDs[0]+" AND B_ID="+documentIDs[1]+") OR (A_ID="+documentIDs[1]+" AND B_ID="+documentIDs[0]+")";
+     
+        Connection conn = null;
+        try {
+            conn = database.getConnection();
+            Generator<Recordset> recordset = conn.getRecordset(cacheQuery);
+            for (Recordset record : recordset) {
+                result = new JSONObject(record.getField("INFO").getValue().toString());
+                return new ServiceResponse(result);
+            }
+        }
+        catch(Exception e) {
+            console.log("ERROR: " + e);
+        }
+        finally {
+            if(conn != null) conn.close();
+        }
         
-        String[]fileIds = request.getParameter("documents").toString().split(",");
-        JSONObject fileNames = getFileNamesById(database, fileIds[0], fileIds[1]);
-
-        javaxt.io.File file1 = getFile(fileNames.get(fileIds[0]).toString(), user);
-        if (file1.exists()) files.add(file1);
-        javaxt.io.File file2 = getFile(fileNames.get(fileIds[1]).toString(), user);
-        if (file2.exists()) files.add(file2);
-        
+        for(int i=0; i<documentIDs.length; i++) {
+            try{
+                bluewave.app.Document document = new bluewave.app.Document(Long.parseLong(documentIDs[i]));
+                bluewave.app.File file = document.getFile();
+                bluewave.app.Path path = file.getPath();
+                javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
+                files.add(new javaxt.io.File(dir, file.getName()));
+            }
+            catch(Exception e){
+            }
+        }
         if (files.size()<2) return new ServiceResponse(400,
             "At least 2 documents are required");
 
@@ -395,11 +423,10 @@ public class DocumentService extends WebService {
 
       //Execute script
         try{
-            JSONObject result = executeScript(scripts[0], params);
+            result = executeScript(scripts[0], params);
             String query = "INSERT into APPLICATION.DOCUMENT_COMPARISON(A_ID, B_ID, INFO) "
-            + "VALUES ( "+fileIds[0]+","+fileIds[1]+", '"+ result.toString() +"'  )";
+            + "VALUES ( "+documentIDs[0]+","+documentIDs[1]+", '"+ result.toString() +"'  )";
 
-            Connection conn = null;
             try {
                 conn = database.getConnection();
                 conn.execute(query);
@@ -547,29 +574,5 @@ public class DocumentService extends WebService {
         }
 
         return null;
-    }
-
-  //**************************************************************************
-  //** getFileNamesById
-  //**************************************************************************
-    private JSONObject getFileNamesById(Database db, String a_id, String b_id){
-        String query = "select ID, NAME from APPLICATION.FILE where ID=" + a_id + " OR ID=" + b_id;
-        Connection conn = null;
-        JSONObject jsonObject = new JSONObject();
-        try {
-            conn = db.getConnection();
-            Generator<Recordset> recordset =  conn.getRecordset(query, true);
-            for (Recordset record : recordset) {
-                String id = record.getField("ID").getValue().toString();
-                jsonObject.set(id, record.getField("NAME").getValue().toString());
-            }
-        }
-        catch(Exception e) {
-            console.log("ERROR: " + e);
-        }
-        finally {
-            if(conn != null) conn.close();
-        }
-        return jsonObject;
     }
 }
