@@ -12,6 +12,7 @@ import java.nio.channels.WritableByteChannel;
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
+import javaxt.utils.Generator;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
 import javaxt.sql.*;
@@ -366,10 +367,15 @@ public class DocumentService extends WebService {
 
       //Get files
         ArrayList<javaxt.io.File> files = new ArrayList<>();
-        for (String fileName : request.getParameter("files").toString().split(",")){
-            javaxt.io.File file = getFile(fileName, user);
-            if (file.exists()) files.add(file);
-        }
+        
+        String[]fileIds = request.getParameter("documents").toString().split(",");
+        JSONObject fileNames = getFileNamesById(database, fileIds[0], fileIds[1]);
+
+        javaxt.io.File file1 = getFile(fileNames.get(fileIds[0]).toString(), user);
+        if (file1.exists()) files.add(file1);
+        javaxt.io.File file2 = getFile(fileNames.get(fileIds[1]).toString(), user);
+        if (file2.exists()) files.add(file2);
+        
         if (files.size()<2) return new ServiceResponse(400,
             "At least 2 documents are required");
 
@@ -389,7 +395,23 @@ public class DocumentService extends WebService {
 
       //Execute script
         try{
-            return new ServiceResponse(executeScript(scripts[0], params));
+            JSONObject result = executeScript(scripts[0], params);
+            String query = "INSERT into APPLICATION.DOCUMENT_COMPARISON(A_ID, B_ID, INFO) "
+            + "VALUES ( "+fileIds[0]+","+fileIds[1]+", '"+ result.toString() +"'  )";
+
+            Connection conn = null;
+            try {
+                conn = database.getConnection();
+                conn.execute(query);
+                conn.commit();
+            }
+            catch(Exception e) {
+                console.log("ERROR: " + e);
+            }
+            finally {
+                if(conn != null) conn.close();
+            }
+            return new ServiceResponse(result);
         }
         catch(Exception e){
             return new ServiceResponse(e);
@@ -525,5 +547,29 @@ public class DocumentService extends WebService {
         }
 
         return null;
+    }
+
+  //**************************************************************************
+  //** getFileNamesById
+  //**************************************************************************
+    private JSONObject getFileNamesById(Database db, String a_id, String b_id){
+        String query = "select ID, NAME from APPLICATION.FILE where ID=" + a_id + " OR ID=" + b_id;
+        Connection conn = null;
+        JSONObject jsonObject = new JSONObject();
+        try {
+            conn = db.getConnection();
+            Generator<Recordset> recordset =  conn.getRecordset(query, true);
+            for (Recordset record : recordset) {
+                String id = record.getField("ID").getValue().toString();
+                jsonObject.set(id, record.getField("NAME").getValue().toString());
+            }
+        }
+        catch(Exception e) {
+            console.log("ERROR: " + e);
+        }
+        finally {
+            if(conn != null) conn.close();
+        }
+        return jsonObject;
     }
 }
