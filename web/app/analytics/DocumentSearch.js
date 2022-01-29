@@ -79,6 +79,14 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
   //**************************************************************************
+  //** getDataGrid
+  //**************************************************************************
+    this.getDataGrid = function(){
+        return grid;
+    };
+
+
+  //**************************************************************************
   //** createHeader
   //**************************************************************************
     var createHeader = function(parent){
@@ -164,6 +172,9 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         if (config.showCheckboxes===true){
             columnConfig.unshift({header: 'x', field: 'id', width:30});
         }
+        if (typeof IScroll !== 'undefined'){
+            columnConfig.push({header: '', width: 8});
+        }
 
         var params = {};
 
@@ -179,7 +190,11 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 var createRecord = function(row){
                     var r = {};
                     header.forEach((field, i)=>{
-                        r[field] = row[i];
+                        var v = row[i];
+                        if (field=="id" || field=="size"){
+                            v = parseFloat(v);
+                        }
+                        r[field] = v;
                     });
                     return r;
                 };

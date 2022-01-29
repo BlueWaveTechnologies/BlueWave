@@ -13,9 +13,9 @@ if(!bluewave.analytics) bluewave.analytics={};
 bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
     var me = this;
-    var charts = [];
+    var panels = [];
     var nav, carousel, sliding;
-    var searchPanel; //panels
+    var selectedDocuments; //datastore
 
 
     var defaultConfig = {
@@ -31,65 +31,67 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+      //Process config
         if (!config) config = {};
         config = merge(config, defaultConfig);
-
         if (!config.fx) config.fx = new javaxt.dhtml.Effects();
+        if (!config.style) config.style = javaxt.dhtml.style.default;
 
 
+
+      //Create main table
         var table = createTable();
         var tbody = table.firstChild;
         var tr, td;
 
-
         tr = document.createElement("tr");
         tbody.appendChild(tr);
-
         td = document.createElement("td");
         tr.appendChild(td);
         createHeader(td);
-
 
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
         td.style.height = "100%";
-        td.style.padding = "7px";
+        td.style.padding = "0px";
         tr.appendChild(td);
         createBody(td);
 
-
         parent.appendChild(table);
+        me.el = table;
 
 
+      //Create data store
+        selectedDocuments = new javaxt.dhtml.DataStore();
 
+
+      //Create panels
         createPanel("Document Search", createSearchPanel);
         createPanel("Selected Documents", createResultsPanel);
 
 
-
+      //Update carousel onRender
         onRender(table, function(){
 
           //Update carousel
             carousel.resize();
 
 
-          //Select default chart
-            var chart = charts[0];
-            chart.select();
+          //Select default panel
+            var panel = panels[0];
+            panel.select();
 
 
-          //Add default chart to carousel
-            var panels = carousel.getPanels();
-            for (var i=0; i<panels.length; i++){
-                var panel = panels[i];
-                if (panel.isVisible){
-                    panel.div.appendChild(chart.div);
-                    break;
+          //Add default panel to carousel
+            carousel.getPanels().every((p)=>{
+                if (p.isVisible){
+                    p.div.appendChild(panel.div);
+                    return false;
                 }
-            }
+                return true;
+            });
         });
-
     };
 
 
@@ -98,9 +100,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        for (var i=0; i<charts.length; i++){
-            charts[i].clear();
-        }
+        panels.forEach((panel)=>panel.clear());
     };
 
 
@@ -115,14 +115,21 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         me.clear();
 
 
-        try{
-            var chart = charts[0];
-            chart.select();
-            chart.update();
-        }
-        catch(e){
-            console.log(e);
-        }
+        var panel = panels[0];
+        panel.select();
+        setTimeout(()=>{
+
+          //Find visible panel
+            carousel.getPanels().every((p)=>{
+                if (p.isVisible){
+                    panel.update(p.div);
+                    return false;
+                }
+                return true;
+            });
+
+        },200);
+
     };
 
 
@@ -204,12 +211,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             parent.className = "";
             sliding = false;
 
-            for (var i=0; i<charts.length; i++){
-                if (charts[i].isSelected()){
-                    charts[i].update(currPanel);
-                    break;
+            panels.every((panel)=>{
+                if (panel.isSelected()){
+                    panel.update(currPanel);
+                    return false;
                 }
-            }
+                return true;
+            });
         };
     };
 
@@ -217,16 +225,16 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** createPanel
   //**************************************************************************
-    var createPanel = function(label, createChart){
+    var createPanel = function(label, _createPanel){
 
 
         var div = document.createElement("div");
         div.style.width = "100%";
         div.style.height = "100%";
         div.setAttribute("desc", label);
-        var chart = createChart(div);
-        chart.div = div;
-        chart.name = label;
+        var panel = _createPanel();
+        panel.div = div;
+        panel.name = label;
 
 
 
@@ -237,6 +245,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         li.className = cls;
         li.tabIndex = -1; //allows the element to have focus
         li.innerHTML = label;
+        panel.menu = li;
 
         li.select = function(){
             if (sliding){
@@ -276,22 +285,22 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 if (currSelection==-1) return;
 
 
-              //Find next panel and previous panel
+              //Find next panel and previous panel in the carousel
                 var nextPanel, prevPanel;
-                var panels = carousel.getPanels();
-                for (var i=0; i<panels.length; i++){
-                    if (panels[i].isVisible){
+                var arr = carousel.getPanels();
+                for (var i=0; i<arr.length; i++){
+                    if (arr[i].isVisible){
                         if (i==0){
-                            prevPanel = panels[panels.length-1];
+                            prevPanel = arr[arr.length-1];
                         }
                         else{
-                            prevPanel = panels[i-1];
+                            prevPanel = arr[i-1];
                         }
-                        if (i==panels.length-1){
-                            nextPanel = panels[0];
+                        if (i==arr.length-1){
+                            nextPanel = arr[0];
                         }
                         else{
-                            nextPanel = panels[i+1];
+                            nextPanel = arr[i+1];
                         }
                         break;
                     }
@@ -302,7 +311,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 if (currSelection<idx){
                     var el = prevPanel.div;
                     removeChild(el);
-                    el.appendChild(charts[idx].div);
+                    el.appendChild(panels[idx].div);
                     removeChild(nextPanel.div);
                     //console.log("slide right");
                     carousel.back();
@@ -310,7 +319,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 else if (currSelection>idx){
                     var el = nextPanel.div;
                     removeChild(el);
-                    el.appendChild(charts[idx].div);
+                    el.appendChild(panels[idx].div);
                     removeChild(prevPanel.div);
                     //console.log("slide left");
                     carousel.next();
@@ -323,13 +332,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         nav.appendChild(li);
 
 
-        chart.select = function(){
+        panel.select = function(){
             li.select();
         };
-        chart.isSelected = function(){
+        panel.isSelected = function(){
             return li.selected;
         };
-        charts.push(chart);
+        panels.push(panel);
     };
 
 
@@ -337,30 +346,131 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** createResultsPanel
   //**************************************************************************
-    var createResultsPanel = function(parent){
+    var createResultsPanel = function(){
 
 
-        var grid = new javaxt.dhtml.DataGrid(parent, {
-            style: config.style.table,
-            localSort: true,
-            columns: [
-                {header: 'Name', width:'100%', sortable: true},
-                {header: 'Similarities', width:'140', sortable: true}
-            ],
-            update: function(row, record){
-                row.set("Name", record.name);
-                row.set("Similarities", record.similarities);
+      //Create toolbar and grid panel
+        var grid, button = {};
+        var createPanel = function(parent){
+
+          //Create main table
+            var table = createTable();
+            parent.appendChild(table);
+            var tbody = table.firstChild;
+            var tr, td;
+
+
+          //Row 1
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            td.className = "panel-toolbar";
+            td.style.background = "#f1f1f1";
+            tr.appendChild(td);
+
+
+          //Add run button
+            button["run"] = createButton(td, {
+                label: "Compare Documents",
+                icon: "fas fa-play"
+            });
+            button["run"].disable();
+            button["run"].onClick = function(){
+
+                var jobs = [];
+                selectedDocuments.forEach((document)=>{
+                    var arr = [];
+                    selectedDocuments.forEach((d)=>{
+                        if (d.id!=document.id) arr.push(d.id);
+                    });
+                    jobs.push({
+                        doc: document.id,
+                        otherDocs: arr
+                    });
+                });
+
+                jobs.forEach((job)=>{
+                    grid.forEachRow((row)=>{
+                        var document = row.record;
+                        if (document.id==job.doc){
+                            job.row = row;
+                            return true;
+                        }
+                    });
+                });
+
+
+                compareDocuments(jobs, function(){
+
+                });
+            };
+
+
+          //TODO: Add stop button
+
+
+
+          //Row 2
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            td.style.height = "100%";
+            tr.appendChild(td);
+
+
+            var gridStyle = config.style.table;
+            if (!gridStyle) gridStyle = javaxt.dhtml.style.default.table;
+            grid = new javaxt.dhtml.DataGrid(td, {
+                style: gridStyle,
+                localSort: true,
+                columns: [
+                    {header: 'Name', width:'100%', sortable: true},
+                    {header: 'Similarities', width:'140', sortable: true}
+                ],
+                update: function(row, record){
+                    row.set("Name", record.name);
+                    row.set("Similarities", record.similarities);
+                }
+            });
+        };
+
+
+
+      //Watch for changes to the selectedDocuments data store
+        selectedDocuments.addEventListener("add", function(document){
+            if (grid){
+                grid.load([document], 2); //second arg is a page number (hack for DataGrid)
+                if (selectedDocuments.length>1) button["run"].enable();
             }
-        });
+            updateCount();
+        }, me);
+
+        selectedDocuments.addEventListener("update", function(document){
+
+        }, me);
+
+        selectedDocuments.addEventListener("remove", function(document){
+            if (grid){
+                grid.clear();
+                grid.load(selectedDocuments);
+                if (selectedDocuments.length<2) button["run"].disable();
+            }
+            updateCount();
+        }, me);
 
 
 
+      //Return "panel"
         return {
             clear: function(){
-                grid.clear();
+                if (grid) grid.clear();
             },
             update: function(panel){
-
+                if (!grid){
+                    createPanel(panel.childNodes[0]);
+                    grid.load(selectedDocuments);
+                    if (selectedDocuments.length>1) button["run"].enable();
+                }
 
             }
         };
@@ -371,27 +481,140 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** createSearchPanel
   //**************************************************************************
-    var createSearchPanel = function(parent){
+    var createSearchPanel = function(){
 
-        searchPanel = new bluewave.analytics.DocumentSearch(parent,{
-            dateFormat: config.dateFormat,
-            showCheckboxes: true
-        });
+        var searchPanel;
+        var createPanel = function(parent){
+
+          //Create document search panel
+            searchPanel = new bluewave.analytics.DocumentSearch(parent,{
+                dateFormat: config.dateFormat,
+                showCheckboxes: false,
+                getIcon: function(document){
+                    //<i class="fas fa-check"></i>
+                }
+            });
+            var grid = searchPanel.getDataGrid();
+
+
+          //Watch for row click events
+            grid.onRowClick = function(row, e){
+                var document = row.record;
+                if (e.detail === 2) { //double click
+
+                  //Add or remove document from the selectedDocuments store
+                    var addDocument = true;
+                    selectedDocuments.forEach((d, i)=>{
+                        if (d.id===document.id){
+                            selectedDocuments.removeAt(i);
+                            addDocument = false;
+                            return true;
+                        }
+                    });
+                    if (addDocument) selectedDocuments.add(document);
+                }
+            };
+        };
 
 
 
         return {
             clear: function(){
-                searchPanel.clear();
+                if (searchPanel) searchPanel.clear();
             },
-            update: function(){
+            update: function(panel){
+                if (!searchPanel) createPanel(panel.childNodes[0]);
                 searchPanel.update();
-
-
             }
         };
     };
 
+
+  //**************************************************************************
+  //** updateCount
+  //**************************************************************************
+    var updateCount = function(){
+        var li = panels[1].menu;
+        if (!li.counter){
+            var div = document.createElement("div");
+            div.className = "carousel-header-link-count";
+            div.style.float = "right";
+            addShowHide(div);
+            div.hide();
+            li.appendChild(div);
+            li.counter = div;
+        }
+
+        if (selectedDocuments.length>0){
+            li.counter.innerText = selectedDocuments.length;
+            li.counter.show();
+        }
+        else{
+            li.counter.hide();
+        }
+
+    };
+
+
+    var compareDocuments = function(jobs, onCompletion){
+
+        var runJob = function(){
+            if (jobs.length==0){
+                if (onCompletion) onCompletion.apply(me, []);
+                return;
+            }
+            
+            var job = jobs.shift();
+            getSimilarities(job.doc, job.otherDocs,
+                function(step, totalSteps, success){
+                    job.row.set("Similarities", Math.round((step/totalSteps)*100) + "%");
+                },
+                function(similarities){
+                    job.row.record.similarities = similarities;
+                    job.row.set("Similarities", "Done!");
+                    runJob();
+                }
+            );
+        };
+        runJob();
+    };
+
+
+    var getSimilarities = function(doc, otherDocs, onStep, onCompletion){
+
+        var similarities = [];
+        var steps = 0;
+        var totalSteps = otherDocs.length;
+
+        var getSimilarity = function(doc, otherDocs){
+
+            if (otherDocs.length==0){
+                if (onCompletion) onCompletion.apply(me, [similarities]);
+                return;
+            }
+
+            var b = otherDocs.shift();
+            steps++;
+
+            get("document/similarity?documents="+doc+","+b,{
+                success: function(json){
+                    similarities.push({
+                        id: b,
+                        results: json
+                    });
+                    if (onStep) onStep.apply(me, [steps,totalSteps,true]);
+                    getSimilarity(doc, otherDocs);
+                },
+                failure: function(){
+                    if (onStep) onStep.apply(me, [steps,totalSteps,false]);
+                    getSimilarity(doc, otherDocs);
+                }
+            });
+        };
+
+        getSimilarity(doc, otherDocs);
+
+    };
 
 
   //**************************************************************************
@@ -405,28 +628,45 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
           //Remove child
             var div = el.removeChild(el.childNodes[0]);
 
-          //Update charts
+          //Update panels
             if (div.childNodes.length>0){
                 var desc = div.getAttribute("desc");
-                for (var j=0; j<charts.length; j++){
-                    var chart = charts[j];
-                    if (chart.div.getAttribute("desc")==desc){
-                        chart.div = div;
-                        break;
+                panels.every((panel)=>{
+                    if (panel.div.getAttribute("desc")==desc){
+                        panel.div = div;
+                        return false;
                     }
-                }
+                    return true;
+                });
             }
         }
     };
 
 
   //**************************************************************************
+  //** createButton
+  //**************************************************************************
+    var createButton = function(parent, btn){
+        if (!config.style.toolbarButton){
+            config.style.toolbarButton = javaxt.dhtml.style.default.toolbarButton;
+        }
+
+        var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
+        if (btn.style) btn.style = merge(btn.style, defaultStyle);
+        else btn.style = defaultStyle;
+
+        return bluewave.utils.createButton(parent, btn);
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
+    var get = bluewave.utils.get;
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
     var onRender = javaxt.dhtml.utils.onRender;
-
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
 
     init();
 };
