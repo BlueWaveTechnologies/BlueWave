@@ -1316,6 +1316,18 @@ li.tree-node:hover {
   opacity: 0.6;
 }
 
+
+.carousel-header-link-count {
+    position:absolute;
+    font-size:9px;
+    top: -3px;
+    right: -14px;
+    background-color: #df4444;
+    border-radius: 6px;
+    padding: 0px 4px;
+    color: #fff;
+}
+
 /**************************************************************************/
 /** Color Picker
 /**************************************************************************/
@@ -1510,4 +1522,13 @@ svg text {
     border-radius: 5px;
     color: #636363;
     box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+
+/**************************************************************************/
+/** iScroll overrides
+/**************************************************************************/
+
+.iScrollVerticalScrollbar{
+    right: 2px;
 }
