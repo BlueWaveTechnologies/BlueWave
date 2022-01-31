@@ -5,12 +5,7 @@ import java.nio.file.Paths;
 import static javaxt.utils.Console.console;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.LowerCaseFilter;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.Tokenizer;
-import org.apache.lucene.analysis.icu.ICUNormalizer2Filter;
-import org.apache.lucene.analysis.icu.segmentation.ICUTokenizer;
-import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Field.Store;
@@ -25,14 +20,15 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.BoostQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.WildcardQuery;
+import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-
-
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
@@ -47,17 +43,13 @@ public class FileIndex {
     private Object smonitor = new Object();
     private IndexWriter _indexWriter;
     private IndexSearcher _indexSearcher;
-    private Analyzer customAnalyzer = new Analyzer() {
-        @Override
-        protected TokenStreamComponents createComponents(String fieldName) {
-            final Tokenizer source = new ICUTokenizer();
-            TokenStream tokenStream = source;
-            tokenStream = new LowerCaseFilter(tokenStream);
-            tokenStream = new ICUNormalizer2Filter(tokenStream);
-            tokenStream = new ASCIIFoldingFilter(tokenStream);
-            return new TokenStreamComponents(source, tokenStream);
-        }
-    };
+    private Analyzer analyzer = new StandardAnalyzer();
+    
+    public static final String FIELD_NAME = "name";
+    public static final String FIELD_CONTENTS = "contents";
+    public static final String FIELD_PATH = "path";
+    public static final String FIELD_MODIFIED = "modified";
+    public static final String FIELD_DOCUMENT_ID = "documentID";
 
     public FileIndex(String path) throws Exception {
         this(new javaxt.io.Directory(path));
@@ -83,7 +75,7 @@ public class FileIndex {
                     ScoreDoc scoreDoc = results.scoreDocs[i];
                     Document doc = searcher.doc(scoreDoc.doc);
                     float score = scoreDoc.score;
-                    javaxt.io.File file = new javaxt.io.File(doc.get("path"));
+                    javaxt.io.File file = new javaxt.io.File(doc.get(FIELD_PATH));
                     ArrayList<javaxt.io.File> files = searchResults.get(score);
                     if (files==null){
                         files = new ArrayList<>();
@@ -110,7 +102,7 @@ public class FileIndex {
 
                     float score = scoreDoc.score;
 
-                    Long documentID = Long.parseLong(doc.get("documentID"));
+                    Long documentID = Long.parseLong(doc.get(FIELD_DOCUMENT_ID));
                     bluewave.app.Document d = new bluewave.app.Document(documentID);
                     ArrayList<bluewave.app.Document> documents = searchResults.get(score);
                     if (documents==null){
@@ -124,7 +116,6 @@ public class FileIndex {
         return searchResults;
     }
 
-
     public TopDocs getTopDocs(ArrayList<String> searchTerms, Integer limit) throws Exception {
         if (limit==null || limit<1) limit = 10;
 
@@ -135,28 +126,28 @@ public class FileIndex {
             BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
             for (String term : searchTerms) {
 
-                QueryParser contentsParser = new QueryParser("contents", customAnalyzer);
-                BooleanClause bc = new BooleanClause(contentsParser.parse(term),
+                WildcardQuery wildcardQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
+                BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
+                bqBuilder.add(wildcardBooleanClause);
+
+                QueryParser contentsParser = new QueryParser(FIELD_CONTENTS, analyzer);
+                BooleanClause bc = new BooleanClause(contentsParser.parse(QueryParser.escape(term).toLowerCase()),
                         BooleanClause.Occur.SHOULD);
                 bqBuilder.add(bc);
 
-                QueryParser pathParser = new QueryParser("path", customAnalyzer);
-                BooleanClause fbc = new BooleanClause(pathParser.parse(term),
-                        BooleanClause.Occur.SHOULD);
-                bqBuilder.add(fbc);
             }
             BooleanQuery bbq = bqBuilder.build();
             return searcher.search(bbq, limit);
         }
         return null;
     }
-
+    
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
             if (_indexWriter == null) {
                 try {
-                    IndexWriterConfig iwc = new IndexWriterConfig(customAnalyzer);
+                    IndexWriterConfig iwc = new IndexWriterConfig(analyzer);             
                     iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
                     _indexWriter = new IndexWriter(dir, iwc);
                 } catch (Exception e) {
@@ -180,6 +171,22 @@ public class FileIndex {
         return _indexSearcher;
     }
 
+    public boolean removeFile(long documentId) {
+        try {
+            BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
+            bqBuilder.add(new TermQuery( new Term( FIELD_DOCUMENT_ID, documentId+"" ) ), Occur.MUST);
+            IndexWriter writer = instanceOfIndexWriter();
+            writer.deleteDocuments(bqBuilder.build());
+            long status = writer.commit();
+            if(status == -1) 
+                return false;
+            return true;
+        } catch(Exception e) {
+            console.log("ERROR: " + e);
+        }
+        return false;
+    }
+
     public void addFile(javaxt.io.File file) throws Exception {
         addDocument(null, file);
     }
@@ -194,8 +201,11 @@ public class FileIndex {
         // field that is indexed (i.e. searchable), but don't tokenize
         // the field into separate words and don't index term frequency
         // or positional information:
-        doc.add(new StringField("path", file.toString(), Field.Store.YES));
+        doc.add(new StringField(FIELD_PATH, file.toString(), Field.Store.YES));
 
+        // Make the document name tokenized and searchable
+        doc.add(new TextField(FIELD_NAME, file.getName(false), Field.Store.YES));
+        
         // Add the last modified date of the file a field named "modified".
         // Use a LongPoint that is indexed (i.e. efficiently filterable with
         // PointRangeQuery). This indexes to milli-second resolution, which
@@ -203,11 +213,11 @@ public class FileIndex {
         // year/month/day/hour/minutes/seconds, down the resolution you require.
         // For example the long value 2011021714 would mean
         // February 17, 2011, 2-3 PM.
-        doc.add(new LongPoint("modified", file.getDate().getTime()));
+        doc.add(new LongPoint(FIELD_MODIFIED, file.getDate().getTime()));
 
 
-        if (d!=null) doc.add(new StringField("documentID", d.getID()+"", Field.Store.YES));
 
+        if (d!=null) doc.add(new StringField(FIELD_DOCUMENT_ID, d.getID()+"", Field.Store.YES));
 
         if (file.getExtension().equalsIgnoreCase("pdf")) {
 
@@ -217,7 +227,7 @@ public class FileIndex {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(new PDDocument(cd));
             cd.close();
-            doc.add(new TextField("contents", text, Store.YES));
+            doc.add(new TextField(FIELD_CONTENTS, text, Store.NO));
         }
         else {
 
@@ -228,7 +238,7 @@ public class FileIndex {
                 // so that the text of the file is tokenized and indexed, but not stored.
                 // Note that FileReader expects the file to be in UTF-8 encoding.
                 // If that's not the case searching for special characters will fail.
-                doc.add(new TextField("contents", file.getBufferedReader()));
+                doc.add(new TextField(FIELD_CONTENTS, file.getBufferedReader()));
             }
         }
 
@@ -242,7 +252,7 @@ public class FileIndex {
             // we use updateDocument instead to replace the old one matching the exact
             // path, if present:
             console.log("updating " + file);
-            writer.updateDocument(new Term("path", file.toString()), doc);
+            writer.updateDocument(new Term(FIELD_PATH, file.toString()), doc);
         }
         writer.commit();
 
@@ -260,23 +270,16 @@ public class FileIndex {
     public boolean hasFile(javaxt.io.File file) {
         if (indexExists()) {
             IndexSearcher searcher = instanceOfIndexSearcher();
-
+            
             if (searcher != null) {
                 try {
                     TopDocs results = searcher.search(new TermQuery(new Term("path", file.toString())), 1);
-//                    console.log("results: " + results.totalHits);
-//                    for (int i = 0; i < results.scoreDocs.length; i++) {
-//                        ScoreDoc tempDoc = results.scoreDocs[i];
-//                        console.log("docId: " + tempDoc.doc + " doc score: " + tempDoc.score);
-//                    }
                     if (results.totalHits.value > 0) {
                         return true;
                     }
                 } catch (Exception e) {
 
                 }
-            } else {
-//                console.log("hasDocumentBeenIndexed: searcher == null");
             }
         }
         return false;
