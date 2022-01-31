@@ -49,6 +49,7 @@ bluewave.charts.Map = function(parent, config) {
             if (!projection) return;
 
             console.log(projection.invert(d3.mouse(this)));
+            console.log(d3.mouse(this))
             console.log(me.getExtent());
         });
     };
@@ -157,9 +158,6 @@ bluewave.charts.Map = function(parent, config) {
                 centerLat = 39.5;
             }
         }
-//override for now
-centerLat = 0;
-centerLon = 0;
 
         projection = d3
             .geoMercator()
@@ -176,15 +174,6 @@ centerLon = 0;
         translate = projection.translate();
         rotate = projection.rotate();
         center = projection.center();
-
-// england to belgium
-        // me.setExtent([0,52], [4, 51])
-
-        //glasgow to prague
-        me.setExtent([-4.25,55.9], [14.4, 50])
-
-        //beijing 
-        // me.setExtent([116,40], [-105, -20])
 
       //Render layers
         draw();
@@ -328,24 +317,19 @@ centerLon = 0;
         if (!upperLeft || !lowerRight) return;
 
         var scale = projection.scale();
-        
-        // extent.left = ul[0];
-        // extent.right = lr[0];
-        // extent.top = ul[1];
-        // extent.bottom = lr[1];
-
         var extent = me.getExtent();
 
         //Need to map to svg coords with projection first to avoid trig and invert after calculations
-        var ulCartesian = projection(upperLeft);
-        var lrCartesian = projection(lowerRight);
-
         var initialUpperLeft = projection([extent.left, extent.top]);
         var initialLowerRight = projection([extent.right, extent.bottom]);
 
-        // var extentDiff = Math.abs(extent.left - extent.right);
+        //Initial extent needed for ratio
         var extentLongDiff = Math.abs(initialUpperLeft[0] - initialLowerRight[0]);
         var extentLatDiff = Math.abs(initialUpperLeft[1] - initialLowerRight[1]);
+
+        projection.rotate([0]) //Black magic
+        var ulCartesian = projection(upperLeft);
+        var lrCartesian = projection(lowerRight);
 
         var longitudeDiff = Math.abs(ulCartesian[0] - lrCartesian[0]);
         var latitudeDiff = Math.abs(ulCartesian[1] - lrCartesian[1]);
@@ -356,33 +340,24 @@ centerLon = 0;
         else{
           var scaleRatio = latitudeDiff/extentLatDiff;
         }
-        
-
-        // var center = [ (upperLeft[0] + lowerRight[0])/2 , (upperLeft[1] + lowerRight[1])/2 ];
 
         projection.scale(scale / scaleRatio);
-
+        
         var rect = javaxt.dhtml.utils.getRect(svg.node());
         var w = rect.width;
         var h = rect.height;
-
-        // var ul = projection.invert([0, 0]);
-        // var lr = projection.invert([w, h]);
 
         //New coords for scaled projection
         ulCartesian = projection(upperLeft);
 
         var centerCartesian = [ulCartesian[0] + w/2, ulCartesian[1] + h/2];
         var center = projection.invert(centerCartesian)
-        console.log("center", center)
 
+        projection
+        .rotate([-center[0], 0])
+        .center([0, center[1]])
  
-        projection.center(center);
-        // projection.center(upperLeft)
-
-        // console.log(projection.scale())
-        // projection.scale(100)
-        // projection.center([0, 0])
+        draw();
     };
 
 
