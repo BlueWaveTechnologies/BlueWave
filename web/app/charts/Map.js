@@ -376,14 +376,14 @@ bluewave.charts.Map = function(parent, config) {
       if (isNaN(radius)) radius = 3;
       if (radius < 0) radius = 1;
 
-      
+
       mapArea.append("g")
         .selectAll("*")
         .data(points)
         .enter()
         .append("circle")
         .attr("r", radius)
-        .attr("class", style.name)
+        .attr("class", pointConfig.name)
         .attr("transform", function (d) {
           return "translate(" + projection(d) + ")";
         })
@@ -391,6 +391,43 @@ bluewave.charts.Map = function(parent, config) {
         .style("fill", style.fill)
 
     };
+
+  //**************************************************************************
+  //** addLines
+  //**************************************************************************
+  this.addLines = function(tuples, lineConfig){
+
+    var style = lineConfig.style;
+
+    var color = style.color;
+    if(!color) color = "red";
+
+    var opacity = style.opacity;
+    if (!opacity) {
+      opacity = 1.0;
+    }
+
+    var width = parseInt(style.width);
+    if (isNaN(width)) width = 3;
+
+    var path = d3.geoPath()
+    .projection(projection)
+
+    mapArea.append("g")
+      .selectAll("links")
+      .data(tuples)
+      .enter()
+      .append("path")
+      .attr("class", lineConfig.name)
+      .attr("d", function(d){
+        return path({type: "LineString", coordinates: d})
+      })
+      .attr("fill", "none")
+      .attr("fill-opacity", opacity)
+      .style("stroke", color)
+      .style("stroke-width", width)
+
+  };
   //**************************************************************************
   //** Utils
   //**************************************************************************
