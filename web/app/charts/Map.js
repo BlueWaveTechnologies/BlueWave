@@ -360,7 +360,37 @@ bluewave.charts.Map = function(parent, config) {
         draw();
     };
 
+  //**************************************************************************
+  //** addPoints
+  //**************************************************************************
+    this.addPoints = function(points, pointConfig){
 
+      var style = pointConfig.style;
+
+      var opacity = style.opacity;
+      if (!opacity) {
+        opacity = 1.0;
+      }
+
+      var radius = parseInt(style.radius);
+      if (isNaN(radius)) radius = 3;
+      if (radius < 0) radius = 1;
+
+      
+      mapArea.append("g")
+        .selectAll("*")
+        .data(points)
+        .enter()
+        .append("circle")
+        .attr("r", radius)
+        .attr("class", style.name)
+        .attr("transform", function (d) {
+          return "translate(" + projection(d) + ")";
+        })
+        .attr("fill-opacity", opacity)
+        .style("fill", style.fill)
+
+    };
   //**************************************************************************
   //** Utils
   //**************************************************************************
