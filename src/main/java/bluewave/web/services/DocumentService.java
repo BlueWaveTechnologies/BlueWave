@@ -449,6 +449,25 @@ public class DocumentService extends WebService {
             JSONObject result = executeScript(scripts[0], params);
 
 
+          //Replace file paths and insert documentID
+            JSONArray arr = result.get("files").toJSONArray();
+            for (int i=0; i<arr.length(); i++){
+                JSONObject f = arr.get(i).toJSONObject();
+                String filename = f.get("filename").toString().replace("\\", "/");
+                bluewave.app.Document document = null;
+                for (int j=0; j<files.size(); j++){
+                    javaxt.io.File file = files.get(j);
+                    if (file.toString().replace("\\", "/").equals(filename)){
+                        document = documents.get(j);
+                        break;
+                    }
+                }
+                f.set("document_id", document.getID());
+                f.set("filename", document.getFile().getName());
+            }
+
+
+
           //Cache the results
             if (documents.size()==2){
                 bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
