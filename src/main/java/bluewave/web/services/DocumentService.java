@@ -70,7 +70,7 @@ public class DocumentService extends WebService {
 
       //Create index of existing files. Use separate thread so the server doesn't hang
         try{
-            index = new FileIndex(getIndexDir().toString());
+            index = new FileIndex(Config.getIndexDir());
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -519,21 +519,6 @@ public class DocumentService extends WebService {
     }
 
 
-  //**************************************************************************
-  //** getIndexDir
-  //**************************************************************************
-    private static javaxt.io.Directory getIndexDir() {
-        javaxt.io.Directory indexDir = null;
-        javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
-        if (jobDir!=null){
-            indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
-            indexDir.create();
-        }
-        if (indexDir==null || !indexDir.exists()){
-            throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
-        }
-        return indexDir;
-    }
 
 
   //**************************************************************************
