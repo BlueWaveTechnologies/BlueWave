@@ -134,14 +134,20 @@ public class FileIndex {
                 BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
                 bqBuilder.add(wildcardBooleanClause);
 
-                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-                        BooleanClause.Occur.SHOULD));
+                QueryParser contentsParser = new QueryParser(FIELD_CONTENTS, analyzer);
+                BooleanClause bc = new BooleanClause(contentsParser.parse(QueryParser.escape(term).toLowerCase()),
+                        BooleanClause.Occur.SHOULD);
+                bqBuilder.add(bc);
 
-                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-                        BooleanClause.Occur.SHOULD));
 
-                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-                        BooleanClause.Occur.SHOULD));
+//                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+//                        BooleanClause.Occur.SHOULD));
+//
+//                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+//                        BooleanClause.Occur.SHOULD));
+//
+//                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+//                        BooleanClause.Occur.SHOULD));
 
             }
             BooleanQuery bbq = bqBuilder.build();
