@@ -464,6 +464,10 @@ li.tree-node:hover {
     color: #000000;
 }
 
+.toolbar-button-icon.fas.fa-times {
+    color: #b11818; /*red - same color as search-bar-cancel*/
+    font-size: 21px;
+}
 
 /**************************************************************************/
 /** Map Legend
@@ -1038,7 +1042,7 @@ li.tree-node:hover {
     right: 6px;
     position: absolute;
     font-size: 16px;
-    color: #b11818;
+    color: #b11818; /*red - same color as fa-times in the toolbar*/
     width: 18px;
     height: 18px;
     text-align: center;
