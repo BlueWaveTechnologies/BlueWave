@@ -16,6 +16,8 @@ bluewave.charts.MapChart = function(parent, config) {
         style: {
         }
     };
+    var WKT = new ol.format.WKT(); //the WKT Format for OpenLayers
+    var geoJSON = new ol.format["GeoJSON"]();  //the geoJSON format for OpenLayers
     var svg, mapArea; //d3 elements
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
@@ -130,7 +132,6 @@ bluewave.charts.MapChart = function(parent, config) {
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
 
-
       //Set color scale
         var colorScale = {
             "blue": d3.scaleQuantile(extent, d3.schemeBlues[7]),
@@ -141,6 +142,10 @@ bluewave.charts.MapChart = function(parent, config) {
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
 
         var mapLevel = chartConfig.mapLevel;
+        var useWKT = false;
+        if(chartConfig.mapLocation && data[0][chartConfig.mapLocation].includes("(")){
+            useWKT = true;
+        }
         if (mapLevel === "counties"){
 
             projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
@@ -163,6 +168,7 @@ bluewave.charts.MapChart = function(parent, config) {
           //Render state boundaries
             var renderStates = function(renderPolygons){
                 if (renderPolygons===true){
+                    //console.log(states.features);
                     return countyMap.selectAll("whatever")
                     .data(states.features)
                     .enter()
@@ -213,7 +219,11 @@ bluewave.charts.MapChart = function(parent, config) {
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, states, chartConfig, path, projection);
+                    if(useWKT){
+                        points = getPointsWKT(data, chartConfig, projection);
+                    }else{
+                        points = getCentroids(data, states, chartConfig, path, projection);
+                    }
                 }
 
 
@@ -223,13 +233,16 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             else if(chartConfig.mapType === "Area"){
 
-                var area = selectArea(data, chartConfig);
+                var area;
+                if(true){
+                    area = selectArea(data, chartConfig);
+                }else{
+                    area = "WKT";
+                }
                 if (area==="counties"){
 
                   //Render Counties
                     var countyPolygons = renderCounties();
-
-
 
                   //Map countyIDs to data values
                     var values = {};
@@ -263,6 +276,18 @@ bluewave.charts.MapChart = function(parent, config) {
                 else if (area==="censusDivisions"){ //render census divisions
                     var statePolygons = renderStates(true);
                     updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
+                }
+                else if(area==="WKT"){  //Render based on WKT Geometry
+                    var countyPolygons = renderCounties();
+                    var statePolygons = renderStates(true);
+                    countyPolygons.each(function() {
+                        var path = d3.select(this);
+                        var fillColor = path.attr('fill');
+                        path.attr('fill', function(d){
+                            return "lightgrey";
+                        });
+                    });
+                    renderWKT(data, chartConfig, colorScale, path, countyMap);
                 }
                 else{
                     renderCounties();
@@ -327,13 +352,16 @@ bluewave.charts.MapChart = function(parent, config) {
 
               //Get points
                 var points = {};
-                if (chartConfig.pointData==="geoCoords"){
+                if (chartConfig.pointData==="geoCoords") {
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, states, chartConfig, path, projection);
+                    if(useWKT){
+                        points = getPointsWKT(data, chartConfig, projection);
+                    }else{
+                        points = getCentroids(data, states, chartConfig, path, projection);
+                    }
                 }
-
 
               //Render points
                 renderPoints(points, chartConfig, extent);
@@ -343,7 +371,12 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
               //Render data using the most suitable geometry type
-                var area = selectArea(data, chartConfig);
+                var area;
+                if(true){
+                    area = selectArea(data, chartConfig);
+                }else{
+                    area = "WKT";
+                }
                 if (area==="counties"){ //render counties
 
                     var values = {};
@@ -373,6 +406,10 @@ bluewave.charts.MapChart = function(parent, config) {
                 else if (area==="censusDivisions"){ //render census divisions
                     var statePolygons = renderStates();
                     updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
+                }
+                else if(area==="WKT"){
+                    var statePolygons = renderStates(true);
+                    renderWKT(data, chartConfig, colorScale, path, worldMap);
                 }
                 else{
                     renderStates();
@@ -412,11 +449,15 @@ bluewave.charts.MapChart = function(parent, config) {
 
               //Get points
                 var points = {};
-                if (chartConfig.pointData==="geoCoords"){
+                if (chartConfig.pointData==="geoCoords") {
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, countries, chartConfig, path, projection);
+                    if(useWKT){
+                        points = getPointsWKT(data, chartConfig, projection);
+                    }else{
+                        points = getCentroids(data, states, chartConfig, path, projection);
+                    }
                 }
 
               //Render points
@@ -457,6 +498,9 @@ bluewave.charts.MapChart = function(parent, config) {
                             return landColor;
                         }
                     });
+                if(useWKT){
+                    //renderWKT(data, chartConfig, colorScale, path, mapArea);
+                }
             }
             else if(chartConfig.mapType === "Links"){
                 getData("PortsOfEntry", function(ports){
@@ -688,7 +732,70 @@ bluewave.charts.MapChart = function(parent, config) {
                 return getColor(d[0]);
             });
     };
+  //**************************************************************************
+  //** renderWKT
+  //**************************************************************************
+    var renderWKT = function(data, chartConfig, colorScale, path, map){
+        var collectionOfFeatures =[];
+//        data.forEach(function(d){
+//            if(d[chartConfig.mapLocation].includes("(")){
+//                var geometry = convertWKT(d[chartConfig.mapLocation]);
+//                geometry.mapValue = d[chartConfig.mapValue];
+//                geometries.push(geometry);
+//            }
+//        }
+        var geoJSONObject = convertWKT("POLYGON((-87.906471 43.038902, -95.992775 36.153980, -75.704722 36.076944, -87.906471 43.038902))");
+//        console.log(geoJSONObject);
+        geoJSONObject.geometry.coordinates[0].reverse(); //This reverses the coordinate order, which is requried for d3 to work properly.
+//        console.log(geoJSONObject);
+        collectionOfFeatures.push(geoJSONObject);
+        map.selectAll("stuff")
+            .data(collectionOfFeatures)
+            .enter()
+            .append("path")
+            .attr('d', path)
+            .attr('fill', "green")
+            .attr('stroke', 'white');
+    }
 
+  //**************************************************************************
+  //** convertWKT
+  //**************************************************************************
+  //Converts a wkt into a geoJSON object;
+    var convertWKT = function(val){
+        var geoJSONObject = geoJSON.writeFeatureObject(WKT.readFeature(val));
+        return geoJSONObject;
+    }
+
+  //**************************************************************************
+  //** getPointsWKT
+  //**************************************************************************
+      var getPointsWKT = function(data, chartConfig, projection){
+        var coords = [];
+        var hasValue;
+        data.forEach(function(d){
+            if(d[chartConfig.mapLocation].includes("(")){
+                var geometry = convertWKT(d[chartConfig.mapLocation]);
+                var coordinates = geometry.flatCoordinates;
+                var lon = parseFloat(coordinates[0]);
+                var lat = parseFloat(coordinates[1]);
+                if (isNaN(lat) || isNaN(lon)) return;
+                var coord = projection([lon, lat]);
+                if (!coord) return;
+                if (isNaN(coord[0]) || isNaN(coord[1])) return;
+                var val = parseFloat(d[chartConfig.mapValue]);
+                if (!isNaN(val)){
+                    coord.push(val);
+                    hasValue = true;
+                }
+                coords.push(coord);
+            }
+        });
+        return {
+            coords: coords,
+            hasValue: hasValue
+        };
+      }
 
   //**************************************************************************
   //** getPoints
@@ -840,7 +947,6 @@ bluewave.charts.MapChart = function(parent, config) {
             var location = d[chartConfig.mapLocation];
             if (typeof location === 'undefined') return;
             var censusDivision = getCensusDivision(d[chartConfig.mapLocation]);
-
 
             counties.features.every(function(county){
                 if (county.id===location){
