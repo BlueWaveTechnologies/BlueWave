@@ -33,6 +33,7 @@ import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.text.PDFTextStripper;
 
 
@@ -50,6 +51,8 @@ public class FileIndex {
     public static final String FIELD_PATH = "path";
     public static final String FIELD_MODIFIED = "modified";
     public static final String FIELD_DOCUMENT_ID = "documentID";
+    public static final String FIELD_SUBJECT = "subject";
+    public static final String FIELD_KEYWORDS = "keywords";
 
     public FileIndex(String path) throws Exception {
         this(new javaxt.io.Directory(path));
@@ -101,6 +104,7 @@ public class FileIndex {
                     Document doc = searcher.doc(scoreDoc.doc);
 
                     float score = scoreDoc.score;
+                    // console.log(score + " " + doc.getField(FIELD_NAME));
 
                     Long documentID = Long.parseLong(doc.get(FIELD_DOCUMENT_ID));
                     bluewave.app.Document d = new bluewave.app.Document(documentID);
@@ -130,10 +134,14 @@ public class FileIndex {
                 BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
                 bqBuilder.add(wildcardBooleanClause);
 
-                QueryParser contentsParser = new QueryParser(FIELD_CONTENTS, analyzer);
-                BooleanClause bc = new BooleanClause(contentsParser.parse(QueryParser.escape(term).toLowerCase()),
-                        BooleanClause.Occur.SHOULD);
-                bqBuilder.add(bc);
+                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+                        BooleanClause.Occur.SHOULD));
+
+                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+                        BooleanClause.Occur.SHOULD));
+
+                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+                        BooleanClause.Occur.SHOULD));
 
             }
             BooleanQuery bbq = bqBuilder.build();
@@ -224,8 +232,18 @@ public class FileIndex {
             PDFParser parser = new PDFParser(new RandomAccessBuffer(file.getInputStream()));
             parser.parse();
             COSDocument cd = parser.getDocument();
+            PDDocument pdDocument = new PDDocument(cd);
+            d.setPageCount(pdDocument.getNumberOfPages());
+            PDDocumentInformation info = pdDocument.getDocumentInformation();
+
+            if(info.getSubject() != null && !info.getSubject().isBlank())
+                doc.add(new TextField(FIELD_SUBJECT, info.getSubject(), Store.NO));
+            
+            if(info.getKeywords() != null && !info.getKeywords().isBlank())
+                doc.add(new TextField(FIELD_KEYWORDS, info.getKeywords(), Store.NO));
+
             PDFTextStripper stripper = new PDFTextStripper();
-            String text = stripper.getText(new PDDocument(cd));
+            String text = stripper.getText(pdDocument);
             cd.close();
             doc.add(new TextField(FIELD_CONTENTS, text, Store.NO));
         }
@@ -270,7 +288,7 @@ public class FileIndex {
     public boolean hasFile(javaxt.io.File file) {
         if (indexExists()) {
             IndexSearcher searcher = instanceOfIndexSearcher();
-            
+
             if (searcher != null) {
                 try {
                     TopDocs results = searcher.search(new TermQuery(new Term("path", file.toString())), 1);
