@@ -553,10 +553,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
           //Create document search panel
             searchPanel = new bluewave.analytics.DocumentSearch(parent,{
                 dateFormat: config.dateFormat,
-                showCheckboxes: false,
-                getIcon: function(document){
-                    //<i class="fas fa-check"></i>
-                }
+                showCheckboxes: false
             });
 
             searchPanel.el.addEventListener('dragover', onDragOver, false);
@@ -617,6 +614,22 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     }
                 }
             };
+
+
+            selectedDocuments.addEventListener("remove", function(){
+                var documents = arguments;
+                grid.forEachRow((row)=>{
+                    var d = row.record;
+                    for (var i=0; i<documents.length; i++){
+                        var document = documents[i];
+                        if (d.id===document.id){
+                            try{ row.get("Name").deselect(); }
+                            catch(e) {}
+                        }
+                    }
+                });
+            });
+
         };
 
 
@@ -626,8 +639,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 if (searchPanel) searchPanel.clear();
             },
             update: function(panel){
-                if (!searchPanel) createPanel(panel.childNodes[0]);
-                searchPanel.update();
+                if (!searchPanel){
+                    createPanel(panel.childNodes[0]);
+                    searchPanel.update();
+                }
             }
         };
     };
