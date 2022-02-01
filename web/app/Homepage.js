@@ -305,6 +305,7 @@ bluewave.Homepage = function(parent, config) {
   //** sort
   //**************************************************************************
     var sort = function(arr){
+        if (!arr) return;
         arr.sort(function(a, b){
             return a.name.localeCompare(b.name);
         });
@@ -812,8 +813,8 @@ bluewave.Homepage = function(parent, config) {
                     myDashboards.push(dashboard.id);
                 }
             }
+            if (!groups) groups = new javaxt.dhtml.DataStore();
             if (myDashboards.length>0){
-                if (!groups) groups = new javaxt.dhtml.DataStore();
                 groups.add({
                     name: "My Dashboards",
                     dashboards: myDashboards
@@ -822,8 +823,8 @@ bluewave.Homepage = function(parent, config) {
                     name: "Shared Dashboards",
                     dashboards: sharedDashboards
                 });
-                return groups;
             }
+            return groups;
         };
 
       //Check if groups exist and if they are populated
