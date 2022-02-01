@@ -10,14 +10,17 @@ import math
 import pickle
 import time
 import argparse
+import datetime
+import itertools
+import subprocess
 from pathlib import Path
 
-import itertools
 import numpy as np
 from itertools import groupby
 from itertools import combinations
 from operator import itemgetter
 from random import randint
+import sklearn
 # from scipy.stats import chisquare
 
 # PyMuPDF
@@ -129,10 +132,10 @@ def find_common_substrings(text1, text2, min_len):
 
     return result
 
+
 #-------------------------------------------------------------------------------
 # COMPARISON
 #-------------------------------------------------------------------------------
-
 def get_digits(text):
     result = ''.join(c for c in text if c.isnumeric() or c=='|')
     return result
@@ -188,6 +191,8 @@ def benford_test(text):
 
 def get_page_texts(filename):
     texts = []
+    if filename[-4:] != '.pdf':
+        raise Exception('Fitz cannot read non-PDF file', filename)
     with fitz.open(filename) as doc:
         for page in doc:
             page_text = page.get_text()
@@ -199,7 +204,6 @@ def get_page_texts(filename):
 
 def get_page_image_hashes(filename):
     hashes = []
-    filename = filename.replace('\\', '/')
     with fitz.open(filename) as doc:
         for page in doc:
             page_images = page.get_image_info(hashes=True)
@@ -215,21 +219,39 @@ def get_page_image_hashes(filename):
 def get_file_data(filenames):
     data = {}
     for full_filename in filenames:
-        page_texts = get_page_texts(full_filename)
-        page_digits = [(n, get_digits(t)) for n, t in page_texts]
-        page_image_hashes = get_page_image_hashes(full_filename)
-        full_text = '|'.join(t.strip() for n, t in page_texts)
-        full_digits = '|'.join(t for n, t in page_digits)
-        full_image_hashes = sum([h for n, h in page_image_hashes], [])
-        path_to_file = '/'.join(full_filename.split('/')[:-1])
-        filename = full_filename.split('/')[-1]
+
+        # Check if cached exists next to PDF
+        cached_filename = full_filename[:-3] + 'json'
+        if os.path.exists(cached_filename):
+            with open(cached_filename, 'rb') as f:
+                cached_data = json.load(f)
+            pages_text = cached_data['pages_text']
+            pages_image_hashes = cached_data['pages_image_hashes']
+        else: # If not, read the PDF
+            pages_text = get_page_texts(full_filename)
+            pages_image_hashes = get_page_image_hashes(full_filename)
+
+            # And cache the data
+            cached_data = {
+                'pages_text': pages_text,
+                'pages_image_hashes': pages_image_hashes,
+            }
+            with open(cached_filename, 'w') as f:
+                cached_data = json.dump(cached_data, f)
+
+        pages_digits = [(n, get_digits(t)) for n, t in pages_text]
+        full_text = '|'.join(t.strip() for n, t in pages_text)
+        full_digits = '|'.join(t for n, t in pages_digits)
+        full_image_hashes = sum([h for n, h in pages_image_hashes], [])
+        path_to_file = (os.path.sep).join(full_filename.split(os.path.sep)[:-1])
+        filename = full_filename.split(os.path.sep)[-1]
 
         file_data = {
             'path_to_file': path_to_file,
             'filename': filename,
-            'pages_text': page_texts,
-            'pages_digits': page_digits,
-            'pages_image_hashes': page_image_hashes,
+            'pages_text': pages_text,
+            'pages_digits': pages_digits,
+            'pages_image_hashes': pages_image_hashes,
             'full_text': full_text,
             'full_digits': full_digits,
             'full_image_hashes': full_image_hashes,
@@ -310,77 +332,6 @@ def filter_sus_pairs(suspicious_pairs):
     return significant_text_pairs + significant_other_pairs
 
 
-def get_file_info(file_data, suspicious_pairs):
-    filename_sus_pages = {filename: set() for filename in file_data.keys()}
-    for pair in suspicious_pairs:
-        pages = pair['pages']
-        for page in pages:
-            filename = page['filename']
-            filename_sus_pages[filename].add(page['page'])
-
-    file_info = []
-    for filename, data in file_data.items():
-        file_sus_pages = list(filename_sus_pages.get(filename, []))
-        fi = {
-            'filename': filename,
-            'n_pages': len(data['pages_text']),
-            'n_suspicious_pages': len(file_sus_pages),
-            'suspicious_pages': file_sus_pages,
-        }
-        file_info.append(fi)
-    return file_info
-
-
-def get_similarity_scores(file_data, suspicious_pairs):
-    reorg_sus_pairs = {}
-
-    for sus in suspicious_pairs:
-        file_a, file_b = sorted(p['filename'] for p in sus['pages'])
-        method = sus['type']
-        if file_a not in reorg_sus_pairs:
-            reorg_sus_pairs[file_a] = {}
-        if file_b not in reorg_sus_pairs[file_a]:
-            reorg_sus_pairs[file_a][file_b] = {}
-        if method not in reorg_sus_pairs[file_a][file_b]:
-            reorg_sus_pairs[file_a][file_b][method] = []
-
-        reorg_sus_pairs[file_a][file_b][method].append(sus)
-
-    similarity_scores = {}
-    # Only upper triangle not incl. diagonal of cross matrix
-    all_filenames = list(file_data.keys())
-    for i, x in enumerate(all_filenames[:-1]):
-        for y in all_filenames[i+1:]:
-            fname_a, fname_b = sorted([x, y]) # Sort by filename
-            data_a = file_data[fname_a]
-            data_b = file_data[fname_b]
-
-            if fname_a not in similarity_scores:
-                similarity_scores[fname_a] = {}
-            if fname_b not in similarity_scores[fname_a]:
-                similarity_scores[fname_a][fname_b] = {}
-
-            for method, suspairs in reorg_sus_pairs[fname_a][fname_b].items():
-                if method == 'Common digit sequence':
-                    intersect = sum(s['length'] for s in suspairs)
-                    union = (len(file_data[fname_a]['full_digits']) +
-                        len(file_data[fname_b]['full_digits'])) - intersect
-                    jaccard = intersect / union
-                elif method == 'Common text string':
-                    intersect = sum(s['length'] for s in suspairs)
-                    union = (len(file_data[fname_a]['full_text']) +
-                        len(file_data[fname_b]['full_text']) - intersect)
-                    jaccard = intersect / union
-                elif method == 'Identical image':
-                    intersect = len(suspairs)
-                    union = (len(file_data[fname_a]['full_image_hashes']) +
-                        len(file_data[fname_b]['full_image_hashes']) - intersect)
-                    jaccard = intersect / union
-                similarity_scores[fname_a][fname_b][method] = jaccard
-
-    return similarity_scores
-
-
 def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
     results = []
     common_substrings = find_common_substrings(
@@ -388,7 +339,7 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
         text2=data_b[f'full_{text_suffix}'],
         min_len=min_len
     )
-    common_substrings = [s.split('|')[0] for s in common_substrings]
+    common_substrings = [s.strip('|').split('|')[0] for s in common_substrings]
     if any(common_substrings):
         for sus_substr in common_substrings:
             sus_page_a = find_page_of_sus_substr(data_a[f'pages_{text_suffix}'], sus_substr)
@@ -408,13 +359,114 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
     return results
 
 
+#-------------------------------------------------------------------------------
+# GATHERING RESULTS
+#-------------------------------------------------------------------------------
+def get_file_info(file_data, suspicious_pairs):
+    filename_sus_pages = {filename: set() for filename in file_data.keys()}
+    for pair in suspicious_pairs:
+        pages = pair['pages']
+        for page in pages:
+            filename = page['filename']
+            filename_sus_pages[filename].add(page['page'])
+
+    file_info = []
+    for filename, data in file_data.items():
+        file_sus_pages = list(filename_sus_pages.get(filename, []))
+        fi = {
+            'filename': filename,
+            'path_to_file': data['path_to_file'],
+            'n_pages': len(data['pages_text']),
+            'n_suspicious_pages': len(file_sus_pages),
+            'suspicious_pages': file_sus_pages,
+        }
+        file_info.append(fi)
+    return file_info
+
+
+def get_similarity_scores(file_data, suspicious_pairs, methods_run):
+    METHOD_NAMES = [
+        ('Common digit sequence', 'digits'),
+        ('Common text string', 'text'),
+        ('Identical image', 'images'),
+    ]
+
+    # Reorganize the suspicious pairs so we can efficiently access when looping
+    reorg_sus_pairs = {}
+    for sus in suspicious_pairs:
+        file_a, file_b = sorted(p['filename'] for p in sus['pages'])
+        method = sus['type']
+        if file_a not in reorg_sus_pairs:
+            reorg_sus_pairs[file_a] = {}
+        if file_b not in reorg_sus_pairs[file_a]:
+            reorg_sus_pairs[file_a][file_b] = {}
+        if method not in reorg_sus_pairs[file_a][file_b]:
+            reorg_sus_pairs[file_a][file_b][method] = []
+
+        reorg_sus_pairs[file_a][file_b][method].append(sus)
+
+    # Only upper triangle not incl. diagonal of cross matrix
+    similarity_scores = {}
+    all_filenames = list(file_data.keys())
+    for i, x in enumerate(all_filenames[:-1]):
+        for y in all_filenames[i+1:]:
+            fname_a, fname_b = sorted([x, y]) # Sort by filename
+            data_a = file_data[fname_a]
+            data_b = file_data[fname_b]
+
+            if fname_a not in similarity_scores:
+                similarity_scores[fname_a] = {}
+            if fname_b not in similarity_scores[fname_a]:
+                similarity_scores[fname_a][fname_b] = {}
+
+            for method_long, method_short in METHOD_NAMES:
+                if method_short in methods_run:
+                    try:
+                        suspairs = reorg_sus_pairs[fname_a][fname_b].get(method_long, [])
+                    except KeyError:
+                        suspairs = []
+
+                    if method_long == 'Common digit sequence':
+                        intersect = sum(s['length'] for s in suspairs)
+                        union = (len(file_data[fname_a]['full_digits']) +
+                            len(file_data[fname_b]['full_digits'])) - intersect
+                    elif method_long == 'Common text string':
+                        intersect = sum(s['length'] for s in suspairs)
+                        union = (len(file_data[fname_a]['full_text']) +
+                            len(file_data[fname_b]['full_text']) - intersect)
+                    elif method_long == 'Identical image':
+                        intersect = len(suspairs)
+                        union = (len(file_data[fname_a]['full_image_hashes']) +
+                            len(file_data[fname_b]['full_image_hashes']) - intersect)
+                    if union == 0:
+                        jaccard = 'Undefined'
+                    else:
+                        jaccard = intersect / union
+                    similarity_scores[fname_a][fname_b][method_long] = jaccard
+                else:
+                    similarity_scores[fname_a][fname_b][method_long] = 'Not run'
+
+    return similarity_scores
+
+
+def get_version():
+    # repo = Repo()
+    # ver = repo.git.describe('--always')
+    currdir = os.path.dirname(os.path.realpath(__file__))
+    ver = subprocess.check_output(["git", "describe", "--always"], cwd=currdir).strip()
+    return ver.decode("utf-8")
+
+
+#-------------------------------------------------------------------------------
+# MAIN
+#-------------------------------------------------------------------------------
 def main(filenames, methods, pretty_print, verbose=False):
     t0 = time.time()
     assert len(filenames) >= 2, 'Must have at least 2 files to compare!'
 
     if not methods:
-        if verbose: print('Methods not specified, using default.')
-        methods = ['digits', 'images']
+        if verbose: print('Methods not specified, using default (all).')
+        methods = ['digits', 'images', 'text']
     if verbose: print('Using methods:', ', '.join(methods))
 
     suspicious_pairs = []
@@ -445,8 +497,8 @@ def main(filenames, methods, pretty_print, verbose=False):
     #     - Duplicate text
     #     - Duplicate images (based on hash)
     for file_a, file_b in combinations(filenames, 2):
-        a = file_data[file_a.split('/')[-1]]
-        b = file_data[file_b.split('/')[-1]]
+        a = file_data[file_a.split(os.path.sep)[-1]]
+        b = file_data[file_b.split(os.path.sep)[-1]]
 
         # Compare numbers
         if 'digits' in methods:
@@ -461,19 +513,19 @@ def main(filenames, methods, pretty_print, verbose=False):
             suspicious_pairs.extend(digit_results)
 
         # Compare texts
-        if 'text' in methods or 'texts' in methods:
+        if 'text' in methods:
             if verbose: print('Comparing texts...')
             text_results = compare_texts(
                 data_a=a,
                 data_b=b,
                 text_suffix='text',
-                min_len=40,
+                min_len=280,
                 comparison_type_name='Common text string'
             )
             suspicious_pairs.extend(text_results)
 
         # Compare images
-        if 'images' in methods or 'image' in methods:
+        if 'images' in methods:
             if verbose: print('Comparing images...')
             identical_images = compare_images(
                 a['full_image_hashes'],
@@ -486,6 +538,7 @@ def main(filenames, methods, pretty_print, verbose=False):
                     sus_page_b = find_page_of_sus_image(b['pages_image_hashes'], img_hash)
                     sus_result = {
                         'type': 'Identical image',
+                        'image_hash': img_hash,
                         'pages': [
                             {'filename': a['filename'], 'page': sus_page_a},
                             {'filename': b['filename'], 'page': sus_page_b},
@@ -495,15 +548,24 @@ def main(filenames, methods, pretty_print, verbose=False):
 
     # Remove duplicate suspicious pairs (this might happen if a page has
     # multiple common substrings with another page)
+    if verbose: print('Removing duplicate sus pairs...')
     suspicious_pairs = list_of_unique_dicts(suspicious_pairs)
 
     # Filter out irrelevant sus pairs
+    if verbose: print('Removing irrelevant pairs...')
     suspicious_pairs = filter_sus_pairs(suspicious_pairs)
 
     # Calculate some more things for the final output
+    if verbose: print('Gathering output...')
+    if verbose: print('\tGet file info...')
     file_info = get_file_info(file_data, suspicious_pairs)
+    if verbose: print('\tGet total pages...')
     total_page_pairs = sum(f['n_pages'] for f in file_info)
-    similarity_scores = get_similarity_scores(file_data, suspicious_pairs)
+    if verbose: print('\tGet similarity score...')
+    similarity_scores = get_similarity_scores(file_data, suspicious_pairs, methods)
+    if verbose: print('\tGet version...')
+    version = get_version()
+    if verbose: print('\tResults gathered.')
 
     dt = time.time() - t0
 
@@ -514,6 +576,8 @@ def main(filenames, methods, pretty_print, verbose=False):
         'elapsed_time_sec': dt,
         'pages_per_second': total_page_pairs/dt,
         'similarity_scores': similarity_scores,
+        'version': version,
+        'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     }
 
     if pretty_print:
