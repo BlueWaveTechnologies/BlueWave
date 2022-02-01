@@ -558,6 +558,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     //<i class="fas fa-check"></i>
                 }
             });
+
+            searchPanel.el.addEventListener('dragover', onDragOver, false);
+            searchPanel.el.addEventListener('drop', onDrop, false);
+
             var grid = searchPanel.getDataGrid();
 
 
@@ -591,6 +595,80 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 searchPanel.update();
             }
         };
+    };
+
+
+  //**************************************************************************
+  //** onDragOver
+  //**************************************************************************
+  /** Called when the client drags something over the searchPanel
+   */
+    var onDragOver = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy
+    };
+
+
+  //**************************************************************************
+  //** onDrop
+  //**************************************************************************
+  /** Called when the client drops something onto the searchPanel
+   */
+    var onDrop = function(e) {
+
+        e.stopPropagation();
+        e.preventDefault();
+        var files = e.dataTransfer.files;
+        if (files.length>0){
+
+          //Generate list of files to upload
+            var arr = [];
+            for (var i=0; i<files.length; i++) {
+                var file = files[i];
+                var fileName = file.name.toLowerCase();
+                var ext = fileName.substring(fileName.lastIndexOf(".")+1);
+                if (ext==="pdf" || ext==="txt"){
+                    arr.push(file);
+                }
+            }
+
+
+            if (arr.length==0) return;
+            waitmask.show(500);
+
+
+          //Upload files to the server
+            var failures = [];
+            var upload = function(){
+
+                if (arr.length===0){
+                    waitmask.hide();
+                    if (failures.length>0){
+                        alert("Failed to upload " + failures);
+                    }
+                    return;
+                }
+
+                var file = arr.shift();
+                var formData = new FormData();
+                formData.append(file.name, file);
+                post("document", formData, {
+                    success: function(text){
+                        var results = JSON.parse(text);
+                        if (results[0].result==="error"){
+                            failures.push(file.name);
+                        }
+                        upload();
+                    },
+                    failure: function(request){
+                        failures.push(file.name);
+                        upload();
+                    }
+                });
+            };
+            upload();
+        }
     };
 
 
@@ -819,7 +897,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 }
             };
         }
-        
+
         documentSimilarities.update(record.results);
         documentSimilarities.show();
     };
@@ -877,6 +955,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** Utils
   //**************************************************************************
     var get = bluewave.utils.get;
+    var post = javaxt.dhtml.utils.post;
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
     var onRender = javaxt.dhtml.utils.onRender;
