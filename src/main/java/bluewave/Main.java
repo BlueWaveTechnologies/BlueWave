@@ -363,6 +363,16 @@ public class Main {
                 }
             }
         }
+        else if (str.equals("uploads")){
+            Config.initDatabase();
+            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()){
+                dc.delete();
+            }
+            for (bluewave.app.Document d : bluewave.app.Document.find()){
+                d.delete();
+            }
+            Config.getIndexDir().delete();
+        }
     }
 
 
