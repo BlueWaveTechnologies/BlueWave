@@ -452,18 +452,20 @@ public class DocumentService extends WebService {
           //Replace file paths and insert documentID
             JSONArray arr = result.get("files").toJSONArray();
             for (int i=0; i<arr.length(); i++){
-                JSONObject f = arr.get(i).toJSONObject();
-                String filename = f.get("filename").toString().replace("\\", "/");
+                JSONObject json = arr.get(i).toJSONObject();
+                String fileName = json.get("filename").toString();
+                String filePath = json.get("path_to_file").toString();
+                javaxt.io.File f = new javaxt.io.File(filePath, fileName);
                 bluewave.app.Document document = null;
                 for (int j=0; j<files.size(); j++){
                     javaxt.io.File file = files.get(j);
-                    if (file.toString().replace("\\", "/").equals(filename)){
+                    if (file.toString().replace("\\", "/").equals(f.toString().replace("\\", "/"))){
                         document = documents.get(j);
                         break;
                     }
                 }
-                f.set("document_id", document.getID());
-                f.set("filename", document.getFile().getName());
+                json.set("document_id", document.getID());
+                json.remove("path_to_file");
             }
 
 
