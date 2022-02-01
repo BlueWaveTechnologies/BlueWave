@@ -1844,6 +1844,55 @@ bluewave.Explorer = function(parent, config) {
         sankeyEditor.show();
     };
 
+  //**************************************************************************
+  //** editLineChart
+  //**************************************************************************
+    var editLineChart = function(node, csv, hide){
+
+        var style = merge({
+            body: {
+                padding: "0px"
+            },
+            closeIcon: {
+                //content: "&#10006;",
+                content: "&#x2715;",
+                lineHeight: "16px",
+                textAlign: "center"
+            }
+        }, config.style.window);
+
+
+        var win = createWindow({
+            title: "edit Line",
+            width: 1680,
+            height: 920,
+            modal: true,
+            resizable: true,
+            shrinkToFit: true,
+            style: style});
+
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+
+                data.push(csv);
+            };
+        };
+
+        var div = document.createElement("div");
+        div.style.height = "100%";
+        win.getBody().appendChild(div);
+
+        var lineEditor = new bluewave.charts.LineEditor(div,{"style":style});
+        lineEditor.update(node.config,data);
+
+        if (hide===true) return lineEditor.getConfig();
+
+    //Show lineEditor when we are in the editor view
+        lineEditor.show();
+    };
 
   //**************************************************************************
   //** editPie
@@ -3010,8 +3059,13 @@ bluewave.Explorer = function(parent, config) {
                             barChart.update(chartConfig, data);
                         }
                         else if (node.type==="lineChart"){
-                            var lineChart = new bluewave.charts.LineChart(createChartContainer(),{});
-                            lineChart.update(chartConfig, data);
+                            //Instantiate lineEditor as needed
+                                if (!lineEditor) lineEditor = editLineChart(node, csv, true);
+
+                            //Render lineChart
+                                var lineChart = new bluewave.charts.LineChart(createChartContainer(), {});
+                                lineChart.setLayers(lineEditor.layers);
+                                lineChart.update();
                         }
                         else if (node.type==="scatterChart"){
                             var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
