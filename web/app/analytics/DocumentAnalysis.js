@@ -567,19 +567,54 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
           //Watch for row click events
             grid.onRowClick = function(row, e){
-                var document = row.record;
                 if (e.detail === 2) { //double click
+
+                    var o = row.get("Name");
+                    if (!o.select){
+                        var div = document.createElement("div");
+                        div.className = "document-analysis-selected-row";
+                        div.select = function(){
+                            div.style.left = "0px";
+                        };
+                        div.deselect = function(){
+                            div.style.left = "-34px";
+                        };
+                        div.deselect();
+
+                        var check = document.createElement("div");
+                        check.className = "fas fa-check-square";
+                        div.appendChild(check);
+
+                        var span = document.createElement("span");
+                        if ( //is element?
+                            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+                            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
+                        ) span.appendChild(o);
+                        else span.innerText = o;
+                        div.appendChild(span);
+
+                        row.set("Name", div);
+                        o = div;
+                    }
+
 
                   //Add or remove document from the selectedDocuments store
                     var addDocument = true;
+                    var r = row.record;
                     selectedDocuments.forEach((d, i)=>{
-                        if (d.id===document.id){
+                        if (d.id===r.id){
                             selectedDocuments.removeAt(i);
                             addDocument = false;
                             return true;
                         }
                     });
-                    if (addDocument) selectedDocuments.add(document);
+                    if (addDocument){
+                        selectedDocuments.add(r);
+                        o.select();
+                    }
+                    else{
+                        o.deselect();
+                    }
                 }
             };
         };

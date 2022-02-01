@@ -1159,6 +1159,29 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
+/** Document Analysis
+/**************************************************************************/
+
+.document-analysis-selected-row {
+    position: absolute;
+    height: 100%;
+    width: 34px;
+    display:inline-block;
+    float: left;
+    transition: left 0.4s cubic-bezier(0.39, 0.575, 0.565, 1),
+    opacity 0.8s cubic-bezier(0.39, 0.575, 0.565, 1);
+}
+
+.document-analysis-selected-row .fas.fa-check-square {
+    color: #009d00;
+    font-size: 30px;
+    line-height: 34px;
+    float:left;
+    width: 34px;
+}
+
+
+/**************************************************************************/
 /** Admin Panel
 /**************************************************************************/
 
