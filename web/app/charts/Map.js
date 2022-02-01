@@ -175,6 +175,9 @@ bluewave.charts.Map = function(parent, config) {
         rotate = projection.rotate();
         center = projection.center();
 
+        
+        setExtent(extent);
+
       //Render layers
         draw();
 
@@ -194,20 +197,69 @@ bluewave.charts.Map = function(parent, config) {
             if (!name) name = "layer"+i;
             var style = layer.config.style;
 
+            var opacity = style.opacity;
+            if (!opacity) opacity = 1.0;
+
+            var color = style.fill;
+            if(!color) color = "red";
+
             var g = mapArea.append("g");
             g.attr("name", name);
-            g.selectAll("*")
-                .data(layer.features)
-                .enter()
-                .append("path")
-                .attr('d', path)
-                .attr('fill', function(d){
-                    if (typeof style.fill === 'function') {
-                        return style.fill(d);
-                    }
-                    else return style.fill;
-                })
-                .attr('stroke', 'white');
+
+            if (layer.type == "polygons"){
+
+                g.selectAll("polys")
+                    .data(layer.features)
+                    .enter()
+                    .append("path")
+                    .attr('d', path)
+                    .attr('fill', function(d){
+                        if (typeof style.fill === 'function') {
+                            return style.fill(d);
+                        }
+                        else return color;
+                    })
+                    .attr('stroke', 'white');
+
+                } else
+            if (layer.type == "points"){
+
+                  var radius = parseInt(style.radius);
+                  if (isNaN(radius)) radius = 3;
+                  if (radius < 0) radius = 1;
+
+                  g.selectAll("points")
+                    .data(layer.features)
+                    .enter()
+                    .append("circle")
+                    .attr("r", radius)
+                    .attr("class", config.name)
+                    .attr("transform", function (d) {
+                      return "translate(" + projection(d) + ")";
+                    })
+                    .attr("opacity", opacity)
+                    .style("fill", color)
+
+                } else
+            if (layer.type == "lines"){
+
+                  var width = parseInt(style.width);
+                  if (isNaN(width)) width = 3;
+
+                  g.selectAll("lines")
+                    .data(layer.features)
+                    .enter()
+                    .append("path")
+                    .attr("class", config.name)
+                    .attr("d", function(d){
+                      return path({type: "LineString", coordinates: d})
+                    })
+                    .attr("fill", "none")
+                    .attr("opacity", opacity)
+                    .style("stroke", color)
+                    .style("stroke-width", width)
+
+                };
 
         });
     };
@@ -218,10 +270,33 @@ bluewave.charts.Map = function(parent, config) {
   //**************************************************************************
     this.addPolygons = function(polygons, config){
         layers.unshift({
+            type: "polygons",
             features: polygons,
             config: config
         });
     };
+
+  //**************************************************************************
+  //** addPolygons
+  //**************************************************************************
+    this.addPoints = function(points, config){
+      layers.push({
+          type: "points",
+          features: points,
+          config: config
+      });
+  };
+
+  //**************************************************************************
+  //** addPolygons
+  //**************************************************************************
+    this.addLines = function(tuples, config){
+      layers.push({
+          type: "lines",
+          features: tuples,
+          config: config
+      });
+  };
 
 
 
@@ -308,20 +383,32 @@ bluewave.charts.Map = function(parent, config) {
     };
 
 
+
   //**************************************************************************
   //** setExtent
   //**************************************************************************
     this.setExtent = function(upperLeft, lowerRight){
+        extent.upperLeft = upperLeft;
+        extent.lowerRight = lowerRight;
+    };
+  //**************************************************************************
+  //** setExtent
+  //**************************************************************************
+    var setExtent = function(extent){
+ 
         var projection = me.getProjection();
         if (!projection) return;
-        if (!upperLeft || !lowerRight) return;
+        if (!extent.upperLeft || !extent.lowerRight) return;
+
+        var upperLeft = extent.upperLeft;
+        var lowerRight = extent.lowerRight;
 
         var scale = projection.scale();
-        var extent = me.getExtent();
+        var windowExtent = me.getExtent();
 
         //Need to map to svg coords with projection first to avoid trig and invert after calculations
-        var initialUpperLeft = projection([extent.left, extent.top]);
-        var initialLowerRight = projection([extent.right, extent.bottom]);
+        var initialUpperLeft = projection([windowExtent.left, windowExtent.top]);
+        var initialLowerRight = projection([windowExtent.right, windowExtent.bottom]);
 
         //Initial extent needed for ratio
         var extentLongDiff = Math.abs(initialUpperLeft[0] - initialLowerRight[0]);
@@ -360,74 +447,6 @@ bluewave.charts.Map = function(parent, config) {
         draw();
     };
 
-  //**************************************************************************
-  //** addPoints
-  //**************************************************************************
-    this.addPoints = function(points, pointConfig){
-
-      var style = pointConfig.style;
-
-      var opacity = style.opacity;
-      if (!opacity) {
-        opacity = 1.0;
-      }
-
-      var radius = parseInt(style.radius);
-      if (isNaN(radius)) radius = 3;
-      if (radius < 0) radius = 1;
-
-
-      mapArea.append("g")
-        .selectAll("*")
-        .data(points)
-        .enter()
-        .append("circle")
-        .attr("r", radius)
-        .attr("class", pointConfig.name)
-        .attr("transform", function (d) {
-          return "translate(" + projection(d) + ")";
-        })
-        .attr("fill-opacity", opacity)
-        .style("fill", style.fill)
-
-    };
-
-  //**************************************************************************
-  //** addLines
-  //**************************************************************************
-  this.addLines = function(tuples, lineConfig){
-
-    var style = lineConfig.style;
-
-    var color = style.color;
-    if(!color) color = "red";
-
-    var opacity = style.opacity;
-    if (!opacity) {
-      opacity = 1.0;
-    }
-
-    var width = parseInt(style.width);
-    if (isNaN(width)) width = 3;
-
-    var path = d3.geoPath()
-    .projection(projection)
-
-    mapArea.append("g")
-      .selectAll("links")
-      .data(tuples)
-      .enter()
-      .append("path")
-      .attr("class", lineConfig.name)
-      .attr("d", function(d){
-        return path({type: "LineString", coordinates: d})
-      })
-      .attr("fill", "none")
-      .attr("fill-opacity", opacity)
-      .style("stroke", color)
-      .style("stroke-width", width)
-
-  };
   //**************************************************************************
   //** Utils
   //**************************************************************************
