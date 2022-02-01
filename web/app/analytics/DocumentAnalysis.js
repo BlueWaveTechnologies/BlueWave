@@ -16,8 +16,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
-    var similarityView;
+    var similarityResults, documentSimilarities;
     var windows = [];
+    var waitmask;
+    var comparisonsEnabled = true;
 
     var defaultConfig = {
         dateFormat: "M/D/YYYY h:mm A",
@@ -42,6 +44,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         if (!config.style.table) config.style.table = javaxt.dhtml.style.default.table;
         if (!config.style.window) config.style.window = javaxt.dhtml.style.default.window;
         if (!config.style.toolbarButton) config.style.toolbarButton = javaxt.dhtml.style.default.toolbarButton;
+
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;
 
 
       //Create main table
@@ -376,7 +381,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
           //Add run button
             button["run"] = createButton(td, {
-                label: "Compare Documents",
+                label: "Run",
                 icon: "fas fa-play"
             });
             button["run"].disable();
@@ -412,13 +417,40 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 });
 
 
+                button["stop"].enable();
                 compareDocuments(jobs, function(){
-
+                    button["stop"].disable();
+                    if (waitmask) waitmask.hide();
+                    comparisonsEnabled = true;
                 });
             };
 
 
-          //TODO: Add stop button
+
+          //Add stop button
+            button["stop"] = createButton(td, {
+                label: "Cancel",
+                icon: "fas fa-stop"
+            });
+            button["stop"].disable();
+            button["stop"].onClick = function(){
+                comparisonsEnabled = false;
+                waitmask.show();
+            };
+
+
+            createSpacer(td);
+
+
+          //Add clear button
+            button["clear"] = createButton(td, {
+                label: "Clear",
+                icon: "fas fa-times"
+            });
+            button["clear"].disable();
+            button["clear"].onClick = function(){
+                selectedDocuments.clear();
+            };
 
 
 
@@ -455,7 +487,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                             if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
                         });
                         if (numSimilarities>0){
-                            showSimilarDocuments(document);
+                            showSimilarityResults(document);
                         }
                     }
                 }
@@ -470,6 +502,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             if (grid){
                 grid.load([document], 2); //second arg is a page number (hack for DataGrid)
                 if (selectedDocuments.length>1) button["run"].enable();
+                if (selectedDocuments.length>0) button["clear"].enable();
             }
             updateCount();
         }, me);
@@ -483,6 +516,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 grid.clear();
                 grid.load(selectedDocuments);
                 if (selectedDocuments.length<2) button["run"].disable();
+                if (selectedDocuments.length<1) button["clear"].disable();
             }
             updateCount();
         }, me);
@@ -499,6 +533,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     createPanel(panel.childNodes[0]);
                     grid.load(selectedDocuments);
                     if (selectedDocuments.length>1) button["run"].enable();
+                    if (selectedDocuments.length>0) button["clear"].enable();
                 }
 
             }
@@ -591,6 +626,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var compareDocuments = function(jobs, onCompletion){
 
         var runJob = function(){
+
+            if (!comparisonsEnabled) jobs.splice(0,jobs.length);
+
             if (jobs.length==0){
                 if (onCompletion) onCompletion.apply(me, []);
                 return;
@@ -636,6 +674,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         var getSimilarity = function(doc, otherDocs){
 
+            if (!comparisonsEnabled) otherDocs.splice(0,otherDocs.length);
+
             if (otherDocs.length==0){
                 if (onCompletion) onCompletion.apply(me, [similarities]);
                 return;
@@ -666,14 +706,14 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
 
   //**************************************************************************
-  //** showSimilarDocuments
+  //** showSimilarityResults
   //**************************************************************************
-    var showSimilarDocuments = function(document){
-        if (!similarityView){
+    var showSimilarityResults = function(document){
+        if (!similarityResults){
 
             var win = createWindow({
                 width: 800,
-                height: 600,
+                height: 450,
                 valign: "top",
                 modal: true,
                 style: config.style.window
@@ -699,14 +739,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
           //Watch for row click events
             grid.onRowClick = function(row, e){
-                var document = row.record;
                 if (e.detail === 2) { //double click
-                    console.log(document.id);
+                    showDocumentSimilarities(row.record);
                 }
             };
 
 
-            similarityView = {
+            similarityResults = {
                 update: function(document){
                     win.setTitle(document.name);
                     grid.clear();
@@ -734,7 +773,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         data.push({
                             id: file.document_id,
                             name: file.filename,
-                            suspicious_pages: file.n_suspicious_pages
+                            suspicious_pages: file.n_suspicious_pages,
+                            sourceID: documentID,
+                            results: similarity.results
                         });
 
                     });
@@ -749,8 +790,38 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         }
 
-        similarityView.update(document);
-        similarityView.show();
+        similarityResults.update(document);
+        similarityResults.show();
+    };
+
+
+  //**************************************************************************
+  //** showDocumentSimilarities
+  //**************************************************************************
+    var showDocumentSimilarities = function(record){
+
+        if (!documentSimilarities){
+
+            var win = createWindow({
+                title: "Document Analysis",
+                width: 965,
+                height: 600,
+                valign: "top",
+                modal: true,
+                style: config.style.window
+            });
+
+            var docCompare = new bluewave.analytics.DocumentComparison(win.getBody());
+            documentSimilarities = {
+                show: win.show,
+                update: function(similarities){
+                    docCompare.update(similarities);
+                }
+            };
+        }
+        
+        documentSimilarities.update(record.results);
+        documentSimilarities.show();
     };
 
 
@@ -810,6 +881,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var createTable = javaxt.dhtml.utils.createTable;
     var onRender = javaxt.dhtml.utils.onRender;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var createSpacer = bluewave.utils.createSpacer;
 
     init();
 };
