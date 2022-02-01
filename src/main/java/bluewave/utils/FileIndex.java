@@ -45,7 +45,7 @@ public class FileIndex {
     private IndexWriter _indexWriter;
     private IndexSearcher _indexSearcher;
     private Analyzer analyzer = new StandardAnalyzer();
-    
+
     public static final String FIELD_NAME = "name";
     public static final String FIELD_CONTENTS = "contents";
     public static final String FIELD_PATH = "path";
@@ -149,13 +149,13 @@ public class FileIndex {
         }
         return null;
     }
-    
+
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
             if (_indexWriter == null) {
                 try {
-                    IndexWriterConfig iwc = new IndexWriterConfig(analyzer);             
+                    IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
                     iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
                     _indexWriter = new IndexWriter(dir, iwc);
                 } catch (Exception e) {
@@ -179,26 +179,22 @@ public class FileIndex {
         return _indexSearcher;
     }
 
-    public boolean removeFile(long documentId) {
-        try {
-            BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
-            bqBuilder.add(new TermQuery( new Term( FIELD_DOCUMENT_ID, documentId+"" ) ), Occur.MUST);
-            IndexWriter writer = instanceOfIndexWriter();
-            writer.deleteDocuments(bqBuilder.build());
-            long status = writer.commit();
-            if(status == -1) 
-                return false;
-            return true;
-        } catch(Exception e) {
-            console.log("ERROR: " + e);
-        }
-        return false;
-    }
 
+  //**************************************************************************
+  //** addFile
+  //**************************************************************************
+  /** Used to add a file to the index
+   */
     public void addFile(javaxt.io.File file) throws Exception {
         addDocument(null, file);
     }
 
+
+  //**************************************************************************
+  //** addDocument
+  //**************************************************************************
+  /** Used to add a bluewave document, backed by a file to the index
+   */
     public void addDocument(bluewave.app.Document d, javaxt.io.File file) throws Exception {
         if (hasFile(file)) return;
 
@@ -213,7 +209,7 @@ public class FileIndex {
 
         // Make the document name tokenized and searchable
         doc.add(new TextField(FIELD_NAME, file.getName(false), Field.Store.YES));
-        
+
         // Add the last modified date of the file a field named "modified".
         // Use a LongPoint that is indexed (i.e. efficiently filterable with
         // PointRangeQuery). This indexes to milli-second resolution, which
@@ -233,12 +229,12 @@ public class FileIndex {
             parser.parse();
             COSDocument cd = parser.getDocument();
             PDDocument pdDocument = new PDDocument(cd);
-            d.setPageCount(pdDocument.getNumberOfPages());
+            if (d!=null) d.setPageCount(pdDocument.getNumberOfPages());
             PDDocumentInformation info = pdDocument.getDocumentInformation();
 
             if(info.getSubject() != null && !info.getSubject().isBlank())
                 doc.add(new TextField(FIELD_SUBJECT, info.getSubject(), Store.NO));
-            
+
             if(info.getKeywords() != null && !info.getKeywords().isBlank())
                 doc.add(new TextField(FIELD_KEYWORDS, info.getKeywords(), Store.NO));
 
@@ -285,13 +281,55 @@ public class FileIndex {
 
     }
 
+
+  //**************************************************************************
+  //** removeFile
+  //**************************************************************************
+  /** Used to remove a file from the index
+   */
+    public boolean removeFile(javaxt.io.File file) throws Exception {
+        return remove(new Term(FIELD_PATH, file.toString() ));
+    }
+
+
+  //**************************************************************************
+  //** removeDocument
+  //**************************************************************************
+  /** Used to remove a bluewave document from the index
+   */
+    public boolean removeDocument(long documentId) throws Exception {
+        return remove(new Term( FIELD_DOCUMENT_ID, documentId+"" ));
+    }
+
+
+  //**************************************************************************
+  //** remove
+  //**************************************************************************
+  /** Used to remove an entry from the index using a given search term
+   */
+    private boolean remove(Term term) throws Exception {
+        BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
+        bqBuilder.add(new TermQuery(term), Occur.MUST);
+        IndexWriter writer = instanceOfIndexWriter();
+        writer.deleteDocuments(bqBuilder.build());
+        long status = writer.commit();
+        if(status == -1) return false;
+        return true;
+    }
+
+
+  //**************************************************************************
+  //** hasFile
+  //**************************************************************************
+  /** Returns true of the given file is in the index
+   */
     public boolean hasFile(javaxt.io.File file) {
         if (indexExists()) {
             IndexSearcher searcher = instanceOfIndexSearcher();
 
             if (searcher != null) {
                 try {
-                    TopDocs results = searcher.search(new TermQuery(new Term("path", file.toString())), 1);
+                    TopDocs results = searcher.search(new TermQuery(new Term(FIELD_PATH, file.toString())), 1);
                     if (results.totalHits.value > 0) {
                         return true;
                     }
