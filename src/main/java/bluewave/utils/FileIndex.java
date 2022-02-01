@@ -22,6 +22,7 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.BoostQuery;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MultiPhraseQuery;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
@@ -92,7 +93,7 @@ public class FileIndex {
     }
 
 
-    public TreeMap<Float, ArrayList<bluewave.app.Document>> findDocuments(ArrayList<String> searchTerms, Integer limit) throws Exception {
+    public TreeMap<Float, ArrayList<bluewave.app.Document>> findDocuments(List<String> searchTerms, Integer limit) throws Exception {
         TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher != null) {
@@ -120,7 +121,7 @@ public class FileIndex {
         return searchResults;
     }
 
-    public TopDocs getTopDocs(ArrayList<String> searchTerms, Integer limit) throws Exception {
+    public TopDocs getTopDocs(List<String> searchTerms, Integer limit) throws Exception {
         if (limit==null || limit<1) limit = 10;
 
         TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
@@ -134,22 +135,26 @@ public class FileIndex {
                 BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
                 bqBuilder.add(wildcardBooleanClause);
 
-                QueryParser contentsParser = new QueryParser(FIELD_CONTENTS, analyzer);
-                BooleanClause bc = new BooleanClause(contentsParser.parse(QueryParser.escape(term).toLowerCase()),
-                        BooleanClause.Occur.SHOULD);
-                bqBuilder.add(bc);
+               bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+                       BooleanClause.Occur.SHOULD));
 
+               bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+                       BooleanClause.Occur.SHOULD));
 
-//                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-//                        BooleanClause.Occur.SHOULD));
-//
-//                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-//                        BooleanClause.Occur.SHOULD));
-//
-//                bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-//                        BooleanClause.Occur.SHOULD));
+               bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, analyzer).parse(QueryParser.escape(term).toLowerCase()),
+                       BooleanClause.Occur.SHOULD));
 
             }
+            if(searchTerms.size() > 1) {
+                MultiPhraseQuery.Builder multiphraseQueryBuilder= new MultiPhraseQuery.Builder();
+                Term[] terms = new Term[searchTerms.size()];
+                for (int i=0;i<searchTerms.size();i++){
+                    terms[i] = new Term( FIELD_CONTENTS , QueryParser.escape(searchTerms.get(i)).toLowerCase());
+                }
+                multiphraseQueryBuilder.add(terms);
+                bqBuilder.add(new BooleanClause(multiphraseQueryBuilder.build(), BooleanClause.Occur.SHOULD));
+            }
+
             BooleanQuery bbq = bqBuilder.build();
             return searcher.search(bbq, limit);
         }
