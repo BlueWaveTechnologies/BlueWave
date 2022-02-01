@@ -363,7 +363,7 @@ public class Main {
                 }
             }
         }
-        else if (str.equals("uploads")){
+        else if (str.equals("index")){
             Config.initDatabase();
             for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()){
                 dc.delete();
@@ -371,7 +371,20 @@ public class Main {
             for (bluewave.app.Document d : bluewave.app.Document.find()){
                 d.delete();
             }
-            Config.getIndexDir().delete();
+            for (bluewave.app.File f : bluewave.app.File.find()){
+                f.delete();
+            }
+            javaxt.io.Directory dir = Config.getIndexDir();
+            boolean deletedDir = dir.delete();
+            if (deletedDir){
+                System.out.println("Sucessfully deleted index: " + dir);
+            }
+            else{
+                System.out.println("Failed to delete index: " + dir);
+            }
+        }
+        else{
+            System.out.println("Unsupported delete option: " + str);
         }
     }
 
