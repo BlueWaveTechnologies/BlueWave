@@ -3064,6 +3064,7 @@ bluewave.Explorer = function(parent, config) {
 
                             //Render lineChart
                                 var lineChart = new bluewave.charts.LineChart(createChartContainer(), {});
+                                lineChart.setConfig(chartConfig)
                                 lineChart.setLayers(lineEditor.layers);
                                 lineChart.update();
                         }
