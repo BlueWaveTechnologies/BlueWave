@@ -314,6 +314,23 @@ public class Config {
         }
     }
 
+    
+  //**************************************************************************
+  //** getIndexDir
+  //**************************************************************************
+    public static javaxt.io.Directory getIndexDir() {
+        javaxt.io.Directory indexDir = null;
+        javaxt.io.Directory jobDir = getDirectory("webserver", "jobDir");
+        if (jobDir!=null){
+            indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
+            indexDir.create();
+        }
+        if (indexDir==null || !indexDir.exists()){
+            throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
+        }
+        return indexDir;
+    }
+
 
   //**************************************************************************
   //** getDirectory

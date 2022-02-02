@@ -63,8 +63,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     this.getSummaryPanel = function(){
         return summaryPanel.el;
     };
-    
-    
+
+
   //**************************************************************************
   //** getSimilarities
   //**************************************************************************
@@ -94,33 +94,52 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(inputs, similarities){
+    this.update = function(){
         me.clear();
 
-        var files = "";
-        for (var i=0; i<inputs.length; i++){
-            if (i>0) files+=",";
-            files+= inputs[i];
+      //Process arguments
+        var similarities, files;
+        if (arguments.length>0){
+
+            if (isArray(arguments[0])){
+                files = "";
+                var inputs = arguments[0];
+                for (var i=0; i<inputs.length; i++){
+                    if (i>0) files+=",";
+                    files+= inputs[i];
+                }
+
+                if (arguments.length>1){
+                    similarities = arguments[1];
+                }
+
+            }
+            else{
+                similarities = arguments[0];
+            }
         }
 
+
+      //Update the panel
         if (similarities){
             results = similarities;
             update(results);
         }
         else{
-
-            waitmask.show(500);
-            get("document/similarity?files="+files,{
-                success: function(json){
-                    waitmask.hide();
-                    results = json;
-                    update(results);
-                },
-                failure: function(request){
-                    alert(request);
-                    waitmask.hide();
-                }
-            });
+            if (files){
+                waitmask.show(500);
+                get("document/similarity?files="+files,{
+                    success: function(json){
+                        waitmask.hide();
+                        results = json;
+                        update(results);
+                    },
+                    failure: function(request){
+                        alert(request);
+                        waitmask.hide();
+                    }
+                });
+            }
         }
     };
 
@@ -232,12 +251,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var elapsedTime = Math.round(results.elapsed_time_sec);
                 if (elapsedTime<1) elapsedTime = "<1 sec";
                 else elapsedTime += " sec";
-                
+
 
               //Update body
                 tbody.innerHTML = "";
                 addRow("Files Analyzed", results.files.length);
-                addRow("Suspicious Pairs", suspiciousPairs.length);                
+                addRow("Suspicious Pairs", suspiciousPairs.length);
                 addRow("Elapsed Time", elapsedTime);
                 addRow("Pages Per Second", results.pages_per_second);
             }
@@ -320,7 +339,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
-            img.src = "document/thumbnail?file="+fileName+"&page="+page;      
+            img.src = "document/thumbnail?file="+fileName+"&page="+page;
             parent.appendChild(img);
         };
 
@@ -355,7 +374,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             }
         };
     };
-    
+
 
   //**************************************************************************
   //** createBody
@@ -505,8 +524,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
-    var addShowHide = javaxt.dhtml.utils.addShowHide;
-    var onRender = javaxt.dhtml.utils.onRender;
+    var isArray = javaxt.dhtml.utils.isArray;
     var get = bluewave.utils.get;
 
 

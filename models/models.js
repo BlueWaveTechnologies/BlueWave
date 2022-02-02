@@ -136,6 +136,77 @@ var models = {
             {name: 'name',    required: true},
             {name: 'user',    required: true, onDelete: 'cascade'}
         ]
+    },
+
+  //**************************************************************************
+  //** File
+  //**************************************************************************
+  /** Used to represent an individual file found in a directory
+   */
+    File: {
+        fields: [
+            {name: 'name',         type: 'string'},
+            {name: 'path',         type: 'Path'},
+            {name: 'type',         type: 'string'},
+            {name: 'date',         type: 'date'},
+            {name: 'size',         type: 'long'},
+            {name: 'metadata',     type: 'json'}
+        ],
+        constraints: [
+            {name: 'name',    required: true},
+            {name: 'path',    required: true}
+        ]
+    },
+
+
+  //**************************************************************************
+  //** Path
+  //**************************************************************************
+  /** Used to represent an individual directory/path containing files.
+   */
+    Path: {
+        fields: [
+            {name: 'dir',    type: 'string'}
+        ],
+        constraints: [
+            {name: 'dir',    required: true}
+        ]
+    },
+
+
+  //**************************************************************************
+  //** Document
+  //**************************************************************************
+    Document: {
+        fields: [
+            {name: 'title',        type: 'string'},
+            {name: 'description',  type: 'string'},
+            {name: 'file',         type: 'File'},
+            {name: 'pageCount',    type: 'int'},
+            {name: 'indexStatus',  type: 'string'},
+            {name: 'info',         type: 'json'}
+        ],
+        constraints: [
+            {name: 'file',    required: true}
+        ]
+    },
+
+
+  //**************************************************************************
+  //** DocumentComparison
+  //**************************************************************************
+    DocumentComparison: {
+        fields: [
+            {name: 'a',         type: 'Document'},
+            {name: 'b',         type: 'Document'},
+            {name: 'info',      type: 'json'}
+        ],
+        constraints: [
+            {name: 'a',     required: true},
+            {name: 'b',     required: true},
+            {name: 'info',  required: true}
+        ]
     }
+
 
 };

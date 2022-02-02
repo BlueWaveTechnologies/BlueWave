@@ -464,6 +464,10 @@ li.tree-node:hover {
     color: #000000;
 }
 
+.toolbar-button-icon.fas.fa-times {
+    color: #b11818; /*red - same color as search-bar-cancel*/
+    font-size: 21px;
+}
 
 /**************************************************************************/
 /** Map Legend
@@ -1038,7 +1042,7 @@ li.tree-node:hover {
     right: 6px;
     position: absolute;
     font-size: 16px;
-    color: #b11818;
+    color: #b11818; /*red - same color as fa-times in the toolbar*/
     width: 18px;
     height: 18px;
     text-align: center;
@@ -1151,6 +1155,29 @@ li.tree-node:hover {
     color: #777;
     font-size: 11px;
     padding: 0 0 0 12px;
+}
+
+
+/**************************************************************************/
+/** Document Analysis
+/**************************************************************************/
+
+.document-analysis-selected-row {
+    position: absolute;
+    height: 100%;
+    width: 34px;
+    display:inline-block;
+    float: left;
+    transition: left 0.4s cubic-bezier(0.39, 0.575, 0.565, 1),
+    opacity 0.8s cubic-bezier(0.39, 0.575, 0.565, 1);
+}
+
+.document-analysis-selected-row .fas.fa-check-square {
+    color: #009d00;
+    font-size: 30px;
+    line-height: 34px;
+    float:left;
+    width: 34px;
 }
 
 
@@ -1314,6 +1341,18 @@ li.tree-node:hover {
   left: 0;
   background: #fff;
   opacity: 0.6;
+}
+
+
+.carousel-header-link-count {
+    position:absolute;
+    font-size:9px;
+    top: -3px;
+    right: -14px;
+    background-color: #df4444;
+    border-radius: 6px;
+    padding: 0px 4px;
+    color: #fff;
 }
 
 /**************************************************************************/
@@ -1510,4 +1549,13 @@ svg text {
     border-radius: 5px;
     color: #636363;
     box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+
+/**************************************************************************/
+/** iScroll overrides
+/**************************************************************************/
+
+.iScrollVerticalScrollbar{
+    right: 2px;
 }
