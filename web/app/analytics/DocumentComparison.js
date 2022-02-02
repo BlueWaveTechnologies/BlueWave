@@ -333,13 +333,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
 
-        var createPreview = function(fileName, page, parent){
+        var createPreview = function(file, page, parent){
             parent.innerHTML = "";
             var i = document.createElement("i");
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
-            img.src = "document/thumbnail?file="+fileName+"&page="+page;
+            img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
             parent.appendChild(img);
         };
 
@@ -361,11 +361,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 }
 
 
+                var files = results.files;
                 var pages = suspiciousPair.pages;
                 var left = pages[0];
                 var right = pages[1];
-                var leftFile = getFileName(left.filename);
-                var rightFile = getFileName(right.filename);
+                var leftFile = files[left.file_index];
+                var rightFile = files[right.file_index];
                 createPreview(leftFile, left.page, leftPanel);
                 createPreview(rightFile, right.page, rightPanel);
 
@@ -506,17 +507,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Slide carousel
         if (slideBack===true) carousel.back();
         else carousel.next();
-    };
-
-
-  //**************************************************************************
-  //** getFileName
-  //**************************************************************************
-    var getFileName = function(fileName){
-        fileName = fileName.replaceAll("\\","/");
-        var idx = fileName.lastIndexOf("/");
-        if (idx>-1) fileName = fileName.substring(idx+1);
-        return fileName;
     };
 
 
