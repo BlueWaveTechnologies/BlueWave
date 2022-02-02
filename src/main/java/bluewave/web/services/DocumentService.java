@@ -314,28 +314,40 @@ public class DocumentService extends WebService {
     }
 
 
-    //**************************************************************************
-    //** getThumbnail
-    //**************************************************************************
+  //**************************************************************************
+  //** getThumbnail
+  //**************************************************************************
     public ServiceResponse getThumbnail(ServiceRequest request, Database database)
             throws ServletException {
 
-        //Get user
+      //Get user
         bluewave.app.User user = (bluewave.app.User) request.getUser();
 
-        //Get file
-        String fileName = request.getParameter("fileName").toString();
-        if (fileName==null || fileName.isBlank()) fileName = request.getParameter("file").toString();
-        if (fileName==null || fileName.isBlank()) return new ServiceResponse(400, "file or fileName is required");
-        javaxt.io.File file = getFile(fileName, user);
-        if (!file.exists()) return new ServiceResponse(404);
 
-        //Get pages
+      //Parse request
+        Long documentID = request.getParameter("documentID").toLong();
+        if (documentID==null) return new ServiceResponse(400, "documentID is required");
         String pages = request.getParameter("pages").toString();
         if (pages==null || pages.isBlank()) pages = request.getParameter("page").toString();
         if (pages==null || pages.isBlank()) return new ServiceResponse(400, "page or pages are required");
 
-        //Get output directory
+
+      //Get file
+        javaxt.io.File file;
+        try{
+            bluewave.app.Document document = new bluewave.app.Document(documentID);
+            bluewave.app.File f = document.getFile();
+            bluewave.app.Path path = f.getPath();
+            javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
+            file = new javaxt.io.File(dir, f.getName());
+            if (!file.exists()) return new ServiceResponse(404);
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+
+
+      //Set output directory
         javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
         if (!outputDir.exists()) outputDir.create();
 
