@@ -102,7 +102,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
     var createSearchBar = function(parent){
         searchBar = bluewave.utils.createSearchBar(parent);
         searchBar.onChange = function(q){
-            console.log(q);
+            //console.log(q);
         };
         searchBar.onSearch = function(q){
             grid.update(q);
