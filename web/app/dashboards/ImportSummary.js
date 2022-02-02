@@ -774,25 +774,19 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             var title = yAxis.replace("total","");            
             dashboardItem.title.innerText = title + " Per Day";
             
-
-            lineChart._update({
-                yGrid: true,
-                xAxis: "date",
-                yAxis: key,                   
-                xAxis2: "date",
-                yAxis2: key,                      
-                endTags: false,
-                lineColor0: "#6699cc", //blue             
-                lineColor1: "#ff7800", //orange
-                smoothingType1: "movingAverage",
-                smoothingValue1: 30,
-                margin: {
-                    top: 15,
-                    right: 15,
-                    bottom: 15,
-                    left: 82
-                }                    
-            },[lineData,lineData]);              
+            var rawValueLine = new bluewave.chart.Line({
+                color: "#6699cc" //blue                
+            });
+            
+            var movingAverageLine = new bluewave.chart.Line({
+                color: "#ff7800", //orange
+                smoothing: "movingAverage",
+                smoothingValue: 30                
+            });            
+            
+            lineChart.addLine(rawValueLine, lineData, "date", key);  
+            lineChart.addLine(movingAverageLine, lineData, "date", key);  
+            lineChart._update();         
         };
     };
     
