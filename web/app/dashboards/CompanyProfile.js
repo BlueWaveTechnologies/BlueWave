@@ -18,15 +18,15 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     var layer = {};
     var importsGrid, productGrid;
     var establishment = {};
-    
+
     var waitmask;
-        
+
     var charts = [];
     var nav, carousel, sliding;
 
     var titleDiv;
-    
-    
+
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -75,7 +75,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
 
         createPanel("Imports", createImportsPanel);
-        createPanel("Products", createProductsPanel);        
+        createPanel("Products", createProductsPanel);
         createPanel("Exams", createExamsPanel);
         createPanel("Sales", createSalesPanel);
 
@@ -101,12 +101,12 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 }
             }
         });
-        
-        
+
+
         me.el = table;
 
-    };    
-    
+    };
+
 
   //**************************************************************************
   //** getTitle
@@ -120,19 +120,22 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        establishment = {};        
+        establishment = {};
         for (var i=0; i<charts.length; i++){
             charts[i].clear();
-        }        
+        }
     };
-    
+
 
   //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(establishmentName, establishmentIDs, establishmentType){
         me.clear();
-        
+
+        if (arguments.length==0) return;
+
+
       //Update establishment
         establishment = {
             name: establishmentName,
@@ -430,7 +433,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
 
         parent.appendChild(table);
-        
+
         var currEstablishment;
 
 
@@ -438,17 +441,17 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             clear: function(){
                 currEstablishment = null;
                 mainPanel.clear();
-                importsGrid.clear();  
-                if (map) map.clear(); 
+                importsGrid.clear();
+                if (map) map.clear();
             },
             update: function(panel){
-                
+
               //Reparent table into panel as needed
                 if (table.parentNode!==panel){
                     reparent(table, panel);
-                }                
-                
-                
+                }
+
+
               //Check if we need to refresh the panel
                 if (currEstablishment){
                     if (!isDirty(currEstablishment, establishment)){
@@ -456,13 +459,15 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     }
                 }
                 currEstablishment = establishment;
-                
-                
-                
+
+
+              //If establishment is empty, return early
+                if (isEmpty(establishment)) return;
+
 
               //Update the importsGrid
-                importsGrid.update();        
-        
+                importsGrid.update();
+
 
              //Get establishment info and update the main panel & map
                 var arr = [];
@@ -506,14 +511,24 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 div.innerHTML = "";
             },
             update: function(panel){
-                
+
+
+              //Reparent table into panel as needed
+                if (div.parentNode!==panel){
+                    reparent(div, panel);
+                }
+
+
+              //If establishment is empty, return early
+                if (isEmpty(establishment)) return;
+
 
                 get("import/exams?establishment=" + establishment.type + "&id=" + establishment.fei.join(","),{
                     success: function(csv){
                         console.log(csv);
                     },
                     failure: function(){
-                        
+
                     }
                 });
             }
@@ -551,7 +566,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         td = document.createElement("td");
         tr.appendChild(td);
 
-        
+
         var div = document.createElement("div");
         div.style.width = "100%";
         div.style.height = "250px";
@@ -564,41 +579,41 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         innerDiv.style.height = "100%";
         innerDiv.style.position = "absolute";
         div.appendChild(innerDiv);
-        
+
 
         var grid = new javaxt.dhtml.DataGrid(innerDiv, {
             style: config.style.table,
             localSort: true,
             columns: [
-                {header: 'Facility', width:'115', sortable: true}, 
-                {header: 'Code', width:'60', sortable: true}, 
+                {header: 'Facility', width:'115', sortable: true},
+                {header: 'Code', width:'60', sortable: true},
                 {header: 'Product Name', width:'100%', sortable: true},
                 {header: 'Total Lines', width:'115', align:'right', sortable: true},
                 {header: 'Reported Quantity', width:'155', align:'right', sortable: true},
                 {header: 'Reported Value', width:'140', align:'right', sortable: true}
             ],
-            update: function(row, entry){  
+            update: function(row, entry){
                 row.set("Facility", entry.fei);
                 row.set("Code", entry.product_code);
                 row.set("Product Name", entry.product_name);
-                
+
                 var lines = parseFloat(entry.lines);
-                if (!isNaN(lines)) row.set('Total Lines', formatNumber(Math.round(lines)));                   
-                
+                if (!isNaN(lines)) row.set('Total Lines', formatNumber(Math.round(lines)));
+
                 var quantity = parseFloat(entry.quantity);
-                if (!isNaN(quantity)) row.set('Reported Quantity', formatNumber(Math.round(quantity)));                
+                if (!isNaN(quantity)) row.set('Reported Quantity', formatNumber(Math.round(quantity)));
                 var value = parseFloat(entry.value);
-                if (!isNaN(value)) row.set('Reported Value', "$"+formatNumber(value));                                               
+                if (!isNaN(value)) row.set('Reported Value', "$"+formatNumber(value));
             }
         });
-        
+
         var data = [];
         var currKey;
 
-        
+
         grid.setSortIndicator(3, "DESC");
         grid.onSort = function(idx, sortDirection){
-            
+
             var key;
             switch (idx) {
                 case 4:
@@ -612,15 +627,15 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     break;
                 default:
                     break;
-            }            
-            
+            }
+
             if (key && key!==currKey){
                 currKey = key;
                 productCharts.update(data, currKey);
             }
-        };         
-        
-        
+        };
+
+
         var currEstablishment;
         return {
             clear: function(){
@@ -629,13 +644,13 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 grid.clear();
             },
             update: function(panel){
-                
-                
+
+
               //Reparent table into panel as needed
                 if (table.parentNode!==panel){
                     reparent(table, panel);
-                }                
-                
+                }
+
 
               //Check if we need to refresh the panel
                 if (currEstablishment){
@@ -643,19 +658,25 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                         return;
                     }
                 }
-                currEstablishment = establishment;                
-                
-                
+
+              //Update currEstablishment and clear the panel
+                currEstablishment = establishment;
+                this.clear();
+
+
+              //If establishment is empty, return early
+                if (isEmpty(establishment)) return;
+
+
 
               //Get products associated with the establishmentIDs
-                this.clear();
                 waitmask.show();
                 get("import/products?fei=" + establishment.fei.join(",") + "&establishment=" + establishment.type, {
                     success: function(csv){
-                        var rows = parseCSV(csv, ",");      
+                        var rows = parseCSV(csv, ",");
                         var header = rows.shift();
                         var createRecord = function(row){
-                            var r = {};                    
+                            var r = {};
                             header.forEach((field, i)=>{
                                 var val = row[i];
                                 if (field.indexOf("product_")!=0) val = parseFloat(val);
@@ -663,20 +684,20 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                             });
                             return r;
                         };
-                        
+
                         rows.forEach((row)=>{
                             data.push(createRecord(row));
                         });
-                        
-                        
+
+
                         waitmask.hide();
-                        
-                        
-                        grid.load(data);                        
+
+
+                        grid.load(data);
                         grid.setSortIndicator(3, "DESC");
                         currKey = "lines";
                         productCharts.update(data, currKey);
-                        
+
                     },
                     failure: function(request){
                         alert(request);
@@ -724,7 +745,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         var facilityPanel = createDashboardItem(td, "Facilities");
         var facilityChart = new bluewave.charts.PieChart(facilityPanel.innerDiv, {});
 
-        
+
       //Product codes chart
         td = document.createElement("td");
         td.style.width = "33%";
@@ -733,18 +754,18 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         tr.appendChild(td);
         var procodePanel = createDashboardItem(td, "Product Codes");
         var procodeChart = new bluewave.charts.PieChart(procodePanel.innerDiv, {});
-        
-        
+
+
       //Products pie chart
         td = document.createElement("td");
         td.style.width = "33%";
         td.style.height = "100%";
         td.style.padding = "10px 0px";
-        tr.appendChild(td);   
+        tr.appendChild(td);
         var productPanel = createDashboardItem(td, "Products");
         var productChart = new bluewave.charts.PieChart(productPanel.innerDiv, {});
-        
-        
+
+
         var groupData = function(data, groupBy, type){
             var ret = {};
             data.forEach((d)=>{
@@ -754,9 +775,9 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 if (isNaN(currVal)) currVal = 0;
                 ret[key] = currVal+val;
             });
-            return ret;   
+            return ret;
         };
-        
+
         var toArray = function(rawData){
             var arr = [];
             for (var key in rawData){
@@ -769,21 +790,21 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 }
             }
             return arr;
-        };        
-        
-        
+        };
+
+
         var chartConfig = {
             pieKey: "key",
             pieValue: "value",
             pieSort: "value",
-            pieSortDir: "descending",            
+            pieSortDir: "descending",
             pieLabels: false,
             labelOffset: 120,
             maximumSlices: 8,
             showOther: true,
             showTooltip: true
-        };        
-        
+        };
+
         return {
             clear: function(){
                 facilityChart.clear();
@@ -791,7 +812,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 productChart.clear();
             },
             update: function(data, key){
-                
+
                 var isCurrency = key === "value";
 
                 var facilityData = groupData(data, key, "fei");
@@ -801,8 +822,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     var value = (isCurrency? "$" : "") + formatNumber(d.value);
                     return procode + ": " + value;
                 };
-                
-                
+
+
                 var procodeData = groupData(data, key, "product_code");
                 procodeChart.update(chartConfig, toArray(procodeData));
                 procodeChart.getTooltipLabel = function(d){
@@ -810,20 +831,20 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     var value = (isCurrency? "$" : "") + formatNumber(d.value);
                     return procode + ": " + value;
                 };
-                
-                var arr = [];                
-                data.forEach((d)=>{                    
+
+                var arr = [];
+                data.forEach((d)=>{
                     var val = d[key];
                     var productCode = d.product_code;
                     var productName = d.product_name;
                     var entry = {
-                        key: productCode + ": " + productName                        
+                        key: productCode + ": " + productName
                     };
                     entry[key] = val;
                     arr.push(entry);
-                });                
+                });
                 var productData = groupData(arr, key, "key");
-                productChart.update(chartConfig, toArray(productData));   
+                productChart.update(chartConfig, toArray(productData));
                 productChart.getTooltipLabel = function(d){
                     var product = d.key;
                     var idx = product.indexOf(":");
@@ -834,7 +855,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     if (productCode.length>0) label+= "<br/>" + productCode;
                     label += "<br/>" + value;
                     return label;
-                };                
+                };
             }
         };
     };
@@ -870,12 +891,12 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
   //** createBody2
   //**************************************************************************
     var createBody2 = function(parent){
-        
+
       //Create main table
         var table = createTable();
         var tbody = table.firstChild;
         var tr = document.createElement("tr");
-        tbody.appendChild(tr);        
+        tbody.appendChild(tr);
         var td;
 
 
@@ -884,41 +905,41 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         td.style.height = "100%";
         td.style.verticalAlign = "top";
         tr.appendChild(td);
-        mainPanel = document.createElement("div"); 
+        mainPanel = document.createElement("div");
         mainPanel.className = "company-profile";
         mainPanel.style.width = "500px";
-        td.appendChild(mainPanel);  
+        td.appendChild(mainPanel);
         mainPanel.clear = function(){
             mainPanel.innerHTML = "";
-        };        
+        };
         mainPanel.update = function(){
             mainPanel.innerHTML = "";
-            
-            var ul = document.createElement("ul"); 
-            mainPanel.appendChild(ul);
-            
 
-            establishment.establishments.forEach((d, i)=>{                                                      
-                var li = document.createElement("li"); 
+            var ul = document.createElement("ul");
+            mainPanel.appendChild(ul);
+
+
+            establishment.establishments.forEach((d, i)=>{
+                var li = document.createElement("li");
                 ul.appendChild(li);
                 li.innerText = d.fei + ": " + d.name;
             });
         };
-        
-        
+
+
 
       //Create map
         td = document.createElement("td");
         td.style.width = "100%";
         td.style.height = "100%";
         tr.appendChild(td);
-        var mapDiv = document.createElement("div");        
+        var mapDiv = document.createElement("div");
         mapDiv.style.height = "100%";
         mapDiv.style.position = "relative";
         td.appendChild(mapDiv);
         getBasemap(function(basemap){
             createMap(mapDiv, basemap);
-        }); 
+        });
 
 
         parent.appendChild(table);
@@ -942,32 +963,36 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         innerDiv.style.height = "100%";
         innerDiv.style.position = "absolute";
         div.appendChild(innerDiv);
-        
+
 
         importsGrid = new javaxt.dhtml.DataGrid(innerDiv, {
             style: config.style.table,
             url: "import/lines",
             autoload: false,
-            getResponse: function(url, payload, callback){             
+            getResponse: function(url, payload, callback){
+
+              //If establishment is empty, return early
+                if (isEmpty(establishment)) return;
+
                 url += "?establishment=" + establishment.type + "&id=" + establishment.fei.join(",");
                 get(url, {
                     success: function(csv){
-                        
-                        var rows = parseCSV(csv, ",");      
+
+                        var rows = parseCSV(csv, ",");
                         var header = rows.shift();
                         var createRecord = function(row){
-                            var r = {};                    
-                            header.forEach((field, i)=>{                                                      
+                            var r = {};
+                            header.forEach((field, i)=>{
                                 r[field] = row[i];
                             });
                             return r;
                         };
-                        
+
                         var data = [];
                         rows.forEach((row)=>{
                             data.push(createRecord(row));
                         });
-                        
+
                         callback.apply(importsGrid, [{
                            status: 200,
                            rows: data
@@ -1003,22 +1028,22 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 {header: 'Predict Score', width:'75'}
             ],
             update: function(row, entry){
-                //console.log(entry);                
+                //console.log(entry);
                 row.set("Entry/DOC/Line", entry.entry+"/"+entry.doc+"/"+entry.line);
                 row.set("Date",entry.date);
                 row.set("CC",entry.country_of_origin);
                 var quantity = parseFloat(entry.quantity);
-                if (!isNaN(quantity)) row.set('Quantity', formatNumber(Math.round(quantity)));                
+                if (!isNaN(quantity)) row.set('Quantity', formatNumber(Math.round(quantity)));
                 var value = parseFloat(entry.value);
-                if (!isNaN(value)) row.set('Value', "$"+formatNumber(value));                                               
+                if (!isNaN(value)) row.set('Value', "$"+formatNumber(value));
             }
         });
-        
-        
+
+
         importsGrid.update = function(){
             importsGrid.clear();
             importsGrid.load();
-        };        
+        };
 
     };
 
@@ -1037,16 +1062,16 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             maxZoom: 10,
             coordinateFormat: "DD"
         });
-        
-        
+
+
       //Set min zoom level (not sure this does anything)
         var v = map.getMap().getView();
         v.setMinZoom(0);
-        
-        
+
+
       //Create waitmask
         map.waitmask = new javaxt.express.WaitMask(parent);
-        
+
 
         layer.basemap = new ol.layer.Tile({
             source: new ol.source.XYZ({
@@ -1066,10 +1091,10 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
         layer.routes = map.createVectorLayer();
         layer.points = map.createVectorLayer();
-        
-        
-        
-        var color = ol.color.asArray("#FF8280");        
+
+
+
+        var color = ol.color.asArray("#FF8280");
 
         var stroke = new ol.style.Stroke({
             color: color,
@@ -1078,8 +1103,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
         var fill = new ol.style.Fill({
             color: [color[0],color[1],color[2],0.1]
-        });        
-        
+        });
+
         var style = new ol.style.Style({
             image: new ol.style.Circle({
                 fill: fill,
@@ -1088,13 +1113,13 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             }),
             fill: fill,
             stroke: stroke
-        });        
-        
-        
+        });
+
+
 
 
         map.update = function(){
-            
+
             var points = [];
             var facilities = [];
             var easternFacilities = 0;
@@ -1103,9 +1128,9 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 var address = d.address;
                 var lat = parseFloat(address.lat);
                 var lon = parseFloat(address.lon);
-                
+
                 if (!isNaN(lat) && !isNaN(lon)){
-                    
+
                     if (lon>90){
                         easternFacilities++;
                     }
@@ -1114,7 +1139,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                             westernFacilities++;
                         }
                     }
-                
+
                     points.push([lon, lat]);
                     var geom = new ol.geom.Point([lon, lat]);
                     geom.transform('EPSG:4326', 'EPSG:3857');
@@ -1125,34 +1150,34 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                         geometry: geom
                     });
                     feature.setStyle(style);
-                    layer.points.addFeature(feature);    
-                    
+                    layer.points.addFeature(feature);
+
                     facilities.push(d.fei);
-                }                
-            });            
+                }
+            });
 
 
 
           //Update layer extents
             updateExtents(layer.points);
-            
+
 
           //Set map extents to include all the facilities
             var geom = new ol.geom.LineString(points);
             geom.transform('EPSG:4326', 'EPSG:3857');
-            var extent = geom.getExtent(); 
-            map.setExtent(extent);  
+            var extent = geom.getExtent();
+            map.setExtent(extent);
             var zoomLevel = map.getZoomLevel();
             var center = map.getCenter();
             map.setCenter(center[0],center[1],Math.min(4,zoomLevel));
 
 
-            
+
             //getShipments(facilities);
-            
+
         };
-        
-        
+
+
         map.clear = function(){
             if (layer.points.clear) layer.points.clear();
             if (layer.routes.clear) layer.routes.clear();
@@ -1164,96 +1189,96 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             map.resize();
         });
     };
-    
-    
+
+
   //**************************************************************************
   //** getShipments
-  //**************************************************************************    
+  //**************************************************************************
     var getShipments = function(facilities){
         //map.waitmask.show();
-        
+
         var shipments = [];
-        
+
         var getShipmentSummary = function(){
 
             if (facilities.length===0){
                 getRoutes(shipments);
                 return;
             }
-            
+
             var fei = facilities.shift();
-            
+
             get("import/shipments?fei=" + fei + "&establishment=" + establishment.type, {
                 success: function(csv){
-                    var rows = parseCSV(csv, ",");      
+                    var rows = parseCSV(csv, ",");
                     var header = rows.shift();
                     var createRecord = function(row){
-                        var r = {};                    
-                        header.forEach((field, i)=>{                                                      
+                        var r = {};
+                        header.forEach((field, i)=>{
                             r[field] = row[i];
                         });
                         return r;
                     };
 
-                    
+
                     rows.forEach((row)=>{
                         var r = createRecord(row);
-                        r.fei = fei;                     
+                        r.fei = fei;
                         shipments.push(r);
                     });
-                    
+
                     getShipmentSummary();
                 },
                 failure: function(){
                     getShipmentSummary();
                 }
-            });            
-            
+            });
+
         };
         getShipmentSummary();
     };
-    
-    
+
+
   //**************************************************************************
   //** getRoutes
   //**************************************************************************
     var getRoutes = function(shipments){
 
-        
+
       //Generate list of unique routes
         var routes = [];
         var uniqueRoutes = {};
         shipments.forEach((shipment)=>{
-            
+
             var key = shipment.fei+"_"+shipment.port+"_"+shipment.method;
             uniqueRoutes[key] = {
                 fei: shipment.fei,
                 port: shipment.port,
                 method: shipment.method
             };
-        });        
+        });
         for (var key in uniqueRoutes) {
-            if (uniqueRoutes.hasOwnProperty(key)){   
+            if (uniqueRoutes.hasOwnProperty(key)){
                 routes.push(uniqueRoutes[key]);
             }
         }
-        
+
         var arr = [];
-        
+
         var getRoute = function(){
             if (routes.length===0){
                 renderRoutes(arr, shipments);
                 return;
             }
-            
+
             var route = routes.shift();
-                        
-            
+
+
             get("import/route?facility=" + route.fei + "&portOfEntry=" + route.port + "&method=" + route.method, {
-                success: function(json){                    
-                    if (json.features.length>0){                    
+                success: function(json){
+                    if (json.features.length>0){
                         route.path = json.features;
-                        arr.push(route);                    
+                        arr.push(route);
                     }
                     else{
                         if (route.method==="land"){
@@ -1265,18 +1290,18 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                             routes.push(route);
                         }
                     }
-                    
+
                     getRoute();
                 },
-                failure: function(){                    
+                failure: function(){
                     getRoute();
                 }
-            });              
+            });
         };
         getRoute();
     };
-    
-    
+
+
   //**************************************************************************
   //** renderRoutes
   //**************************************************************************
@@ -1290,19 +1315,19 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             var val = parseFloat(shipment[key]);
             if (!isNaN(val)) maxVal+=val;
         });
-       
-        
-        routes.forEach((route)=>{            
+
+
+        routes.forEach((route)=>{
             var fei = route.fei;
             var port = route.port;
             var method = route.method;
-            route.path.forEach((path)=>{  
+            route.path.forEach((path)=>{
                 var feature = path.geometry;
                 //var properties = path.properties;
-                
+
 
                 if (feature.type.toLowerCase()==="linestring"){
-                    
+
                     var coords = [];
                     var isFirstXPositive = feature.coordinates[0][0]>=0;
                     var crossesDateLine=null;
@@ -1332,8 +1357,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                         }
                         coords.push(coord);
                     }
-                    
-                    
+
+
 
                     var total = 0;
                     shipments.forEach((shipment)=>{
@@ -1344,9 +1369,9 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                     });
                     var d = total/maxVal;
 
-                    
+
                     var geom = new ol.geom.LineString(coords);
-                    geom.transform('EPSG:4326', 'EPSG:3857');  
+                    geom.transform('EPSG:4326', 'EPSG:3857');
                     layer.routes.addFeature(new ol.Feature({
                         geometry: geom,
                         style: new ol.style.Style({
@@ -1361,12 +1386,12 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
 
             });
         });
-        
+
         updateExtents(layer.routes);
-        
-        
-        
-        
+
+
+
+
       //Get coords for all the facilities
         var points = [];
         var easternFacilities = 0;
@@ -1388,16 +1413,16 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
                 }
 
                 points.push([lon, lat]);
-            }                
-        }); 
+            }
+        });
 
 
       //Set map extents to include all the facilities and the center of the US
         points.push([-100, 40]);
         var geom = new ol.geom.LineString(points);
         geom.transform('EPSG:4326', 'EPSG:3857');
-        var extent = geom.getExtent(); 
-        map.setExtent(extent);  
+        var extent = geom.getExtent();
+        map.setExtent(extent);
 
 
       //Adjust center point as needed
@@ -1433,8 +1458,8 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             }
         }
     };
-    
-    
+
+
   //**************************************************************************
   //** reparent
   //**************************************************************************
@@ -1445,15 +1470,16 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
         var parent = el.parentNode;
         if (parent) parent.removeChild(el);
         panel.innerHTML = "";
-        panel.appendChild(el);        
+        panel.appendChild(el);
     };
-    
-    
+
+
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var isDirty = javaxt.dhtml.utils.isDirty;
+    var isEmpty = javaxt.dhtml.utils.isEmpty;
     var createTable = javaxt.dhtml.utils.createTable;
     var onRender = javaxt.dhtml.utils.onRender;
     var getBasemap = bluewave.utils.getBasemap;
