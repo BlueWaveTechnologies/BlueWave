@@ -750,7 +750,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             height: "360px"
         });
         dashboardItem.el.style.margin = "0px";
-        dashboardItem.el.style.display = "table";
+        //dashboardItem.el.style.display = "table";
         lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
         lineChart._update = lineChart.update;
         lineChart.update = function(){
@@ -807,7 +807,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             height: "360px"
         });
         dashboardItem.el.style.margin = "0px";
-        dashboardItem.el.style.display = "table";
+        //dashboardItem.el.style.display = "table";
         barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
     };
     
@@ -822,7 +822,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             height: "360px"
         });                
         dashboardItem.el.style.margin = "0px";
-        dashboardItem.el.style.display = "table";
+        //dashboardItem.el.style.display = "table";
         scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{
             
         });
@@ -890,7 +890,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             height: "360px"
         });
         dashboardItem.el.style.margin = "0px";
-        dashboardItem.el.style.display = "table";
+        //dashboardItem.el.style.display = "table";
         
         
       //Get colors
@@ -979,18 +979,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     
     
   //**************************************************************************
-  //** numberWithCommas
-  //**************************************************************************
-    const formatNumber = (x) => {
-        if (x==null) return "";
-        if (typeof x !== "string") x+="";
-        var parts = x.toString().split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return parts.join(".");
-    };    
-    
-    
-  //**************************************************************************
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
@@ -1000,6 +988,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var parseCSV = bluewave.utils.parseCSV;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var getColorPalette = bluewave.utils.getColorPalette;
+    var formatNumber = bluewave.utils.formatNumber;
 
     init();
 };

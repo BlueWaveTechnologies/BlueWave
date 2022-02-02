@@ -227,10 +227,10 @@ public class Imports {
                     nodeID = getSession().run(query.toString(), params).single().get(0).asLong();
                 }
                 catch(Exception e){
-                    //e.printStackTrace();
                     nodeID = getIdFromError(e);
+                    if (nodeID==null) e.printStackTrace();
                 }
-                //console.log(nodeID);
+                if (nodeID==null) return;
 
 
 

@@ -508,7 +508,14 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             update: function(panel){
                 
 
-
+                get("import/exams?establishment=" + establishment.type + "&id=" + establishment.fei.join(","),{
+                    success: function(csv){
+                        console.log(csv);
+                    },
+                    failure: function(){
+                        
+                    }
+                });
             }
         };
 
@@ -1436,7 +1443,7 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
     var reparent = function(el, panel){
         if (!panel) return;
         var parent = el.parentNode;
-        parent.removeChild(el);
+        if (parent) parent.removeChild(el);
         panel.innerHTML = "";
         panel.appendChild(el);        
     };
