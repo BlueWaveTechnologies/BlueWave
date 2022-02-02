@@ -469,7 +469,9 @@ bluewave.utils = {
         input.className = "search-bar-input";
         input.style.width = "100%";
         input.placeholder = "Search";
+        input.setAttribute("spellcheck", "false");
         div.appendChild(input);
+        var timer;
         input.oninput = function(e){
             var q = searchBar.getValue();
             if (q){
@@ -481,6 +483,13 @@ bluewave.utils = {
                 cancelButton.hide();
             }
             searchBar.onChange(q);
+
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function(){
+                var q = searchBar.getValue();
+                searchBar.onSearch(q);
+            }, 500);
+
         };
         input.onkeydown = function(event){
             var key = event.keyCode;
