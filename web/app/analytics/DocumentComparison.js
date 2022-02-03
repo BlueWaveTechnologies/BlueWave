@@ -17,6 +17,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var summaryPanel, comparisonPanel, comparisonPanel2;
     var waitmask;
     var results = {};
+    var fileIndex = 0;
+    var suspiciousPages = [];
+    var totalPages = 0;
     var currPair = -1;
 
 
@@ -78,6 +81,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         results = {};
+        suspiciousPages = [];
+        totalPages = 0;
         currPair = -1;
         backButton.disabled = true;
         nextButton.disabled = true;
@@ -151,8 +156,32 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
    *  carousel is cleared (see clear method)
    */
     var update = function(){
-        var suspiciousPairs = results.suspicious_pairs;
-        if (suspiciousPairs.length>0){
+        var files = results.files;
+        if (files.length>2) return; //only 2 docs supported at this time
+        fileIndex = 0;
+
+
+      //Get suspicious pages and count total number of pages to display
+        suspiciousPages = getSuspiciousPages(fileIndex);
+        suspiciousPages.forEach((suspiciousPage)=>{
+            var similarPages = {};
+            suspiciousPage.suspiciousPairs.forEach((suspiciousPair)=>{
+                var pages = suspiciousPair.pages;
+                for (var i=0; i<pages.length; i++){
+                    var page = pages[i];
+                    if (page.file_index!==fileIndex){
+                        var rightPage = page.page;
+                        var rightFile = page.file_index;
+                        similarPages[rightFile +","+ rightPage] = true;
+                    }
+                }
+            });
+            totalPages+=Object.keys(similarPages).length;
+        });
+
+
+
+        if (totalPages>0){
             nextButton.disabled = false;
         }
 
@@ -161,11 +190,45 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         summaryPanel.update();
         panels[0].div.appendChild(summaryPanel.el);
 
-        if (suspiciousPairs.length===0) return;
+        if (totalPages===0) return;
 
         if (!comparisonPanel) comparisonPanel = createComparisonPanel();
         comparisonPanel.update(0);
         panels[1].div.appendChild(comparisonPanel.el);
+    };
+
+
+  //**************************************************************************
+  //** getSuspiciousPages
+  //**************************************************************************
+    var getSuspiciousPages = function(fileIndex){
+
+        var files = results.files;
+        var file = files[fileIndex];
+
+        var suspiciousPages = [];
+        file.suspicious_pages.forEach((pageNumber)=>{
+            var suspiciousPairs = [];
+            results.suspicious_pairs.forEach((suspiciousPair)=>{
+                var addPair = false;
+                var pages = suspiciousPair.pages;
+                for (var i=0; i<pages.length; i++){
+                    var page = pages[i];
+                    if (page.file_index===fileIndex && page.page===pageNumber){
+                        addPair = true;
+                        break;
+                    }
+                }
+                if (addPair) suspiciousPairs.push(suspiciousPair);
+            });
+
+            suspiciousPages.push({
+                pageNumber: pageNumber,
+                suspiciousPairs: suspiciousPairs
+            });
+        });
+
+        return suspiciousPages;
     };
 
 
@@ -252,13 +315,20 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 if (elapsedTime<1) elapsedTime = "<1 sec";
                 else elapsedTime += " sec";
 
+                var n = 0;
+                results.files.forEach((file)=>{
+                    n+= file.n_pages;
+                });
+
 
               //Update body
                 tbody.innerHTML = "";
                 addRow("Files Analyzed", results.files.length);
+                addRow("Pages Analyzed", n);
+                addRow("Suspicious Pages", totalPages);
                 addRow("Suspicious Pairs", suspiciousPairs.length);
                 addRow("Elapsed Time", elapsedTime);
-                addRow("Pages Per Second", results.pages_per_second);
+                addRow("Pages Per Second", round(results.pages_per_second, 1));
             }
         };
     };
@@ -346,32 +416,55 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         return {
             el: el,
-            update: function(index){
-                var suspiciousPairs = results.suspicious_pairs;
-                var suspiciousPair = suspiciousPairs[index];
-
-                title.innerText = "Pair " + (index+1) + " of " + suspiciousPairs.length;
-                var type = suspiciousPair.type;
-                if (type==="Common digit string"){
-                    subtitle.innerText = "Found pairs of files that have long digit sequences in common. " +
-                    "This is extremely unlikely to be random and indicates copied data or numbers."
-                }
-                else{
-                    subtitle.innerText = type;
-                }
-
+            update: function(pageIndex){
 
                 var files = results.files;
-                var pages = suspiciousPair.pages;
-                var left = pages[0];
-                var right = pages[1];
-                var leftFile = files[left.file_index];
-                var rightFile = files[right.file_index];
-                createPreview(leftFile, left.page, leftPanel);
-                createPreview(rightFile, right.page, rightPanel);
+                var leftFile = files[fileIndex];
+                var rightFile;
+                var leftPage = 0;
+                var rightPage = 0;
 
-                leftFooter.innerText = "Page " + left.page + " of " + leftFile;
-                rightFooter.innerText = "Page " + right.page + " of " + rightFile;
+                var suspiciousPairs = [];
+                var idx = 0;
+                suspiciousPages.every((suspiciousPage)=>{
+                    var similarPages = {};
+                    suspiciousPage.suspiciousPairs.forEach((suspiciousPair)=>{
+                        var pages = suspiciousPair.pages;
+                        for (var i=0; i<pages.length; i++){
+                            var page = pages[i];
+                            if (page.file_index!==fileIndex){
+                                var rightPage = page.page;
+                                var rightFile = page.file_index;
+                                similarPages[rightFile +","+ rightPage] = true;
+                            }
+                        }
+                    });
+                    similarPages = Object.keys(similarPages);
+                    for (var i=0; i<similarPages.length; i++){
+                        if (idx===pageIndex){
+                            var arr = similarPages[i].split(",");
+                            rightPage = parseInt(arr[1]);
+                            rightFile = files[parseInt(arr[0])];
+
+                            leftPage = suspiciousPage.pageNumber;
+                            suspiciousPairs = suspiciousPage.suspiciousPairs;
+
+                            return false;
+                        }
+                        idx++;
+                    }
+                    return true;
+                });
+
+
+                title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
+                subtitle.innerText = suspiciousPairs.length + " suspicious pair" + (suspiciousPairs.length>1 ? "s" : "");
+
+                createPreview(leftFile, leftPage, leftPanel);
+                createPreview(rightFile, rightPage, rightPanel);
+
+                leftFooter.innerText = "Page " + leftPage + " of " + leftFile.filename;
+                rightFooter.innerText = "Page " + rightPage + " of " + rightFile.filename;
             }
         };
     };
@@ -404,9 +497,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
       //Add event handlers
         carousel.onChange = function(){
-            var suspiciousPairs = results.suspicious_pairs;
             if (currPair>=0) backButton.disabled = false;
-            if (currPair<suspiciousPairs.length-1) nextButton.disabled = false;
+            if (currPair<totalPages-1) nextButton.disabled = false;
         };
 
     };
@@ -515,6 +607,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var isArray = javaxt.dhtml.utils.isArray;
+    var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
 
 
