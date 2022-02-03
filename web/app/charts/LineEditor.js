@@ -174,7 +174,7 @@ bluewave.charts.LineEditor = function(parent, config) {
   /** Returns chart configuration
    */
     this.getConfig = function(){
-        chartConfig.layers = lineChart.getLayers()
+        chartConfig.layers = lineChart.getLayers();
         return chartConfig;
     };
 
