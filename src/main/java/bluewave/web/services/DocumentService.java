@@ -436,7 +436,7 @@ public class DocumentService extends WebService {
 
 
       //Check cache
-        bluewave.app.DocumentComparison dc = null;
+        ArrayList<bluewave.app.DocumentComparison> docs = new ArrayList<>();
         if (documentIDs.length==2){
             String cacheQuery =
             "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON " +
@@ -447,34 +447,42 @@ public class DocumentService extends WebService {
             try {
 
               //Execute query
-                Long id = null;
-                String info = null;
+                HashMap<Long, String> results = new HashMap<>();
                 conn = database.getConnection();
                 Recordset rs = new Recordset();
                 rs.open(cacheQuery, conn);
-                if (rs.hasNext()){
-                    id = rs.getValue("ID").toLong();
-                    info = rs.getValue("INFO").toString();
+                while (rs.hasNext()){
+                    Long id = rs.getValue("ID").toLong();
+                    String info = rs.getValue("INFO").toString();
+                    results.put(id, info);
+                    rs.moveNext();
                 }
                 rs.close();
                 conn.close();
 
 
               //Parse json and return results if appropriate
-                if (info!=null){
-                    JSONObject result = new JSONObject(info);
-                    String version = result.get("version").toString();
-                    if (version!=null){
-                        if (version.equals(scriptVersion)){
-                            return new ServiceResponse(result);
+                Iterator<Long> it = results.keySet().iterator();
+                while (it.hasNext()){
+                    Long id = it.next();
+                    String info = results.get(id);
+                    if (info!=null){
+                        JSONObject result = new JSONObject(info);
+                        String version = result.get("version").toString();
+                        if (version!=null){
+                            if (version.equals(scriptVersion)){
+                                return new ServiceResponse(result);
+                            }
                         }
                     }
                 }
 
 
               //Get current DocumentComparison from the database
-                if (dc!=null) dc = new bluewave.app.DocumentComparison(id);
-
+                it = results.keySet().iterator();
+                while (it.hasNext()){
+                    docs.add(new bluewave.app.DocumentComparison(it.next()));
+                }
             }
             catch(Exception e) {
                 if(conn!=null) conn.close();
@@ -543,13 +551,18 @@ public class DocumentService extends WebService {
 
           //Cache the results
             if (documents.size()==2){
-                if (dc==null){
-                    dc = new bluewave.app.DocumentComparison();
+
+                if (docs.isEmpty()){
+                    bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
                     dc.setA(documents.get(0));
                     dc.setB(documents.get(1));
+                    docs.add(dc);
                 }
-                dc.setInfo(result);
-                dc.save();
+
+                for (bluewave.app.DocumentComparison dc : docs){
+                    dc.setInfo(result);
+                    dc.save();
+                }
             }
 
 
