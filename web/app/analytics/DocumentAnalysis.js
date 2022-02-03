@@ -856,11 +856,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     {header: 'Similar Document', width:'100%', sortable: true},
                     {header: 'Digit Similarity', width:'120', sortable: true},
                     {header: 'Text Similarity', width:'120', sortable: true},
-                    {header: 'Suspicious Pairs', width:'120', sortable: true}
+                    {header: 'Similarities', width:'120', sortable: true}
                 ],
                 update: function(row, record){
                     row.set("Similar Document", record.name);
-                    row.set("Suspicious Pairs", record.suspicious_pages);
+                    row.set("Similarities", record.suspicious_pages);
                 }
             });
 

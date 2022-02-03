@@ -8,11 +8,11 @@ import java.io.FileOutputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
-import javaxt.utils.Generator;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
 import javaxt.sql.*;
@@ -31,6 +31,8 @@ public class DocumentService extends WebService {
 
     private ThreadPool pool;
     private FileIndex index;
+    private ConcurrentHashMap<String, JSONObject> scripts;
+
 
   //**************************************************************************
   //** Constructor
@@ -89,6 +91,9 @@ public class DocumentService extends WebService {
         }
         catch(Exception e){
         }
+
+
+        scripts = new ConcurrentHashMap<>();
     }
 
 
@@ -394,27 +399,94 @@ public class DocumentService extends WebService {
             return new ServiceResponse(400, "At least 2 documents are required");
 
 
+      //Get python script
+        String scriptName = "compare_pdfs.py";
+        javaxt.io.File[] scripts = getScriptDir().getFiles(scriptName, true);
+        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+        javaxt.io.File script = scripts[0];
+
+
+      //Get script verion
+        String scriptVersion = null;
+        long lastModified = script.getDate().getTime();
+        synchronized(this.scripts){
+            try{
+                JSONObject info = this.scripts.get(script.getName());
+                if (info==null){
+                    info = new JSONObject();
+                    info.set("lastModified", lastModified);
+                    info.set("version", getScriptVersion(script));
+                    this.scripts.put(scriptName, info);
+                }
+                else{
+                    if (lastModified>info.get("lastModified").toLong()){
+                        info.set("lastModified", lastModified);
+                        info.set("version", getScriptVersion(script));
+                    }
+                }
+
+                scriptVersion = info.get("version").toString();
+            }
+            catch(Exception e){
+                //Failed to get version
+            }
+            this.scripts.notifyAll();
+        }
+
+
+
       //Check cache
+        ArrayList<bluewave.app.DocumentComparison> docs = new ArrayList<>();
         if (documentIDs.length==2){
             String cacheQuery =
             "select ID, INFO from APPLICATION.DOCUMENT_COMPARISON " +
             "where (A_ID="+documentIDs[0]+" AND B_ID="+documentIDs[1]+") " +
                "OR (A_ID="+documentIDs[1]+" AND B_ID="+documentIDs[0]+")";
+
             Connection conn = null;
             try {
+
+              //Execute query
+                HashMap<Long, String> results = new HashMap<>();
                 conn = database.getConnection();
-                Generator<Recordset> recordset = conn.getRecordset(cacheQuery);
-                for (Recordset record : recordset) {
-                    JSONObject result = new JSONObject(record.getField("INFO").getValue().toString());
-                    //TODO: Check version
-                    return new ServiceResponse(result);
+                Recordset rs = new Recordset();
+                rs.open(cacheQuery, conn);
+                while (rs.hasNext()){
+                    Long id = rs.getValue("ID").toLong();
+                    String info = rs.getValue("INFO").toString();
+                    results.put(id, info);
+                    rs.moveNext();
+                }
+                rs.close();
+                conn.close();
+
+
+              //Parse json and return results if appropriate
+                Iterator<Long> it = results.keySet().iterator();
+                while (it.hasNext()){
+                    Long id = it.next();
+                    String info = results.get(id);
+                    if (info!=null){
+                        JSONObject result = new JSONObject(info);
+                        String version = result.get("version").toString();
+                        if (version!=null){
+                            if (version.equals(scriptVersion)){
+                                return new ServiceResponse(result);
+                            }
+                        }
+                    }
+                }
+
+
+              //Get current DocumentComparison from the database
+                it = results.keySet().iterator();
+                while (it.hasNext()){
+                    docs.add(new bluewave.app.DocumentComparison(it.next()));
                 }
             }
             catch(Exception e) {
+                if(conn!=null) conn.close();
                 return new ServiceResponse(e);
-            }
-            finally {
-                if(conn != null) conn.close();
             }
         }
 
@@ -440,10 +512,6 @@ public class DocumentService extends WebService {
 
 
 
-      //Get python script
-        javaxt.io.File[] scripts = getScriptDir().getFiles("compare_pdfs.py", true);
-        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
-
 
       //Compile command line options
         ArrayList<String> params = new ArrayList<>();
@@ -457,7 +525,7 @@ public class DocumentService extends WebService {
         try{
 
           //Execute script
-            JSONObject result = executeScript(scripts[0], params);
+            JSONObject result = executeScript(script, params);
 
 
           //Replace file paths and insert documentID
@@ -483,11 +551,18 @@ public class DocumentService extends WebService {
 
           //Cache the results
             if (documents.size()==2){
-                bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
-                dc.setA(documents.get(0));
-                dc.setB(documents.get(1));
-                dc.setInfo(result);
-                dc.save();
+
+                if (docs.isEmpty()){
+                    bluewave.app.DocumentComparison dc = new bluewave.app.DocumentComparison();
+                    dc.setA(documents.get(0));
+                    dc.setB(documents.get(1));
+                    docs.add(dc);
+                }
+
+                for (bluewave.app.DocumentComparison dc : docs){
+                    dc.setInfo(result);
+                    dc.save();
+                }
             }
 
 
