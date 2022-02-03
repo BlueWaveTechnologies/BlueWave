@@ -2839,121 +2839,23 @@ bluewave.Explorer = function(parent, config) {
    */
     var updateSVG = function(dashboardItem){
 
-        console.log("updateSvg called here for dashboard item")
-        console.log(dashboardItem)
-
 
         var svgs = dashboardItem.getElementsByTagName("svg");
         if (svgs.length>0){
             var svg = svgs[0];
-            console.log("logging svg and chart container")
             var chartContainer = svg.parentNode;
 
-
-            console.log(svg)
-            console.log(chartContainer)
-
+          // update SVG parent div to have percentage-scaling dimensions
+            chartContainer.parentNode.style.width = "100%";
+            chartContainer.parentNode.style.height = "100%";
 
             var rect = javaxt.dhtml.utils.getRect(chartContainer.parentNode);
-
-
-            console.log("logging this rect object - not sure what its for - width and ehight after")
-            console.log(rect)
-            console.log(rect.width)
-            console.log(rect.height)
 
 
           //Update dimensions of the svg
             d3.select(svg)
             .attr("width",rect.width)
             .attr("height",rect.height);
-
-
-          //Get attributes of the second "g" element in the svg. Assumes that
-          //the first "g" element is reserved exclusively for us to manipulate
-          //in this class. All chart types should have a outer "g" like this.
-            var g = svg.getElementsByTagName("g")[0]; //reserved for explorer
-            var g2 = g.getElementsByTagName("g")[0]; //used by individual charts
-
-
-            console.log("logging if we found anything here - g elements")
-
-            console.log(g)
-            console.log(g2)
-
-
-
-
-            var box = g2.getBBox();
-            var width = box.width;
-            var height = box.height;
-            var scaleX = 1;
-            var scaleY = 1;
-            var translateX = 0;
-            var translateY = 0;
-            var transformList = g2.transform.baseVal;
-            for (var i=0; i<transformList.numberOfItems; i++){
-                var transform = transformList.getItem(i);
-                var m = transform.matrix;
-                switch (transform.type){
-                  case 2:
-                    translateX = m.e;
-                    translateY = m.f;
-                    break;
-                  case 3:
-                    scaleX = m.a;
-                    scaleY = m.d;
-                    break;
-                }
-            }
-
-
-
-        //   Compute scale
-            var scale;
-            var scaledWidth = (width)*scaleX;
-            var scaledHeight = (height)*scaleY;
-            if (width>=height){
-                scale = rect.width/scaledWidth;
-                var h = scaledHeight*scale;
-                if (h>rect.height){
-                    scale = rect.height/scaledHeight;
-                }
-            }
-            else{
-                scale = rect.height/scaledHeight;
-                var w = scaledWidth*scale;
-                if (w>rect.width){
-                    scale = rect.width/scaledWidth;
-                }
-            }
-
-
-
-          //Compute x/y offset
-            var x = 0;
-            var y = 0;
-            if (translateX===0){ //center the chart
-                x = (rect.width/2)-((scaledWidth*scale)/2);
-            }
-            else{
-                //TODO: center chart using translateX
-            }
-
-            if (translateY===0){ //center the chart
-                y = (rect.height/2)-((scaledHeight*scale)/2);
-            }
-            else{
-                //TODO: center chart using translateY
-            }
-
-
-          //Apply transform to the first g
-            d3.select(g).attr("transform",
-                "translate(" + x + "," + y + ") " +
-                "scale(" + scale + ")"
-            );
-
         }
     };
 
@@ -3139,7 +3041,6 @@ bluewave.Explorer = function(parent, config) {
                     var chartContainer = document.createElement("div");
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
-                    innerDiv.style.overflow = "hidden";
                     chartContainer.style.width = layout.imageWidth + "px";
                     chartContainer.style.height = layout.imageHeight + "px";
                     innerDiv.appendChild(chartContainer);
