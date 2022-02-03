@@ -233,18 +233,44 @@ bluewave.charts.Map = function(parent, config) {
                     .enter()
                     .append("circle")
                     .attr("r", radius)
-                    .attr("class", config.name)
+                    .attr("class", name)
                     .attr("transform", function (d) {
                       return "translate(" + projection(d) + ")";
                     })
                     .attr("opacity", opacity)
                     .style("fill", color)
+                    .attr("stroke", "white")
+                    // .attr("stroke-width", radius/5)
+                    .attr("stroke-width", 2)
+                    .attr("stroke-opacity", opacity);
+
+                  //Add labels
+                  var labelGroup = mapArea.append("g");
+
+                  labelGroup.append("g")
+                    .selectAll("text")
+                    .data(layer.features)
+                    .enter()
+                    .append("text")
+                    .attr("transform", function (d) {
+                      return `translate(  ${projection(d)[0]+radius}, ${projection(d)[1]}  )`;
+                    })
+                    .attr("font-size", 20)
+                    .attr("font-weight", 900)
+                    .style("fill", color)
+                    .style("stroke", "white")
+                    .style("stroke-width", 1)
+                    .text(name)
+                    
 
                 } else
             if (layer.type == "lines"){
 
                   var width = parseInt(style.width);
                   if (isNaN(width)) width = 3;
+
+                  var lineStyle = style.lineStyle;
+                  if (!lineStyle) lineStyle = "solid";
 
                   g.selectAll("lines")
                     .data(layer.features)
@@ -258,6 +284,14 @@ bluewave.charts.Map = function(parent, config) {
                     .attr("opacity", opacity)
                     .style("stroke", color)
                     .style("stroke-width", width)
+                    .attr("stroke-dasharray", function(d){
+                      if(lineStyle==="dashed") return "10, 10";
+                      else if(lineStyle==="dotted") return "0, 10";
+                    })
+                    .attr("stroke-linecap", function(d){
+                      if(lineStyle==="dotted") return "round";
+                    })
+
 
                 };
 
@@ -277,7 +311,7 @@ bluewave.charts.Map = function(parent, config) {
     };
 
   //**************************************************************************
-  //** addPolygons
+  //** addPoints
   //**************************************************************************
     this.addPoints = function(points, config){
       layers.push({
@@ -288,7 +322,7 @@ bluewave.charts.Map = function(parent, config) {
   };
 
   //**************************************************************************
-  //** addPolygons
+  //** addLines
   //**************************************************************************
     this.addLines = function(tuples, config){
       layers.push({
@@ -297,7 +331,6 @@ bluewave.charts.Map = function(parent, config) {
           config: config
       });
   };
-
 
 
   //**************************************************************************
@@ -442,7 +475,7 @@ bluewave.charts.Map = function(parent, config) {
 
         projection
         .rotate([-center[0], 0])
-        .center([0, center[1]])
+        .center([0, center[1]]);
  
         draw();
     };
