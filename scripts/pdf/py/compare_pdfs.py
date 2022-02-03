@@ -32,9 +32,43 @@ warnings.filterwarnings("ignore")
 from pydivsufsort import divsufsort, kasai
 
 
+
+VERSION = "1.0.2"
+
+
 #-------------------------------------------------------------------------------
 # UTILS
 #-------------------------------------------------------------------------------
+def import_pacakges():
+    import os
+    import re
+    import sys
+    import json
+    import math
+    import pickle
+    import time
+    import datetime
+    import itertools
+    import subprocess
+    from pathlib import Path
+
+    import numpy as np
+    from itertools import groupby
+    from itertools import combinations
+    from operator import itemgetter
+    from random import randint
+    import sklearn
+    # from scipy.stats import chisquare
+
+    # PyMuPDF
+    import fitz
+    fitz.TOOLS.mupdf_display_errors(False)
+    import warnings
+    warnings.filterwarnings("ignore")
+
+    from pydivsufsort import divsufsort, kasai
+
+
 def get_datadir():
     currdir = os.path.dirname(os.path.realpath(__file__))
     parentdir = str(Path(currdir).parent)
@@ -550,13 +584,17 @@ def main(filenames, methods, pretty_print, verbose=False):
     if verbose: print('\tResults gathered.')
 
     dt = time.time() - t0
+    if dt == 0:
+        pages_per_second = -1
+    else:
+        pages_per_second = total_page_pairs/dt
 
     result = {
         'files': file_info,
         'suspicious_pairs': suspicious_pairs,
         'num_suspicious_pairs': len(suspicious_pairs),
         'elapsed_time_sec': dt,
-        'pages_per_second': total_page_pairs/dt,
+        'pages_per_second': pages_per_second,
         'similarity_scores': similarity_scores,
         'version': version,
         'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -604,9 +642,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.version:
-        ver = get_version()
-        print(ver)
+        print(VERSION)
     else:
+        import_pacakges()
         main(
             filenames=args.filenames,
             methods=args.methods,
