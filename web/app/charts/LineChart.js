@@ -576,7 +576,8 @@ bluewave.charts.LineChart = function(parent, config) {
                         maxLabelWidth = Math.max(w, maxLabelWidth);
                     }
                 });
-                marginRight+=maxLabelWidth;
+                // marginRight+=maxLabelWidth;
+                marginRight = maxLabelWidth + 5;
                 if (labelHeight>0){
                     marginTop = Math.max((labelHeight/2), marginTop);
                 }
