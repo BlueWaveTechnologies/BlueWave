@@ -458,7 +458,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
-                subtitle.innerText = suspiciousPairs.length + " suspicious pair" + (suspiciousPairs.length>1 ? "s" : "");
+                subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
 
                 createPreview(leftFile, leftPage, leftPanel);
                 createPreview(rightFile, rightPage, rightPanel);
