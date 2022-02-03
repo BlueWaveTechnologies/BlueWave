@@ -1749,12 +1749,9 @@ bluewave.Explorer = function(parent, config) {
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
-
-                console.log("csv object here is")
-
-                console.log(csv)
-
-                data.push(csv);
+                if (csv){
+                    data.push(csv);
+                }
             }
         }
 
@@ -2811,20 +2808,11 @@ bluewave.Explorer = function(parent, config) {
    *  layout.
    */
     var updateLayout = function(){
-        console.log("updateLayout called")
         if (me.getView()!=="Edit"){
             dashboardPanel.resize();
             var dashboardItems = dashboardPanel.getDashboardItems();
-            console.log("dashboard Items are printing here")
-            console.log(dashboardItems)
-            console.log(JSON.stringify(dashboardItems,null,4))
             for (var i=0; i<dashboardItems.length; i++){
-                console.log("found a new dashboard Item .. trying to render it")
-
                 var dashboardItem = dashboardItems[i];
-                console.log("dashboard layout item name is ",0 )
-                console.log(JSON.stringify(dashboardItem, null, 4))
-                console.log(dashboardItem)
                 updateSVG(dashboardItem);
             }
         }
@@ -2838,7 +2826,6 @@ bluewave.Explorer = function(parent, config) {
    *  in s layout.
    */
     var updateSVG = function(dashboardItem){
-
 
         var svgs = dashboardItem.getElementsByTagName("svg");
         if (svgs.length>0){
@@ -2948,13 +2935,9 @@ bluewave.Explorer = function(parent, config) {
   //** updateDashboard
   //**************************************************************************
     var updateDashboard = function(){
-        // console.log("update dashboard called")
-        console.log("update dashboard called here - ")
+
       //Find layout node
         var layoutNode = getLayoutNode();
-        console.log(JSON.stringify(layoutNode,null,4))
-        // console.log("layout node printout")
-        // console.log(layoutNode)
         if (!layoutNode) return;
 
 
@@ -2967,26 +2950,12 @@ bluewave.Explorer = function(parent, config) {
         dashboardPanel.clear();
 
 
-        console.log("layout node config ")
-        console.log(layoutNode.config)
-        console.log(JSON.stringify(layoutNode.config))
       //Render dashboard items
         for (var key in layoutNode.config) {
-            console.log("rendering new dashboard item")
-            console.log(JSON.stringify(key, null,4))
-            console.log(key)
 
             if (layoutNode.config.hasOwnProperty(key)){
-                console.log("layout node has it's own property", key)
-                // console.log("logging layout and node and nodetype")
                 var layout = layoutNode.config[key];
                 var node = nodes[key];
-                console.log("logging the node")
-                console.log(node)
-                console.log(JSON.stringify(node,null,4))
-                // console.log(layout)
-                // console.log(node)
-                // console.log(node.type)
                 var connected = checkConnection(layoutNode, node);
                 if (!connected) continue;
                 if (!node) continue;
@@ -2996,16 +2965,12 @@ bluewave.Explorer = function(parent, config) {
 
 
               //Create absolute div for the dashboard item
-                console.log("creating new div for the dashboard item")
                 var outerDiv = document.createElement("div");
                 outerDiv.style.position = "absolute";
                 outerDiv.style.width = layout.width;
                 outerDiv.style.height = layout.height;
                 outerDiv.style.top = layout.top;
                 outerDiv.style.left = layout.left;
-                console.log("dashboard panel printout (and the json current)")
-                console.log(dashboardPanel)
-                console.log(JSON.stringify(dashboardPanel, null, 4))
                 dashboardPanel.add(outerDiv);
                 dashboardPanel.resize();
 
@@ -3107,8 +3072,9 @@ bluewave.Explorer = function(parent, config) {
                         for (var key in node.inputs) {
                             if (node.inputs.hasOwnProperty(key)){
                                 var csv = node.inputs[key].csv;
-                                data.push(d3.csvParse(csv));
-
+                                if (csv){
+                                    data.push(d3.csvParse(csv));
+                                }
                             }
                         }
                         if (node.type==="pieChart"){
