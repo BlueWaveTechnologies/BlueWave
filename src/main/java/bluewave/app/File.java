@@ -18,6 +18,7 @@ public class File extends javaxt.sql.Model {
     private String type;
     private Date date;
     private Long size;
+    private String hash;
     private JSONObject metadata;
 
 
@@ -32,6 +33,7 @@ public class File extends javaxt.sql.Model {
             java.util.Map.entry("type", "type"),
             java.util.Map.entry("date", "date"),
             java.util.Map.entry("size", "size"),
+            java.util.Map.entry("hash", "hash"),
             java.util.Map.entry("metadata", "metadata")
 
         ));
@@ -76,6 +78,7 @@ public class File extends javaxt.sql.Model {
             this.type = getValue(rs, "type").toString();
             this.date = getValue(rs, "date").toDate();
             this.size = getValue(rs, "size").toLong();
+            this.hash = getValue(rs, "hash").toString();
             this.metadata = new JSONObject(getValue(rs, "metadata").toString());
 
 
@@ -113,6 +116,7 @@ public class File extends javaxt.sql.Model {
         this.type = json.get("type").toString();
         this.date = json.get("date").toDate();
         this.size = json.get("size").toLong();
+        this.hash = json.get("hash").toString();
         this.metadata = json.get("metadata").toJSONObject();
     }
 
@@ -155,6 +159,14 @@ public class File extends javaxt.sql.Model {
 
     public void setSize(Long size){
         this.size = size;
+    }
+
+    public String getHash(){
+        return hash;
+    }
+
+    public void setHash(String hash){
+        this.hash = hash;
     }
 
     public JSONObject getMetadata(){

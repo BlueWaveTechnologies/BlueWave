@@ -681,6 +681,7 @@ public class DocumentService extends WebService {
             f.setSize(file.getSize());
             f.setDate(new javaxt.utils.Date(file.getDate()));
             f.setType(file.getContentType());
+            f.setHash(file.getMD5());
             f.setPath(path);
             f.save();
             return f;
