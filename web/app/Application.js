@@ -419,32 +419,54 @@ bluewave.Application = function(parent, config) {
         }
 
 
-      //Create new panels
-        get("dashboards?fields=id,name,className",{
-            success: function(dashboards) {
 
-              //Convert the dashboards array into a datastore
-                dashboards = new javaxt.dhtml.DataStore(dashboards);
-                config.dataStores["Dashboard"] = dashboards;
-
-
-              //Add homepage
-                var homepage = raisePanel(bluewave.Homepage);
-                homepage.onClick = function(dashboardItem){
-                    renderDashboard(dashboardItem);
-                };
-                me.setTitle(homepage.getTitle());
-
-
-              //Hide waitmask
-                waitmask.hide();
-            },
-            failure: function(request){
-                alert(request);
-                waitmask.hide();
+      //Check if we have a URL shortcut to a bluewave dashboard
+        var showHomepage = true;
+        var fileName = window.location.pathname.replaceAll(/[^a-zA-Z0-9]/g, "");
+        if (fileName.length>0){
+            try{
+                var app = eval("bluewave.dashboards." + fileName);
+                if (!app) app = eval("bluewave.analytics." + fileName);
+                if (app){
+                    raisePanel(app);
+                    me.setTitle(fileName);
+                    showHomepage = false;
+                }
             }
-        });
+            catch(e){
+                console.log(e);
+            }
+        }
 
+
+
+      //Create new panels
+        if (showHomepage){
+            get("dashboards?fields=id,name,className",{
+                success: function(dashboards) {
+
+                  //Convert the dashboards array into a datastore
+                    dashboards = new javaxt.dhtml.DataStore(dashboards);
+                    config.dataStores["Dashboard"] = dashboards;
+
+
+                  //Add homepage
+                    var homepage = raisePanel(bluewave.Homepage);
+                    homepage.onClick = function(dashboardItem){
+                        renderDashboard(dashboardItem);
+                    };
+                    me.setTitle(homepage.getTitle());
+
+
+                  //Hide waitmask
+                    waitmask.hide();
+                },
+                failure: function(request){
+                    alert(request);
+                    waitmask.hide();
+                }
+            });
+        }
 
 
 
@@ -779,7 +801,7 @@ bluewave.Application = function(parent, config) {
                 //Note: title is updated in the carousel.onChange() function
             }
             else{
-                me.setTitle(app.getTitle());
+                if (app.getTitle) me.setTitle(app.getTitle());
             }
 
             currApp = app;

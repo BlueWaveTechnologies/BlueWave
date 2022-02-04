@@ -265,7 +265,20 @@ public class WebApp extends HttpServlet {
                         return;
                     }
                 }
+
+
+              //Special case: URL shortcuts to bluewave dashboards
+                if (!path.contains("/")){
+                    javaxt.io.File file = new javaxt.io.File(web + "app/dashboards/" + path +".js");
+                    if (!file.exists()) file = new javaxt.io.File(web + "app/analytics/" + path +".js");
+                    if (file.exists()){
+                        file = new javaxt.io.File(web, "index.html");
+                        fileManager.sendFile(file, request, response);
+                        return;
+                    }
+                }
             }
+
 
           //If we're still here, we either have a bad file request or a web
           //service request. In either case, send the request to the
