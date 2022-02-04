@@ -364,6 +364,12 @@ public class Main {
                 }
             }
         }
+        else if (str.equalsIgnoreCase("DocumentComparison")){
+            Config.initDatabase();
+            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()){
+                dc.delete();
+            }
+        }
         else if (str.equals("index")){
             Config.initDatabase();
             for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()){
