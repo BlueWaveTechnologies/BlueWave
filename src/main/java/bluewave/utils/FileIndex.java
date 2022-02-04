@@ -86,7 +86,7 @@ public class FileIndex {
         customFieldForVectors.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
         customFieldForVectors.setStored(true);
         customFieldForVectors.setStoreTermVectors(true);
-        
+
     }
 
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(String... searchTerms) throws Exception {
@@ -125,13 +125,25 @@ public class FileIndex {
         if (searcher != null) {
             List<ResultWrapper> results = getTopDocs(searchTerms, limit);
             if (results != null) {
-                    for(ResultWrapper resultWrapper: results) {
+                for (ResultWrapper resultWrapper: results) {
                     ScoreDoc scoreDoc = resultWrapper.scoreDoc;
                     Document doc = searcher.doc(scoreDoc.doc);
 
                     float score = scoreDoc.score;
                     Long documentID = Long.parseLong(doc.get(FIELD_DOCUMENT_ID));
                     bluewave.app.Document d = new bluewave.app.Document(documentID);
+
+                    javaxt.json.JSONObject searchMetadata = new javaxt.json.JSONObject();
+                    javaxt.json.JSONObject info = d.getInfo();
+                    if (info==null){
+                        info = new javaxt.json.JSONObject();
+                        d.setInfo(info);
+                    }
+                    searchMetadata.set("score", score);
+                    searchMetadata.set("frequency", resultWrapper.frequency);
+                    searchMetadata.set("frequency", resultWrapper.highlightFragment);
+                    info.set("searchResults", searchMetadata);
+
                     ArrayList<bluewave.app.Document> documents = searchResults.get(score);
                     if (documents==null){
                         documents = new ArrayList<>();
@@ -153,7 +165,7 @@ public class FileIndex {
 
             BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
             String term = searchTerms.get(0);
-            
+
             WildcardQuery wildcardQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
             BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
             bqBuilder.add(wildcardBooleanClause);
@@ -169,10 +181,10 @@ public class FileIndex {
 
             BooleanQuery bbq = bqBuilder.build();
             QueryScorer scorer = new QueryScorer(bbq);
-            
+
             Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter(), scorer);
-            highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, FRAGMENT_CHAR_SIZE));  
-            
+            highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, FRAGMENT_CHAR_SIZE));
+
             TopDocs hits = searcher.search(bbq, limit);
             List<ResultWrapper>results = new ArrayList<>();
             ResultWrapper resultWrapper = null;
@@ -202,12 +214,12 @@ public class FileIndex {
 
     private String getHighlights(final IndexableField field, Document doc, Highlighter highlighter) {
         try {
-            
+
             String text = doc.get(field.name());
             if(text != null && !text.isBlank()) {
                 TokenStream stream = perFieldAnalyzerWrapper.tokenStream(field.name(), new StringReader(text));
                 String[] frags = highlighter.getBestFragments(stream, text, NUM_HIGHLIGHT_FRAGS_PER_HIT);
-                for (String frag : frags) 
+                for (String frag : frags)
                 {
                     return frag;
                 }
@@ -228,7 +240,7 @@ public class FileIndex {
                 if(frequencyStr != null && !frequencyStr.isBlank()) {
                     return Float.parseFloat(frequencyStr);
                 }
-            } 
+            }
         }catch(Exception e) {
             console.log("Error: " + e);
         }
@@ -441,5 +453,5 @@ public class FileIndex {
         Float frequency;
         String highlightFragment;
     }
-    
+
 }
