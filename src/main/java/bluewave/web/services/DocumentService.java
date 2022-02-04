@@ -142,7 +142,7 @@ public class DocumentService extends WebService {
         String q = request.getParameter("q").toString();
 
 
-      //Start compileing response
+      //Start compiling response
         StringBuilder str = new StringBuilder();
         str.append("id,name,type,date,size");
 
@@ -152,6 +152,7 @@ public class DocumentService extends WebService {
         sql.append("select document.id, file.name, file.type, file.date, file.size ");
         sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
         sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
+        HashMap<Long, JSONObject> searchMetadata = new HashMap<>();
         if (q!=null){
             try{
 
@@ -173,6 +174,12 @@ public class DocumentService extends WebService {
                         for (bluewave.app.Document document : documents){
                             if (documentIDs.length()>0) documentIDs += ",";
                             documentIDs += document.getID() + "";
+
+                            JSONObject info = document.getInfo();
+                            if (info!=null){
+                                JSONObject md = info.get("searchMetadata").toJSONObject();
+                                if (md!=null) searchMetadata.put(document.getID(), md);
+                            }
                         }
                     }
                     sql.append("WHERE document.id in (");
@@ -191,16 +198,24 @@ public class DocumentService extends WebService {
         sql.append(" LIMIT " + limit);
 
 
+        if (!searchMetadata.isEmpty()) str.append(",info");
+
+
       //Execute query and update response
         Connection conn = null;
         try{
             conn = database.getConnection();
             Recordset rs = new Recordset();
             rs.open(sql.toString(), conn);
-            JSONArray arr = new JSONArray();
             while (rs.hasNext()){
                 str.append("\n");
                 str.append(getString(rs));
+                if (!searchMetadata.isEmpty()) str.append(",");
+                JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
+                if (md!=null){
+                    //TODO: Make csv-safe string of the json and append to str
+                    String s = md.toString();
+                }
                 rs.moveNext();
             }
             rs.close();
