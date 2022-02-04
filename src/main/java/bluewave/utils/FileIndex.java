@@ -141,8 +141,8 @@ public class FileIndex {
                     }
                     searchMetadata.set("score", score);
                     searchMetadata.set("frequency", resultWrapper.frequency);
-                    searchMetadata.set("frequency", resultWrapper.highlightFragment);
-                    info.set("searchResults", searchMetadata);
+                    searchMetadata.set("highlightFragment", resultWrapper.highlightFragment);
+                    info.set("searchMetadata", searchMetadata);
 
                     ArrayList<bluewave.app.Document> documents = searchResults.get(score);
                     if (documents==null){
