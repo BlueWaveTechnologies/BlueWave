@@ -155,7 +155,8 @@ public class DocumentService extends WebService {
         if (q!=null){
             try{
 
-                List<String> searchTerms = Arrays.asList(q.split(" "));
+                List<String> searchTerms = new ArrayList<>();
+                searchTerms.add(q);
 
                 TreeMap<Float, ArrayList<bluewave.app.Document>> results =
                     index.findDocuments(searchTerms, Math.toIntExact(limit));

@@ -1,33 +1,44 @@
 package bluewave.utils;
 
 import java.util.*;
+import java.io.StringReader;
 import java.nio.file.Paths;
 import static javaxt.utils.Console.console;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
+import org.apache.lucene.analysis.shingle.ShingleAnalyzerWrapper;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.BoostQuery;
+import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.MultiPhraseQuery;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.QueryScorer;
+import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
+import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.pdfbox.cos.COSDocument;
@@ -45,7 +56,8 @@ public class FileIndex {
     private Object smonitor = new Object();
     private IndexWriter _indexWriter;
     private IndexSearcher _indexSearcher;
-    private Analyzer analyzer = new StandardAnalyzer();
+    private PerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
+    FieldType customFieldForVectors = null;
 
     public static final String FIELD_NAME = "name";
     public static final String FIELD_CONTENTS = "contents";
@@ -54,6 +66,8 @@ public class FileIndex {
     public static final String FIELD_DOCUMENT_ID = "documentID";
     public static final String FIELD_SUBJECT = "subject";
     public static final String FIELD_KEYWORDS = "keywords";
+    public static final int FRAGMENT_CHAR_SIZE = 100;
+    public static final int NUM_HIGHLIGHT_FRAGS_PER_HIT = 1;
 
     public FileIndex(String path) throws Exception {
         this(new javaxt.io.Directory(path));
@@ -61,6 +75,18 @@ public class FileIndex {
 
     public FileIndex(javaxt.io.Directory path) throws Exception {
         dir = FSDirectory.open(Paths.get(path.toString()));
+        Analyzer standardAnalyzer = new StandardAnalyzer();
+        ShingleAnalyzerWrapper shingleAnalyzerWrapper = new ShingleAnalyzerWrapper(standardAnalyzer, 2, 3);
+        Map<String,Analyzer> analyzerPerFieldMap = new HashMap<>();
+        analyzerPerFieldMap.put(FIELD_CONTENTS, shingleAnalyzerWrapper);
+        analyzerPerFieldMap.put(FIELD_NAME, standardAnalyzer);
+        perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(standardAnalyzer, analyzerPerFieldMap);
+
+        customFieldForVectors = new FieldType();
+        customFieldForVectors.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
+        customFieldForVectors.setStored(true);
+        customFieldForVectors.setStoreTermVectors(true);
+        
     }
 
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(String... searchTerms) throws Exception {
@@ -73,10 +99,10 @@ public class FileIndex {
         TreeMap<Float, ArrayList<javaxt.io.File>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher != null) {
-            TopDocs results = getTopDocs(searchTerms, limit);
+            List<ResultWrapper> results = getTopDocs(searchTerms, limit);
             if (results != null) {
-                for (int i = 0; i < results.scoreDocs.length; i++) {
-                    ScoreDoc scoreDoc = results.scoreDocs[i];
+                for(ResultWrapper resultWrapper: results) {
+                    ScoreDoc scoreDoc = resultWrapper.scoreDoc;
                     Document doc = searcher.doc(scoreDoc.doc);
                     float score = scoreDoc.score;
                     javaxt.io.File file = new javaxt.io.File(doc.get(FIELD_PATH));
@@ -97,16 +123,13 @@ public class FileIndex {
         TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher != null) {
-            TopDocs results = getTopDocs(searchTerms, limit);
+            List<ResultWrapper> results = getTopDocs(searchTerms, limit);
             if (results != null) {
-                for (int i = 0; i < results.scoreDocs.length; i++) {
-                    ScoreDoc scoreDoc = results.scoreDocs[i];
-
+                    for(ResultWrapper resultWrapper: results) {
+                    ScoreDoc scoreDoc = resultWrapper.scoreDoc;
                     Document doc = searcher.doc(scoreDoc.doc);
 
                     float score = scoreDoc.score;
-                    // console.log(score + " " + doc.getField(FIELD_NAME));
-
                     Long documentID = Long.parseLong(doc.get(FIELD_DOCUMENT_ID));
                     bluewave.app.Document d = new bluewave.app.Document(documentID);
                     ArrayList<bluewave.app.Document> documents = searchResults.get(score);
@@ -121,7 +144,7 @@ public class FileIndex {
         return searchResults;
     }
 
-    public TopDocs getTopDocs(List<String> searchTerms, Integer limit) throws Exception {
+    public List<ResultWrapper> getTopDocs(List<String> searchTerms, Integer limit) throws Exception {
         if (limit==null || limit<1) limit = 10;
 
         TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
@@ -129,44 +152,94 @@ public class FileIndex {
         if (searcher != null) {
 
             BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
-            for (String term : searchTerms) {
+            String term = searchTerms.get(0);
+            
+            WildcardQuery wildcardQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
+            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
+            bqBuilder.add(wildcardBooleanClause);
 
-                WildcardQuery wildcardQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
-                BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
-                bqBuilder.add(wildcardBooleanClause);
+            bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase()),
+                    BooleanClause.Occur.SHOULD));
 
-               bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-                       BooleanClause.Occur.SHOULD));
+            bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase()),
+                    BooleanClause.Occur.SHOULD));
 
-               bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-                       BooleanClause.Occur.SHOULD));
-
-               bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, analyzer).parse(QueryParser.escape(term).toLowerCase()),
-                       BooleanClause.Occur.SHOULD));
-
-            }
-            if(searchTerms.size() > 1) {
-                MultiPhraseQuery.Builder multiphraseQueryBuilder= new MultiPhraseQuery.Builder();
-                Term[] terms = new Term[searchTerms.size()];
-                for (int i=0;i<searchTerms.size();i++){
-                    terms[i] = new Term( FIELD_CONTENTS , QueryParser.escape(searchTerms.get(i)).toLowerCase());
-                }
-                multiphraseQueryBuilder.add(terms);
-                bqBuilder.add(new BooleanClause(multiphraseQueryBuilder.build(), BooleanClause.Occur.SHOULD));
-            }
+            bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase()),
+                    BooleanClause.Occur.SHOULD));
 
             BooleanQuery bbq = bqBuilder.build();
-            return searcher.search(bbq, limit);
+            QueryScorer scorer = new QueryScorer(bbq);
+            
+            Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter(), scorer);
+            highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, FRAGMENT_CHAR_SIZE));  
+            
+            TopDocs hits = searcher.search(bbq, limit);
+            List<ResultWrapper>results = new ArrayList<>();
+            ResultWrapper resultWrapper = null;
+            for(ScoreDoc scoreDoc : hits.scoreDocs) {
+                resultWrapper = new ResultWrapper();
+                resultWrapper.scoreDoc = scoreDoc;
+                int docid = scoreDoc.doc;
+                Document doc = searcher.doc(docid);
+                Explanation ex = searcher.explain(bbq, docid);
+                Explanation explanation = ex.getDetails()[0];
+                resultWrapper.frequency = getFrequency(explanation.toString());
+                String fragment = null;
+                for (IndexableField field : doc.getFields()) {
+                    fragment = null;
+                    if((fragment = getHighlights(field, doc, highlighter)) != null) {
+                        // Collect only the first highlight fragment
+                        resultWrapper.highlightFragment = fragment;
+                        break;
+                    }
+                }
+                results.add(resultWrapper);
+            }
+            return results;
         }
         return null;
     }
 
+    private String getHighlights(final IndexableField field, Document doc, Highlighter highlighter) {
+        try {
+            
+            String text = doc.get(field.name());
+            if(text != null && !text.isBlank()) {
+                TokenStream stream = perFieldAnalyzerWrapper.tokenStream(field.name(), new StringReader(text));
+                String[] frags = highlighter.getBestFragments(stream, text, NUM_HIGHLIGHT_FRAGS_PER_HIT);
+                for (String frag : frags) 
+                {
+                    return frag;
+                }
+            }
+        }catch(Exception e) {
+            console.log("ERROR: " + e);
+        }
+        return null;
+    }
+
+    private Float getFrequency(String explanationDetails) {
+        try {
+            int indexOfEqualsSign = explanationDetails.indexOf("= freq,");
+            if(indexOfEqualsSign != -1) {
+                String firstHalf = explanationDetails.substring(0, indexOfEqualsSign);
+                int indexOfColonBeforeTargetEqualsSign = firstHalf.lastIndexOf("from:") + 5;
+                String frequencyStr = explanationDetails.substring(indexOfColonBeforeTargetEqualsSign, indexOfEqualsSign);
+                if(frequencyStr != null && !frequencyStr.isBlank()) {
+                    return Float.parseFloat(frequencyStr);
+                }
+            } 
+        }catch(Exception e) {
+            console.log("Error: " + e);
+        }
+        return null;
+    }
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
             if (_indexWriter == null) {
                 try {
-                    IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
+                   IndexWriterConfig iwc = new IndexWriterConfig(perFieldAnalyzerWrapper);
                     iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
                     _indexWriter = new IndexWriter(dir, iwc);
                 } catch (Exception e) {
@@ -244,15 +317,16 @@ public class FileIndex {
             PDDocumentInformation info = pdDocument.getDocumentInformation();
 
             if(info.getSubject() != null && !info.getSubject().isBlank())
-                doc.add(new TextField(FIELD_SUBJECT, info.getSubject(), Store.NO));
+                doc.add(new TextField(FIELD_SUBJECT, info.getSubject(), Store.YES));
 
             if(info.getKeywords() != null && !info.getKeywords().isBlank())
-                doc.add(new TextField(FIELD_KEYWORDS, info.getKeywords(), Store.NO));
+                doc.add(new TextField(FIELD_KEYWORDS, info.getKeywords(), Store.YES));
 
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(pdDocument);
             cd.close();
-            doc.add(new TextField(FIELD_CONTENTS, text, Store.NO));
+            doc.add(new Field(FIELD_CONTENTS, text, customFieldForVectors));
+            // doc.add(new TextField(FIELD_CONTENTS, text, Store.YES));
         }
         else {
 
@@ -361,4 +435,11 @@ public class FileIndex {
         }
         return false;
     }
+
+    class ResultWrapper {
+        ScoreDoc scoreDoc;
+        Float frequency;
+        String highlightFragment;
+    }
+    
 }

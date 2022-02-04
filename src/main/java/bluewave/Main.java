@@ -11,6 +11,7 @@ import java.net.InetSocketAddress;
 
 import javaxt.sql.*;
 import javaxt.json.*;
+import javaxt.io.File;
 import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
@@ -502,6 +503,60 @@ public class Main {
             }
 
             console.log("done! hits: " + totalHits);
+        }
+        else if(test.equalsIgnoreCase("lucene")) {
+            Config.initDatabase();
+            javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
+            javaxt.io.Directory indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
+            String action = args.get("-action");
+            if(action == null || action.isBlank()) {
+                console.log("-action arg is empty");
+                return;
+            }
+
+            switch(action) {
+                case "clean":
+                    List<String>sql = new ArrayList<>();
+                    sql.add("DELETE FROM APPLICATION.DOCUMENT_COMPARISON;");
+                    sql.add("DELETE FROM APPLICATION.DOCUMENT;");
+                    sql.add("DELETE FROM APPLICATION.FILE;");
+                    sql.add("DELETE FROM APPLICATION.PATH;");
+                    Connection conn = null;
+                    boolean cleaned = true;
+                    try {
+                        for (File file : indexDir.getFiles()) 
+                            if(!file.delete()) cleaned = false;
+                        if(indexDir.exists()) {
+                            if(!indexDir.delete()) cleaned = false;
+                        }
+                        conn =  Config.getDatabase().getConnection();
+                        for (String q : sql) {
+                            conn.execute(q);
+                            conn.commit();
+                        }
+                        conn.commit();
+                        conn.close();
+                        
+                    }catch(Exception e) {
+                        cleaned = false;
+                        console.log("Error: " + e);
+                    }finally{
+                        if (conn != null) conn.close();
+                        if(cleaned) {
+                            console.log("Successfully cleaned.");
+                        } else {
+                            console.log("Error cleaning.");
+                        }
+                    }
+                    break;
+
+                case "delete":
+                    long documentId = Long.parseLong(args.get("-id"));
+                    bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(indexDir);
+                    index.removeDocument(documentId);
+                default: 
+                        break;
+            }
         }
         else{
             console.log("Unsupported test: " + test);

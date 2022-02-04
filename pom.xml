@@ -168,6 +168,14 @@
           <artifactId>lucene-analyzers-icu</artifactId>
           <version>${lucene.analyzers.version}</version>
         </dependency>
+
+        <!-- Lucene Highlighter -->
+        <dependency>
+          <groupId>org.apache.lucene</groupId>
+          <artifactId>lucene-highlighter</artifactId>
+          <version>9.0.0</version>
+        </dependency>
+
     </dependencies>
 
 
