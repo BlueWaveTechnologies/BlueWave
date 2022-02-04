@@ -32,9 +32,43 @@ warnings.filterwarnings("ignore")
 from pydivsufsort import divsufsort, kasai
 
 
+
+VERSION = "1.0.2"
+
+
 #-------------------------------------------------------------------------------
 # UTILS
 #-------------------------------------------------------------------------------
+def import_pacakges():
+    import os
+    import re
+    import sys
+    import json
+    import math
+    import pickle
+    import time
+    import datetime
+    import itertools
+    import subprocess
+    from pathlib import Path
+
+    import numpy as np
+    from itertools import groupby
+    from itertools import combinations
+    from operator import itemgetter
+    from random import randint
+    import sklearn
+    # from scipy.stats import chisquare
+
+    # PyMuPDF
+    import fitz
+    fitz.TOOLS.mupdf_display_errors(False)
+    import warnings
+    warnings.filterwarnings("ignore")
+
+    from pydivsufsort import divsufsort, kasai
+
+
 def get_datadir():
     currdir = os.path.dirname(os.path.realpath(__file__))
     parentdir = str(Path(currdir).parent)
@@ -101,14 +135,14 @@ def find_common_substrings(text1, text2, min_len):
 
     is_ok = is_long_enough & is_in_both & does_not_cross
 
-    my_j1 = j1s[is_ok]
+    my_jmin = j_min[is_ok]
     my_h = lcp[is_ok]
 
     # Remove candidates that are a substring of other candidates
 
     # Sort by length, descending
     sorted_idxs = np.argsort(-my_h)
-    my_j1 = my_j1[sorted_idxs]
+    my_jmin = my_jmin[sorted_idxs]
     my_h = my_h[sorted_idxs]
 
     # Go through and take out overlapping substrings
@@ -122,7 +156,7 @@ def find_common_substrings(text1, text2, min_len):
 
     non_overlapping = []
     LIMIT = 100000
-    for j1, h in zip(my_j1[:LIMIT], my_h[:LIMIT]):
+    for j1, h in zip(my_jmin[:LIMIT], my_h[:LIMIT]):
         start = j1
         end = j1 + h
         if not is_subset_of_any_existing(new=(start, end), existing=non_overlapping):
@@ -131,6 +165,81 @@ def find_common_substrings(text1, text2, min_len):
     result = [text1[start:end] for start, end in non_overlapping]
 
     return result
+
+
+#-------------------------------------------------------------------------------
+# READING FILES
+#-------------------------------------------------------------------------------
+def get_page_texts(filename):
+    texts = []
+    if filename[-4:] != '.pdf':
+        raise Exception('Fitz cannot read non-PDF file', filename)
+    with fitz.open(filename) as doc:
+        for page in doc:
+            page_text = page.get_text()
+            page_text_ascii = ''.join(c if c.isascii() else ' ' for c in page_text)
+            texts.append((page.number+1, page_text_ascii))
+
+    return texts
+
+
+def get_page_image_hashes(filename):
+    hashes = []
+    with fitz.open(filename) as doc:
+        for page in doc:
+            page_images = page.get_image_info(hashes=True)
+            page_hashes = []
+            for img in page_images:
+                hash_ = img['digest'].hex()
+                if img['height'] > 200 and img['width'] > 200:
+                    page_hashes.append(hash_)
+            hashes.append((page.number+1, page_hashes))
+    return hashes
+
+
+def get_file_data(filenames):
+    data = []
+    for i, full_filename in enumerate(filenames):
+
+        # Check if cached exists next to PDF
+        cached_filename = full_filename + '.jsoncached'
+        if os.path.exists(cached_filename):
+            with open(cached_filename, 'rb') as f:
+                cached_data = json.load(f)
+            pages_text = cached_data['pages_text']
+            pages_image_hashes = cached_data['pages_image_hashes']
+        else: # If not, read the PDF
+            pages_text = get_page_texts(full_filename)
+            pages_image_hashes = get_page_image_hashes(full_filename)
+
+            # And cache the data
+            cached_data = {
+                'pages_text': pages_text,
+                'pages_image_hashes': pages_image_hashes,
+            }
+            with open(cached_filename, 'w') as f:
+                cached_data = json.dump(cached_data, f)
+
+        pages_digits = [(n, get_digits(t)) for n, t in pages_text]
+        full_text = '|'.join(t.strip() for n, t in pages_text)
+        full_digits = '|'.join(t for n, t in pages_digits)
+        full_image_hashes = sum([h for n, h in pages_image_hashes], [])
+        path_to_file = (os.path.sep).join(full_filename.split(os.path.sep)[:-1])
+        filename = full_filename.split(os.path.sep)[-1]
+
+        file_data = {
+            'path_to_file': path_to_file,
+            'filename': filename,
+            'file_index': i,
+            'pages_text': pages_text,
+            'pages_digits': pages_digits,
+            'pages_image_hashes': pages_image_hashes,
+            'full_text': full_text,
+            'full_digits': full_digits,
+            'full_image_hashes': full_image_hashes,
+        }
+        data.append(file_data)
+    return data
 
 
 #-------------------------------------------------------------------------------
@@ -189,77 +298,6 @@ def benford_test(text):
     return p
 
 
-def get_page_texts(filename):
-    texts = []
-    if filename[-4:] != '.pdf':
-        raise Exception('Fitz cannot read non-PDF file', filename)
-    with fitz.open(filename) as doc:
-        for page in doc:
-            page_text = page.get_text()
-            page_text_ascii = ''.join(c if c.isascii() else ' ' for c in page_text)
-            texts.append((page.number+1, page_text_ascii))
-
-    return texts
-
-
-def get_page_image_hashes(filename):
-    hashes = []
-    with fitz.open(filename) as doc:
-        for page in doc:
-            page_images = page.get_image_info(hashes=True)
-            page_hashes = []
-            for img in page_images:
-                hash_ = img['digest'].hex()
-                if img['height'] > 200 and img['width'] > 200:
-                    page_hashes.append(hash_)
-            hashes.append((page.number+1, page_hashes))
-    return hashes
-
-
-def get_file_data(filenames):
-    data = {}
-    for full_filename in filenames:
-
-        # Check if cached exists next to PDF
-        cached_filename = full_filename[:-3] + 'json'
-        if os.path.exists(cached_filename):
-            with open(cached_filename, 'rb') as f:
-                cached_data = json.load(f)
-            pages_text = cached_data['pages_text']
-            pages_image_hashes = cached_data['pages_image_hashes']
-        else: # If not, read the PDF
-            pages_text = get_page_texts(full_filename)
-            pages_image_hashes = get_page_image_hashes(full_filename)
-
-            # And cache the data
-            cached_data = {
-                'pages_text': pages_text,
-                'pages_image_hashes': pages_image_hashes,
-            }
-            with open(cached_filename, 'w') as f:
-                cached_data = json.dump(cached_data, f)
-
-        pages_digits = [(n, get_digits(t)) for n, t in pages_text]
-        full_text = '|'.join(t.strip() for n, t in pages_text)
-        full_digits = '|'.join(t for n, t in pages_digits)
-        full_image_hashes = sum([h for n, h in pages_image_hashes], [])
-        path_to_file = (os.path.sep).join(full_filename.split(os.path.sep)[:-1])
-        filename = full_filename.split(os.path.sep)[-1]
-
-        file_data = {
-            'path_to_file': path_to_file,
-            'filename': filename,
-            'pages_text': pages_text,
-            'pages_digits': pages_digits,
-            'pages_image_hashes': pages_image_hashes,
-            'full_text': full_text,
-            'full_digits': full_digits,
-            'full_image_hashes': full_image_hashes,
-        }
-        data[filename] = file_data
-    return data
-
-
 def find_page_of_sus_substr(pages, sus_substr):
     if '|' in sus_substr:
         for page_a, page_b in zip(pages[:-1], pages[1:]):
@@ -314,15 +352,15 @@ def filter_sus_pairs(suspicious_pairs):
         if prediction==1:
             significant_text_pairs.append(pair)
         else:
-            bad_page_1 = (pair['pages'][0]['filename'], pair['pages'][0]['page'])
-            bad_page_2 = (pair['pages'][1]['filename'], pair['pages'][1]['page'])
+            bad_page_1 = (pair['pages'][0]['file_index'], pair['pages'][0]['page'])
+            bad_page_2 = (pair['pages'][1]['file_index'], pair['pages'][1]['page'])
             bad_pages.add(bad_page_1)
             bad_pages.add(bad_page_2)
 
     significant_other_pairs = []
     for pair in all_other_pairs:
-        page1 = (pair['pages'][0]['filename'], pair['pages'][0]['page'])
-        page2 = (pair['pages'][1]['filename'], pair['pages'][1]['page'])
+        page1 = (pair['pages'][0]['file_index'], pair['pages'][0]['page'])
+        page2 = (pair['pages'][1]['file_index'], pair['pages'][1]['page'])
         if page1 in bad_pages or page2 in bad_pages:
             continue
         else:
@@ -339,6 +377,7 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
         text2=data_b[f'full_{text_suffix}'],
         min_len=min_len
     )
+
     common_substrings = [s.strip('|').split('|')[0] for s in common_substrings]
     if any(common_substrings):
         for sus_substr in common_substrings:
@@ -351,8 +390,8 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
                 'string_preview': str_preview,
                 'length': len(sus_substr),
                 'pages': [
-                    {'filename': data_a['filename'], 'page': sus_page_a},
-                    {'filename': data_b['filename'], 'page': sus_page_b},
+                    {'file_index': data_a['file_index'], 'page': sus_page_a},
+                    {'file_index': data_b['file_index'], 'page': sus_page_b},
                 ]
             }
             results.append(sus_result)
@@ -363,18 +402,18 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
 # GATHERING RESULTS
 #-------------------------------------------------------------------------------
 def get_file_info(file_data, suspicious_pairs):
-    filename_sus_pages = {filename: set() for filename in file_data.keys()}
+    # Set of suspicious pages for filename
+    sus_page_sets = [set() for i in file_data]
     for pair in suspicious_pairs:
         pages = pair['pages']
         for page in pages:
-            filename = page['filename']
-            filename_sus_pages[filename].add(page['page'])
+            sus_page_sets[page['file_index']].add(page['page'])
 
     file_info = []
-    for filename, data in file_data.items():
-        file_sus_pages = list(filename_sus_pages.get(filename, []))
+    for i, data in enumerate(file_data):
+        file_sus_pages = list(sus_page_sets[i])
         fi = {
-            'filename': filename,
+            'filename': data['filename'],
             'path_to_file': data['path_to_file'],
             'n_pages': len(data['pages_text']),
             'n_suspicious_pages': len(file_sus_pages),
@@ -394,7 +433,7 @@ def get_similarity_scores(file_data, suspicious_pairs, methods_run):
     # Reorganize the suspicious pairs so we can efficiently access when looping
     reorg_sus_pairs = {}
     for sus in suspicious_pairs:
-        file_a, file_b = sorted(p['filename'] for p in sus['pages'])
+        file_a, file_b = [p['file_index'] for p in sus['pages']]
         method = sus['type']
         if file_a not in reorg_sus_pairs:
             reorg_sus_pairs[file_a] = {}
@@ -407,44 +446,40 @@ def get_similarity_scores(file_data, suspicious_pairs, methods_run):
 
     # Only upper triangle not incl. diagonal of cross matrix
     similarity_scores = {}
-    all_filenames = list(file_data.keys())
-    for i, x in enumerate(all_filenames[:-1]):
-        for y in all_filenames[i+1:]:
-            fname_a, fname_b = sorted([x, y]) # Sort by filename
-            data_a = file_data[fname_a]
-            data_b = file_data[fname_b]
+    for a in range(len(file_data)-1):
+        for b in range(a+1, len(file_data)):
 
-            if fname_a not in similarity_scores:
-                similarity_scores[fname_a] = {}
-            if fname_b not in similarity_scores[fname_a]:
-                similarity_scores[fname_a][fname_b] = {}
+            if a not in similarity_scores:
+                similarity_scores[a] = {}
+            if b not in similarity_scores[a]:
+                similarity_scores[a][b] = {}
 
             for method_long, method_short in METHOD_NAMES:
                 if method_short in methods_run:
                     try:
-                        suspairs = reorg_sus_pairs[fname_a][fname_b].get(method_long, [])
+                        suspairs = reorg_sus_pairs[a][b].get(method_long, [])
                     except KeyError:
                         suspairs = []
 
                     if method_long == 'Common digit sequence':
                         intersect = sum(s['length'] for s in suspairs)
-                        union = (len(file_data[fname_a]['full_digits']) +
-                            len(file_data[fname_b]['full_digits'])) - intersect
+                        union = (len(file_data[a]['full_digits']) +
+                            len(file_data[b]['full_digits'])) - intersect
                     elif method_long == 'Common text string':
                         intersect = sum(s['length'] for s in suspairs)
-                        union = (len(file_data[fname_a]['full_text']) +
-                            len(file_data[fname_b]['full_text']) - intersect)
+                        union = (len(file_data[a]['full_text']) +
+                            len(file_data[b]['full_text']) - intersect)
                     elif method_long == 'Identical image':
                         intersect = len(suspairs)
-                        union = (len(file_data[fname_a]['full_image_hashes']) +
-                            len(file_data[fname_b]['full_image_hashes']) - intersect)
+                        union = (len(file_data[a]['full_image_hashes']) +
+                            len(file_data[b]['full_image_hashes']) - intersect)
                     if union == 0:
                         jaccard = 'Undefined'
                     else:
                         jaccard = intersect / union
-                    similarity_scores[fname_a][fname_b][method_long] = jaccard
+                    similarity_scores[a][b][method_long] = jaccard
                 else:
-                    similarity_scores[fname_a][fname_b][method_long] = 'Not run'
+                    similarity_scores[a][b][method_long] = 'Not run'
 
     return similarity_scores
 
@@ -452,9 +487,10 @@ def get_similarity_scores(file_data, suspicious_pairs, methods_run):
 def get_version():
     # repo = Repo()
     # ver = repo.git.describe('--always')
-    currdir = os.path.dirname(os.path.realpath(__file__))
-    ver = subprocess.check_output(["git", "describe", "--always"], cwd=currdir).strip()
-    return ver.decode("utf-8")
+    # currdir = os.path.dirname(os.path.realpath(__file__))
+    # ver = subprocess.check_output(["git", "describe", "--always"], cwd=currdir).strip()
+    # return ver.decode("utf-8")
+    return '1.0.0'
 
 
 #-------------------------------------------------------------------------------
@@ -474,77 +510,57 @@ def main(filenames, methods, pretty_print, verbose=False):
     if verbose: print('Reading files...')
     file_data = get_file_data(filenames)
 
-    # Within-file tests:
-    #    - Benford's Law
-    # for file in filenames:
-    #     a = file_data[file.split('/')[-1]]
-    #     for page_num, page_text in a['page_texts']:
-    #         paragraphs = re.split(r'[ \n]{4,}', page_text)
-    #         for paragraph in paragraphs:
-    #             p = benford_test(paragraph)
-    #             if p < 0.05:
-    #                 sus_result = {
-    #                     'type': 'Failed Benford Test',
-    #                     'p_value': p,
-    #                     'pages': [
-    #                         {'filename': a['filename'], 'page': page_num},
-    #                         {'filename': a['filename'], 'page': page_num},
-    #                     ]
-    #                 }
+    for i in range(len(filenames)-1):
+        for j in range(i+1, len(filenames)):
+            # i always less than j
+            a = file_data[i]
+            b = file_data[j]
 
-    # Between-file tests:
-    #     - Duplicate digits
-    #     - Duplicate text
-    #     - Duplicate images (based on hash)
-    for file_a, file_b in combinations(filenames, 2):
-        a = file_data[file_a.split(os.path.sep)[-1]]
-        b = file_data[file_b.split(os.path.sep)[-1]]
+            # Compare numbers
+            if 'digits' in methods:
+                if verbose: print('Comparing digits...')
+                digit_results = compare_texts(
+                    data_a=file_data[i],
+                    data_b=file_data[j],
+                    text_suffix='digits',
+                    min_len=40,
+                    comparison_type_name='Common digit sequence'
+                )
+                suspicious_pairs.extend(digit_results)
 
-        # Compare numbers
-        if 'digits' in methods:
-            if verbose: print('Comparing digits...')
-            digit_results = compare_texts(
-                data_a=a,
-                data_b=b,
-                text_suffix='digits',
-                min_len=40,
-                comparison_type_name='Common digit sequence'
-            )
-            suspicious_pairs.extend(digit_results)
+            # Compare texts
+            if 'text' in methods:
+                if verbose: print('Comparing texts...')
+                text_results = compare_texts(
+                    data_a=a,
+                    data_b=b,
+                    text_suffix='text',
+                    min_len=280,
+                    comparison_type_name='Common text string'
+                )
+                suspicious_pairs.extend(text_results)
 
-        # Compare texts
-        if 'text' in methods:
-            if verbose: print('Comparing texts...')
-            text_results = compare_texts(
-                data_a=a,
-                data_b=b,
-                text_suffix='text',
-                min_len=280,
-                comparison_type_name='Common text string'
-            )
-            suspicious_pairs.extend(text_results)
-
-        # Compare images
-        if 'images' in methods:
-            if verbose: print('Comparing images...')
-            identical_images = compare_images(
-                a['full_image_hashes'],
-                b['full_image_hashes'],
-            )
-            images_are_sus = len(identical_images) > 0
-            if images_are_sus:
-                for img_hash in identical_images:
-                    sus_page_a = find_page_of_sus_image(a['pages_image_hashes'], img_hash)
-                    sus_page_b = find_page_of_sus_image(b['pages_image_hashes'], img_hash)
-                    sus_result = {
-                        'type': 'Identical image',
-                        'image_hash': img_hash,
-                        'pages': [
-                            {'filename': a['filename'], 'page': sus_page_a},
-                            {'filename': b['filename'], 'page': sus_page_b},
-                        ]
-                    }
-                    suspicious_pairs.append(sus_result)
+            # Compare images
+            if 'images' in methods:
+                if verbose: print('Comparing images...')
+                identical_images = compare_images(
+                    a['full_image_hashes'],
+                    b['full_image_hashes'],
+                )
+                images_are_sus = len(identical_images) > 0
+                if images_are_sus:
+                    for img_hash in identical_images:
+                        sus_page_a = find_page_of_sus_image(a['pages_image_hashes'], img_hash)
+                        sus_page_b = find_page_of_sus_image(b['pages_image_hashes'], img_hash)
+                        sus_result = {
+                            'type': 'Identical image',
+                            'image_hash': img_hash,
+                            'pages': [
+                                {'file_index': a['file_index'], 'page': sus_page_a},
+                                {'file_index': b['file_index'], 'page': sus_page_b},
+                            ]
+                        }
+                        suspicious_pairs.append(sus_result)
 
     # Remove duplicate suspicious pairs (this might happen if a page has
     # multiple common substrings with another page)
@@ -568,13 +584,17 @@ def main(filenames, methods, pretty_print, verbose=False):
     if verbose: print('\tResults gathered.')
 
     dt = time.time() - t0
+    if dt == 0:
+        pages_per_second = -1
+    else:
+        pages_per_second = total_page_pairs/dt
 
     result = {
         'files': file_info,
         'suspicious_pairs': suspicious_pairs,
         'num_suspicious_pairs': len(suspicious_pairs),
         'elapsed_time_sec': dt,
-        'pages_per_second': total_page_pairs/dt,
+        'pages_per_second': pages_per_second,
         'similarity_scores': similarity_scores,
         'version': version,
         'time': datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -594,7 +614,6 @@ if __name__ == '__main__':
         '-f',
         '--filenames',
         help='PDF filenames to compare',
-        required=True,
         nargs='+',
     )
     parser.add_argument(
@@ -615,11 +634,38 @@ if __name__ == '__main__':
         help='Print things while running',
         action='store_true'
     )
+    parser.add_argument(
+        '--version',
+        help='Print version',
+        action='store_true'
+    )
     args = parser.parse_args()
 
-    main(
-        filenames=args.filenames,
-        methods=args.methods,
-        pretty_print=args.pretty_print,
-        verbose=args.verbose,
-        )
+    if args.version:
+        print(VERSION)
+    else:
+        import_pacakges()
+        main(
+            filenames=args.filenames,
+            methods=args.methods,
+            pretty_print=args.pretty_print,
+            verbose=args.verbose,
+            )
+
+# Within-file tests:
+#    - Benford's Law
+# for file in filenames:
+#     a = file_data[file.split('/')[-1]]
+#     for page_num, page_text in a['page_texts']:
+#         paragraphs = re.split(r'[ \n]{4,}', page_text)
+#         for paragraph in paragraphs:
+#             p = benford_test(paragraph)
+#             if p < 0.05:
+#                 sus_result = {
+#                     'type': 'Failed Benford Test',
+#                     'p_value': p,
+#                     'pages': [
+#                         {'filename': a['filename'], 'page': page_num},
+#                         {'filename': a['filename'], 'page': page_num},
+#                     ]
+#                 }

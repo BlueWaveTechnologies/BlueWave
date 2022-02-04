@@ -423,7 +423,8 @@ bluewave.chart.utils = {
 
             case "date":
 
-                var timeRange = [new Date(chartData[0][key]),new Date(chartData[chartData.length-1][key])];
+                var timeRange = [ new Date(d3.min(chartData, d=>d[key])), new Date(d3.max(chartData, d=>d[key])) ];
+                
                 chartData.map((val) => {
                     val[key] = new Date(val[key]);
                     return val;
