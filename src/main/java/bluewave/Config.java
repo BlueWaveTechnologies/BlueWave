@@ -270,6 +270,7 @@ public class Config {
         else{
 
             JSONObject json = get(key).toJSONObject();
+            if (json==null) return null;
             bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             neo4j.setHost(json.get("host").toString());
             neo4j.setUsername(json.get("username").toString());
@@ -314,7 +315,7 @@ public class Config {
         }
     }
 
-    
+
   //**************************************************************************
   //** getIndexDir
   //**************************************************************************
@@ -378,7 +379,7 @@ public class Config {
    *  both canonical and relative paths (relative to the configFile).
    */
     public static void updateDir(String key, JSONObject config, javaxt.io.File configFile, boolean create){
-        if (config.has(key)){
+        if (config!=null && config.has(key)){
             String path = config.get(key).toString();
             if (path==null){
                 config.remove(key);
