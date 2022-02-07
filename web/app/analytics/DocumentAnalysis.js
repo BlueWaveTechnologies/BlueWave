@@ -16,6 +16,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
+    var searchPanel;
     var similarityResults, documentSimilarities;
     var windows = [];
     var waitmask;
@@ -547,7 +548,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
     var createSearchPanel = function(){
 
-        var searchPanel;
         var createPanel = function(parent){
 
           //Create document search panel
@@ -694,6 +694,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                 if (arr.length===0){
                     waitmask.hide();
+                    if (searchPanel) searchPanel.update();
                     if (failures.length>0){
                         alert("Failed to upload " + failures);
                     }
