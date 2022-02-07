@@ -100,12 +100,35 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //** createSearchBar
   //**************************************************************************
     var createSearchBar = function(parent){
+
         searchBar = bluewave.utils.createSearchBar(parent);
         searchBar.onChange = function(q){
-            //console.log(q);
+            // console.log(q);
         };
         searchBar.onSearch = function(q){
+            console.log("on search called searchbar")
+            console.log("onchange called in createSearchBAR")
+            console.log(q)
+            console.log(JSON.stringify(q,null,4))
+
+            if (typeof q === 'string'){
+
+                var q = q.split(/"|'/);
+
+                var ignoredSearches = new Set(["", " "]);
+                q = q.filter((queryParam) => {
+                    return !ignoredSearches.has(queryParam)
+                });
+                for (let value in q) q[value] = q[value].trim()
+
+                console.log(JSON.stringify(q,null,4))
+            }
+
             grid.update(q);
+            console.log("grid printout");
+            console.log(grid);
+            console.log(JSON.stringify(grid));
+
         };
         searchBar.onClear = function(){
             grid.update();
@@ -242,7 +265,8 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
             if (q) params.q = q;
             else delete params.q;
-
+            console.log("params.q object")
+            console.log(JSON.stringify(params,null,4))
             grid.clear();
             grid.load();
             grid.setSortIndicator(0, "DESC");
