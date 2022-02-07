@@ -159,7 +159,7 @@ public class DocumentService extends WebService {
 
       //Start compiling response
         StringBuilder str = new StringBuilder();
-        str.append("id,name,type,date,size");
+        str.append("id,name,type,date,size,score,frequency,fragment");
 
 
       //Compile sql statement
