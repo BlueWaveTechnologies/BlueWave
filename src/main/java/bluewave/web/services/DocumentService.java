@@ -149,12 +149,19 @@ public class DocumentService extends WebService {
         if (limit==null || limit<1) limit = 50L;
         String orderBy = request.getParameter("orderby").toString();
         if (orderBy==null) orderBy = "name";
-        String q = null;
-        try {
-            q = URLDecoder.decode(request.getParameter("q").toString(), "utf-8");
-        }catch(Exception e) {
-            q = request.getParameter("q").toString();
+
+
+        String[] terms = request.getRequest().getParameterValues("q");
+        if (terms!=null){
+            for (String t : terms){
+                console.log(t);
+            }
         }
+
+
+
+        String q = null;
+
 
 
       //Start compiling response
@@ -255,7 +262,7 @@ public class DocumentService extends WebService {
         String response = null;
         try {
             response = URLEncoder.encode(str.toString(),  "utf-8");
-        }catch(Exception e) 
+        }catch(Exception e)
         {
             response = str.toString();
         }

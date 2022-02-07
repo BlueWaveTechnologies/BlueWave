@@ -106,10 +106,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             // console.log(q);
         };
         searchBar.onSearch = function(q){
-            console.log("on search called searchbar")
-            console.log("onchange called in createSearchBAR")
-            console.log(q)
-            console.log(JSON.stringify(q,null,4))
 
             if (typeof q === 'string'){
 
@@ -121,13 +117,10 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 });
                 for (let value in q) q[value] = q[value].trim()
 
-                console.log(JSON.stringify(q,null,4))
             }
 
             grid.update(q);
-            console.log("grid printout");
-            console.log(grid);
-            console.log(JSON.stringify(grid));
+
 
         };
         searchBar.onClear = function(){
@@ -205,7 +198,26 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             columns: columnConfig,
             style: config.style.table,
             url: "/documents",
-            params: params,
+            //params: params,
+            getResponse: function(url, payload, callback){
+                if (params.q){
+                    var q = "";
+                    params.q.forEach((t)=>{
+                        q += "&q=" + encodeURIComponent(t);
+                    });
+
+                    if (q.length>0) url+=q;
+                }
+                payload = JSON.stringify(params);
+                javaxt.dhtml.utils.get(url, {
+                    success: function(text, xml, url, request){
+                        callback.apply(me, [request]);
+                    },
+                    failure: function(request){
+                        callback.apply(me, [request]);
+                    }
+                });
+            },
             parseResponse: function(request){
                 var csv = request.responseText;
                 var rows = parseCSV(csv, ",");
@@ -262,11 +274,8 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
         grid.update = function(q){
-
             if (q) params.q = q;
             else delete params.q;
-            console.log("params.q object")
-            console.log(JSON.stringify(params,null,4))
             grid.clear();
             grid.load();
             grid.setSortIndicator(0, "DESC");
