@@ -5,16 +5,21 @@ import static bluewave.utils.Python.*;
 
 import java.util.*;
 import java.io.FileOutputStream;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.ConcurrentHashMap;
-
+import javax.swing.text.html.HTML;
+import org.eclipse.jetty.http.HttpCompliance;
+import org.eclipse.jetty.http.HttpParser;
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
+import javaxt.express.utils.StringUtils;
 import javaxt.sql.*;
 import javaxt.json.*;
 
@@ -144,7 +149,12 @@ public class DocumentService extends WebService {
         if (limit==null || limit<1) limit = 50L;
         String orderBy = request.getParameter("orderby").toString();
         if (orderBy==null) orderBy = "name";
-        String q = request.getParameter("q").toString();
+        String q = null;
+        try {
+            q = URLDecoder.decode(request.getParameter("q").toString(), "utf-8");
+        }catch(Exception e) {
+            q = request.getParameter("q").toString();
+        }
 
 
       //Start compiling response
@@ -220,6 +230,17 @@ public class DocumentService extends WebService {
                 if (md!=null){
                     //TODO: Make csv-safe string of the json and append to str
                     String s = md.toString();
+                    console.log(s);
+                    String score = md.get("score").toString();
+                    str.append(score);
+                    String frequency = md.get("frequency").toString();
+                    str.append(",").append(frequency);
+                    JSONValue fragmentValue = md.get("highlightFragment");
+                    if(!fragmentValue.isNull()) {
+                        String fragment = fragmentValue.toString();
+                        fragment = fragment.replaceAll(",", " ");
+                        str.append(",").append(fragment);
+                    }
                 }
                 rs.moveNext();
             }
@@ -231,7 +252,14 @@ public class DocumentService extends WebService {
             return new ServiceResponse(e);
         }
 
-        return new ServiceResponse(str.toString());
+        String response = null;
+        try {
+            response = URLEncoder.encode(str.toString(),  "utf-8");
+        }catch(Exception e) 
+        {
+            response = str.toString();
+        }
+        return new ServiceResponse(response);
     }
 
     private String getString(Recordset rs){
