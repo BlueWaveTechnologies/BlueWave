@@ -19,6 +19,7 @@ import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexOptions;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexableField;
@@ -30,6 +31,7 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.BoostQuery;
 import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
@@ -39,6 +41,10 @@ import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.QueryScorer;
 import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
+import org.apache.lucene.search.vectorhighlight.FastVectorHighlighter;
+import org.apache.lucene.search.vectorhighlight.FieldQuery;
+import org.apache.lucene.search.vectorhighlight.SimpleFragListBuilder;
+import org.apache.lucene.search.vectorhighlight.SimpleFragmentsBuilder;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.pdfbox.cos.COSDocument;
@@ -66,7 +72,7 @@ public class FileIndex {
     public static final String FIELD_DOCUMENT_ID = "documentID";
     public static final String FIELD_SUBJECT = "subject";
     public static final String FIELD_KEYWORDS = "keywords";
-    public static final int FRAGMENT_CHAR_SIZE = 100;
+    public static final int FRAGMENT_CHAR_SIZE = 650;
     public static final int NUM_HIGHLIGHT_FRAGS_PER_HIT = 1;
 
     public FileIndex(String path) throws Exception {
@@ -86,7 +92,9 @@ public class FileIndex {
         customFieldForVectors.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
         customFieldForVectors.setStored(true);
         customFieldForVectors.setStoreTermVectors(true);
-
+        customFieldForVectors.setStoreTermVectorPayloads(true);
+        customFieldForVectors.setStoreTermVectorOffsets(true);
+        customFieldForVectors.setStoreTermVectorPositions(true);
     }
 
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(String... searchTerms) throws Exception {
@@ -162,50 +170,72 @@ public class FileIndex {
         TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher != null) {
-
-            BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
-            String term = searchTerms.get(0);
-
-            WildcardQuery wildcardQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
-            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(wildcardQuery, 2.0f), BooleanClause.Occur.SHOULD);
-            bqBuilder.add(wildcardBooleanClause);
-
-            bqBuilder.add(new BooleanClause(new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase()),
-                    BooleanClause.Occur.SHOULD));
-
-            bqBuilder.add(new BooleanClause(new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase()),
-                    BooleanClause.Occur.SHOULD));
-
-            bqBuilder.add(new BooleanClause(new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase()),
-                    BooleanClause.Occur.SHOULD));
-
-            BooleanQuery bbq = bqBuilder.build();
-            QueryScorer scorer = new QueryScorer(bbq);
-
-            Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter(), scorer);
-            highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, FRAGMENT_CHAR_SIZE));
-
-            TopDocs hits = searcher.search(bbq, limit);
             List<ResultWrapper>results = new ArrayList<>();
-            ResultWrapper resultWrapper = null;
-            for(ScoreDoc scoreDoc : hits.scoreDocs) {
-                resultWrapper = new ResultWrapper();
-                resultWrapper.scoreDoc = scoreDoc;
-                int docid = scoreDoc.doc;
-                Document doc = searcher.doc(docid);
-                Explanation ex = searcher.explain(bbq, docid);
-                Explanation explanation = ex.getDetails()[0];
-                resultWrapper.frequency = getFrequency(explanation.toString());
-                String fragment = null;
-                for (IndexableField field : doc.getFields()) {
-                    fragment = null;
-                    if((fragment = getHighlights(field, doc, highlighter)) != null) {
-                        // Collect only the first highlight fragment
+            BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
+            for (String term : searchTerms) {
+                
+                WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
+                BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
+                bqBuilder.add(wildcardBooleanClause);
+
+                Query contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+                bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
+
+                Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+                bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.SHOULD));
+
+                Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+                bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
+
+                BooleanQuery bbq = bqBuilder.build();
+                QueryScorer scorer = new QueryScorer(bbq);
+
+                Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter(), scorer);
+                highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, FRAGMENT_CHAR_SIZE));
+
+                TopDocs hits = searcher.search(bbq, limit);
+                console.log("Hits: " + hits.totalHits.value + " search term: " + term);
+                ResultWrapper resultWrapper = null;
+                for(ScoreDoc scoreDoc : hits.scoreDocs) {
+                    resultWrapper = new ResultWrapper();
+                    resultWrapper.scoreDoc = scoreDoc;
+                    int docid = scoreDoc.doc;
+                    Document doc = searcher.doc(docid);
+                    Explanation ex = searcher.explain(bbq, docid);
+                    Explanation explanation = ex.getDetails()[0];
+                    resultWrapper.frequency = getFrequency(explanation.toString());
+                    String fragment = null;
+                    
+                    // Contents 
+                    IndexableField field = doc.getField(FIELD_CONTENTS);
+                    fragment = getVectorHighlight(contentsQuery, searcher.getIndexReader(), docid, FIELD_CONTENTS, term);
+                    if(fragment != null && !fragment.isBlank()) {
                         resultWrapper.highlightFragment = fragment;
-                        break;
                     }
+
+                    // Name 
+                    if(resultWrapper.highlightFragment == null || resultWrapper.highlightFragment.isBlank()) {
+                        field = doc.getField(FIELD_NAME);
+                        fragment = getHighlights(field, doc, highlighter);
+                        resultWrapper.highlightFragment = fragment;
+                    }
+
+                    // Keywords 
+                    if(resultWrapper.highlightFragment == null || resultWrapper.highlightFragment.isBlank()) {
+                        field = doc.getField(FIELD_KEYWORDS);
+                        fragment = getHighlights(field, doc, highlighter);
+                        resultWrapper.highlightFragment = fragment;
+                    }
+
+                    // Subject 
+                    if(resultWrapper.highlightFragment == null || resultWrapper.highlightFragment.isBlank()) {
+                        field = doc.getField(FIELD_SUBJECT);
+                        fragment = getHighlights(field, doc, highlighter);
+                        resultWrapper.highlightFragment = fragment;
+                    }
+
+                    results.add(resultWrapper);
                 }
-                results.add(resultWrapper);
             }
             return results;
         }
@@ -224,6 +254,19 @@ public class FileIndex {
                     return frag;
                 }
             }
+        }catch(Exception e) {
+            console.log("ERROR: " + e);
+        }
+        return null;
+    }
+
+    private String getVectorHighlight(Query query, IndexReader indexReader, int docId, String fieldName, String searchTerm ) {
+        String[] PRE_TAGS = new String[]{"<b>"};
+        String[] POST_TAGS = new String[]{"</b>"};
+        FastVectorHighlighter fastVectorHighlighter = new FastVectorHighlighter(true, true,new SimpleFragListBuilder(200), new SimpleFragmentsBuilder(PRE_TAGS, POST_TAGS) );
+        try {
+            FieldQuery fieldQuery = fastVectorHighlighter.getFieldQuery(new QueryParser(fieldName, perFieldAnalyzerWrapper).parse(QueryParser.escape(searchTerm).toLowerCase()), indexReader);
+            return fastVectorHighlighter.getBestFragment(fieldQuery, indexReader, docId, fieldName, FRAGMENT_CHAR_SIZE);
         }catch(Exception e) {
             console.log("ERROR: " + e);
         }
@@ -291,7 +334,7 @@ public class FileIndex {
   //**************************************************************************
   /** Used to add a bluewave document, backed by a file to the index
    */
-    public void addDocument(bluewave.app.Document d, javaxt.io.File file) throws Exception {
+    public synchronized void addDocument(bluewave.app.Document d, javaxt.io.File file) throws Exception {
         if (hasFile(file)) return;
 
         // make a new, empty document
@@ -338,7 +381,6 @@ public class FileIndex {
             String text = stripper.getText(pdDocument);
             cd.close();
             doc.add(new Field(FIELD_CONTENTS, text, customFieldForVectors));
-            // doc.add(new TextField(FIELD_CONTENTS, text, Store.YES));
         }
         else {
 
@@ -352,22 +394,30 @@ public class FileIndex {
                 doc.add(new TextField(FIELD_CONTENTS, file.getBufferedReader()));
             }
         }
-
-        IndexWriter writer = instanceOfIndexWriter();
-        if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
-            // New index, so we just add the document (no old document can be there):
-            console.log("adding " + file);
-            writer.addDocument(doc);
-        } else {
-            // Existing index (an old copy of this document may have been indexed) so
-            // we use updateDocument instead to replace the old one matching the exact
-            // path, if present:
-            console.log("updating " + file);
-            writer.updateDocument(new Term(FIELD_PATH, file.toString()), doc);
+        IndexWriter writer = null;
+        try {
+            writer = instanceOfIndexWriter();
+            if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
+                // New index, so we just add the document (no old document can be there):
+                console.log("adding " + file);
+                writer.addDocument(doc);
+            } else {
+                // Existing index (an old copy of this document may have been indexed) so
+                // we use updateDocument instead to replace the old one matching the exact
+                // path, if present:
+                console.log("updating " + file);
+                writer.updateDocument(new Term(FIELD_PATH, file.toString()), doc);
+            }
+            writer.flush();
+        }catch(Exception e) {
+            console.log("Error Adding doc: "+ e);
+        } finally {
+            if(writer != null && writer.isOpen()) {
+                try {
+                    writer.commit();
+                }catch(Exception ex) {}
+            }
         }
-        writer.commit();
-
-
         // NOTE: if you want to maximize search performance,
         // you can optionally call forceMerge here. This can be
         // a terribly costly operation, so generally it's only
