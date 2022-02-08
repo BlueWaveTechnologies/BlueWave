@@ -105,6 +105,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         searchBar.onChange = function(q){
             // console.log(q);
         };
+
         searchBar.onSearch = function(q){
 
             if (typeof q === 'string'){
@@ -113,15 +114,13 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
                 var ignoredSearches = new Set(["", " "]);
                 q = q.filter((queryParam) => {
-                    return !ignoredSearches.has(queryParam)
+                    return !ignoredSearches.has(queryParam);
                 });
-                for (let value in q) q[value] = q[value].trim()
+                for (let value in q) q[value] = q[value].trim();
 
             }
 
             grid.update(q);
-
-
         };
         searchBar.onClear = function(){
             grid.update();
@@ -177,7 +176,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //** createGrid
   //**************************************************************************
     var createGrid = function(parent){
-
         var df = d3.timeFormat(getDateFormat(config.dateFormat));
         var columnConfig = [
             {header: 'Name', width:'100%', field: 'name', sortable: true},
@@ -200,6 +198,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             url: "/documents",
             params: params,
             parseResponse: function(request){
+                console.log("parsing response from java")
                 var csv = request.responseText;
                 var rows = parseCSV(csv, ",");
                 var header = rows.shift();
@@ -232,8 +231,33 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 if (searchMetadata){
                     console.log(searchMetadata);
                 }
+                var recordDiv = document.createElement("div");
+                var recordNameSpan = document.createElement("span");
+                var metadataSpan = document.createElement("span");
 
-                row.set("Name", record.name);
+                recordDiv.appendChild(recordNameSpan);
+                recordDiv.appendChild(metadataSpan);
+
+                console.log("search metadata is currently");
+                console.log(JSON.stringify( searchMetadata, null, 4 ));
+
+
+                var metadataString = "this was a search term found in the entire thing, and another term is document";// example, sample set
+                Terms = []// sample search terms
+                Terms[0] = "search term found"; // example, sample set
+                Terms[1] = "document";// example, sample set - multiple search terms
+                for (Term in Terms) metadataString = metadataString.replaceAll(Terms[Term], `<strong>${Terms[Term]}</strong>`);
+
+                recordNameSpan.innerHTML = record.name;
+
+                metadataSpan.innerHTML = metadataString;
+                metadataSpan.style.color = "#777";
+                metadataSpan.style.fontSize = "11px";
+                metadataSpan.style.fontStyle = "italic";
+                metadataSpan.style.paddingLeft = "30px";
+
+                row.set("Name", recordDiv);
+                // row.set("Name", record.name);
 
                 var d = Date.parse(record.date);
                 if (!isNaN(d)){
