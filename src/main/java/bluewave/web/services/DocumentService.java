@@ -5,21 +5,15 @@ import static bluewave.utils.Python.*;
 
 import java.util.*;
 import java.io.FileOutputStream;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.swing.text.html.HTML;
-import org.eclipse.jetty.http.HttpCompliance;
-import org.eclipse.jetty.http.HttpParser;
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
-import javaxt.express.utils.StringUtils;
 import javaxt.sql.*;
 import javaxt.json.*;
 
@@ -149,24 +143,12 @@ public class DocumentService extends WebService {
         if (limit==null || limit<1) limit = 50L;
         String orderBy = request.getParameter("orderby").toString();
         if (orderBy==null) orderBy = "name";
-
-
-        String[] terms = request.getRequest().getParameterValues("q");
-        if (terms!=null){
-            for (String t : terms){
-                console.log(t);
-            }
-        }
-
-
-
-        String q = null;
-
+        String[] q = request.getRequest().getParameterValues("q");
 
 
       //Start compiling response
         StringBuilder str = new StringBuilder();
-        str.append("id,name,type,date,size,score,frequency,fragment");
+        str.append("id,name,type,date,size");
 
 
       //Compile sql statement
@@ -179,7 +161,8 @@ public class DocumentService extends WebService {
             try{
 
                 List<String> searchTerms = new ArrayList<>();
-                searchTerms.add(q);
+                for (String s : q) searchTerms.add(s);
+
 
                 TreeMap<Float, ArrayList<bluewave.app.Document>> results =
                     index.findDocuments(searchTerms, Math.toIntExact(limit));
@@ -235,19 +218,9 @@ public class DocumentService extends WebService {
                 if (!searchMetadata.isEmpty()) str.append(",");
                 JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
                 if (md!=null){
-                    //TODO: Make csv-safe string of the json and append to str
+                  //Create csv-safe string of the json and append to str
                     String s = md.toString();
-                    console.log(s);
-                    String score = md.get("score").toString();
-                    str.append(score);
-                    String frequency = md.get("frequency").toString();
-                    str.append(",").append(frequency);
-                    JSONValue fragmentValue = md.get("highlightFragment");
-                    if(!fragmentValue.isNull()) {
-                        String fragment = fragmentValue.toString();
-                        fragment = fragment.replaceAll(",", " ");
-                        str.append(",").append(fragment);
-                    }
+                    str.append(java.net.URLEncoder.encode(s, "UTF-8"));
                 }
                 rs.moveNext();
             }
@@ -259,14 +232,7 @@ public class DocumentService extends WebService {
             return new ServiceResponse(e);
         }
 
-        String response = null;
-        try {
-            response = URLEncoder.encode(str.toString(),  "utf-8");
-        }catch(Exception e)
-        {
-            response = str.toString();
-        }
-        return new ServiceResponse(response);
+        return new ServiceResponse(str.toString());
     }
 
     private String getString(Recordset rs){

@@ -229,6 +229,9 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                         if (field=="id" || field=="size"){
                             v = parseFloat(v);
                         }
+                        else if (field=="info"){
+                            if (v) v = JSON.parse(decodeURIComponent(v));
+                        }
                         r[field] = v;
                     });
                     return r;
@@ -243,6 +246,12 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             },
             update: function(row, record){
                 if (config.showCheckboxes===true) row.set("x", record.id);
+
+                var searchMetadata = record.info;
+                if (searchMetadata){
+                    console.log(searchMetadata);
+                }
+
                 row.set("Name", record.name);
 
                 var d = Date.parse(record.date);
