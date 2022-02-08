@@ -198,7 +198,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             url: "/documents",
             params: params,
             parseResponse: function(request){
-                console.log("parsing response from java")
                 var csv = request.responseText;
                 var rows = parseCSV(csv, ",");
                 var header = rows.shift();
@@ -229,54 +228,50 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
                 var searchMetadata = record.info;
                 if (searchMetadata){
-                    console.log(searchMetadata);
+
+                    var recordDiv = document.createElement("div");
+                    var recordNameSpan = document.createElement("span");
+                    var metadataSpan = document.createElement("span");
+
+                    recordDiv.appendChild(recordNameSpan);
+                    recordDiv.appendChild(metadataSpan);
+
+                    var metadataString = searchMetadata.highlightFragment;
+
+                    var terms = []// sample search terms
+                    terms[0] = "search term found"; // example, sample set
+                    terms[1] = "document";// example, sample set - multiple search terms
+
+                    var replaceInsensitive = function(string, matchedTerm, replaceWith) {
+
+                        var strLower = string.toLowerCase();
+                        var findLower = String(matchedTerm).toLowerCase();
+                        var strTemp = string.toString();
+
+                        var pos = strLower.length;
+                        while((pos = strLower.lastIndexOf(findLower, pos)) != -1){
+                            strTemp = strTemp.substr(0, pos) + replaceWith + strTemp.substr(pos + findLower.length);
+                            pos--;
+                        }
+                        return strTemp;
+
+                    };
+
+                    for (var term in terms) metadataString = replaceInsensitive(metadataString, terms[term], `<strong>${terms[term]}</strong>` );
+
+                    recordNameSpan.innerHTML = record.name;
+
+                    metadataSpan.innerHTML = metadataString;
+                    metadataSpan.style.color = "#777";
+                    metadataSpan.style.fontSize = "11px";
+                    metadataSpan.style.fontStyle = "italic";
+                    metadataSpan.style.paddingLeft = "30px";
+
+                    row.set("Name", recordDiv);
                 }
-                var recordDiv = document.createElement("div");
-                var recordNameSpan = document.createElement("span");
-                var metadataSpan = document.createElement("span");
-
-                recordDiv.appendChild(recordNameSpan);
-                recordDiv.appendChild(metadataSpan);
-
-                console.log("search metadata is currently");
-                console.log(JSON.stringify( searchMetadata, null, 4 ));
-
-
-                var metadataString = "this was a search term found in the entire thing, document and another term is Document ";// example, sample set
-                var longString = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."; // testing overflow
-
-                metadataString = metadataString + longString; // make metadataString very long to test overflow
-                terms = []// sample search terms
-                terms[0] = "search term found"; // example, sample set
-                terms[1] = "document";// example, sample set - multiple search terms
-
-                var replaceInsensitive = function(string, matchedTerm, replaceWith) {
-
-                    var strLower = string.toLowerCase();
-                    var findLower = String(matchedTerm).toLowerCase();
-                    var strTemp = string.toString();
-
-                    var pos = strLower.length;
-                    while((pos = strLower.lastIndexOf(findLower, pos)) != -1){
-                        strTemp = strTemp.substr(0, pos) + replaceWith + strTemp.substr(pos + findLower.length);
-                        pos--;
-                    }
-                    return strTemp;
-
-                };
-
-                for (term in terms) metadataString = replaceInsensitive(metadataString, terms[term], `<strong>${terms[term]}</strong>` );
-
-                recordNameSpan.innerHTML = record.name;
-
-                metadataSpan.innerHTML = metadataString;
-                metadataSpan.style.color = "#777";
-                metadataSpan.style.fontSize = "11px";
-                metadataSpan.style.fontStyle = "italic";
-                metadataSpan.style.paddingLeft = "30px";
-
-                row.set("Name", recordDiv);
-                // row.set("Name", record.name);
+                else{
+                    row.set("Name", record.name);
+                }
 
                 var d = Date.parse(record.date);
                 if (!isNaN(d)){
