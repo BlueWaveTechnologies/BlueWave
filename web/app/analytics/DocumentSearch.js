@@ -198,26 +198,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             columns: columnConfig,
             style: config.style.table,
             url: "/documents",
-            //params: params,
-            getResponse: function(url, payload, callback){
-                if (params.q){
-                    var q = "";
-                    params.q.forEach((t)=>{
-                        q += "&q=" + encodeURIComponent(t);
-                    });
-
-                    if (q.length>0) url+=q;
-                }
-                payload = JSON.stringify(params);
-                javaxt.dhtml.utils.get(url, {
-                    success: function(text, xml, url, request){
-                        callback.apply(me, [request]);
-                    },
-                    failure: function(request){
-                        callback.apply(me, [request]);
-                    }
-                });
-            },
+            params: params,
             parseResponse: function(request){
                 var csv = request.responseText;
                 var rows = parseCSV(csv, ",");
