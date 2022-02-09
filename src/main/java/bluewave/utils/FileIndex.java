@@ -6,7 +6,9 @@ import java.nio.file.Paths;
 import static javaxt.utils.Console.console;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.shingle.ShingleAnalyzerWrapper;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -82,7 +84,7 @@ public class FileIndex {
 
     public FileIndex(javaxt.io.Directory path) throws Exception {
         dir = FSDirectory.open(Paths.get(path.toString()));
-        Analyzer standardAnalyzer = new StandardAnalyzer();
+        StandardAnalyzer standardAnalyzer = new StandardAnalyzer(getStopWords());
         ShingleAnalyzerWrapper shingleAnalyzerWrapper = new ShingleAnalyzerWrapper(standardAnalyzer, 2, 3);
         Map<String,Analyzer> analyzerPerFieldMap = new HashMap<>();
         analyzerPerFieldMap.put(FIELD_CONTENTS, shingleAnalyzerWrapper);
@@ -510,4 +512,24 @@ public class FileIndex {
         String highlightFragment;
     }
 
+    private CharArraySet getStopWords() {
+        List<String>stopWords = new ArrayList<>(); 
+        Iterator it = EnglishAnalyzer.ENGLISH_STOP_WORDS_SET.iterator();
+        while(it.hasNext()) {
+            char[] chars = (char[]) it.next();
+            stopWords.add(new String(chars));       
+        }
+
+        /**
+         * Add more words to the list here
+         * stopWords.add("someword")
+         */
+
+
+        // console.log("STOP WORD LIST");   
+        // for(String str: stopWords) 
+        //     console.log(str); 
+
+        return new CharArraySet(stopWords, false);
+    }
 }
