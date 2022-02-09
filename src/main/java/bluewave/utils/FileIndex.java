@@ -6,7 +6,9 @@ import java.nio.file.Paths;
 import static javaxt.utils.Console.console;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.shingle.ShingleAnalyzerWrapper;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -63,7 +65,8 @@ public class FileIndex {
     private IndexWriter _indexWriter;
     private IndexSearcher _indexSearcher;
     private PerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
-    FieldType customFieldForVectors = null;
+    private FieldType customFieldForVectors = null;
+    private DirectoryReader directoryReader = null;
 
     public static final String FIELD_NAME = "name";
     public static final String FIELD_CONTENTS = "contents";
@@ -81,7 +84,7 @@ public class FileIndex {
 
     public FileIndex(javaxt.io.Directory path) throws Exception {
         dir = FSDirectory.open(Paths.get(path.toString()));
-        Analyzer standardAnalyzer = new StandardAnalyzer();
+        StandardAnalyzer standardAnalyzer = new StandardAnalyzer(getStopWords());
         ShingleAnalyzerWrapper shingleAnalyzerWrapper = new ShingleAnalyzerWrapper(standardAnalyzer, 2, 3);
         Map<String,Analyzer> analyzerPerFieldMap = new HashMap<>();
         analyzerPerFieldMap.put(FIELD_CONTENTS, shingleAnalyzerWrapper);
@@ -314,7 +317,26 @@ public class FileIndex {
         synchronized (smonitor) {
             if (_indexSearcher == null) {
                 try {
-                    _indexSearcher = new IndexSearcher(DirectoryReader.open(dir));
+                    directoryReader = DirectoryReader.open(dir);
+                    _indexSearcher = new IndexSearcher(directoryReader);
+                } catch (Exception e) {
+                    console.log("ERROR: " + e);
+                }
+            } else {
+                try {
+                    DirectoryReader directoryReaderTemp = DirectoryReader.openIfChanged(directoryReader);
+                    if(directoryReaderTemp != null) {
+                        IndexSearcher indexSearcherTemp = new IndexSearcher(directoryReaderTemp);
+                        try {
+                            if(directoryReader != null) {
+                                directoryReader.close();
+                            }
+                        } catch(Exception e) {
+                            console.log("ERROR: " + e);
+                        }
+                        directoryReader = directoryReaderTemp;
+                        _indexSearcher = indexSearcherTemp;
+                    }
                 } catch (Exception e) {
                     console.log("ERROR: " + e);
                 }
@@ -484,22 +506,30 @@ public class FileIndex {
         return false;
     }
 
-    public void commit() {
-        try {
-            if(_indexWriter != null) {
-                _indexWriter.flush();
-                _indexWriter.prepareCommit();
-                _indexWriter.commit();
-            }
-        }catch(Exception e) {
-            console.log("commit: " + e);
-        }
-    }
-
     private class ResultWrapper {
         ScoreDoc scoreDoc;
         Float frequency;
         String highlightFragment;
     }
 
+    private CharArraySet getStopWords() {
+        List<String>stopWords = new ArrayList<>(); 
+        Iterator it = EnglishAnalyzer.ENGLISH_STOP_WORDS_SET.iterator();
+        while(it.hasNext()) {
+            char[] chars = (char[]) it.next();
+            stopWords.add(new String(chars));       
+        }
+
+        /**
+         * Add more words to the list here
+         * stopWords.add("someword")
+         */
+
+
+        // console.log("STOP WORD LIST");   
+        // for(String str: stopWords) 
+        //     console.log(str); 
+
+        return new CharArraySet(stopWords, false);
+    }
 }
