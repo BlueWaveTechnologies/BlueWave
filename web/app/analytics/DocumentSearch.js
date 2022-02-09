@@ -227,20 +227,22 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 if (config.showCheckboxes===true) row.set("x", record.id);
 
                 var searchMetadata = record.info;
-                if (searchMetadata){
+                if (searchMetadata && searchMetadata.highlightFragment){
 
                     var recordDiv = document.createElement("div");
-                    var recordNameSpan = document.createElement("span");
+                    var recordNameSpan = document.createElement("div");
+                    recordNameSpan.className = "document-search-result";
+                    recordNameSpan.innerHTML = record.name;
+
+
                     var metadataSpan = document.createElement("span");
+                    metadataSpan.className = "document-search-fragment";
 
                     recordDiv.appendChild(recordNameSpan);
                     recordDiv.appendChild(metadataSpan);
 
                     var metadataString = searchMetadata.highlightFragment;
-
-                    var terms = []// sample search terms
-                    terms[0] = "search term found"; // example, sample set
-                    terms[1] = "document";// example, sample set - multiple search terms
+                    var terms = params.q;
 
                     var replaceInsensitive = function(string, matchedTerm, replaceWith) {
 
@@ -259,13 +261,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
                     for (var term in terms) metadataString = replaceInsensitive(metadataString, terms[term], `<strong>${terms[term]}</strong>` );
 
-                    recordNameSpan.innerHTML = record.name;
-
                     metadataSpan.innerHTML = metadataString;
-                    metadataSpan.style.color = "#777";
-                    metadataSpan.style.fontSize = "11px";
-                    metadataSpan.style.fontStyle = "italic";
-                    metadataSpan.style.paddingLeft = "30px";
 
                     row.set("Name", recordDiv);
                 }
