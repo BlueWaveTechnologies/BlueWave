@@ -11,6 +11,7 @@ if(!bluewave.analytics) bluewave.analytics={};
  ******************************************************************************/
 
 bluewave.analytics.DocumentAnalysis = function(parent, config) {
+    parent.id = "thisDocAnalysisID";
 
     var me = this;
     var panels = [];
@@ -28,6 +29,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         }
     };
 
+    //Button components
+        var mainButton;
 
   //**************************************************************************
   //** Constructor
@@ -58,6 +61,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         tbody.appendChild(tr);
         td = document.createElement("td");
         tr.appendChild(td);
+        tr.id = "idOfHeader"
         createHeader(td);
 
         tr = document.createElement("tr");
@@ -66,7 +70,17 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         td.style.height = "100%";
         td.style.padding = "0px";
         tr.appendChild(td);
+        tr.id = "idOfAllSearchPanel"
         createBody(td);
+
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.padding = "0px";
+        tr.appendChild(td);
+        tr.id = "idOfButtonsPanel"
+        createButtonPanel(td);
 
         parent.appendChild(table);
         me.el = table;
@@ -224,6 +238,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             panels.every((panel)=>{
                 if (panel.isSelected()){
                     panel.update(currPanel);
+                    UpdateButtons();
                     return false;
                 }
                 return true;
@@ -236,7 +251,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** createPanel
   //**************************************************************************
     var createPanel = function(label, _createPanel){
-
 
         var div = document.createElement("div");
         div.style.width = "100%";
@@ -344,6 +358,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         panel.select = function(){
             li.select();
+            UpdateButtons();
         };
         panel.isSelected = function(){
             return li.selected;
@@ -357,7 +372,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** createResultsPanel
   //**************************************************************************
     var createResultsPanel = function(){
-
 
       //Create toolbar and grid panel
         var grid, button = {};
@@ -547,7 +561,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
     var createSearchPanel = function(){
 
+
         var searchPanel;
+
+
         var createPanel = function(parent){
 
           //Create document search panel
@@ -565,53 +582,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
           //Watch for row click events
             grid.onRowClick = function(row, e){
                 if (e.detail === 2) { //double click
-
-                    var o = row.get("Name");
-                    if (!o.select){
-                        var div = document.createElement("div");
-                        div.className = "document-analysis-selected-row";
-                        div.select = function(){
-                            div.style.left = "0px";
-                        };
-                        div.deselect = function(){
-                            div.style.left = "-34px";
-                        };
-                        div.deselect();
-
-                        var check = document.createElement("div");
-                        check.className = "fas fa-check-square";
-                        div.appendChild(check);
-
-                        var span = document.createElement("span");
-                        if ( //is element?
-                            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
-                            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
-                        ) span.appendChild(o);
-                        else span.innerText = o;
-                        div.appendChild(span);
-
-                        row.set("Name", div);
-                        o = div;
-                    }
-
-
-                  //Add or remove document from the selectedDocuments store
-                    var addDocument = true;
-                    var r = row.record;
-                    selectedDocuments.forEach((d, i)=>{
-                        if (d.id===r.id){
-                            selectedDocuments.removeAt(i);
-                            addDocument = false;
-                            return true;
-                        }
-                    });
-                    if (addDocument){
-                        selectedDocuments.add(r);
-                        o.select();
-                    }
-                    else{
-                        o.deselect();
-                    }
+                    selectRow(row);
                 }
             };
 
@@ -659,6 +630,60 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy
     };
 
+
+  //**************************************************************************
+  //** selectRow
+  //**************************************************************************
+  /** Selects the row from Document Search panel and adds it to the Selected Documents panel
+   */
+    var selectRow= function(row){
+        var o = row.get("Name");
+        if (!o.select){
+            var div = document.createElement("div");
+            div.className = "document-analysis-selected-row";
+            div.select = function(){
+                div.style.left = "0px";
+            };
+            div.deselect = function(){
+                div.style.left = "-34px";
+            };
+            div.deselect();
+
+            var check = document.createElement("div");
+            check.className = "fas fa-check-square";
+            div.appendChild(check);
+
+            var span = document.createElement("span");
+            if ( //is element?
+                typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+                o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
+            ) span.appendChild(o);
+            else span.innerText = o;
+            div.appendChild(span);
+
+            row.set("Name", div);
+            o = div;
+        }
+
+
+        //Add or remove document from the selectedDocuments store
+        var addDocument = true;
+        var r = row.record;
+        selectedDocuments.forEach((d, i)=>{
+            if (d.id===r.id){
+                selectedDocuments.removeAt(i);
+                addDocument = false;
+                return true;
+            }
+        });
+        if (addDocument){
+            selectedDocuments.add(r);
+            o.select();
+        }
+        else{
+            o.deselect();
+        }
+    }
 
   //**************************************************************************
   //** onDrop
@@ -998,6 +1023,139 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         var win = new javaxt.dhtml.Window(document.body, config);
         windows.push(win);
         return win;
+    };
+
+  //**************************************************************************
+  //** createButtonPanel
+  //**************************************************************************
+    var createButtonPanel = function(parent){
+
+
+        var table = createTable();
+        var tbody = table.firstChild;
+        parent.appendChild(table);
+        var tr = document.createElement("tr");
+        tr.className = "table-header";
+        tbody.appendChild(tr);
+        var td;
+
+        td = document.createElement("td");
+        td.style.width = "100%";
+        td.style.position= "relative";
+        tr.appendChild(td);
+        createButtons(td);
+
+
+
+    }
+  //**************************************************************************
+  //** createButtons
+  //**************************************************************************
+    var createButtons = function(parent){
+
+        mainButton = {};
+
+        var buttonsDiv = document.createElement("div");
+        buttonsDiv.style.width = "100%";
+        buttonsDiv.style.position = "relative";
+        buttonsDiv.style.marginBottom = "30px";
+        parent.appendChild(buttonsDiv);
+
+
+        var rightSideButtons = document.createElement("div");
+        rightSideButtons.style.right = "0px";
+        rightSideButtons.style.position = "absolute";
+
+        buttonsDiv.appendChild(rightSideButtons);
+
+        var leftSideButtons = document.createElement("div");
+        leftSideButtons.style.left = "0px";
+        leftSideButtons.style.position = "absolute";
+
+        buttonsDiv.appendChild(leftSideButtons);
+
+        //Add next button
+        mainButton["next"] = createButton(rightSideButtons, {
+            label: "Next",
+            // icon: "fas fa-play"
+        });
+        mainButton["next"].onClick = function(){
+            for (i in panels){
+                if (panels[i].name == "Selected Documents") panels[i].select()
+            }
+        };
+
+
+        createSpacer(rightSideButtons);
+
+        // Add back button
+            mainButton["back"] = createButton(rightSideButtons, {
+                label: "Back",
+                // icon: "fas fa-back"
+            });
+            mainButton["back"].onClick = function(){
+                for (i in panels){
+                    if (panels[i].name == "Document Search") panels[i].select()
+                }
+            };
+
+
+
+        //Add selectAll button
+        mainButton["selectAll"] = createButton(leftSideButtons, {
+            label: "Select All",
+            // icon: "fas fa-times"
+        });
+        mainButton["selectAll"].setText = function(text){
+            this.el.getElementsByClassName("toolbar-button-label")[0].innerText = text;
+        };
+        mainButton["selectAll"].onClick = function(){
+
+            function isElement(element) {
+                return element instanceof Element || element instanceof HTMLDocument;
+            };
+
+            var rows = document.getElementsByClassName("table-row");
+            console.log(rows);
+            for (row in rows){
+                if (isElement(rows[row])){
+                    selectRow(rows[row]);
+                };
+            };
+
+            if (this.getText() == "Select All") this.setText("Deselect All");
+            else this.setText("Select All");
+        };
+        mainButton["back"].disable();
+        mainButton["next"].disable();
+        mainButton["selectAll"].disable();
+        UpdateButtons();
+    };
+
+
+
+  //**************************************************************************
+  //** UpdateButtons
+  //**************************************************************************
+    var UpdateButtons = function(){
+        var selectedPanel;
+
+        for (panel in panels){
+            if (panels[panel].isSelected()) selectedPanel = panels[panel].name;
+        }
+
+        if (mainButton){ // if Button panel Buttons have been initialized
+            if (selectedPanel == "Document Search") {
+                mainButton["back"].disable();
+                mainButton["next"].enable();
+                mainButton["selectAll"].enable();
+            }
+            else if (selectedPanel == "Selected Documents") {
+                mainButton["back"].enable();
+                mainButton["next"].disable();
+                mainButton["selectAll"].disable();
+            };
+        };
     };
 
 
