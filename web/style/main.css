@@ -1180,6 +1180,22 @@ li.tree-node:hover {
     width: 34px;
 }
 
+/**************************************************************************/
+/** Document Search
+/**************************************************************************/
+
+.document-search-result {
+    height: 8px;
+    line-height: 19px;
+}
+
+.document-search-fragment {
+    color: #e9a07d;
+    font-size: 11px;
+    font-style: italic;
+    padding-left: 0px;
+}
+
 
 /**************************************************************************/
 /** Admin Panel
