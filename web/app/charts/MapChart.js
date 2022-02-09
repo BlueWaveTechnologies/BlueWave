@@ -18,7 +18,7 @@ bluewave.charts.MapChart = function(parent, config) {
     };
     var svg, mapArea; //d3 elements
     var projection, scale, translate, rotate, center;
-    var readOnly;
+    var panningDisabled = false;
     var layers = [];
     var extent = {};
     var projectionType = "Mercator";
@@ -36,7 +36,7 @@ bluewave.charts.MapChart = function(parent, config) {
         });
 
 
-        readOnly = false;
+        panningDisabled = false;
 
       //Watch for panning and zooming events
         svg.call(
@@ -63,14 +63,14 @@ bluewave.charts.MapChart = function(parent, config) {
         return projection;
     };
 
+
   //**************************************************************************
   //** setProjection
   //**************************************************************************
-
     this.setProjection = function(name){
-      projectionType = name;
-      projection = d3["geo"+name]();
-  };
+        projectionType = name;
+        projection = d3["geo"+name]();
+    };
 
 
   //**************************************************************************
@@ -90,10 +90,18 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** setReadOnly
+  //** enablePan
   //**************************************************************************
-    this.setReadOnly = function(readonly){
-        readOnly = (readonly===false) ? false : true;
+    this.enablePan = function(){
+        panningDisabled = false;
+    };
+
+
+  //**************************************************************************
+  //** disablePan
+  //**************************************************************************
+    this.disablePan = function(){
+        panningDisabled = true;
     };
 
 
@@ -146,28 +154,16 @@ bluewave.charts.MapChart = function(parent, config) {
     var update = function(parent){
         clearChart();
 
-        var chartConfig = config;
 
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
 
+        var centerLat = parseFloat(config.lat);
+        var centerLon = parseFloat(config.lon);
+        if (isNaN(centerLat)) centerLat = 0;
+        if (isNaN(centerLon)) centerLon = 0;
 
-        var centerLon, centerLat;
-        if (chartConfig.lat && chartConfig.lon){
-            centerLon = parseFloat(chartConfig.lon);
-            centerLat = parseFloat(chartConfig.lat);
-        }
-        else{
-            if (chartConfig.mapType === "Links"){
-                centerLon = -180;
-                centerLat = 39.5;
-            }
-            else{
-                centerLon = -98.5;
-                centerLat = 39.5;
-            }
-        }
 
         if (!projection) me.setProjection("Mercator");
 
@@ -208,20 +204,26 @@ bluewave.charts.MapChart = function(parent, config) {
 
         layers.forEach(function(layer, i){
 
+            if (!layer.config) layer.config = {};
+
+
             var name = layer.config.name;
             if (!name) name = "layer"+i;
+
             var style = layer.config.style;
+            if (!style) style = {};
 
             var opacity = style.opacity;
             if (!opacity) opacity = 1.0;
 
-            var color = style.fill;
-            if(!color) color = "red";
-
             var g = mapArea.append("g");
             g.attr("name", name);
 
-            if (layer.type == "polygons"){
+
+            if (layer.type === "polygons"){
+
+                var color = style.fill;
+                if(!color) color = "red";
 
                 g.selectAll("polys")
                     .data(layer.features)
@@ -236,21 +238,25 @@ bluewave.charts.MapChart = function(parent, config) {
                     })
                     .attr('stroke', 'white');
 
-                } else
-            if (layer.type == "points"){
+            }
+            else if (layer.type === "points"){
 
-                  var radius = parseInt(style.radius);
-                  if (isNaN(radius)) radius = 3;
-                  if (radius < 0) radius = 1;
+                var color = style.fill;
+                if(!color) color = "red";
 
-                  g.selectAll("points")
+                var radius = parseInt(style.radius);
+                if (isNaN(radius)) radius = 3;
+                if (radius < 0) radius = 1;
+                g.selectAll("points")
                     .data(layer.features)
                     .enter()
                     .append("circle")
                     .attr("r", radius)
-                    .attr("class", name)
+                    //.attr("class", config.className)
                     .attr("transform", function (d) {
-                      return "translate(" + projection(d) + ")";
+                        var coords = getCoordinates(d);
+                        if (coords) coords = projection(coords);
+                        return coords ? "translate(" + coords + ")" : "";
                     })
                     .attr("opacity", opacity)
                     .style("fill", color)
@@ -258,42 +264,64 @@ bluewave.charts.MapChart = function(parent, config) {
                     // .attr("stroke-width", radius/5)
                     .attr("stroke-width", 2)
                     .attr("stroke-opacity", opacity);
+            }
+            else if (layer.type === "labels"){
 
-                  //Add labels
-                  var labelGroup = mapArea.append("g");
+                var fontSize = parseFloat(style.fontSize);
+                if (isNaN(fontSize)) fontSize = 12;
 
-                  labelGroup.append("g")
-                    .selectAll("text")
+                var color = style.color;
+                if (!color) color = style.fill;
+                if (!color) color = "#000";
+
+                var textAlign = style.textAlign;
+                if (!textAlign) textAlign = "left";
+
+
+                g.selectAll("text")
                     .data(layer.features)
                     .enter()
                     .append("text")
                     .attr("transform", function (d) {
-                      return `translate(  ${projection(d)[0]+radius}, ${projection(d)[1]}  )`;
+                        var coords = getCoordinates(d);
+                        if (coords) coords = projection(coords);
+                        var x = coords[0];
+                        var y = coords[1];
+                        return coords ? `translate(  ${x}, ${y}  )` : "";
                     })
-                    .attr("font-size", 20)
-                    .attr("font-weight", 900)
+                    .attr("font-size", fontSize)
+                    .attr("text-anchor", ()=>{
+                        if (textAlign=="center") return "middle";
+                        return textAlign;
+                    })
+                    //.attr("font-weight", 900)
                     .style("fill", color)
-                    .style("stroke", "white")
-                    .style("stroke-width", 1)
-                    .text(name)
+                    //.style("stroke", color)
+                    //.style("stroke-width", 1)
+                    .text((d)=>{
+                        if (d.properties && layer.config.label){
+                            return d.properties[layer.config.label];
+                        }
+                        else{
+                            return "";
+                        }
+                    });
+            }
+            else if (layer.type === "lines"){
 
+                var width = parseInt(style.width);
+                if (isNaN(width)) width = 3;
 
-                } else
-            if (layer.type == "lines"){
-
-                  var width = parseInt(style.width);
-                  if (isNaN(width)) width = 3;
-
-                  var lineStyle = style.lineStyle;
-                  if (!lineStyle) lineStyle = "solid";
+                var lineStyle = style.lineStyle;
+                if (!lineStyle) lineStyle = "solid";
 
                   g.selectAll("lines")
                     .data(layer.features)
                     .enter()
                     .append("path")
-                    .attr("class", config.name)
+                    //.attr("class", config.className)
                     .attr("d", function(d){
-                      return path({type: "LineString", coordinates: d})
+                        return path({type: "LineString", coordinates: d})
                     })
                     .attr("fill", "none")
                     .attr("opacity", opacity)
@@ -305,12 +333,23 @@ bluewave.charts.MapChart = function(parent, config) {
                     })
                     .attr("stroke-linecap", function(d){
                       if(lineStyle==="dotted") return "round";
-                    })
-
+                    });
 
                 };
 
         });
+    };
+
+    var getCoordinates = function(d){
+        if (isArray(d)){
+            return d;
+        }
+        else{
+            if (d.geometry){
+                return d.geometry.coordinates;
+            }
+        }
+        return null;
     };
 
 
@@ -339,6 +378,18 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** addLabels
+  //**************************************************************************
+    this.addLabels = function(points, config){
+        layers.push({
+            type: "labels",
+            features: points,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
   //** addLines
   //**************************************************************************
     this.addLines = function(tuples, config){
@@ -358,7 +409,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var recenter = function(){
 
         var projection = me.getProjection();
-        if (!projection || readOnly) return;
+        if (!projection || panningDisabled) return;
 
 
         //mapArea.attr('transform', d3.event.transform); //<--not what we want
@@ -530,6 +581,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var isArray = javaxt.dhtml.utils.isArray;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
 
