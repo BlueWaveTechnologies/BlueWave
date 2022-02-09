@@ -21,6 +21,7 @@ bluewave.charts.Map = function(parent, config) {
     var readOnly;
     var layers = [];
     var extent = {};
+    var projectionType = "Mercator";
 
 
   //**************************************************************************
@@ -61,6 +62,15 @@ bluewave.charts.Map = function(parent, config) {
     this.getProjection = function(){
         return projection;
     };
+
+  //**************************************************************************
+  //** setProjection
+  //**************************************************************************
+
+    this.setProjection = function(name){
+      projectionType = name;
+      projection = d3["geo"+name]();
+  };
 
 
   //**************************************************************************
@@ -159,8 +169,13 @@ bluewave.charts.Map = function(parent, config) {
             }
         }
 
-        projection = d3
-            .geoMercator()
+        if (!projection) me.setProjection("Mercator");
+
+        projection
+            // .geoMercator()
+            // .geoConicConformal()
+            // .geoAlbers()
+            // .geoEquirectangular()
             .scale(width / 2 / Math.PI)
             .rotate([-centerLon, 0])
             .center([0, centerLat])
@@ -439,6 +454,22 @@ bluewave.charts.Map = function(parent, config) {
         var scale = projection.scale();
         var windowExtent = me.getExtent();
 
+        var rect = javaxt.dhtml.utils.getRect(svg.node());
+        var w = rect.width;
+        var h = rect.height;
+
+        if (projectionType == "Albers"){
+ 
+          //"The greatest accuracy is obtained if the selected standard parallels enclose two-thirds the height of the map"
+          projection.parallels( [lowerRight[1] + Math.abs(lowerRight[1]*(1/6)), upperLeft[1] - Math.abs(upperLeft[1]*(1/6))] )
+
+//           let center = [-160, 18];
+//           projection
+//           .rotate([-center[0], 0])
+//           .center([0, center[1]]);
+        }
+
+        
         //Need to map to svg coords with projection first to avoid trig and invert after calculations
         var initialUpperLeft = projection([windowExtent.left, windowExtent.top]);
         var initialLowerRight = projection([windowExtent.right, windowExtent.bottom]);
@@ -447,7 +478,11 @@ bluewave.charts.Map = function(parent, config) {
         var extentLongDiff = Math.abs(initialUpperLeft[0] - initialLowerRight[0]);
         var extentLatDiff = Math.abs(initialUpperLeft[1] - initialLowerRight[1]);
 
-        projection.rotate([0]) //Black magic
+        //If lower right extent is set over the edge of the map, flip the map. Not gonna work for albers
+        if (projection(upperLeft)[0] > projection(lowerRight)[0]){
+            projection.rotate([180, 0])
+        }
+
         var ulCartesian = projection(upperLeft);
         var lrCartesian = projection(lowerRight);
 
@@ -461,11 +496,9 @@ bluewave.charts.Map = function(parent, config) {
           var scaleRatio = latitudeDiff/extentLatDiff;
         }
 
+        //for albers I think we're gonna need to rotate and center first - then the scaling will be ~ linear
         projection.scale(scale / scaleRatio);
         
-        var rect = javaxt.dhtml.utils.getRect(svg.node());
-        var w = rect.width;
-        var h = rect.height;
 
         //New coords for scaled projection
         ulCartesian = projection(upperLeft);
@@ -473,9 +506,18 @@ bluewave.charts.Map = function(parent, config) {
         var centerCartesian = [ulCartesian[0] + w/2, ulCartesian[1] + h/2];
         var center = projection.invert(centerCartesian)
 
+        
         projection
         .rotate([-center[0], 0])
         .center([0, center[1]]);
+
+        // var geoJson = {
+        //           "type": "Point", 
+        //           "coordinates": [30.0, 10.0]
+        //           };
+
+        // .fitExtent([[w, h], geoJson]);
+        
  
         draw();
     };
