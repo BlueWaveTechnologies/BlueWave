@@ -63,7 +63,8 @@ public class FileIndex {
     private IndexWriter _indexWriter;
     private IndexSearcher _indexSearcher;
     private PerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
-    FieldType customFieldForVectors = null;
+    private FieldType customFieldForVectors = null;
+    private DirectoryReader directoryReader = null;
 
     public static final String FIELD_NAME = "name";
     public static final String FIELD_CONTENTS = "contents";
@@ -314,7 +315,26 @@ public class FileIndex {
         synchronized (smonitor) {
             if (_indexSearcher == null) {
                 try {
-                    _indexSearcher = new IndexSearcher(DirectoryReader.open(dir));
+                    directoryReader = DirectoryReader.open(dir);
+                    _indexSearcher = new IndexSearcher(directoryReader);
+                } catch (Exception e) {
+                    console.log("ERROR: " + e);
+                }
+            } else {
+                try {
+                    DirectoryReader directoryReaderTemp = DirectoryReader.openIfChanged(directoryReader);
+                    if(directoryReaderTemp != null) {
+                        IndexSearcher indexSearcherTemp = new IndexSearcher(directoryReaderTemp);
+                        try {
+                            if(directoryReader != null) {
+                                directoryReader.close();
+                            }
+                        } catch(Exception e) {
+                            console.log("ERROR: " + e);
+                        }
+                        directoryReader = directoryReaderTemp;
+                        _indexSearcher = indexSearcherTemp;
+                    }
                 } catch (Exception e) {
                     console.log("ERROR: " + e);
                 }
@@ -482,18 +502,6 @@ public class FileIndex {
             console.log("indexExists: " + e);
         }
         return false;
-    }
-
-    public void commit() {
-        try {
-            if(_indexWriter != null) {
-                _indexWriter.flush();
-                _indexWriter.prepareCommit();
-                _indexWriter.commit();
-            }
-        }catch(Exception e) {
-            console.log("commit: " + e);
-        }
     }
 
     private class ResultWrapper {
