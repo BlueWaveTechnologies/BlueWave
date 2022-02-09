@@ -72,7 +72,7 @@ public class FileIndex {
     public static final String FIELD_DOCUMENT_ID = "documentID";
     public static final String FIELD_SUBJECT = "subject";
     public static final String FIELD_KEYWORDS = "keywords";
-    public static final int FRAGMENT_CHAR_SIZE = 650;
+    public static final int FRAGMENT_CHAR_SIZE = 150;
     public static final int NUM_HIGHLIGHT_FRAGS_PER_HIT = 1;
 
     public FileIndex(String path) throws Exception {
@@ -242,7 +242,7 @@ public class FileIndex {
                 }
             }
 
-            //console.log("fragment: " + resultWrapper.highlightFragment);
+            // console.log("fragment: " + resultWrapper.highlightFragment);
             results.add(resultWrapper);
         }
 
@@ -268,7 +268,7 @@ public class FileIndex {
     private String getVectorHighlight(Query query, IndexReader indexReader, int docId, String fieldName, String searchTerm ) {
         String[] PRE_TAGS = new String[]{"<b>"};
         String[] POST_TAGS = new String[]{"</b>"};
-        FastVectorHighlighter fastVectorHighlighter = new FastVectorHighlighter(true, true,new SimpleFragListBuilder(200), new SimpleFragmentsBuilder(PRE_TAGS, POST_TAGS) );
+        FastVectorHighlighter fastVectorHighlighter = new FastVectorHighlighter(true, true,new SimpleFragListBuilder(25), new SimpleFragmentsBuilder(PRE_TAGS, POST_TAGS) );
         try {
             FieldQuery fieldQuery = fastVectorHighlighter.getFieldQuery(new QueryParser(fieldName, perFieldAnalyzerWrapper).parse(QueryParser.escape(searchTerm).toLowerCase()), indexReader);
             return fastVectorHighlighter.getBestFragment(fieldQuery, indexReader, docId, fieldName, FRAGMENT_CHAR_SIZE);
