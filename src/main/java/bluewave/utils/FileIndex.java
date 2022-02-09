@@ -194,7 +194,7 @@ public class FileIndex {
                 highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, FRAGMENT_CHAR_SIZE));
 
                 TopDocs hits = searcher.search(bbq, limit);
-                console.log("Hits: " + hits.totalHits.value + " search term: " + term);
+                // console.log("Hits: " + hits.totalHits.value + " search term: " + term);
                 ResultWrapper resultWrapper = null;
                 for(ScoreDoc scoreDoc : hits.scoreDocs) {
                     resultWrapper = new ResultWrapper();
@@ -233,7 +233,7 @@ public class FileIndex {
                         fragment = getHighlights(field, doc, highlighter);
                         resultWrapper.highlightFragment = fragment;
                     }
-
+                    // console.log("fragment: " + resultWrapper.highlightFragment);
                     results.add(resultWrapper);
                 }
             }
@@ -248,11 +248,7 @@ public class FileIndex {
             String text = doc.get(field.name());
             if(text != null && !text.isBlank()) {
                 TokenStream stream = perFieldAnalyzerWrapper.tokenStream(field.name(), new StringReader(text));
-                String[] frags = highlighter.getBestFragments(stream, text, NUM_HIGHLIGHT_FRAGS_PER_HIT);
-                for (String frag : frags)
-                {
-                    return frag;
-                }
+                return  highlighter.getBestFragment(stream, text);
             }
         }catch(Exception e) {
             console.log("ERROR: " + e);
@@ -397,27 +393,11 @@ public class FileIndex {
         IndexWriter writer = null;
         try {
             writer = instanceOfIndexWriter();
-            if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
-                // New index, so we just add the document (no old document can be there):
-                console.log("adding " + file);
-                writer.addDocument(doc);
-            } else {
-                // Existing index (an old copy of this document may have been indexed) so
-                // we use updateDocument instead to replace the old one matching the exact
-                // path, if present:
-                console.log("updating " + file);
-                writer.updateDocument(new Term(FIELD_PATH, file.toString()), doc);
-            }
-            writer.flush();
+            console.log("updating " + file);
+            writer.updateDocument(new Term(FIELD_PATH, file.toString()), doc);
         }catch(Exception e) {
             console.log("Error Adding doc: "+ e);
-        } finally {
-            if(writer != null && writer.isOpen()) {
-                try {
-                    writer.commit();
-                }catch(Exception ex) {}
-            }
-        }
+        } 
         // NOTE: if you want to maximize search performance,
         // you can optionally call forceMerge here. This can be
         // a terribly costly operation, so generally it's only
@@ -496,6 +476,18 @@ public class FileIndex {
             console.log("indexExists: " + e);
         }
         return false;
+    }
+
+    public void commit() {
+        try {
+            if(_indexWriter != null) {
+                _indexWriter.flush();
+                _indexWriter.prepareCommit();
+                _indexWriter.commit();
+            }
+        }catch(Exception e) {
+            console.log("commit: " + e);
+        }
     }
 
     class ResultWrapper {

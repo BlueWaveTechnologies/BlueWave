@@ -85,13 +85,20 @@ public class DocumentService extends WebService {
                             pool.add(new Object[]{file, path});
                         }
                     }
+                    pool.done();
                 }
             }).start();
         }
         catch(Exception e){
         }
 
-
+        try {
+            pool.join();
+            index.commit();
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
+        
         scripts = new ConcurrentHashMap<>();
     }
 
