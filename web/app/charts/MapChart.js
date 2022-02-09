@@ -318,34 +318,36 @@ bluewave.charts.MapChart = function(parent, config) {
   //** addPolygons
   //**************************************************************************
     this.addPolygons = function(polygons, config){
-        layers.unshift({
+        layers.push({
             type: "polygons",
             features: polygons,
             config: config
         });
     };
 
+
   //**************************************************************************
   //** addPoints
   //**************************************************************************
     this.addPoints = function(points, config){
-      layers.push({
-          type: "points",
-          features: points,
-          config: config
-      });
-  };
+        layers.push({
+            type: "points",
+            features: points,
+            config: config
+        });
+    };
+
 
   //**************************************************************************
   //** addLines
   //**************************************************************************
     this.addLines = function(tuples, config){
-      layers.push({
-          type: "lines",
-          features: tuples,
-          config: config
-      });
-  };
+        layers.push({
+            type: "lines",
+            features: tuples,
+            config: config
+        });
+    };
 
 
   //**************************************************************************
@@ -440,7 +442,7 @@ bluewave.charts.MapChart = function(parent, config) {
         extent.lowerRight = lowerRight;
     };
 
-    
+
   //**************************************************************************
   //** setExtent
   //**************************************************************************
