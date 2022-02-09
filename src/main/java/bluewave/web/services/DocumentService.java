@@ -220,7 +220,7 @@ public class DocumentService extends WebService {
                 if (md!=null){
                   //Create csv-safe string of the json and append to str
                     String s = md.toString();
-                    str.append(java.net.URLEncoder.encode(s, "UTF-8"));
+                    str.append(java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
                 }
                 rs.moveNext();
             }
