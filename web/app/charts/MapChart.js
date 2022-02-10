@@ -282,7 +282,7 @@ bluewave.charts.MapChart = function(parent, config) {
         //Translate vector from origin to midpoint
         var pseudoPoint = [ (normVector[0] + midPointX) , (normVector[1] + midPointY) ];
         pseudoPoint = projection.invert(pseudoPoint);
-        
+
         return pseudoPoint;
 
     };
@@ -646,21 +646,20 @@ bluewave.charts.MapChart = function(parent, config) {
     var renderLineLayer = function(layer, g, path){
 
         if (!layer.config) layer.config = {};
-        var config = layer.config;
         var style = layer.config.style;
         if (!style) style = {};
 
         var width = parseInt(style.width);
-        if (isNaN(width)) width = 3;
+        if (isNaN(width)) width = 1;
 
         var lineStyle = style.lineStyle;
         if (!lineStyle) lineStyle = "solid";
 
-        var smoothingType = style.smoothingType;
-        if (!smoothingType) smoothingType = "curveLinear";
+        var smoothing = style.smoothing;
+        if (!smoothing || smoothing==="none") smoothing = "curveLinear";
 
 
-        var color = style.fill;
+        var color = style.color;
         if(!color) color = "red";
 
         var opacity = style.opacity;
@@ -673,11 +672,9 @@ bluewave.charts.MapChart = function(parent, config) {
         .append("path")
         //.attr("class", config.className)
         .attr("d", function(d){
-
-          var curve = d3.line().curve(d3[smoothingType]);
-          var arr = d.map(coord => projection(coord))
-
-          return curve(arr);
+            var curve = d3.line().curve(d3[smoothing]);
+            var arr = d.map(coord => projection(coord));
+            return curve(arr);
         })
         .attr("fill", "none")
         .attr("opacity", opacity)
