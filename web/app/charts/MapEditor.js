@@ -13,7 +13,7 @@ if(!bluewave.charts) bluewave.charts={};
 
     var me = this;
     var defaultConfig = {
-        backgroundColor: "fff",
+        backgroundColor: "#fff",
         landColor: "#dedde0"
     };
 
@@ -92,6 +92,8 @@ if(!bluewave.charts) bluewave.charts={};
         mapChart = new bluewave.charts.MapChart(previewArea, {
 
         });
+        mapChart.disablePan();
+
 
       //Allow users to change the title associated with the chart
         addTextEditor(panel.title, function(title){
@@ -525,7 +527,7 @@ if(!bluewave.charts) bluewave.charts={};
             ];
 
             if (mapLevel==="states" || mapLevel==="world"){
-                formItems.push(mapCenter);
+                //formItems.push(mapCenter);
             }
 
             form = new javaxt.dhtml.Form(body, {
@@ -572,28 +574,32 @@ if(!bluewave.charts) bluewave.charts={};
             if (mapLevel==="states" || mapLevel==="world"){
 
                 var horizontalField = form.findField("centerHorizontal");
-                var horizontal = chartConfig.lon;
-                if(horizontal==null) {
-                    if(mapLevel==="states"){
-                        horizontal = 38.7
-                    }else{
-                        horizontal = 39.5;
+                if (horizontalField){
+                    var horizontal = chartConfig.lon;
+                    if(horizontal==null) {
+                        if(mapLevel==="states"){
+                            horizontal = 38.7
+                        }else{
+                            horizontal = 39.5;
+                        }
                     }
+                    chartConfig.lon = horizontal;
+                    horizontalField.setValue(horizontal);
                 }
-                chartConfig.lon = horizontal;
-                horizontalField.setValue(horizontal);
 
                 var verticalField = form.findField("centerVertical");
-                var vertical = chartConfig.lat;
-                if(vertical==null){
-                    if(mapLevel==="states"){
-                        vertical = -0.6
-                    }else{
-                        vertical = -98.5;
+                if (verticalField){
+                    var vertical = chartConfig.lat;
+                    if(vertical==null){
+                        if(mapLevel==="states"){
+                            vertical = -0.6
+                        }else{
+                            vertical = -98.5;
+                        }
                     }
+                    chartConfig.lat = vertical;
+                    verticalField.setValue(vertical);
                 }
-                chartConfig.lat = vertical;
-                verticalField.setValue(vertical);
 
                 form.onChange = function(){
                     var settings = form.getData();
@@ -648,8 +654,8 @@ if(!bluewave.charts) bluewave.charts={};
                                 }
                             ]
                         },
-                        mapColors,
-                        mapCenter
+                        mapColors
+                        //mapCenter
                     ]
                 });
 
@@ -660,28 +666,34 @@ if(!bluewave.charts) bluewave.charts={};
                 form.findField("landColor").setValue(chartConfig.landColor);
 
                 var horizontalField = form.findField("centerHorizontal");
-                var horizontal = chartConfig.lon;
-                if(horizontal==null) {
-                    if(mapLevel==="states"){
-                        horizontal = 38.7;
-                    }else{
-                        horizontal = 39.5;
+                if (horizontalField){
+                    var horizontal = chartConfig.lon;
+                    if(horizontal==null) {
+                        if(mapLevel==="states"){
+                            horizontal = 38.7;
+                        }else{
+                            horizontal = 39.5;
+                        }
                     }
+                    chartConfig.lon = horizontal;
+                    horizontalField.setValue(horizontal);
                 }
-                chartConfig.lon = horizontal;
-                horizontalField.setValue(horizontal);
+
 
                 var verticalField = form.findField("centerVertical");
-                var vertical = chartConfig.lat;
-                if(vertical==null){
-                    if(mapLevel==="states"){
-                        vertical = -0.6;
-                    }else{
-                        vertical = -98.5;
+                if (verticalField){
+                    var vertical = chartConfig.lat;
+                    if(vertical==null){
+                        if(mapLevel==="states"){
+                            vertical = -0.6;
+                        }else{
+                            vertical = -98.5;
+                        }
                     }
+                    chartConfig.lat = vertical;
+                    verticalField.setValue(vertical);
                 }
-                chartConfig.lat = vertical;
-                verticalField.setValue(vertical);
+
 
               //Process onChange events
                 form.onChange = function(){
@@ -742,8 +754,8 @@ if(!bluewave.charts) bluewave.charts={};
                 form = new javaxt.dhtml.Form(body, {
                     style: config.style.form,
                     items: [
-                        mapColors,
-                        mapCenter
+                        mapColors
+                        //mapCenter
                     ]
                 });
 
@@ -754,28 +766,32 @@ if(!bluewave.charts) bluewave.charts={};
                 form.findField("landColor").setValue(chartConfig.landColor);
 
                 var horizontalField = form.findField("centerHorizontal");
-                var horizontal = chartConfig.lon;
-                if(horizontal==null) {
-                    if(mapLevel==="states"){
-                        horizontal = 38.7
-                    }else{
-                        horizontal = 39.5;
+                if (horizontalField){
+                    var horizontal = chartConfig.lon;
+                    if(horizontal==null) {
+                        if(mapLevel==="states"){
+                            horizontal = 38.7
+                        }else{
+                            horizontal = 39.5;
+                        }
                     }
+                    chartConfig.lon = horizontal;
+                    horizontalField.setValue(horizontal);
                 }
-                chartConfig.lon = horizontal;
-                horizontalField.setValue(horizontal);
 
                 var verticalField = form.findField("centerVertical");
-                var vertical = chartConfig.lat;
-                if(vertical==null){
-                    if(mapLevel==="states"){
-                        vertical = -0.6
-                    }else{
-                        vertical = -98.5;
+                if (verticalField){
+                    var vertical = chartConfig.lat;
+                    if(vertical==null){
+                        if(mapLevel==="states"){
+                            vertical = -0.6
+                        }else{
+                            vertical = -98.5;
+                        }
                     }
+                    chartConfig.lat = vertical;
+                    verticalField.setValue(vertical);
                 }
-                chartConfig.lat = vertical;
-                verticalField.setValue(vertical);
 
                 form.onChange = function(){
                     var settings = form.getData();
@@ -854,18 +870,16 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     var update = function(data, chartConfig){
 
-        //set the color the 'water'
+      //Set background color for the map (i.e. the color the 'water')
         var backgroundColor = chartConfig.backgroundColor;
-        if(!backgroundColor){
-            backgroundColor = "white";
-        }
+        if (!backgroundColor) backgroundColor = "white";
+        mapChart.setBackgroundColor(backgroundColor);
 
 
-        //Set the color of the land
+      //Set default color for land masses
         var landColor = chartConfig.landColor;
-        if(!landColor){
-            landColor = "lightgray";
-        }
+        if (!landColor) landColor = "lightgray";
+
 
       //Get min/max values
         var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
