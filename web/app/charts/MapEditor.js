@@ -967,7 +967,7 @@ if(!bluewave.charts) bluewave.charts={};
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, states, chartConfig, path, projection);
+                    //points = getCentroids(data, states, chartConfig, path, projection);
                 }
 
 
@@ -1058,7 +1058,7 @@ if(!bluewave.charts) bluewave.charts={};
               //Get points
                 var points = {};
                 if (chartConfig.pointData==="geoCoords"){
-                    //points = getPoints(data, chartConfig, projection);
+                    points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
                     //points = getCentroids(data, states, chartConfig, path, projection);
@@ -1066,7 +1066,7 @@ if(!bluewave.charts) bluewave.charts={};
 
 
               //Render points
-                //renderPoints(points, chartConfig, extent);
+                renderPoints(points, chartConfig, extent);
 
             }
             else if(chartConfig.mapType === "Area"){
@@ -1163,7 +1163,7 @@ if(!bluewave.charts) bluewave.charts={};
                     points = getPoints(data, chartConfig, projection);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, countries, chartConfig, path, projection);
+                    //points = getCentroids(data, countries, chartConfig, path, projection);
                 }
 
 
@@ -1178,7 +1178,7 @@ if(!bluewave.charts) bluewave.charts={};
 
 
               //Render points
-                //renderPoints(points, chartConfig, extent);
+                renderPoints(points, chartConfig, extent);
             }
             else if(chartConfig.mapType === "Area"){
                 var aggregateState = 0;
@@ -1439,7 +1439,7 @@ if(!bluewave.charts) bluewave.charts={};
             var lat = parseFloat(d[chartConfig.latitude]);
             var lon = parseFloat(d[chartConfig.longitude]);
             if (isNaN(lat) || isNaN(lon)) return;
-            var coord = projection([lon, lat]);
+            var coord = [lon, lat];
             if (!coord) return;
             if (isNaN(coord[0]) || isNaN(coord[1])) return;
             var val = parseFloat(d[chartConfig.mapValue]);
@@ -1533,34 +1533,33 @@ if(!bluewave.charts) bluewave.charts={};
         if (outlineWidth>r) outlineWidth = r;
 
 
-
-        mapArea.append("g")
-        .selectAll("*")
-        .data(points.coords)
-        .enter()
-        .append("circle")
-        .attr("r",function(coord){
-            if (points.hasValue){
-                var val = coord[2];
-                if (isNaN(val) || val<=0) return r;
-                var p = val/extent[1];
-                var maxSize = r;
-                if (p > 0){
-                    return maxSize*p;
-                }
-                else{
-                    return maxSize*.25;
-                }
+        mapChart.addPoints(points.coords, {
+            name: "points",
+            style: {
+                fill: c,
+                opacity: opacity,
+                radius: function(coord){
+                    if (points.hasValue){
+                        var val = coord[2];
+                        if (isNaN(val) || val<=0) return r;
+                        var p = val/extent[1];
+                        var maxSize = r;
+                        if (p > 0){
+                            return maxSize*p;
+                        }
+                        else{
+                            return maxSize*.25;
+                        }
+                    }
+                    return r;
+                },
+                outlineWidth: outlineWidth,
+                outlineColor: oc
+            },
+            onClick: function(o){
+                console.log(o);
             }
-            return r;
-        })
-        .attr("transform", function(d) {
-            return "translate(" + [d[0],d[1]] + ")";
-        })
-        .attr("fill-opacity", opacity)
-        .style("fill", c)
-        .style("stroke", oc)
-        .style("stroke-width", outlineWidth + "px");
+        });
     };
 
 
