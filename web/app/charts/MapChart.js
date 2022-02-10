@@ -134,6 +134,32 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** getCentroid
+  //**************************************************************************
+  /** Returns center point of a given feature
+   */
+    this.getCentroid = function(feature){
+        if (!feature) return null;
+        if (!projection) me.setProjection("Mercator");
+        var path = d3.geoPath(projection);
+        if (isArray(feature)){
+            var type = "Point";
+            if (isArray(feature[0])) type = "Polygon"; //not always true
+            feature = {
+                type: "Feature",
+                geometry: {
+                    type: type,
+                    coordinates: feature
+                }
+            };
+        }
+        var centroid = path.centroid(feature);
+        centroid = projection.invert(centroid);
+        return centroid;
+    };
+
+
+  //**************************************************************************
   //** onRecenter
   //**************************************************************************
   /** Called whenever the center point of the map is changed
@@ -217,7 +243,7 @@ bluewave.charts.MapChart = function(parent, config) {
       coords[0] = projection(coords[0]);
       coords[1] = projection(coords[1]);
 
-      
+
       var midPointX = (coords[0][0] + coords[1][0])/2;
       var midPointY = (coords[0][1] + coords[1][1])/2;
 
