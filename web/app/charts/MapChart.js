@@ -14,11 +14,13 @@ bluewave.charts.MapChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         style: {
+            backgroundColor: "#fff"
         }
     };
     var svg, mapArea; //d3 elements
     var projection, scale, translate, rotate, center;
     var panningDisabled = false;
+    var background;
     var layers = [];
     var extent = {};
     var projectionType = "Mercator";
@@ -100,6 +102,16 @@ bluewave.charts.MapChart = function(parent, config) {
         });
     };
 
+
+  //**************************************************************************
+  //** setBackgroundColor
+  //**************************************************************************
+    this.setBackgroundColor = function(color){
+        config.style.backgroundColor = color;
+        if (color){
+            if (background) background.attr("fill", color);
+        }
+    };
 
 
   //**************************************************************************
@@ -431,13 +443,28 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     var draw = function(){
         clearChart();
+
+      //Create background
+        var backgroundGroup = mapArea.append("g");
+        backgroundGroup.attr("name", "background");
+        background = backgroundGroup.append("rect")
+        .attr("width", "100%")
+        .attr("height", "100%");
+        if (config.style.backgroundColor){
+            background.attr("fill", config.style.backgroundColor);
+        }
+
+
+      //Add layers
+        var layerGroup = mapArea.append("g");
+        layerGroup.attr("name", "layers");
         var path = d3.geoPath(projection);
         layers.forEach(function(layer, i){
 
           //Create group
             var name = layer.config.name;
             if (!name) name = "layer"+i;
-            var g = mapArea.append("g");
+            var g = layerGroup.append("g");
             g.attr("name", name);
 
 
