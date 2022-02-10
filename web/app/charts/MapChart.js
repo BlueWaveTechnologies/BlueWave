@@ -513,12 +513,23 @@ bluewave.charts.MapChart = function(parent, config) {
         if (radius < 0) radius = 1;
 
 
+        var outlineWidth = parseFloat(style.outlineWidth);
+        if (isNaN(outlineWidth)) outlineWidth = 1;
+
+        var outlineColor = style.outlineColor;
+
+
         var points = g.selectAll("*")
         .data(layer.features)
         .enter()
         .append("circle")
-        .attr("r", radius)
         //.attr("class", config.className)
+        .attr('r', function(d){
+            if (typeof style.radius === 'function') {
+                return style.radius(d);
+            }
+            else return radius;
+        })
         .attr("transform", function (d) {
             var coords = getCoordinates(d);
             if (coords) coords = projection(coords);
@@ -526,9 +537,8 @@ bluewave.charts.MapChart = function(parent, config) {
         })
         .attr("opacity", opacity)
         .style("fill", color)
-        .attr("stroke", "white")
-        // .attr("stroke-width", radius/5)
-        .attr("stroke-width", 2)
+        .attr("stroke", outlineColor)
+        .attr("stroke-width", outlineWidth)
         .attr("stroke-opacity", opacity)
         .on("click", function(feature, idx, siblings){
             if (config.onClick) config.onClick.apply(me, [{
