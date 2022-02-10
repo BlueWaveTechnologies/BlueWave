@@ -36,8 +36,6 @@ bluewave.charts.MapChart = function(parent, config) {
         });
 
 
-        panningDisabled = false;
-
       //Watch for panning and zooming events
         svg.call(
             d3.zoom().scaleExtent([1, 1])
@@ -45,15 +43,63 @@ bluewave.charts.MapChart = function(parent, config) {
         );
 
       //Watch for mouse click events
-        svg.on("click", function() {
+        svg.on("click", function(e) {
             var projection = me.getProjection();
             if (!projection) return;
 
-            console.log(projection.invert(d3.mouse(this)));
-            console.log(d3.mouse(this))
-            console.log(me.getExtent());
+            var point = d3.mouse(this);
+            var coord = projection.invert(point);
+            me.onMouseClick(coord[1], coord[0], e);
         });
     };
+
+
+  //**************************************************************************
+  //** addPoints
+  //**************************************************************************
+    this.addPoints = function(points, config){
+        layers.push({
+            type: "points",
+            features: points,
+            config: config
+        });
+    };
+
+  //**************************************************************************
+  //** addLines
+  //**************************************************************************
+    this.addLines = function(tuples, config){
+        layers.push({
+            type: "lines",
+            features: tuples,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
+  //** addPolygons
+  //**************************************************************************
+    this.addPolygons = function(polygons, config){
+        layers.push({
+            type: "polygons",
+            features: polygons,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
+  //** addLabels
+  //**************************************************************************
+    this.addLabels = function(points, config){
+        layers.push({
+            type: "labels",
+            features: points,
+            config: config
+        });
+    };
+
 
 
   //**************************************************************************
@@ -87,6 +133,14 @@ bluewave.charts.MapChart = function(parent, config) {
   /** Called whenever the zoom event ends
    */
     this.onRedraw = function(){};
+
+
+  //**************************************************************************
+  //** onMouseClick
+  //**************************************************************************
+  /** Called whenever the user clicks on the map
+   */
+    this.onMouseClick = function(lat, lon, e){};
 
 
   //**************************************************************************
@@ -192,212 +246,6 @@ bluewave.charts.MapChart = function(parent, config) {
       //Render layers
         draw();
 
-    };
-
-
-  //**************************************************************************
-  //** draw
-  //**************************************************************************
-    var draw = function(){
-        clearChart();
-        var path = d3.geoPath(projection);
-
-        layers.forEach(function(layer, i){
-
-            if (!layer.config) layer.config = {};
-
-
-            var name = layer.config.name;
-            if (!name) name = "layer"+i;
-
-            var style = layer.config.style;
-            if (!style) style = {};
-
-            var opacity = style.opacity;
-            if (!opacity) opacity = 1.0;
-
-            var g = mapArea.append("g");
-            g.attr("name", name);
-
-
-            if (layer.type === "polygons"){
-
-                var color = style.fill;
-                if(!color) color = "red";
-
-                g.selectAll("polys")
-                    .data(layer.features)
-                    .enter()
-                    .append("path")
-                    .attr('d', path)
-                    .attr('fill', function(d){
-                        if (typeof style.fill === 'function') {
-                            return style.fill(d);
-                        }
-                        else return color;
-                    })
-                    .attr('stroke', 'white');
-
-            }
-            else if (layer.type === "points"){
-
-                var color = style.fill;
-                if(!color) color = "red";
-
-                var radius = parseInt(style.radius);
-                if (isNaN(radius)) radius = 3;
-                if (radius < 0) radius = 1;
-                g.selectAll("points")
-                    .data(layer.features)
-                    .enter()
-                    .append("circle")
-                    .attr("r", radius)
-                    //.attr("class", config.className)
-                    .attr("transform", function (d) {
-                        var coords = getCoordinates(d);
-                        if (coords) coords = projection(coords);
-                        return coords ? "translate(" + coords + ")" : "";
-                    })
-                    .attr("opacity", opacity)
-                    .style("fill", color)
-                    .attr("stroke", "white")
-                    // .attr("stroke-width", radius/5)
-                    .attr("stroke-width", 2)
-                    .attr("stroke-opacity", opacity);
-            }
-            else if (layer.type === "labels"){
-
-                var fontSize = parseFloat(style.fontSize);
-                if (isNaN(fontSize)) fontSize = 12;
-
-                var color = style.color;
-                if (!color) color = style.fill;
-                if (!color) color = "#000";
-
-                var textAlign = style.textAlign;
-                if (!textAlign) textAlign = "left";
-
-
-                g.selectAll("text")
-                    .data(layer.features)
-                    .enter()
-                    .append("text")
-                    .attr("transform", function (d) {
-                        var coords = getCoordinates(d);
-                        if (coords) coords = projection(coords);
-                        var x = coords[0];
-                        var y = coords[1];
-                        return coords ? `translate(  ${x}, ${y}  )` : "";
-                    })
-                    .attr("font-size", fontSize)
-                    .attr("text-anchor", ()=>{
-                        if (textAlign=="center") return "middle";
-                        return textAlign;
-                    })
-                    //.attr("font-weight", 900)
-                    .style("fill", color)
-                    //.style("stroke", color)
-                    //.style("stroke-width", 1)
-                    .text((d)=>{
-                        if (d.properties && layer.config.label){
-                            return d.properties[layer.config.label];
-                        }
-                        else{
-                            return "";
-                        }
-                    });
-            }
-            else if (layer.type === "lines"){
-
-                var width = parseInt(style.width);
-                if (isNaN(width)) width = 3;
-
-                var lineStyle = style.lineStyle;
-                if (!lineStyle) lineStyle = "solid";
-
-                  g.selectAll("lines")
-                    .data(layer.features)
-                    .enter()
-                    .append("path")
-                    //.attr("class", config.className)
-                    .attr("d", function(d){
-                        return path({type: "LineString", coordinates: d})
-                    })
-                    .attr("fill", "none")
-                    .attr("opacity", opacity)
-                    .style("stroke", color)
-                    .style("stroke-width", width)
-                    .attr("stroke-dasharray", function(d){
-                      if(lineStyle==="dashed") return "10, 10";
-                      else if(lineStyle==="dotted") return "0, 10";
-                    })
-                    .attr("stroke-linecap", function(d){
-                      if(lineStyle==="dotted") return "round";
-                    });
-
-                };
-
-        });
-    };
-
-    var getCoordinates = function(d){
-        if (isArray(d)){
-            return d;
-        }
-        else{
-            if (d.geometry){
-                return d.geometry.coordinates;
-            }
-        }
-        return null;
-    };
-
-
-  //**************************************************************************
-  //** addPolygons
-  //**************************************************************************
-    this.addPolygons = function(polygons, config){
-        layers.push({
-            type: "polygons",
-            features: polygons,
-            config: config
-        });
-    };
-
-
-  //**************************************************************************
-  //** addPoints
-  //**************************************************************************
-    this.addPoints = function(points, config){
-        layers.push({
-            type: "points",
-            features: points,
-            config: config
-        });
-    };
-
-
-  //**************************************************************************
-  //** addLabels
-  //**************************************************************************
-    this.addLabels = function(points, config){
-        layers.push({
-            type: "labels",
-            features: points,
-            config: config
-        });
-    };
-
-
-  //**************************************************************************
-  //** addLines
-  //**************************************************************************
-    this.addLines = function(tuples, config){
-        layers.push({
-            type: "lines",
-            features: tuples,
-            config: config
-        });
     };
 
 
@@ -576,6 +424,328 @@ bluewave.charts.MapChart = function(parent, config) {
 
         draw();
     };
+
+
+  //**************************************************************************
+  //** draw
+  //**************************************************************************
+    var draw = function(){
+        clearChart();
+        var path = d3.geoPath(projection);
+        layers.forEach(function(layer, i){
+
+          //Create group
+            var name = layer.config.name;
+            if (!name) name = "layer"+i;
+            var g = mapArea.append("g");
+            g.attr("name", name);
+
+
+          //Render layer
+            if (layer.type === "points"){
+                renderPointLayer(layer, g, path);
+            }
+            else if (layer.type === "lines"){
+                renderLineLayer(layer, g, path);
+            }
+            if (layer.type === "polygons"){
+                renderPolygonLayer(layer, g, path);
+            }
+            else if (layer.type === "labels"){
+                renderLabelLayer(layer, g, path);
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderPointLayer
+  //**************************************************************************
+    var renderPointLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var config = layer.config;
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var tooltip;
+        if (config.showTooltip===true) tooltip = createTooltip();
+
+
+        var highlight = false;
+        if (tooltip || config.onClick) highlight = true;
+
+        var color = style.fill;
+        if(!color) color = "red";
+
+        var opacity = style.opacity;
+        if (!opacity) opacity = 1.0;
+
+        var radius = parseInt(style.radius);
+        if (isNaN(radius)) radius = 3;
+        if (radius < 0) radius = 1;
+
+
+        var points = g.selectAll("*")
+        .data(layer.features)
+        .enter()
+        .append("circle")
+        .attr("r", radius)
+        //.attr("class", config.className)
+        .attr("transform", function (d) {
+            var coords = getCoordinates(d);
+            if (coords) coords = projection(coords);
+            return coords ? "translate(" + coords + ")" : "";
+        })
+        .attr("opacity", opacity)
+        .style("fill", color)
+        .attr("stroke", "white")
+        // .attr("stroke-width", radius/5)
+        .attr("stroke-width", 2)
+        .attr("stroke-opacity", opacity)
+        .on("click", function(feature, idx, siblings){
+            if (config.onClick) config.onClick.apply(me, [{
+                feature: feature,
+                element: siblings[idx],
+                layer: layer
+            }]);
+        });
+
+        layer.elements = points;
+    };
+
+
+  //**************************************************************************
+  //** renderLineLayer
+  //**************************************************************************
+    var renderLineLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var config = layer.config;
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var width = parseInt(style.width);
+        if (isNaN(width)) width = 3;
+
+        var lineStyle = style.lineStyle;
+        if (!lineStyle) lineStyle = "solid";
+
+
+        var color = style.fill;
+        if(!color) color = "red";
+
+        var opacity = style.opacity;
+        if (!opacity) opacity = 1.0;
+
+
+        var lines = g.selectAll("*")
+        .data(layer.features)
+        .enter()
+        .append("path")
+        //.attr("class", config.className)
+        .attr("d", function(d){
+            return path({type: "LineString", coordinates: d})
+        })
+        .attr("fill", "none")
+        .attr("opacity", opacity)
+        .style("stroke", color)
+        .style("stroke-width", width)
+        .attr("stroke-dasharray", function(d){
+          if(lineStyle==="dashed") return "10, 10";
+          else if(lineStyle==="dotted") return "0, 10";
+        })
+        .attr("stroke-linecap", function(d){
+          if(lineStyle==="dotted") return "round";
+        });
+
+        layer.elements = lines;
+    };
+
+
+  //**************************************************************************
+  //** renderPolygonLayer
+  //**************************************************************************
+    var renderPolygonLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var config = layer.config;
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var tooltip;
+        if (config.showTooltip===true) tooltip = createTooltip();
+
+
+        var highlight = false;
+        if (tooltip || config.onClick) highlight = true;
+
+
+        var mouseover = function(d) {
+            if (tooltip){
+
+              //Get label
+                var label = me.getTooltipLabel(d.data);
+
+              //Get zIndex
+                var highestElements = getHighestElements();
+                var zIndex = highestElements.zIndex;
+                if (!highestElements.contains(tooltip.node())) zIndex++;
+
+              //Update tooltip
+                tooltip
+                .html(label)
+                .style("opacity", 1)
+                .style("display", "block")
+                .style("z-index", zIndex);
+            }
+
+            if (highlight) d3.select(this).transition().duration(100).attr("opacity", "0.8");
+        };
+
+        var mousemove = function() {
+            var e = d3.event;
+            if (tooltip) tooltip
+            .style('top', (e.clientY) + "px")
+            .style('left', (e.clientX + 20) + "px");
+        };
+
+        var mouseleave = function() {
+            if (tooltip) tooltip
+            .style("opacity", 0)
+            .style("display", "none");
+
+            if (highlight) d3.select(this).transition().duration(100).attr("opacity", "1");
+        };
+
+
+        var fill = style.fill;
+        if (!fill) fill = "#DEDDE0";
+
+        var polygons = g.selectAll("*")
+        .data(layer.features)
+        .enter()
+        .append("path")
+        .attr('d', path)
+        .attr('fill', function(d){
+            if (typeof style.fill === 'function') {
+                return style.fill(d);
+            }
+            else return fill;
+        })
+        .attr('stroke', 'white')
+        .on("mouseover", mouseover)
+        .on("mousemove", mousemove)
+        .on("mouseleave", mouseleave)
+        .on("click", function(feature, idx, siblings){
+            if (config.onClick) config.onClick.apply(me, [{
+                feature: feature,
+                element: siblings[idx],
+                layer: layer
+            }]);
+        });
+
+        layer.elements = polygons;
+    };
+
+
+  //**************************************************************************
+  //** renderLabelLayer
+  //**************************************************************************
+    var renderLabelLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var config = layer.config;
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var fontSize = parseFloat(style.fontSize);
+        if (isNaN(fontSize)) fontSize = 12;
+
+        var color = style.color;
+        if (!color) color = style.fill;
+        if (!color) color = "#000";
+
+        var textAlign = style.textAlign;
+        if (!textAlign) textAlign = "left";
+
+
+        var labels = g.selectAll("text")
+        .data(layer.features)
+        .enter()
+        .append("text")
+        .attr("transform", function (d) {
+            var coords = getCoordinates(d);
+            if (coords){
+                coords = projection(coords);
+                var x = coords[0];
+                var y = coords[1];
+                if (isNaN(x) || isNaN(y)) return "";
+                else return `translate(  ${x}, ${y}  )`;
+            }
+            return "";
+        })
+        .attr("font-size", fontSize)
+        .attr("text-anchor", ()=>{
+            if (textAlign=="center") return "middle";
+            return textAlign;
+        })
+        //.attr("font-weight", 900)
+        .style("fill", color)
+        //.style("stroke", color)
+        //.style("stroke-width", 1)
+        .text((d)=>{
+            if (d.properties && layer.config.label){
+                return d.properties[layer.config.label];
+            }
+            else{
+                return "";
+            }
+        })
+        .on("click", function(feature, idx, siblings){
+            if (config.onClick) config.onClick.apply(me, [{
+                feature: feature,
+                element: siblings[idx],
+                layer: layer
+            }]);
+        });
+
+
+        layer.elements = labels;
+    };
+
+
+  //**************************************************************************
+  //** createTooltip
+  //**************************************************************************
+    var createTooltip = function(){
+        var tooltip = bluewave.charts.MapChart.Tooltip;
+        if (!tooltip){
+            tooltip = bluewave.charts.MapChart.Tooltip =
+            d3.select(document.body)
+            .append("div")
+            .style("opacity", 0)
+            .attr("class", "tooltip");
+        }
+        return tooltip;
+    };
+
+
+  //**************************************************************************
+  //** getCoordinates
+  //**************************************************************************
+    var getCoordinates = function(d){
+        if (isArray(d)){
+            return d;
+        }
+        else{
+            if (d.geometry){
+                return d.geometry.coordinates;
+            }
+        }
+        return null;
+    };
+
 
   //**************************************************************************
   //** Utils
