@@ -34,14 +34,11 @@ if(!bluewave.charts) bluewave.charts={};
         mapLevel:null,
         colorScale:null
     };
-    var changeMapLevel = false;
     var styleEditor, colorPicker;
 
     var countyData, countryData; //raw json
     var counties, states, countries; //topojson
     var options = []; //aggregation options
-    var projection;
-    var readOnly;
 
 
 
@@ -116,7 +113,6 @@ if(!bluewave.charts) bluewave.charts={};
         inputData = [];
         chartConfig = {};
         panel.title.innerHTML = "Untitled";
-        changeMapLevel = false;
 
       //Clear map inputs
         if (mapInputs){
@@ -315,7 +311,6 @@ if(!bluewave.charts) bluewave.charts={};
         else if (inputType==="mapLevel"){
             delete chartConfig.lon;
             delete chartConfig.lat;
-            changeMapLevel = true;
             createMapPreview();
         }
     };
@@ -327,7 +322,7 @@ if(!bluewave.charts) bluewave.charts={};
     var createMapPreview = function(){
         if (!chartConfig.mapType) return;
         if (!chartConfig.mapLevel) return;
-        if(chartConfig.mapType==="Point" && chartConfig.pointData===null) return;
+        if (chartConfig.mapType==="Point" && chartConfig.pointData===null) return;
         if (chartConfig.mapType==="Point" && (chartConfig.pointData==="geoCoords" &&
             (chartConfig.latitude===null || chartConfig.longitude===null || chartConfig.mapValue===null))){
             return;
@@ -344,33 +339,9 @@ if(!bluewave.charts) bluewave.charts={};
             chartConfig.mapLocation===null)){
             return;
         }
-        onRender(previewArea, function() {
-            var data = inputData[0];
-            console.log(chartConfig);
-            console.log(data);
 
-            getMapData(()=>{
-                update(data, chartConfig);
-            });
-
-
-
-            /*
-            mapChart.update(chartConfig, data);
-            mapChart.onRecenter = function(lat, lon){
-                if(!changeMapLevel){
-                    chartConfig.lat = lat;
-                    chartConfig.lon = lon;
-                }else{
-                    delete chartConfig.lat;
-                    delete chartConfig.lon;
-                    changeMapLevel = false;
-                }
-            };
-            mapChart.onRedraw = function(){
-                mapChart.update(chartConfig, data);
-            }
-            */
+        getMapData(()=>{
+            update(inputData[0]);
         });
     };
 
@@ -378,12 +349,12 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** getConfig
   //**************************************************************************
-  /** Return chart configuration file
+  /** Return chart configuration
    */
     this.getConfig = function(){
-        let copy = Object.assign({},chartConfig);
-        return copy;
+        return chartConfig;
     };
+
 
   //**************************************************************************
   //** getChart
@@ -391,6 +362,7 @@ if(!bluewave.charts) bluewave.charts={};
     this.getChart = function(){
         return previewArea;
     };
+
 
   //**************************************************************************
   //** getMapData
@@ -868,7 +840,11 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** update
   //**************************************************************************
-    var update = function(data, chartConfig){
+    var update = function(data){
+
+      //Clear the map
+        mapChart.clear();
+
 
       //Set background color for the map (i.e. the color the 'water')
         var backgroundColor = chartConfig.backgroundColor;
@@ -901,77 +877,22 @@ if(!bluewave.charts) bluewave.charts={};
             mapChart.setExtent([-130, 50.5], [-65, 25.8]);
 
 
-
-            mapChart.addPolygons(counties.features, {
-                name: "states",
-                style: {
-                    fill: landColor,
-                    stroke: "white"
-                }
-            });
-
-
-
-          //Render state boundaries
-            var renderStates = function(renderPolygons){
-                if (renderPolygons===true){
-                    return countyMap.selectAll("whatever")
-                    .data(states.features)
-                    .enter()
-                    .append("path")
-                    .attr('d', path)
-                    .attr('fill', 'none')
-                    .attr('stroke', 'white');
-                }
-                else{
-                    countyMap
-                      .append("path")
-                      .attr("fill", "none")
-                      .attr("stroke", "white")
-                      .attr("d", path(
-                          topojson.mesh(
-                            countyData,
-                            countyData.objects.states,
-                            function(a, b) {
-                              return a !== b;
-                            }
-                          )
-                        )
-                      );
-                }
-            };
-
-
-            chartConfig.mapType = null;
-
           //Render data
             if (chartConfig.mapType === "Point"){
 
-              //Render counties
-                var countyPolygons = renderCounties();
-                countyPolygons.each(function() {
-                    var path = d3.select(this);
-                    path.attr('fill', function(d){
-                        return landColor;
-                    });
-                });
-
-
-              //Render states
+              //Render counties and states
+                renderCounties();
                 renderStates();
 
 
-              //Get points
+              //Render points
                 var points = {};
                 if (chartConfig.pointData==="geoCoords") {
-                    points = getPoints(data, chartConfig, projection);
+                    points = getPoints(data, chartConfig);
                 }
                 else if (chartConfig.pointData==="adminArea"){
                     //points = getCentroids(data, states, chartConfig, path, projection);
                 }
-
-
-              //Render points
                 renderPoints(points, chartConfig, extent);
 
             }
@@ -979,51 +900,20 @@ if(!bluewave.charts) bluewave.charts={};
 
                 var area = selectArea(data, chartConfig);
                 if (area==="counties"){
-
-                  //Render Counties
-                    var countyPolygons = renderCounties();
-
-
-
-                  //Map countyIDs to data values
-                    var values = {};
-                    data.forEach(function(d){
-                        var countyID = d[chartConfig.mapLocation];
-                        values[countyID] = d[chartConfig.mapValue];
-                    });
-
-
-                  //Update fill color of county polygons
-                    countyPolygons.each(function() {
-                        var path = d3.select(this);
-                        var fillColor = path.attr('fill');
-                        path.attr('fill', function(d){
-                            var v = parseFloat(values[d.id]);
-                            if (isNaN(v) || v<0) v = 0;
-                            var fill = colorScale[chartConfig.colorScale](v);
-                            if (!fill) return fillColor;
-                            return fill;
-                        });
-                    });
-
-
-                  //Render state boundaries
+                    renderCounties(data, colorScale);
                     renderStates();
                 }
                 else if (area==="states"){ //render states
-                    var statePolygons = renderStates(true);
-                    updateStatePolygons(data, statePolygons, chartConfig, colorScale);
+                    renderStates(data, colorScale);
                 }
                 else if (area==="censusDivisions"){ //render census divisions
-                    var statePolygons = renderStates(true);
-                    updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
+                    renderCensusRegions(data, colorScale);
                 }
                 else{
                     renderCounties();
                     renderStates();
                 }
             }
-
 
         }
         else if (mapLevel === "states"){
@@ -1058,7 +948,7 @@ if(!bluewave.charts) bluewave.charts={};
               //Get points
                 var points = {};
                 if (chartConfig.pointData==="geoCoords"){
-                    points = getPoints(data, chartConfig, projection);
+                    points = getPoints(data, chartConfig);
                 }
                 else if (chartConfig.pointData==="adminArea"){
                     //points = getCentroids(data, states, chartConfig, path, projection);
@@ -1075,77 +965,23 @@ if(!bluewave.charts) bluewave.charts={};
               //Render data using the most suitable geometry type
                 var area = selectArea(data, chartConfig);
                 if (area==="counties"){ //render counties
-
-                    var values = {};
-                    data.forEach(function(d){
-                        var countyID = d[chartConfig.mapLocation];
-                        values[countyID] = d[chartConfig.mapValue];
-                    });
-
-                    mapChart.addPolygons(states.features, {
-                        name: "counties",
-                        style: {
-                            fill: function(county){
-                                var v = parseFloat(values[county.id]);
-                                if (isNaN(v) || v<0) v = 0;
-                                var fill = colorScale[chartConfig.colorScale](v);
-                                if (!fill) return 'none';
-                                return fill;
-                            }
-                        }
-                    });
-
-                    mapChart.addPolygons(states.features, {
-                        name: "states",
-                        style: {
-                            fill: "none",
-                            stroke: "white"
-                        }
-                    });
+                    renderCounties(data, colorScale);
+                    renderStates();
                 }
                 else if (area==="states"){ //render states
-                    //var statePolygons = renderStates();
-                    //updateStatePolygons(data, statePolygons, chartConfig, colorScale);
-
-                    var values = {};
-                    data.forEach(function(d){
-                        var state = d[chartConfig.mapLocation];
-                        values[state] = d[chartConfig.mapValue];
-                    });
-
-                    mapChart.addPolygons(states.features, {
-                        name: "states",
-                        style: {
-                            fill: function(state){
-                                var v = parseFloat(values[state.properties.name]);
-                                if (isNaN(v)) v = parseFloat(values[state.properties.code]);
-                                if (isNaN(v) || v<0) v = 0;
-                                var fill = colorScale[chartConfig.colorScale](v);
-                                if (!fill) return 'none';
-                                return fill;
-                            },
-                            stroke: "white"
-                        }
-                    });
+                    renderStates(data, colorScale);
                 }
                 else if (area==="censusDivisions"){ //render census divisions
-                    //var statePolygons = renderStates();
-                    //updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
+                    renderCensusRegions(data, colorScale);
                 }
                 else{
-                    mapChart.addPolygons(states.features, {
-                        name: "states",
-                        style: {
-                            fill: "none",
-                            stroke: "white"
-                        }
-                    });
+                    renderStates();
                 }
 
             }
             else if(chartConfig.mapType === "Links"){
                 getData("PortsOfEntry", function(ports){
-                    //renderLinks(data, countries, ports, path, projection, mapLevel);
+                    renderLinks(data, countries, ports, mapLevel);
                 });
             }
         }
@@ -1160,7 +996,7 @@ if(!bluewave.charts) bluewave.charts={};
               //Get points
                 var points = {};
                 if (chartConfig.pointData==="geoCoords"){
-                    points = getPoints(data, chartConfig, projection);
+                    points = getPoints(data, chartConfig);
                 }
                 else if (chartConfig.pointData==="adminArea"){
                     //points = getCentroids(data, countries, chartConfig, path, projection);
@@ -1181,6 +1017,9 @@ if(!bluewave.charts) bluewave.charts={};
                 renderPoints(points, chartConfig, extent);
             }
             else if(chartConfig.mapType === "Area"){
+
+
+              //Aggregate state and county data to the country level
                 var aggregateState = 0;
                 data.forEach(function(d){
                     var state;
@@ -1222,7 +1061,7 @@ if(!bluewave.charts) bluewave.charts={};
             }
             else if(chartConfig.mapType === "Links"){
                 getData("PortsOfEntry", function(ports){
-                    //renderLinks(data, countries, ports, path, projection, mapLevel);
+                    renderLinks(data, countries, ports, mapLevel);
                 });
             }
         }
@@ -1236,22 +1075,25 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** renderLinks
   //**************************************************************************
-    var renderLinks = function(data, countries, ports, path, projection, mapLevel){
+    var renderLinks = function(data, countries, ports, mapLevel){
         var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
         var nodes = data.nodes;
         var links = data.links;
-        var linkArray = []
+        var linkArray = [];
         var connections = [];
         var coords = [];
-        //Split Links up into the component parts.
+
+      //Split Links up into the component parts.
         for (var link in links){
             if(links.hasOwnProperty(link)){
                 var linkage = link.split('->');
                 linkage.push(links[link].quantity);
                 linkArray.push(linkage);
             }
-        };
-        if(mapLevel==="states"){
+        }
+
+        if (mapLevel==="states"){
+
             linkArray.forEach(function(d){
                 var connection = {};
                 var stateCodeOne = nodes[d[0]].state;
@@ -1280,9 +1122,9 @@ if(!bluewave.charts) bluewave.charts={};
                         break;
                     }
                 }
-                for(var i = 0; i < states.features.length; i++){
+                for (var i = 0; i < states.features.length; i++){
                     var stateCenter = states.features[i];
-                    if(stateTwo === stateCenter.properties.code){
+                    if (stateTwo === stateCenter.properties.code){
                         var lat = stateCenter.properties.latitude;
                         var lon = stateCenter.properties.longitude;
                         coordTwo.push(lat);
@@ -1294,7 +1136,9 @@ if(!bluewave.charts) bluewave.charts={};
                 }
                 coords.push(connectionPath);
             });
-        }else if(mapLevel==="world"){
+        }
+        else if (mapLevel==="world"){
+
             linkArray.forEach(function(d){
                 var connection = {};
                 var countryCodeOne = nodes[d[0]].country;
@@ -1314,8 +1158,8 @@ if(!bluewave.charts) bluewave.charts={};
                 var coordOne = [];
                 var coordTwo = [];
                 var connectionPath = [];
-                if(countryOne !== 'US' && countryTwo === 'US'){
-                    for(var i = 0; i < ports.length; i++){
+                if (countryOne !== 'US' && countryTwo === 'US'){
+                    for (var i = 0; i < ports.length; i++){
                         if(countryOne === ports[i].iso2){
                             coordOne.push(ports[i].exlatitude);
                             coordOne.push(ports[i].exlongitude);
@@ -1363,6 +1207,10 @@ if(!bluewave.charts) bluewave.charts={};
         var thicknessScale = d3.scaleQuantile()
             .domain(thicknessExtent)
             .range([6 ,8, 10, 12, 14]);
+
+
+if (true) return;
+
         mapArea.selectAll("#connection-path").remove();
         mapArea.selectAll("#connection-path")
             .data(coords)
@@ -1432,7 +1280,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** getPoints
   //**************************************************************************
-    var getPoints = function(data, chartConfig, projection){
+    var getPoints = function(data, chartConfig){
         var coords = [];
         var hasValue = false;
         data.forEach(function(d){
@@ -1555,9 +1403,6 @@ if(!bluewave.charts) bluewave.charts={};
                 },
                 outlineWidth: outlineWidth,
                 outlineColor: oc
-            },
-            onClick: function(o){
-                console.log(o);
             }
         });
     };
@@ -1627,38 +1472,87 @@ if(!bluewave.charts) bluewave.charts={};
 
 
   //**************************************************************************
-  //** updateStatePolygons
+  //** renderCounties
   //**************************************************************************
-  /** Used to update the fill color for states using the "mapValue"
+  /** Used to render county polygons
+   *  @param data If given, will render different fill colors using data values
+   *  @param colorScale Used to define fill colors
    */
-    var updateStatePolygons = function(data, statePolygons, chartConfig, colorScale){
-        var values = {};
-        data.forEach(function(d){
-            var location = d[chartConfig.mapLocation];
-            if (typeof location === 'undefined') return;
-            values[location] = d[chartConfig.mapValue];
-        });
+    var renderCounties = function(data, colorScale){
 
-        statePolygons.each(function() {
-            var path = d3.select(this);
-            path.attr('fill', function(state){
-                var v = parseFloat(values[state.properties.name]);
-                if (isNaN(v)) v = parseFloat(values[state.properties.code]);
+        var fill = chartConfig.landColor; //"none";
+        if (data && colorScale){
+
+            var values = {};
+            data.forEach(function(d){
+                var countyID = d[chartConfig.mapLocation];
+                values[countyID] = d[chartConfig.mapValue];
+            });
+
+            fill = function(county){
+                var v = parseFloat(values[county.id]);
                 if (isNaN(v) || v<0) v = 0;
                 var fill = colorScale[chartConfig.colorScale](v);
-                if (!fill) return 'none';
+                if (!fill) return chartConfig.landColor;
                 return fill;
-            });
+            };
+        }
+
+        mapChart.addPolygons(counties.features, {
+            name: "counties",
+            style: {
+                fill: fill
+            }
         });
     };
 
 
   //**************************************************************************
-  //** updateCensusPolygons
+  //** renderStates
   //**************************************************************************
-  /** Used to update the fill color for states by census division using "mapValue"
+  /** Used to render state polygons
+   *  @param data If given, will render different fill colors using data values
+   *  @param colorScale Used to define fill colors
    */
-    var updateCensusPolygons = function(data, statePolygons, chartConfig, colorScale){
+    var renderStates = function(data, colorScale){
+
+        var fill = "none";
+        if (data && colorScale){
+
+            var values = {};
+            data.forEach(function(d){
+                var state = d[chartConfig.mapLocation];
+                if (typeof state === 'undefined') return;
+                values[state] = d[chartConfig.mapValue];
+            });
+
+            fill = function(state){
+                var v = parseFloat(values[state.properties.name]);
+                if (isNaN(v)) v = parseFloat(values[state.properties.code]);
+                if (isNaN(v) || v<0) v = 0;
+                var fill = colorScale[chartConfig.colorScale](v);
+                if (!fill) return chartConfig.landColor;
+                return fill;
+            };
+        }
+
+        mapChart.addPolygons(states.features, {
+            name: "states",
+            style: {
+                fill: fill,
+                stroke: "white"
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderCensusRegions
+  //**************************************************************************
+  /** Used to render sensus regions using state polygons with a given color scale
+   */
+    var renderCensusRegions = function(data, colorScale){
+
         var values = {};
         data.forEach(function(d){
             var censusDivision = getCensusDivision(d[chartConfig.mapLocation]);
@@ -1667,15 +1561,18 @@ if(!bluewave.charts) bluewave.charts={};
             }
         });
 
-        statePolygons.each(function() {
-            var path = d3.select(this);
-            path.attr('fill', function(state){
-                var v = parseFloat(values[state.properties.censusDivision+""]);
-                if (isNaN(v) || v<0) v = 0;
-                var fill = colorScale[chartConfig.colorScale](v);
-                if (!fill) return 'none';
-                return fill;
-            });
+        mapChart.addPolygons(states.features, {
+            name: "censusRegions",
+            style: {
+                fill: function(state){
+                    var v = parseFloat(values[state.properties.censusDivision+""]);
+                    if (isNaN(v) || v<0) v = 0;
+                    var fill = colorScale[chartConfig.colorScale](v);
+                    if (!fill) return 'none';
+                    return fill;
+                },
+                stroke: "white"
+            }
         });
     };
 
@@ -1758,7 +1655,6 @@ if(!bluewave.charts) bluewave.charts={};
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
-    var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
