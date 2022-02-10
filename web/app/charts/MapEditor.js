@@ -891,7 +891,7 @@ if(!bluewave.charts) bluewave.charts={};
                     points = getPoints(data, chartConfig);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    //points = getCentroids(data, states, chartConfig, path, projection);
+                    points = getCentroids(data, states);
                 }
                 renderPoints(points, chartConfig, extent);
 
@@ -951,7 +951,7 @@ if(!bluewave.charts) bluewave.charts={};
                     points = getPoints(data, chartConfig);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    //points = getCentroids(data, states, chartConfig, path, projection);
+                    points = getCentroids(data, states);
                 }
 
 
@@ -999,7 +999,7 @@ if(!bluewave.charts) bluewave.charts={};
                     points = getPoints(data, chartConfig);
                 }
                 else if (chartConfig.pointData==="adminArea"){
-                    //points = getCentroids(data, countries, chartConfig, path, projection);
+                    points = getCentroids(data, countries);
                 }
 
 
@@ -1307,7 +1307,7 @@ if (true) return;
   //**************************************************************************
   //** getCentroids
   //**************************************************************************
-    var getCentroids = function(data, mapData, chartConfig, path, projection){
+    var getCentroids = function(data, mapData){
         var coords = [];
         var hasValue = false;
         data.forEach(function(d){
@@ -1319,10 +1319,10 @@ if (true) return;
                   //Get centroid
                     var centroid;
                     if (!isNaN(properties.latitude) && !isNaN(properties.longitude)){
-                        centroid = projection([properties.longitude, properties.latitude]);
+                        centroid = [properties.longitude, properties.latitude];
                     }
                     else{
-                        centroid = path.centroid(feature);
+                        centroid = mapChart.getCentroid(feature);
                     }
 
                   //Update coords
