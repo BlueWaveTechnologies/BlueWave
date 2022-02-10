@@ -59,6 +59,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** addPoints
   //**************************************************************************
+  //Accepts array of [long, lat] points
     this.addPoints = function(points, config){
         layers.push({
             type: "points",
@@ -70,6 +71,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** addLines
   //**************************************************************************
+  //Accepts array of point tuples
     this.addLines = function(tuples, config){
         layers.push({
             type: "lines",
@@ -198,6 +200,43 @@ bluewave.charts.MapChart = function(parent, config) {
 
         }
     };
+
+    //Returns [long, lat] of point perpendicular to param coordinates
+    this.pseudoGlobalPath = function(coordinates, ratio, inclination){
+
+      if (!projection) me.setProjection("Mercator");
+      if (!ratio) ratio = 1;
+
+      if (inclination === "south") {
+        inclination = 1
+      } else {
+        inclination = -1;
+      }
+      var coords = coordinates.slice();
+      //coordinates is a pair of [long, lat] coords
+      coords[0] = projection(coords[0]);
+      coords[1] = projection(coords[1]);
+
+      
+      var midPointX = (coords[0][0] + coords[1][0])/2;
+      var midPointY = (coords[0][1] + coords[1][1])/2;
+
+      var deltaX = coords[1][0] - coords[0][0];
+      var deltaY = coords[1][1] - coords[0][1];
+
+      //Vector normal to line from origin scaled by ratio
+      var normVector = [-deltaY * ratio * inclination, deltaX * ratio * inclination];
+
+      //Translate vector from origin to midpoint
+      var pseudoPoint = [ (normVector[0] + midPointX) , (normVector[1] + midPointY) ];
+      pseudoPoint = projection.invert(pseudoPoint);
+      //Just returning the points now
+      return pseudoPoint;
+      // var curve = d3.line().curve(d3.curveNatural);
+      // var arr = [coordinates[0], pseudoPoint, coordinates[1]]
+      // return curve(arr);
+
+  };
 
 
   //**************************************************************************
@@ -582,7 +621,13 @@ bluewave.charts.MapChart = function(parent, config) {
         .append("path")
         //.attr("class", config.className)
         .attr("d", function(d){
-            return path({type: "LineString", coordinates: d})
+          // return path({type: "LineString", coordinates: d})
+          var curve = d3.line().curve(d3.curveNatural);
+          var arr = d.map(coord => projection(coord))
+
+          // return curve([projection(d[0]), projection(d[1])]);
+          return curve(arr);
+
         })
         .attr("fill", "none")
         .attr("opacity", opacity)
