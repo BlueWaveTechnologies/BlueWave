@@ -1116,7 +1116,7 @@ if(!bluewave.charts) bluewave.charts={};
       //Set map extents
         if (countryCodes['US']){
             countryCodes = Object.keys(countryCodes);
-            if (countryCodes.length==0 && countryCodes[0]=="US"){
+            if (countryCodes.length===1 && countryCodes[0]==="US"){
                 mapChart.setExtent([-130, 50.5], [-65, 25.8]); //zoom to US
             }
             else{
