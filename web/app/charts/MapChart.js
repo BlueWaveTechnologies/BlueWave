@@ -656,6 +656,9 @@ bluewave.charts.MapChart = function(parent, config) {
         var lineStyle = style.lineStyle;
         if (!lineStyle) lineStyle = "solid";
 
+        var smoothingType = style.smoothingType;
+        if (!smoothingType) smoothingType = "curveLinear";
+
 
         var color = style.fill;
         if(!color) color = "red";
@@ -670,13 +673,11 @@ bluewave.charts.MapChart = function(parent, config) {
         .append("path")
         //.attr("class", config.className)
         .attr("d", function(d){
-          // return path({type: "LineString", coordinates: d})
-          var curve = d3.line().curve(d3.curveNatural);
+
+          var curve = d3.line().curve(d3[smoothingType]);
           var arr = d.map(coord => projection(coord))
 
-          // return curve([projection(d[0]), projection(d[1])]);
           return curve(arr);
-
         })
         .attr("fill", "none")
         .attr("opacity", opacity)
