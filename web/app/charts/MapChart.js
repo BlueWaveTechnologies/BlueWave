@@ -267,6 +267,8 @@ bluewave.charts.MapChart = function(parent, config) {
         coords[0] = projection(coords[0]);
         coords[1] = projection(coords[1]);
 
+        //Flip coordinates if line is east to west
+        if ((coords[1][0] - coords[0][0]) < 0) coords.reverse();
 
         var midPointX = (coords[0][0] + coords[1][0])/2;
         var midPointY = (coords[0][1] + coords[1][1])/2;
@@ -280,11 +282,8 @@ bluewave.charts.MapChart = function(parent, config) {
         //Translate vector from origin to midpoint
         var pseudoPoint = [ (normVector[0] + midPointX) , (normVector[1] + midPointY) ];
         pseudoPoint = projection.invert(pseudoPoint);
-        //Just returning the points now
+        
         return pseudoPoint;
-        // var curve = d3.line().curve(d3.curveNatural);
-        // var arr = [coordinates[0], pseudoPoint, coordinates[1]]
-        // return curve(arr);
 
     };
 
