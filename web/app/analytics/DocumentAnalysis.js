@@ -238,7 +238,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             panels.every((panel)=>{
                 if (panel.isSelected()){
                     panel.update(currPanel);
-                    UpdateButtons();
+                    updateButtons();
                     return false;
                 }
                 return true;
@@ -358,7 +358,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         panel.select = function(){
             li.select();
-            UpdateButtons();
+            updateButtons();
         };
         panel.isSelected = function(){
             return li.selected;
@@ -578,11 +578,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
             var grid = searchPanel.getDataGrid();
 
-
           //Watch for row click events
             grid.onRowClick = function(row, e){
                 if (e.detail === 2) { //double click
-                    selectRow(row);
+                    selectRow(row, true, false);
                 }
             };
 
@@ -634,11 +633,15 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** selectRow
   //**************************************************************************
-  /** Selects the row from Document Search panel and adds it to the Selected Documents panel
+  /** Selects or deselects the row from Document Search panel and adds it to the Selected Documents panel
+   *  if function is called with mouseEvent true -> unselect row if selected and select the row if unselected
+   *  if function is called with makeSelected true -> select row
+   *  if function is called with makeSelected false -> unselect row
    */
-    var selectRow= function(row){
+    var selectRow = function(row, mouseEvent, makeSelected){
         var o = row.get("Name");
-        if (!o.select){
+
+        if (!o.select){ // runs only once for each row - initialize row with selection capability if not already initialized
             var div = document.createElement("div");
             div.className = "document-analysis-selected-row";
             div.select = function(){
@@ -671,18 +674,42 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         var r = row.record;
         selectedDocuments.forEach((d, i)=>{
             if (d.id===r.id){
-                selectedDocuments.removeAt(i);
                 addDocument = false;
+
+                if (mouseEvent) {
+                    selectedDocuments.removeAt(i);
+                }
+                else {
+                    if (!makeSelected){
+                        selectedDocuments.removeAt(i);
+                    };
+                };
                 return true;
             }
         });
-        if (addDocument){
-            selectedDocuments.add(r);
-            o.select();
-        }
-        else{
-            o.deselect();
-        }
+        // mouse click events
+            if (addDocument && mouseEvent){
+                selectedDocuments.add(r);
+                o.select();
+            }
+            else if (!addDocument && mouseEvent){
+                o.deselect();
+            }
+        // selectAll events
+            else if (!addDocument && !mouseEvent && makeSelected){
+                o.select();
+            }
+            else if (!addDocument && !mouseEvent && !makeSelected){
+                o.deselect();
+            }
+            else if (addDocument && !mouseEvent && !makeSelected){
+                o.deselect();
+            }
+            else if (addDocument && !mouseEvent && makeSelected){
+                selectedDocuments.add(r);
+                o.select();
+            }
+
     }
 
   //**************************************************************************
@@ -1081,7 +1108,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         });
         mainButton["next"].onClick = function(){
             for (i in panels){
-                if (panels[i].name == "Selected Documents") panels[i].select()
+                if (panels[i].name == "Selected Documents") panels[i].select();
             }
         };
 
@@ -1095,7 +1122,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             });
             mainButton["back"].onClick = function(){
                 for (i in panels){
-                    if (panels[i].name == "Document Search") panels[i].select()
+                    if (panels[i].name == "Document Search") panels[i].select();
                 }
             };
 
@@ -1116,28 +1143,43 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             };
 
             var rows = document.getElementsByClassName("table-row");
-            console.log(rows);
+            var actualRows = [];
+
             for (row in rows){
                 if (isElement(rows[row])){
-                    selectRow(rows[row]);
+                    actualRows.push(rows[row])
                 };
             };
+            rows = actualRows;
 
-            if (this.getText() == "Select All") this.setText("Deselect All");
-            else this.setText("Select All");
+            if (this.getText() == "Select All"){
+                for (row in rows){
+                    selectRow(rows[row], false, true);
+                };
+                this.setText("Deselect All");
+                return;
+            }
+            else {
+                for (row in rows){
+                    selectRow(rows[row], false, false);
+                };
+                this.setText("Select All");
+                return;
+            };
+
         };
         mainButton["back"].disable();
         mainButton["next"].disable();
         mainButton["selectAll"].disable();
-        UpdateButtons();
+        updateButtons();
     };
 
 
 
   //**************************************************************************
-  //** UpdateButtons
+  //** updateButtons
   //**************************************************************************
-    var UpdateButtons = function(){
+    var updateButtons = function(){
         var selectedPanel;
 
         for (panel in panels){
