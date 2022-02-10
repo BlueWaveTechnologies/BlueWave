@@ -59,7 +59,10 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** addPoints
   //**************************************************************************
-  //Accepts array of [long, lat] points
+  /** Used to add points to the map
+   *  @param points Accepts an array of [long, lat] points or a GeoJson object
+   *  @param config Style and other rendering options
+   */
     this.addPoints = function(points, config){
         layers.push({
             type: "points",
@@ -68,14 +71,19 @@ bluewave.charts.MapChart = function(parent, config) {
         });
     };
 
+
   //**************************************************************************
   //** addLines
   //**************************************************************************
-  //Accepts array of point tuples
-    this.addLines = function(tuples, config){
+  /** Used to add lines to the map
+   *  @param lines Accepts an array of lines, each defined by an array of points,
+   *  or a GeoJson object
+   *  @param config Style and other rendering options
+   */
+    this.addLines = function(lines, config){
         layers.push({
             type: "lines",
-            features: tuples,
+            features: lines,
             config: config
         });
     };
@@ -84,6 +92,10 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** addPolygons
   //**************************************************************************
+  /** Used to add polygons to the map
+   *  @param labels Accepts a GeoJson object with polygons
+   *  @param config Style and other rendering options
+   */
     this.addPolygons = function(polygons, config){
         layers.push({
             type: "polygons",
@@ -96,10 +108,14 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** addLabels
   //**************************************************************************
-    this.addLabels = function(points, config){
+  /** Used to add lables to the map
+   *  @param labels Accepts a GeoJson object with coordinates and properties
+   *  @param config Style and other rendering options
+   */
+    this.addLabels = function(labels, config){
         layers.push({
             type: "labels",
-            features: points,
+            features: labels,
             config: config
         });
     };
@@ -227,42 +243,50 @@ bluewave.charts.MapChart = function(parent, config) {
         }
     };
 
-    //Returns [long, lat] of point perpendicular to param coordinates
-    this.pseudoGlobalPath = function(coordinates, ratio, inclination){
 
-      if (!projection) me.setProjection("Mercator");
-      if (!ratio) ratio = 1;
+  //**************************************************************************
+  //** getMidPoint
+  //**************************************************************************
+  /** Returns the midpoint between a pair of coordinates with an optional
+   *  perpendicular offset
+   *  @param ratio Perpendicular offset (optional). Defined as a ratio of the
+   *  distance between the start/end coordinates
+   */
+    this.getMidPoint = function(coordinates, ratio, inclination){
 
-      if (inclination === "south") {
-        inclination = 1
-      } else {
-        inclination = -1;
-      }
-      var coords = coordinates.slice();
-      //coordinates is a pair of [long, lat] coords
-      coords[0] = projection(coords[0]);
-      coords[1] = projection(coords[1]);
+        if (!projection) me.setProjection("Mercator");
+        if (isNaN(ratio)) ratio = 0;
+
+        if (inclination === "south") {
+            inclination = 1;
+        } else {
+            inclination = -1;
+        }
+        var coords = coordinates.slice();
+        //coordinates is a pair of [long, lat] coords
+        coords[0] = projection(coords[0]);
+        coords[1] = projection(coords[1]);
 
 
-      var midPointX = (coords[0][0] + coords[1][0])/2;
-      var midPointY = (coords[0][1] + coords[1][1])/2;
+        var midPointX = (coords[0][0] + coords[1][0])/2;
+        var midPointY = (coords[0][1] + coords[1][1])/2;
 
-      var deltaX = coords[1][0] - coords[0][0];
-      var deltaY = coords[1][1] - coords[0][1];
+        var deltaX = coords[1][0] - coords[0][0];
+        var deltaY = coords[1][1] - coords[0][1];
 
-      //Vector normal to line from origin scaled by ratio
-      var normVector = [-deltaY * ratio * inclination, deltaX * ratio * inclination];
+        //Vector normal to line from origin scaled by ratio
+        var normVector = [-deltaY * ratio * inclination, deltaX * ratio * inclination];
 
-      //Translate vector from origin to midpoint
-      var pseudoPoint = [ (normVector[0] + midPointX) , (normVector[1] + midPointY) ];
-      pseudoPoint = projection.invert(pseudoPoint);
-      //Just returning the points now
-      return pseudoPoint;
-      // var curve = d3.line().curve(d3.curveNatural);
-      // var arr = [coordinates[0], pseudoPoint, coordinates[1]]
-      // return curve(arr);
+        //Translate vector from origin to midpoint
+        var pseudoPoint = [ (normVector[0] + midPointX) , (normVector[1] + midPointY) ];
+        pseudoPoint = projection.invert(pseudoPoint);
+        //Just returning the points now
+        return pseudoPoint;
+        // var curve = d3.line().curve(d3.curveNatural);
+        // var arr = [coordinates[0], pseudoPoint, coordinates[1]]
+        // return curve(arr);
 
-  };
+    };
 
 
   //**************************************************************************
