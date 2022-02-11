@@ -322,6 +322,12 @@ bluewave.charts.MapChart = function(parent, config) {
 
         if (!projection) me.setProjection("Mercator");
 
+        if (projectionType === "AlbersUsa"){
+          projection.translate([width / 2, height / 2]);
+          draw();
+          return;
+        }
+
         projection
             // .geoMercator()
             // .geoConicConformal()
@@ -456,6 +462,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var setExtent = function(extent){
 
         if (!projection) return;
+        if (projectionType === "AlbersUsa") return;
         if (!extent.upperLeft || !extent.lowerRight) return;
 
         var upperLeft = extent.upperLeft;
@@ -513,6 +520,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         //New coords for scaled projection
         ulCartesian = projection(upperLeft);
+        lrCartesian = projection(lowerRight);
 
         var centerCartesian = [ulCartesian[0] + w/2, ulCartesian[1] + h/2];
         var center = projection.invert(centerCartesian);
@@ -522,14 +530,27 @@ bluewave.charts.MapChart = function(parent, config) {
         .rotate([-center[0], 0])
         .center([0, center[1]]);
 
-        // var geoJson = {
-        //           "type": "Point",
-        //           "coordinates": [30.0, 10.0]
-        //           };
+        //Check if lowerRight is below bottom extent and re-scale/center accordingly
+        var extentCheck = me.getExtent();
+        var latRatio = Math.abs(lowerRight[1] - extentCheck.bottom);
 
-        // .fitExtent([[w, h], geoJson]);
+        if(lowerRight[1] < extentCheck.bottom){
+          let windowExtent = extentCheck.top - extentCheck.bottom;
 
+          let scaleRatio = latRatio/windowExtent;
+          scaleRatio++;
 
+          center = me.getMidPoint([upperLeft, lowerRight]);
+
+          let scale = projection.scale();
+          projection
+            .scale(scale / scaleRatio)
+            .rotate([-center[0], 0])
+            .center([0, center[1]]);
+            
+        };
+        
+ 
         draw();
     };
 
