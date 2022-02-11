@@ -525,6 +525,8 @@ bluewave.charts.MapChart = function(parent, config) {
         .rotate([-center[0], 0])
         .center([0, center[1]]);
 
+        //True center
+        center = me.getMidPoint([upperLeft, lowerRight]);
         //Check if lowerRight is below bottom extent and scale by latitude then center accordingly
         var extentCheck = me.getExtent();
         var latitudeDiff = Math.abs(lowerRight[1] - extentCheck.bottom);
@@ -535,14 +537,17 @@ bluewave.charts.MapChart = function(parent, config) {
           let scaleRatio = latitudeDiff/windowExtent;
           scaleRatio++;
 
-          center = me.getMidPoint([upperLeft, lowerRight]);
-
           let scale = projection.scale();
+          
           projection
             .scale(scale / scaleRatio)
             .rotate([-center[0], 0])
             .center([0, center[1]]);
 
+        }else if(lowerRight[1] > extentCheck.bottom){
+          projection
+            .rotate([-center[0], 0])
+            .center([0, center[1]]);
         };
         
  
