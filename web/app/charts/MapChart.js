@@ -497,7 +497,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         //If lower right extent is set over the edge of the map, flip the map. Not gonna work for albers
         if (projection(upperLeft)[0] > projection(lowerRight)[0]){
-            projection.rotate([180, 0]);
+            projection.rotate([-upperLeft[0]-180, 0]);
         }
 
         var ulCartesian = projection(upperLeft);
