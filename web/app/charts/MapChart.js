@@ -291,12 +291,13 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(){
+    this.update = function(callback){
         clearChart();
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
             update(parent);
+            if (callback) callback();
         });
 
     };
@@ -436,9 +437,16 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** setExtent
   //**************************************************************************
-    this.setExtent = function(upperLeft, lowerRight){
+    this.setExtent = function(upperLeft, lowerRight, callback){
         extent.upperLeft = upperLeft;
         extent.lowerRight = lowerRight;
+
+        if (!projection){
+            me.update(function(){
+                setExtent(extent);
+                if (callback) callback();
+            });
+        }
     };
 
 
@@ -447,7 +455,6 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
     var setExtent = function(extent){
 
-        var projection = me.getProjection();
         if (!projection) return;
         if (!extent.upperLeft || !extent.lowerRight) return;
 
@@ -464,7 +471,7 @@ bluewave.charts.MapChart = function(parent, config) {
         if (projectionType == "Albers"){
 
           //"The greatest accuracy is obtained if the selected standard parallels enclose two-thirds the height of the map"
-          projection.parallels( [lowerRight[1] + Math.abs(lowerRight[1]*(1/6)), upperLeft[1] - Math.abs(upperLeft[1]*(1/6))] )
+          projection.parallels( [lowerRight[1] + Math.abs(lowerRight[1]*(1/6)), upperLeft[1] - Math.abs(upperLeft[1]*(1/6))] );
 
 //           let center = [-160, 18];
 //           projection
@@ -483,7 +490,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         //If lower right extent is set over the edge of the map, flip the map. Not gonna work for albers
         if (projection(upperLeft)[0] > projection(lowerRight)[0]){
-            projection.rotate([180, 0])
+            projection.rotate([180, 0]);
         }
 
         var ulCartesian = projection(upperLeft);
@@ -492,11 +499,12 @@ bluewave.charts.MapChart = function(parent, config) {
         var longitudeDiff = Math.abs(ulCartesian[0] - lrCartesian[0]);
         var latitudeDiff = Math.abs(ulCartesian[1] - lrCartesian[1]);
 
+        var scaleRatio;
         if (longitudeDiff>latitudeDiff){
-          var scaleRatio = longitudeDiff/extentLongDiff;
+            scaleRatio = longitudeDiff/extentLongDiff;
         }
         else{
-          var scaleRatio = latitudeDiff/extentLatDiff;
+            scaleRatio = latitudeDiff/extentLatDiff;
         }
 
         //for albers I think we're gonna need to rotate and center first - then the scaling will be ~ linear
@@ -507,7 +515,7 @@ bluewave.charts.MapChart = function(parent, config) {
         ulCartesian = projection(upperLeft);
 
         var centerCartesian = [ulCartesian[0] + w/2, ulCartesian[1] + h/2];
-        var center = projection.invert(centerCartesian)
+        var center = projection.invert(centerCartesian);
 
 
         projection
