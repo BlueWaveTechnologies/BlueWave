@@ -504,17 +504,12 @@ bluewave.charts.MapChart = function(parent, config) {
         var lrCartesian = projection(lowerRight);
 
         var longitudeDiff = Math.abs(ulCartesian[0] - lrCartesian[0]);
-        var latitudeDiff = Math.abs(ulCartesian[1] - lrCartesian[1]);
 
         var scaleRatio;
-        if (longitudeDiff>latitudeDiff){
-            scaleRatio = longitudeDiff/extentLongDiff;
-        }
-        else{
-            scaleRatio = latitudeDiff/extentLatDiff;
-        }
+        scaleRatio = longitudeDiff/extentLongDiff;
 
         //for albers I think we're gonna need to rotate and center first - then the scaling will be ~ linear
+        //Scale by longtitude first
         projection.scale(scale / scaleRatio);
 
 
@@ -530,14 +525,14 @@ bluewave.charts.MapChart = function(parent, config) {
         .rotate([-center[0], 0])
         .center([0, center[1]]);
 
-        //Check if lowerRight is below bottom extent and re-scale/center accordingly
+        //Check if lowerRight is below bottom extent and scale by latitude then center accordingly
         var extentCheck = me.getExtent();
-        var latRatio = Math.abs(lowerRight[1] - extentCheck.bottom);
+        var latitudeDiff = Math.abs(lowerRight[1] - extentCheck.bottom);
 
         if(lowerRight[1] < extentCheck.bottom){
           let windowExtent = extentCheck.top - extentCheck.bottom;
 
-          let scaleRatio = latRatio/windowExtent;
+          let scaleRatio = latitudeDiff/windowExtent;
           scaleRatio++;
 
           center = me.getMidPoint([upperLeft, lowerRight]);
@@ -547,7 +542,7 @@ bluewave.charts.MapChart = function(parent, config) {
             .scale(scale / scaleRatio)
             .rotate([-center[0], 0])
             .center([0, center[1]]);
-            
+
         };
         
  
