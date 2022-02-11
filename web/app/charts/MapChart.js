@@ -538,17 +538,14 @@ bluewave.charts.MapChart = function(parent, config) {
           scaleRatio++;
 
           let scale = projection.scale();
-          
+
           projection
             .scale(scale / scaleRatio)
-            .rotate([-center[0], 0])
-            .center([0, center[1]]);
-
-        }else if(lowerRight[1] > extentCheck.bottom){
-          projection
-            .rotate([-center[0], 0])
-            .center([0, center[1]]);
         };
+
+        projection
+            .rotate([-center[0], 0])
+            .center([0, center[1]]);
         
  
         draw();
