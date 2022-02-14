@@ -1,6 +1,7 @@
 package bluewave.utils;
 
 import java.util.*;
+import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Paths;
 import static javaxt.utils.Console.console;
@@ -41,6 +42,7 @@ import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.QueryScorer;
+import org.apache.lucene.search.highlight.SimpleFragmenter;
 import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
 import org.apache.lucene.search.vectorhighlight.FastVectorHighlighter;
@@ -55,6 +57,10 @@ import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.text.PDFTextStripper;
+import bluewave.app.DocumentComparison;
+import bluewave.app.File;
+import javaxt.json.JSONArray;
+import javaxt.json.JSONObject;
 
 
 public class FileIndex {
@@ -150,6 +156,7 @@ public class FileIndex {
                 searchMetadata.set("score", score);
                 searchMetadata.set("frequency", resultWrapper.frequency);
                 searchMetadata.set("highlightFragment", resultWrapper.highlightFragment);
+                searchMetadata.set("explainDetails", resultWrapper.explainDetails);
                 info.set("searchMetadata", searchMetadata);
 
                 ArrayList<bluewave.app.Document> documents = searchResults.get(score);
@@ -169,13 +176,17 @@ public class FileIndex {
 
       //Compile query
         BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
+        Query contentsQuery = null;
         for (String term : searchTerms) {
 
             WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
             BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
             bqBuilder.add(wildcardBooleanClause);
 
-            Query contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, QueryParser.escape(term).toLowerCase());
+            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
+
+            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
             bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
 
             Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
@@ -198,8 +209,12 @@ public class FileIndex {
       //Create highlighter
         QueryScorer scorer = new QueryScorer(bbq);
         Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter(), scorer);
-        highlighter.setTextFragmenter(new SimpleSpanFragmenter(scorer, FRAGMENT_CHAR_SIZE));
+        highlighter.setTextFragmenter(new SimpleFragmenter( FRAGMENT_CHAR_SIZE));
 
+        QueryScorer phraseScorer = new QueryScorer(bbq);
+        phraseScorer.setExpandMultiTermQuery(false);
+        Highlighter phraseHighlighter = new Highlighter(new SimpleHTMLFormatter(), phraseScorer);
+        phraseHighlighter.setTextFragmenter(new SimpleSpanFragmenter(phraseScorer, FRAGMENT_CHAR_SIZE));
 
       //Generate response
         for (ScoreDoc scoreDoc : hits.scoreDocs) {
@@ -208,20 +223,25 @@ public class FileIndex {
             int docid = scoreDoc.doc;
             Document doc = searcher.doc(docid);
             Explanation ex = searcher.explain(bbq, docid);
-            Explanation explanation = ex.getDetails()[0];
-            resultWrapper.frequency = getFrequency(explanation.toString());
-
+            JSONArray explainDetails = new JSONArray();
+            for(Explanation explanation : ex.getDetails()) {
+                JSONArray explains = parse(explanation);
+                for(Object explain : explains) {
+                    explainDetails.add(explain);
+                }
+            }
+            resultWrapper.explainDetails = explainDetails;
 
           //Generate highlightFragment
             for (String term : searchTerms) {
 
                 // Contents
                 IndexableField field = doc.getField(FIELD_CONTENTS);
-                Query contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-                String fragment = getVectorHighlight(contentsQuery, searcher.getIndexReader(), docid, FIELD_CONTENTS, term);
-                if(fragment != null && !fragment.isBlank()) {
-                    resultWrapper.highlightFragment = fragment;
+                String fragment = getHighlights(field, doc, phraseHighlighter);
+                if(fragment == null) {
+                    fragment = getVectorHighlight(contentsQuery, searcher.getIndexReader(), docid, FIELD_CONTENTS, term);
                 }
+                resultWrapper.highlightFragment = fragment;
 
                 // Name
                 if(resultWrapper.highlightFragment == null || resultWrapper.highlightFragment.isBlank()) {
@@ -245,7 +265,6 @@ public class FileIndex {
                 }
             }
 
-            // console.log("fragment: " + resultWrapper.highlightFragment);
             results.add(resultWrapper);
         }
 
@@ -271,29 +290,12 @@ public class FileIndex {
     private String getVectorHighlight(Query query, IndexReader indexReader, int docId, String fieldName, String searchTerm ) {
         String[] PRE_TAGS = new String[]{"<b>"};
         String[] POST_TAGS = new String[]{"</b>"};
-        FastVectorHighlighter fastVectorHighlighter = new FastVectorHighlighter(true, true,new SimpleFragListBuilder(25), new SimpleFragmentsBuilder(PRE_TAGS, POST_TAGS) );
+        FastVectorHighlighter fastVectorHighlighter = new FastVectorHighlighter(true, true,new SimpleFragListBuilder(1), new SimpleFragmentsBuilder(PRE_TAGS, POST_TAGS) );
         try {
-            FieldQuery fieldQuery = fastVectorHighlighter.getFieldQuery(new QueryParser(fieldName, perFieldAnalyzerWrapper).parse(QueryParser.escape(searchTerm).toLowerCase()), indexReader);
+            FieldQuery fieldQuery = fastVectorHighlighter.getFieldQuery(query, indexReader);
             return fastVectorHighlighter.getBestFragment(fieldQuery, indexReader, docId, fieldName, FRAGMENT_CHAR_SIZE);
         }catch(Exception e) {
             console.log("ERROR: " + e);
-        }
-        return null;
-    }
-
-    private Float getFrequency(String explanationDetails) {
-        try {
-            int indexOfEqualsSign = explanationDetails.indexOf("= freq,");
-            if(indexOfEqualsSign != -1) {
-                String firstHalf = explanationDetails.substring(0, indexOfEqualsSign);
-                int indexOfColonBeforeTargetEqualsSign = firstHalf.lastIndexOf("from:") + 5;
-                String frequencyStr = explanationDetails.substring(indexOfColonBeforeTargetEqualsSign, indexOfEqualsSign);
-                if(frequencyStr != null && !frequencyStr.isBlank()) {
-                    return Float.parseFloat(frequencyStr);
-                }
-            }
-        }catch(Exception e) {
-            console.log("Error: " + e);
         }
         return null;
     }
@@ -510,6 +512,7 @@ public class FileIndex {
         ScoreDoc scoreDoc;
         Float frequency;
         String highlightFragment;
+        JSONArray explainDetails;
     }
 
     private CharArraySet getStopWords() {
@@ -531,5 +534,122 @@ public class FileIndex {
         //     console.log(str); 
 
         return new CharArraySet(stopWords, false);
+    }
+
+    private JSONArray parse(Explanation _explanation) {
+        if(_explanation == null) return null;
+
+        JSONArray explains = new JSONArray();
+        Explanation[]explanationDetails = _explanation.getDetails();
+        String description = desc(_explanation.getDescription());
+        if(description != null) {
+            String [] desc = description.split(":");
+            JSONObject explain = new JSONObject();
+            explain.set("field", desc[0]);
+            explain.set("term", desc[1]);
+            for (Explanation explanation : explanationDetails) {
+                Explanation[]subExplanationDetails = explanation.getDetails();
+                for(Explanation subExplanation : subExplanationDetails) {
+                    for(Explanation subSubExplanation : subExplanation.getDetails()) {
+                        if(subSubExplanation.getDescription().contains("freq") || subSubExplanation.getDescription().contains("phraseFreq")) {
+                            explain.set("frequency", subSubExplanation.getValue().toString());
+                            explains.add(explain);
+                        }
+                    }
+                }
+            }
+        } else {
+            description = null;
+            for (Explanation explanation : explanationDetails) {
+                Explanation[]subExplanationDetails = explanation.getDetails();
+                description = desc(explanation.getDescription());
+                if(description != null) {
+                    String [] desc = description.split(":");
+                    JSONObject explain = new JSONObject();
+                    explain.set("field", desc[0]);
+                    explain.set("term", desc[1]);
+                    for(Explanation subExplanation : subExplanationDetails) {
+                        for(Explanation subSubExplanation : subExplanation.getDetails()) {
+                            for(Explanation subSubSubExplanation : subSubExplanation.getDetails()) {
+                                if(subSubSubExplanation.getDescription().contains("freq,") || subSubSubExplanation.getDescription().contains("phraseFreq")) {
+                                    explain.set("frequency", subSubSubExplanation.getValue().toString());
+                                    explains.add(explain);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // console.log("Explains: " + explains.toString());
+        return explains;
+    }
+
+    /**
+     * Single term description
+     * @param line
+     * @return
+     */
+    private String desc(String line) {
+        String startTag = "weight(";
+        if(line == null || line.isBlank() || !line.contains(startTag))
+            return null;
+
+        int startIndex = line.indexOf(startTag) + startTag.length();
+        int endIndex = line.indexOf(")", startIndex);
+        String substring = line.substring(startIndex, endIndex);
+        endIndex = substring.lastIndexOf("in");
+        substring = substring.substring(0, endIndex);
+
+        return substring;
+    }
+
+
+
+    public void sync(javaxt.io.Directory  uploadDir) {
+        if(!indexExists()) return;
+        
+        try {
+            IndexReader reader = instanceOfIndexSearcher().getIndexReader();
+            console.log("Index has " + reader.numDocs() + " total docs.");
+            for (int i=0; i<reader.maxDoc(); i++) {
+                try {
+                    Document doc = reader.document(i);
+                    String path = doc.get(FIELD_PATH);
+                    long docId = Long.parseLong(doc.get(FIELD_DOCUMENT_ID));
+                    boolean exists = false;
+                    for (javaxt.io.File file : uploadDir.getFiles("*.pdf", true)){ 
+                        if(file.toString().equals(path)) {
+                            exists = true; break;
+                        }
+                    }
+                    if(!exists) {
+                        try {
+                            bluewave.app.Document document = bluewave.app.Document.get("id=", docId);
+                            if(document != null) {
+                                Map<String, Long> constraints = new HashMap<>();
+                                constraints.put("a_id=", docId);
+                                constraints.put("b_id=", docId);
+                                DocumentComparison[] foundDCs = bluewave.app.DocumentComparison.find(constraints);
+                                // Delete from db
+                                for (bluewave.app.DocumentComparison dc : foundDCs){
+                                    dc.delete();
+                                }
+                                File file = document.getFile();
+                                document.delete();
+                                file.delete();
+                                 
+                                // Delete from index
+                                remove(new Term(FIELD_DOCUMENT_ID, docId+""));
+                            }
+                        }catch(Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } catch(IOException ioe) {
+                }
+            }
+        }catch(Exception e) {
+        }
     }
 }

@@ -72,6 +72,7 @@ public class DocumentService extends WebService {
       //Create index of existing files. Use separate thread so the server doesn't hang
         try{
             index = new FileIndex(Config.getIndexDir());
+            index.sync(getUploadDir());
             new Thread(new Runnable() {
                 @Override
                 public void run() {
