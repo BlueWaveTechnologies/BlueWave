@@ -122,6 +122,21 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** addGrid
+  //**************************************************************************
+  /** Used to add graticule to the map
+   *  @param config Style and other rendering options
+   */
+    this.addGrid = function(config){
+        layers.push({
+            type: "grid",
+            features: null,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
   //** setBackgroundColor
   //**************************************************************************
     this.setBackgroundColor = function(color){
@@ -479,11 +494,12 @@ bluewave.charts.MapChart = function(parent, config) {
 
           //"The greatest accuracy is obtained if the selected standard parallels enclose two-thirds the height of the map"
           projection.parallels( [lowerRight[1] + Math.abs(lowerRight[1]*(1/6)), upperLeft[1] - Math.abs(upperLeft[1]*(1/6))] );
+          let center = me.getMidPoint([upperLeft, lowerRight]);
+        //   windowExtent = me.getExtent()
 
-//           let center = [-160, 18];
-//           projection
-//           .rotate([-center[0], 0])
-//           .center([0, center[1]]);
+        //   projection
+        //   .rotate([-center[0], 0])
+        //   .center([0, center[1]]);
         }
 
 
@@ -576,6 +592,7 @@ bluewave.charts.MapChart = function(parent, config) {
         layers.forEach(function(layer, i){
 
           //Create group
+            if(!layer.config) layer.config={};
             var name = layer.config.name;
             if (!name) name = "layer"+i;
             var g = layerGroup.append("g");
@@ -594,6 +611,9 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             else if (layer.type === "labels"){
                 renderLabelLayer(layer, g, path);
+            }
+            else if (layer.type === "grid"){
+                renderGridLayer(layer, g, path)
             }
         });
     };
@@ -712,6 +732,56 @@ bluewave.charts.MapChart = function(parent, config) {
         })
         .attr("stroke-linecap", function(d){
           if(lineStyle==="dotted") return "round";
+        });
+
+        layer.elements = lines;
+    };
+
+  //**************************************************************************
+  //** renderGridLayer
+  //**************************************************************************
+    var renderGridLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var width = parseInt(style.width);
+        if (isNaN(width)) width = 1;
+
+        var lineStyle = style.lineStyle;
+        if (!lineStyle) lineStyle = "solid";
+
+        var color = style.color;
+        if(!color) color = "gray";
+
+        var opacity = style.opacity;
+        if (!opacity) opacity = 0.5;
+
+        var longSteps = style.longSteps;
+        if (!longSteps) longSteps = 10;
+
+        var latSteps = style.latSteps;
+        if (!latSteps) latSteps = 10;
+
+        var graticule = d3.geoGraticule()
+        .step([longSteps, latSteps]);
+
+        var lines = g.selectAll("*")
+        .data([graticule()])
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .attr("fill", "none")
+        .attr("opacity", opacity)
+        .style("stroke", color)
+        .style("stroke-width", width)
+        .attr("stroke-dasharray", function(d){
+        if(lineStyle==="dashed") return "10, 10";
+        else if(lineStyle==="dotted") return "0, 10";
+        })
+        .attr("stroke-linecap", function(d){
+        if(lineStyle==="dotted") return "round";
         });
 
         layer.elements = lines;
