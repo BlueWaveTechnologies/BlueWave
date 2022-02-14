@@ -343,6 +343,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var table = createTable();
         var tbody = table.firstChild;
         var el = table;
+        // el.id = "comparisonPanel";
         var tr, td;
 
 
@@ -363,7 +364,22 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         td.className = "doc-compare-panel-subtitle";
         td.colSpan = 2;
         tr.appendChild(td);
-        var subtitle = td;
+        var tdContainer = document.createElement("div");
+        tdContainer.style.paddingBottom = "35px";
+        tdContainer.style.position = "relative";
+        td.appendChild(tdContainer);
+        var div = document.createElement("div");
+        div.style.position = "absolute";
+        tdContainer.appendChild(div);
+        var subtitle = div;
+
+      //Create navbar row
+        var div = document.createElement("div");
+        tdContainer.appendChild(div);
+        div.className = "doc-compare-panel-navbar";
+        div.style.width = "100%";
+        div.style.position = "absolute";
+        var navbar = div;
 
 
       //Create body row
@@ -457,18 +473,128 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 });
 
 
+                var ourNav;
+                ourNav = document.createElement("div");
+                ourNav.style.textAlign = "center";
+                navbar.appendChild(ourNav);
+
+                var div1 = document.createElement("div");
+                // div1.className = "doc-compare-panel-dot-navbar";
+                div1.style.width = "100%";
+                div1.style.height = "100%";
+                div1.style.background = "#34495e"; // this currently allows you to see the dot
+                div1.style.opacity = "50%";
+                div1.style.display = "table";
+                ourNav.appendChild(div1);
+
+                var div2 = document.createElement("div");
+                // div2.className = "doc-compare-panel-dot-navbar-container";
+                div2.style.display = "table-cell";
+                div2.style.verticalAlign = "middle";
+                div2.style.margin = "auto";
+                div2.style.textAlign = "center";
+                div1.appendChild(div2);
+
+                var ul = document.createElement("ul");
+                // ul.className = "doc-compare-panel-dot-navbar-ul";
+                ul.style.position = "relative";
+                ul.style.display = "inline-block";
+                ul.style.margin = "0";
+                ul.style.padding = "0";
+                ul.style.listStyle = "none";
+                ul.style.cursor = "default";
+                div2.appendChild(ul);
+
+                var maxDots = 10; // declare maximum number of dots to add
+                var totalPages = 9; // set a random totalpage amount
+
+
+
+                var bestIncrement = function (n, setMax){
+                    // round the number down to the nearest 10
+                        n = Math.floor( n /10 ) * 10;
+                    return Math.ceil(n / setMax);
+                }
+
+                // if its less than or equal to 10 increment by 1
+                    if (totalPages <= 10) increment = 1;
+                // if its more than 10 and less than or equal to 50 then increment by 5
+                    if (totalPages > 10 & totalPages <= 50) increment = 5;
+                // if its more than 50 and less than 100 increment by 10
+                    if (totalPages > 50 & totalPages <= 100) increment = 10;
+                // if it's more than 100 then increment by whatever divides it best
+                    if (totalPages > 100) increment = bestIncrement(totalPages,maxDots);
+
+                // console.log(increment);
+
+                numDots = Math.round(totalPages/increment);
+                // console.log(numDots);
+
+                var li = [];
+                for (var i=0; i <= numDots-1; i++){
+                  li.push(document.createElement("li"));
+                };
+
+                // set li elements with links to each page
+                  for (var i=0; i <= numDots-1; i++){
+                    li[i].className = "doc-compare-panel-dot-navbar-li";
+                    li[i].name = i;
+                    li[i].style.position = "relative";
+                    li[i].style.display = "block";
+                    li[i].style.float = "left";
+                    li[i].style.margin = "0 16px";
+                    li[i].style.width = "20px";
+                    li[i].style.height = "20px";
+                    li[i].style.cursor = "pointer";
+
+                    // a refs inside li element
+                      var a = document.createElement("a");
+                      a.className = "doc-compare-panel-dot-navbar-a";
+                      a.style.top = "0";
+                      a.style.left = "0";
+                      a.style.width = "100%";
+                      a.style.height = "100%";
+                      a.style.outline = "none";
+                      a.style.borderRadius = "50%";
+                      a.style.textIndent = "-999em"; // send it offscreen
+                      a.style.cursor = "pointer";
+                      a.style.position = "absolute";
+                      a.style.overflow = "hidden";
+                      a.style.backgroundColor = "transparent";
+                      a.style.boxShadow = "inset 0 0 0 2px white";
+                      a.style.transition = "all 0.3s ease";
+                      a.style.transform = "scale3d(1, 1, 1)";
+
+                    li[i].appendChild(a);
+                    console.log(`dot page index is ${ i * increment}`);
+
+                    li[i].onclick = function (){
+                      console.log("dot was clicked!");
+                      // find  li index #
+                        var liIndex;
+                        liIndex = this.name; // determine which button this is
+
+                      // use li index # to calculate page index
+                      console.log(`dot page index (not page number) is ${ liIndex * increment }`); // page number would be index +1
+                    };
+
+                    ul.appendChild(li[i]);
+                  };
+
+
+
+
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
 
                 createPreview(leftFile, leftPage, leftPanel);
                 createPreview(rightFile, rightPage, rightPanel);
 
-                leftFooter.innerText = "Page " + leftPage + " of " + leftFile.filename;
-                rightFooter.innerText = "Page " + rightPage + " of " + rightFile.filename;
+                leftFooter.innerText = "Page " + leftPage + " of " + totalPages + " " + leftFile.filename;
+                rightFooter.innerText = "Page " + rightPage + " of " + totalPages + " " + rightFile.filename;
             }
         };
     };
-
 
   //**************************************************************************
   //** createBody
