@@ -1,6 +1,7 @@
 package bluewave.utils;
 
 import java.util.*;
+import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Paths;
 import static javaxt.utils.Console.console;
@@ -56,6 +57,8 @@ import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.text.PDFTextStripper;
+import bluewave.app.DocumentComparison;
+import bluewave.app.File;
 import javaxt.json.JSONArray;
 import javaxt.json.JSONObject;
 
@@ -599,5 +602,54 @@ public class FileIndex {
         substring = substring.substring(0, endIndex);
 
         return substring;
+    }
+
+
+
+    public void sync(javaxt.io.Directory  uploadDir) {
+        if(!indexExists()) return;
+        
+        try {
+            IndexReader reader = instanceOfIndexSearcher().getIndexReader();
+            console.log("Index has " + reader.numDocs() + " total docs.");
+            for (int i=0; i<reader.maxDoc(); i++) {
+                try {
+                    Document doc = reader.document(i);
+                    String path = doc.get(FIELD_PATH);
+                    long docId = Long.parseLong(doc.get(FIELD_DOCUMENT_ID));
+                    boolean exists = false;
+                    for (javaxt.io.File file : uploadDir.getFiles("*.pdf", true)){ 
+                        if(file.toString().equals(path)) {
+                            exists = true; break;
+                        }
+                    }
+                    if(!exists) {
+                        try {
+                            bluewave.app.Document document = bluewave.app.Document.get("id=", docId);
+                            if(document != null) {
+                                Map<String, Long> constraints = new HashMap<>();
+                                constraints.put("a_id=", docId);
+                                constraints.put("b_id=", docId);
+                                DocumentComparison[] foundDCs = bluewave.app.DocumentComparison.find(constraints);
+                                // Delete from db
+                                for (bluewave.app.DocumentComparison dc : foundDCs){
+                                    dc.delete();
+                                }
+                                File file = document.getFile();
+                                document.delete();
+                                file.delete();
+                                 
+                                // Delete from index
+                                remove(new Term(FIELD_DOCUMENT_ID, docId+""));
+                            }
+                        }catch(Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } catch(IOException ioe) {
+                }
+            }
+        }catch(Exception e) {
+        }
     }
 }
