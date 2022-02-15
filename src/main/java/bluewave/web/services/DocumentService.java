@@ -5,6 +5,7 @@ import static bluewave.utils.Python.*;
 
 import java.util.*;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -278,8 +279,9 @@ public class DocumentService extends WebService {
                         getUploadDir().toString() + user.getID() + "/" +
                         d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
                     );
-
-
+                    if(!tempFile.exists()) 
+                        tempFile.create();
+                        
                     try{
                         int bufferSize = 2048;
                         FileOutputStream output = new FileOutputStream(tempFile.toFile());
@@ -310,7 +312,7 @@ public class DocumentService extends WebService {
                         String hash = tempFile.getMD5(); //faster than getSHA1()
                         for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
                             javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
-                            //TODO: do byte by byte comparison
+
                             final int byteNum = 4096;
                             try (
                                 BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
@@ -320,21 +322,19 @@ public class DocumentService extends WebService {
                                 int readFile1 = -1;
                                 int readFile2 = -1;
                                 try {
+                                    boolean fileContentDifferenceFound = false;
                                     readFile1 = file1Reader.read(fileBytes1, 0, byteNum);
                                     readFile2 = file2Reader.read(fileBytes2, 0, byteNum);
                                     while(readFile1 != -1 && file1Reader.available() != 0 && readFile2 != -1 && file2Reader.available() != 0 ) {
                                         if(!Arrays.equals(fileBytes1, fileBytes2)) {
-                                            fileExists = false;
+                                            fileContentDifferenceFound = true;
                                             break;
                                         }
                                         readFile1 = file1Reader.read(fileBytes1, 0, byteNum);
                                         readFile2 = file2Reader.read(fileBytes2, 0, byteNum);
-                                        if(readFile1 == -1 && readFile2 == -1) {
-                                            fileExists = true;
-                                        } else if(readFile1 == -1 && readFile2 != -1) {
-                                            fileExists = false;
-                                        }
                                     }
+                                    
+                                    fileExists = !fileContentDifferenceFound;
                                 } catch(Exception e) {
                                     e.printStackTrace();
                                 }
@@ -368,6 +368,7 @@ public class DocumentService extends WebService {
                         }
                     }
                     catch(Exception e){
+                        e.printStackTrace();
                         json.set("result", "error");
                     }
 
