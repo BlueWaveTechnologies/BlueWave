@@ -52,7 +52,8 @@ public class WebServices extends WebService {
 
 
       //Sync bluewave user accounts with the graph database
-        bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
+        Neo4J graph = Config.getGraph(null);
+        if (graph!=null) bluewave.graph.Maintenance.syncUsers(graph);
 
 
       //Get database
@@ -66,10 +67,17 @@ public class WebServices extends WebService {
         reportService = new ReportService();
         dataService = new DataService(new javaxt.io.Directory(web + "data"));
         queryService = new QueryService(webConfig);
-        graphService = new GraphService();
-        importService = new ImportService();
         documentService = new DocumentService();
-        supplyChainService = new SupplyChainService();
+
+
+        if (graph!=null){
+            graphService = new GraphService();
+            importService = new ImportService();
+            supplyChainService = new SupplyChainService();
+        }
+        else{
+            console.log("Graph services offline");
+        }
 
 
 

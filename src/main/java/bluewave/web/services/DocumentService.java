@@ -252,9 +252,11 @@ public class DocumentService extends WebService {
   //** uploadFile
   //**************************************************************************
     private ServiceResponse uploadFile(ServiceRequest request, bluewave.app.User user)
-    throws ServletException {
+            throws ServletException {
 
-        if (user==null || user.getAccessLevel()<3) return new ServiceResponse(403, "Not Authorized");
+        if (user==null || (user.getAccessLevel()<3 && user.getID()!=null)){
+            return new ServiceResponse(403, "Not Authorized");
+        }
 
         try{
             JSONArray results = new JSONArray();
@@ -321,8 +323,13 @@ public class DocumentService extends WebService {
                           //Rename the temp file
                             javaxt.io.File file = tempFile.rename(name);
 
-                          //Index the file
+                          //Save the file in the database
                             bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+                            bluewave.app.File f = getOrCreateFile(file, path);
+                            bluewave.app.Document doc = getOrCreateDocument(f);
+                            doc.save();
+
+                          //Index the file
                             pool.add(new Object[]{file, path});
 
                           //Set response
