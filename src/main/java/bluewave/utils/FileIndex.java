@@ -1,11 +1,16 @@
 package bluewave.utils;
 
+//Java imports
 import java.util.*;
-import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Paths;
+
+//JavaXT imports
+import javaxt.json.JSONArray;
+import javaxt.json.JSONObject;
 import static javaxt.utils.Console.console;
 
+//Lucene imports
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
@@ -51,17 +56,25 @@ import org.apache.lucene.search.vectorhighlight.SimpleFragListBuilder;
 import org.apache.lucene.search.vectorhighlight.SimpleFragmentsBuilder;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+
+//PDFBox imports
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.text.PDFTextStripper;
-import bluewave.app.DocumentComparison;
-import bluewave.app.File;
-import javaxt.json.JSONArray;
-import javaxt.json.JSONObject;
 
+
+
+//******************************************************************************
+//**  FileIndex
+//******************************************************************************
+/**
+ *   Used to create and manage an searchable file index. The file index is
+ *   persisted in a directory on the file system.
+ *
+ ******************************************************************************/
 
 public class FileIndex {
 
@@ -84,10 +97,18 @@ public class FileIndex {
     public static final int FRAGMENT_CHAR_SIZE = 150;
     public static final int NUM_HIGHLIGHT_FRAGS_PER_HIT = 1;
 
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
     public FileIndex(String path) throws Exception {
         this(new javaxt.io.Directory(path));
     }
 
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
     public FileIndex(javaxt.io.Directory path) throws Exception {
         dir = FSDirectory.open(Paths.get(path.toString()));
         StandardAnalyzer standardAnalyzer = new StandardAnalyzer(getStopWords());
@@ -124,12 +145,24 @@ public class FileIndex {
 
     }
 
+
+  //**************************************************************************
+  //** findFiles
+  //**************************************************************************
+  /** Used to find files in the index using a given set of keywords
+   */
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(String... searchTerms) throws Exception {
         ArrayList<String> arr = new ArrayList<>();
         for (String term : searchTerms) arr.add(term);
         return findFiles(arr, 10);
     }
 
+
+  //**************************************************************************
+  //** findFiles
+  //**************************************************************************
+  /** Used to find files in the index using a given set of keywords
+   */
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(ArrayList<String> searchTerms, Integer limit) throws Exception {
         TreeMap<Float, ArrayList<javaxt.io.File>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
@@ -152,6 +185,11 @@ public class FileIndex {
     }
 
 
+  //**************************************************************************
+  //** findFiles
+  //**************************************************************************
+  /** Used to find bluewave documents in the index using a given set of keywords
+   */
     public TreeMap<Float, ArrayList<bluewave.app.Document>> findDocuments(List<String> searchTerms, Integer limit) throws Exception {
         TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
@@ -188,6 +226,10 @@ public class FileIndex {
         return searchResults;
     }
 
+
+  //**************************************************************************
+  //** getTopDocs
+  //**************************************************************************
     private List<ResultWrapper> getTopDocs(List<String> searchTerms, Integer limit) throws Exception {
         List<ResultWrapper> results = new ArrayList<>();
 
