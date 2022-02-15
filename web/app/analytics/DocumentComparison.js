@@ -493,6 +493,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             fx: config.fx
         });
 
+        onRender(carousel.el, ()=>{
+            console.log("ready!");
+        });
+
+
 
       //Create 2 panels for the carousel
         for (var i=0; i<2; i++){
@@ -533,6 +538,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             input.type = "button";
             input.name = label;
             input.value = label;
+            input.disabled = true;
             div.appendChild(input);
             return input;
         };
@@ -597,17 +603,38 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             // set li elements with links to each page
             var numDots = Math.round(totalPages/increment);
-            for (var i=0; i <= numDots-1; i++){
+            for (var i=0; i<numDots; i++){
                 var li = document.createElement("li");
                 li.name = i;
                 li.onclick = function(){
 
                   // find  li index #
                     var liIndex = this.name; // determine which button this is
+
+                    var currSelection = -1;
+                    for (var i=0; i<ul.childNodes.length; i++){
+                        if (ul.childNodes[i].className==="active"){
+                            currSelection = i;
+                            break;
+                        }
+                    }
+                    if (currSelection===liIndex) return;
+
+
+                    var diff = liIndex-currSelection;
+                    console.log(diff, increment, currPair);
+                    if (diff>0){
+                        currPair += (diff*increment);
+                        nextButton.click();
+                    }
+                    else{
+                        currPair -= (diff*increment);
+                        backButton.click();
+                    }
+
+
                     navbar.highlight(liIndex);
 
-                  // use li index # to calculate page index
-                    console.log(`dot page index (not page number) is ${ liIndex * increment }`);
                 };
                 ul.appendChild(li);
             }
@@ -644,7 +671,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             }
         }
         if (!currPage) currPage = panels[0].div; //strange!
-
+        if (!nextPage) nextPage = panels[1].div; //strange!
 
 
       //Update nextPage
@@ -689,6 +716,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
