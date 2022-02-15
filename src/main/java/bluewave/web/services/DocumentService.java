@@ -4,6 +4,7 @@ import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
 
 import java.util.*;
+import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -310,6 +311,36 @@ public class DocumentService extends WebService {
                         for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
                             javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
                             //TODO: do byte by byte comparison
+                            final int byteNum = 4096;
+                            try (
+                                BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
+                                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream())) {
+                                byte[] fileBytes1 = new byte[byteNum];
+                                byte[] fileBytes2 = new byte[byteNum]; 
+                                int readFile1 = -1;
+                                int readFile2 = -1;
+                                try {
+                                    readFile1 = file1Reader.read(fileBytes1, 0, byteNum);
+                                    readFile2 = file2Reader.read(fileBytes2, 0, byteNum);
+                                    while(readFile1 != -1 && file1Reader.available() != 0 && readFile2 != -1 && file2Reader.available() != 0 ) {
+                                        if(!Arrays.equals(fileBytes1, fileBytes2)) {
+                                            fileExists = false;
+                                            break;
+                                        }
+                                        readFile1 = file1Reader.read(fileBytes1, 0, byteNum);
+                                        readFile2 = file2Reader.read(fileBytes2, 0, byteNum);
+                                        if(readFile1 == -1 && readFile2 == -1) {
+                                            fileExists = true;
+                                        } else if(readFile1 == -1 && readFile2 != -1) {
+                                            fileExists = false;
+                                        }
+                                    }
+                                } catch(Exception e) {
+                                    e.printStackTrace();
+                                }
+                            } catch(Exception e) {
+                                e.printStackTrace();
+                            }
                         }
 
 
