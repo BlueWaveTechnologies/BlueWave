@@ -258,6 +258,27 @@ bluewave.charts.MapChart = function(parent, config) {
         }
     };
 
+  //**************************************************************************
+  //** setCenter
+  //**************************************************************************
+   /**
+   * @param center Array of [long, lat] coordinate
+   */
+    this.setCenter = function(center, scale){
+
+      var width = parent.offsetWidth;
+      var height = parent.offsetHeight;
+
+      if (!scale) scale = width / 2 / Math.PI;
+
+      projection
+      .rotate([-center[0], 0])
+      .center([0, center[1]])
+      .scale(scale)
+      .translate([width / 2, height / 2]);
+
+    };
+
 
   //**************************************************************************
   //** getMidPoint
@@ -364,6 +385,17 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
         setExtent(extent);
+
+        //Manual rotation tesing for ortho
+        // projection
+        // .geoMercator()
+        // .geoConicConformal()
+        // .geoAlbers()
+        // .geoEquirectangular()
+        // .scale(width / 2 / Math.PI)
+        // .rotate([-116 - 180, 0])
+        // .center([0, 40])
+        // .translate([width / 2, height / 2]);
 
       //Render layers
         draw();
@@ -474,7 +506,12 @@ bluewave.charts.MapChart = function(parent, config) {
   //**************************************************************************
   //** setExtent
   //**************************************************************************
-    var setExtent = function(extent){
+    var setExtent = function(extent, base=10){
+
+        //Base case
+        if (base<0 || isNaN(base)) return;
+
+        //TODO: Write a real base case ex: if (extent is within a certain epsilon) break. Keep emergency one though
 
         if (!projection) return;
         if (projectionType === "AlbersUsa") return;
@@ -494,12 +531,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
           //"The greatest accuracy is obtained if the selected standard parallels enclose two-thirds the height of the map"
           projection.parallels( [lowerRight[1] + Math.abs(lowerRight[1]*(1/6)), upperLeft[1] - Math.abs(upperLeft[1]*(1/6))] );
-          let center = me.getMidPoint([upperLeft, lowerRight]);
-        //   windowExtent = me.getExtent()
-
-        //   projection
-        //   .rotate([-center[0], 0])
-        //   .center([0, center[1]]);
         }
 
 
@@ -524,7 +555,7 @@ bluewave.charts.MapChart = function(parent, config) {
         var scaleRatio;
         scaleRatio = longitudeDiff/extentLongDiff;
 
-        //for albers I think we're gonna need to rotate and center first - then the scaling will be ~ linear
+
         //Scale by longtitude first
         projection.scale(scale / scaleRatio);
 
@@ -564,7 +595,9 @@ bluewave.charts.MapChart = function(parent, config) {
             .center([0, center[1]]);
         
  
-        draw();
+        // draw();
+
+        setExtent(extent, --base);
     };
 
 
@@ -747,7 +780,7 @@ bluewave.charts.MapChart = function(parent, config) {
         if (!style) style = {};
 
         var width = parseInt(style.width);
-        if (isNaN(width)) width = 1;
+        if (isNaN(width)) width = 0.5;
 
         var lineStyle = style.lineStyle;
         if (!lineStyle) lineStyle = "solid";
