@@ -1,11 +1,16 @@
 package bluewave.utils;
 
+//Java imports
 import java.util.*;
-import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Paths;
+
+//JavaXT imports
+import javaxt.json.JSONArray;
+import javaxt.json.JSONObject;
 import static javaxt.utils.Console.console;
 
+//Lucene imports
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
@@ -51,17 +56,25 @@ import org.apache.lucene.search.vectorhighlight.SimpleFragListBuilder;
 import org.apache.lucene.search.vectorhighlight.SimpleFragmentsBuilder;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+
+//PDFBox imports
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessBuffer;
 import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.text.PDFTextStripper;
-import bluewave.app.DocumentComparison;
-import bluewave.app.File;
-import javaxt.json.JSONArray;
-import javaxt.json.JSONObject;
 
+
+
+//******************************************************************************
+//**  FileIndex
+//******************************************************************************
+/**
+ *   Used to create and manage an searchable file index. The file index is
+ *   persisted in a directory on the file system.
+ *
+ ******************************************************************************/
 
 public class FileIndex {
 
@@ -84,10 +97,18 @@ public class FileIndex {
     public static final int FRAGMENT_CHAR_SIZE = 150;
     public static final int NUM_HIGHLIGHT_FRAGS_PER_HIT = 1;
 
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
     public FileIndex(String path) throws Exception {
         this(new javaxt.io.Directory(path));
     }
 
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
     public FileIndex(javaxt.io.Directory path) throws Exception {
         dir = FSDirectory.open(Paths.get(path.toString()));
         StandardAnalyzer standardAnalyzer = new StandardAnalyzer(getStopWords());
@@ -104,14 +125,44 @@ public class FileIndex {
         customFieldForVectors.setStoreTermVectorPayloads(true);
         customFieldForVectors.setStoreTermVectorOffsets(true);
         customFieldForVectors.setStoreTermVectorPositions(true);
+
+
+      //Remove any docs that might have been moved or deleted
+        IndexReader reader = instanceOfIndexSearcher().getIndexReader();
+        console.log("Index has " + reader.numDocs() + " total docs.");
+        for (int i=0; i<reader.maxDoc(); i++) {
+            try {
+                Document doc = reader.document(i);
+                javaxt.io.File file = new javaxt.io.File(doc.get(FIELD_PATH));
+                if (!file.exists()) {
+                    removeFile(file);
+                }
+            }
+            catch(Exception e) {
+
+            }
+        }
+
     }
 
+
+  //**************************************************************************
+  //** findFiles
+  //**************************************************************************
+  /** Used to find files in the index using a given set of keywords
+   */
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(String... searchTerms) throws Exception {
         ArrayList<String> arr = new ArrayList<>();
         for (String term : searchTerms) arr.add(term);
         return findFiles(arr, 10);
     }
 
+
+  //**************************************************************************
+  //** findFiles
+  //**************************************************************************
+  /** Used to find files in the index using a given set of keywords
+   */
     public TreeMap<Float, ArrayList<javaxt.io.File>> findFiles(ArrayList<String> searchTerms, Integer limit) throws Exception {
         TreeMap<Float, ArrayList<javaxt.io.File>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
@@ -134,6 +185,11 @@ public class FileIndex {
     }
 
 
+  //**************************************************************************
+  //** findFiles
+  //**************************************************************************
+  /** Used to find bluewave documents in the index using a given set of keywords
+   */
     public TreeMap<Float, ArrayList<bluewave.app.Document>> findDocuments(List<String> searchTerms, Integer limit) throws Exception {
         TreeMap<Float, ArrayList<bluewave.app.Document>> searchResults = new TreeMap<>();
         IndexSearcher searcher = instanceOfIndexSearcher();
@@ -170,6 +226,10 @@ public class FileIndex {
         return searchResults;
     }
 
+
+  //**************************************************************************
+  //** getTopDocs
+  //**************************************************************************
     private List<ResultWrapper> getTopDocs(List<String> searchTerms, Integer limit) throws Exception {
         List<ResultWrapper> results = new ArrayList<>();
 
@@ -315,7 +375,7 @@ public class FileIndex {
         return _indexWriter;
     }
 
-    public IndexSearcher instanceOfIndexSearcher() {
+    private IndexSearcher instanceOfIndexSearcher() {
         synchronized (smonitor) {
             if (_indexSearcher == null) {
                 try {
@@ -516,11 +576,11 @@ public class FileIndex {
     }
 
     private CharArraySet getStopWords() {
-        List<String>stopWords = new ArrayList<>(); 
+        List<String>stopWords = new ArrayList<>();
         Iterator it = EnglishAnalyzer.ENGLISH_STOP_WORDS_SET.iterator();
         while(it.hasNext()) {
             char[] chars = (char[]) it.next();
-            stopWords.add(new String(chars));       
+            stopWords.add(new String(chars));
         }
 
         /**
@@ -529,9 +589,9 @@ public class FileIndex {
          */
 
 
-        // console.log("STOP WORD LIST");   
-        // for(String str: stopWords) 
-        //     console.log(str); 
+        // console.log("STOP WORD LIST");
+        // for(String str: stopWords)
+        //     console.log(str);
 
         return new CharArraySet(stopWords, false);
     }
@@ -602,54 +662,5 @@ public class FileIndex {
         substring = substring.substring(0, endIndex);
 
         return substring;
-    }
-
-
-
-    public void sync(javaxt.io.Directory  uploadDir) {
-        if(!indexExists()) return;
-        
-        try {
-            IndexReader reader = instanceOfIndexSearcher().getIndexReader();
-            console.log("Index has " + reader.numDocs() + " total docs.");
-            for (int i=0; i<reader.maxDoc(); i++) {
-                try {
-                    Document doc = reader.document(i);
-                    String path = doc.get(FIELD_PATH);
-                    long docId = Long.parseLong(doc.get(FIELD_DOCUMENT_ID));
-                    boolean exists = false;
-                    for (javaxt.io.File file : uploadDir.getFiles("*.pdf", true)){ 
-                        if(file.toString().equals(path)) {
-                            exists = true; break;
-                        }
-                    }
-                    if(!exists) {
-                        try {
-                            bluewave.app.Document document = bluewave.app.Document.get("id=", docId);
-                            if(document != null) {
-                                Map<String, Long> constraints = new HashMap<>();
-                                constraints.put("a_id=", docId);
-                                constraints.put("b_id=", docId);
-                                DocumentComparison[] foundDCs = bluewave.app.DocumentComparison.find(constraints);
-                                // Delete from db
-                                for (bluewave.app.DocumentComparison dc : foundDCs){
-                                    dc.delete();
-                                }
-                                File file = document.getFile();
-                                document.delete();
-                                file.delete();
-                                 
-                                // Delete from index
-                                remove(new Term(FIELD_DOCUMENT_ID, docId+""));
-                            }
-                        }catch(Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                } catch(IOException ioe) {
-                }
-            }
-        }catch(Exception e) {
-        }
     }
 }
