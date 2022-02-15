@@ -3,6 +3,8 @@ package bluewave.utils;
 import bluewave.Config;
 import java.util.*;
 import javaxt.json.JSONObject;
+import static javaxt.utils.Console.console;
+
 
 public class Python {
 
@@ -14,20 +16,41 @@ public class Python {
   //**************************************************************************
     public static String getPythonCommand() {
 
+        String path = Config.get("python").toString();
+        if (path!=null){
+            javaxt.io.File f = new javaxt.io.File(path);
+            if (f.exists()){
+                try{
+                    String python = f.toString();
+                    String[] cmdarray = new String[]{python, "--version"};
+                    javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
+                    cmd.run();
+                    parseErrors(cmd.getErrors());
+                    console.log("Found python " + cmd.getOutput().get(0));
+                    return python;
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+
+
         for (String python : new String[]{"python3", "python"}){
-            String[] cmdarray = new String[]{python, "--version"};
-
-            javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
-            cmd.run();
-
             try{
+                String[] cmdarray = new String[]{python, "--version"};
+                javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
+                cmd.run();
                 parseErrors(cmd.getErrors());
+                console.log("Found python " + cmd.getOutput().get(0));
                 return python;
             }
             catch(Exception e){
                 //e.printStackTrace();
             }
         }
+
+        console.log("Failed to find python");
 
         return null;
     }
