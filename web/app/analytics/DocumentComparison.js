@@ -21,6 +21,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var suspiciousPages = [];
     var totalPages = 0;
     var currPair = -1;
+    var navbar;
 
 
 
@@ -86,6 +87,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         currPair = -1;
         backButton.disabled = true;
         nextButton.disabled = true;
+
+        navbar.clear();
+        navbar.hide();
 
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
@@ -195,6 +199,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         if (!comparisonPanel) comparisonPanel = createComparisonPanel();
         comparisonPanel.update(0);
         panels[1].div.appendChild(comparisonPanel.el);
+
+
+        navbar.update();
     };
 
 
@@ -363,20 +370,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         td.className = "doc-compare-panel-subtitle";
         td.colSpan = 2;
         tr.appendChild(td);
-        var tdContainer = document.createElement("div");
-        tdContainer.style.paddingBottom = "35px";
-        tdContainer.style.position = "relative";
-        td.appendChild(tdContainer);
-        var div = document.createElement("div");
-        div.style.position = "absolute";
-        tdContainer.appendChild(div);
-        var subtitle = div;
-
-      //Create navbar row
-        var div = document.createElement("div");
-        tdContainer.appendChild(div);
-        div.className = "doc-compare-panel-navbar";
-        var navbar = div;
+        var subtitle = td;
 
 
       //Create body row
@@ -470,80 +464,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 });
 
 
-                var ourNav;
-                ourNav = document.createElement("div");
-                ourNav.style.textAlign = "center";
-                navbar.appendChild(ourNav);
-
-                var div1 = document.createElement("div");
-                div1.className = "doc-compare-panel-dot-navbar";
-                ourNav.appendChild(div1);
-
-                var div2 = document.createElement("div");
-                div2.className = "doc-compare-panel-dot-navbar-container";
-                div1.appendChild(div2);
-
-                var ul = document.createElement("ul");
-                ul.className = "doc-compare-panel-dot-navbar-ul";
-                div2.appendChild(ul);
-
-                var maxDots = 10; // declare maximum number of dots to add
-                // var totalPages = 9; // set a random totalpage amount
-
-
-                var increment = 1;
-                var bestIncrement = function (n, setMax){
-                    // round the number down to the nearest 10
-                        n = Math.floor( n /10 ) * 10;
-                    return Math.ceil(n / setMax);
-                };
-
-                // if its less than or equal to 10 increment by 1
-                    if (totalPages <= 10) increment = 1;
-                // if its more than 10 and less than or equal to 50 then increment by 5
-                    if (totalPages > 10 & totalPages <= 50) increment = 5;
-                // if its more than 50 and less than 100 increment by 10
-                    if (totalPages > 50 & totalPages <= 100) increment = 10;
-                // if it's more than 100 then increment by whatever divides it best
-                    if (totalPages > 100) increment = bestIncrement(totalPages,maxDots);
-
-                // console.log(increment);
-
-                var numDots = Math.round(totalPages/increment);
-                // console.log(numDots);
-
-                var li = [];
-                for (var i=0; i <= numDots-1; i++){
-                  li.push(document.createElement("li"));
-                };
-
-                // set li elements with links to each page
-                  for (var i=0; i <= numDots-1; i++){
-                    li[i].className = "doc-compare-panel-dot-navbar-li";
-                    li[i].name = i;
-
-                    // a refs inside li element
-                      var a = document.createElement("a");
-                      a.className = "doc-compare-panel-dot-navbar-a";
-
-                    li[i].appendChild(a);
-
-                    li[i].onclick = function (){
-                      console.log("dot was clicked!");
-                      // find  li index #
-                        var liIndex;
-                        liIndex = this.name; // determine which button this is
-
-                      // use li index # to calculate page index
-                      console.log(`dot page index (not page number) is ${ liIndex * increment }`);
-                    };
-
-                    ul.appendChild(li[i]);
-                  };
-
-
-
-
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
 
@@ -555,6 +475,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             }
         };
     };
+
 
   //**************************************************************************
   //** createBody
@@ -583,7 +504,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
       //Add event handlers
         carousel.onChange = function(){
-            if (currPair>=0) backButton.disabled = false;
+            if (currPair>=0){
+                backButton.disabled = false;
+                navbar.show();
+            }
             if (currPair<totalPages-1) nextButton.disabled = false;
         };
 
@@ -594,6 +518,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** createFooter
   //**************************************************************************
     var createFooter = function(parent){
+        createNavBar(parent);
+
         var div = document.createElement("div");
         div.className = "noselect";
         div.style.float = "right";
@@ -630,6 +556,72 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
   //**************************************************************************
+  //** createNavBar
+  //**************************************************************************
+    var createNavBar = function(parent){
+
+        navbar = document.createElement("div");
+        navbar.className = "doc-compare-panel-navbar";
+        addShowHide(navbar);
+        navbar.hide();
+
+        parent.appendChild(navbar);
+        var ul = document.createElement("ul");
+        navbar.appendChild(ul);
+
+        navbar.clear = function(){
+            ul.innerHTML = "";
+        };
+
+        navbar.update = function(){
+            navbar.clear();
+
+            var maxDots = 10; // declare maximum number of dots to add
+            var increment = 1;
+            var bestIncrement = function (n, setMax){
+                // round the number down to the nearest 10
+                n = Math.floor( n /10 ) * 10;
+                return Math.ceil(n / setMax);
+            };
+
+            // if its less than or equal to 10 increment by 1
+            if (totalPages <= 10) increment = 1;
+            // if its more than 10 and less than or equal to 50 then increment by 5
+            if (totalPages > 10 & totalPages <= 50) increment = 5;
+            // if its more than 50 and less than 100 increment by 10
+            if (totalPages > 50 & totalPages <= 100) increment = 10;
+            // if it's more than 100 then increment by whatever divides it best
+            if (totalPages > 100) increment = bestIncrement(totalPages,maxDots);
+
+
+
+            // set li elements with links to each page
+            var numDots = Math.round(totalPages/increment);
+            for (var i=0; i <= numDots-1; i++){
+                var li = document.createElement("li");
+                li.name = i;
+                li.onclick = function(){
+
+                    for (var i=0; i<ul.childNodes.length; i++){
+                        ul.childNodes[i].className = "";
+                    }
+                    this.className = "active";
+
+                  // find  li index #
+                    var liIndex = this.name; // determine which button this is
+
+                  // use li index # to calculate page index
+                    console.log(`dot page index (not page number) is ${ liIndex * increment }`);
+                };
+                ul.appendChild(li);
+            }
+            ul.childNodes[0].className = "active";
+        };
+
+    };
+
+
+  //**************************************************************************
   //** raisePanel
   //**************************************************************************
     var raisePanel = function(slideBack){
@@ -655,6 +647,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Update nextPage
         var el = nextPage.firstChild;
         if (currPair<0){
+            navbar.hide();
             if (el){
                 if (el!==summaryPanel.el){
                     nextPage.removeChild(el);
@@ -692,6 +685,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
     var isArray = javaxt.dhtml.utils.isArray;
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
