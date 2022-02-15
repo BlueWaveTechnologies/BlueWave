@@ -70,12 +70,44 @@ public class DocumentService extends WebService {
 
 
       //Create index of existing files. Use separate thread so the server doesn't hang
-        try{
-            index = new FileIndex(Config.getIndexDir());
-            index.sync(getUploadDir());
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+
+                  //Instantiate index
+                    index = new FileIndex(Config.getIndexDir());
+
+
+                  //Remove any docs that might have been moved or deleted from the upload directory
+                    for (bluewave.app.Document doc : bluewave.app.Document.find()){
+                        bluewave.app.File f = doc.getFile();
+                        javaxt.io.Directory dir = new javaxt.io.Directory(f.getPath().getDir());
+                        javaxt.io.File file = new javaxt.io.File(dir, f.getName());
+                        if (!file.exists()){
+
+
+                          //Remove any document comparisons associated with the file
+                            Long docId = doc.getID();
+                            Map<String, Long> constraints = new HashMap<>();
+                            constraints.put("a_id=", docId);
+                            constraints.put("b_id=", docId);
+                            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find(constraints)){
+                                dc.delete();
+                            }
+
+
+                          //Remove document from the database
+                            doc.delete();
+
+
+                          //Remove from index
+                            index.removeFile(file);
+                        }
+                    }
+
+
+                  //Add new documents to the index
                     HashMap<javaxt.io.Directory, bluewave.app.Path> paths = new HashMap<>();
                     for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
                         javaxt.io.Directory dir = file.getDirectory();
@@ -86,11 +118,14 @@ public class DocumentService extends WebService {
                             pool.add(new Object[]{file, path});
                         }
                     }
+
                 }
-            }).start();
-        }
-        catch(Exception e){
-        }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
 
 
         scripts = new ConcurrentHashMap<>();
