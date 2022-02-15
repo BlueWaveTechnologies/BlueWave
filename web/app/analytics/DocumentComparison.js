@@ -602,13 +602,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 li.name = i;
                 li.onclick = function(){
 
-                    for (var i=0; i<ul.childNodes.length; i++){
-                        ul.childNodes[i].className = "";
-                    }
-                    this.className = "active";
-
                   // find  li index #
                     var liIndex = this.name; // determine which button this is
+                    navbar.highlight(liIndex);
 
                   // use li index # to calculate page index
                     console.log(`dot page index (not page number) is ${ liIndex * increment }`);
@@ -616,6 +612,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 ul.appendChild(li);
             }
             ul.childNodes[0].className = "active";
+        };
+
+        navbar.highlight = function(idx){
+            for (var i=0; i<ul.childNodes.length; i++){
+                ul.childNodes[i].className = "";
+            }
+            ul.childNodes[idx].className = "active";
         };
 
     };
