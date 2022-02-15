@@ -1024,7 +1024,7 @@ li.tree-node:hover {
 /**************************************************************************/
 
 .search-bar {
-    height: 42px;
+    height: 37px;
     padding: 5px 0 0 0;
 }
 
@@ -1215,9 +1215,22 @@ li.tree-node:hover {
     width: 34px;
 }
 
+.document-analysis-button-bar {
+    position: relative;
+    height: 35px;
+    padding: 7px -0px 0 0;
+    border-top: 1px solid #ccc;
+    margin-right: 10px;
+}
+
 /**************************************************************************/
 /** Document Search
 /**************************************************************************/
+
+.document-search-search-bar {
+    padding: 0 5px;
+    border-bottom: 1px solid #ccc;
+}
 
 .document-search-result {
     height: 8px;
