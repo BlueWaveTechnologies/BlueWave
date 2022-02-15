@@ -1157,65 +1157,40 @@ li.tree-node:hover {
     padding: 0 0 0 12px;
 }
 
+
 .doc-compare-panel-navbar {
-    width: 100%;
-    position: absolute;
-}
-
-.doc-compare-panel-dot-navbar {
-    width: 100%;
-    height: 100%;
-    background: #34495E;
-    opacity: 50%;
-    display: table;
-}
-
-.doc-compare-panel-dot-navbar-container {
-    display: table-cell;
-    vertical-align: middle;
-    margin: auto;
-    text-align: center;
-}
-
-.doc-compare-panel-dot-navbar-ul {
     position: relative;
     display: inline-block;
     margin: 0;
     padding: 0;
-    list-style: none;
-    cursor: default;
-
 }
 
-.doc-compare-panel-dot-navbar-li {
+.doc-compare-panel-navbar ul {
+    cursor: default;
+    list-style: none;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-compare-panel-navbar li {
     position: relative;
     display: block;
     float: left;
-    margin: 0 16px;
-    width: 20px;
-    height: 20px;
+    margin: 14px 16px 4px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
-}
-
-.doc-compare-panel-dot-navbar-a {
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    outline: none;
+    background-color: #ff9800;
     border-radius: 50%;
-    text-indent: -999em;
-    cursor: pointer;
-    position: absolute;
-    overflow: hidden;
-    background-color: transparent;
-    box-shadow: inset 0 0 0 2px white;
-    -webkit-transition: all 0.3s ease;
-    transition: all 0.3s ease;
-    -webkit-transform: scale3d(1, 1, 1);
-    transform: scale3d(1, 1, 1);
+    transition: 0.2s;
 }
 
+
+.doc-compare-panel-navbar li.active,
+.doc-compare-panel-navbar li:hover {
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.46);
+}
 
 
 /**************************************************************************/
