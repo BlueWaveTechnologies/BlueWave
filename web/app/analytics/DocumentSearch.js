@@ -46,6 +46,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
+        td.className = "document-search-search-bar";
         tr.appendChild(td);
         createHeader(td);
 
