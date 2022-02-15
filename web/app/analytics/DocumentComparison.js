@@ -509,12 +509,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var totalPages = 9; // set a random totalpage amount
 
 
-
+                var increment = 1;
                 var bestIncrement = function (n, setMax){
                     // round the number down to the nearest 10
                         n = Math.floor( n /10 ) * 10;
                     return Math.ceil(n / setMax);
-                }
+                };
 
                 // if its less than or equal to 10 increment by 1
                     if (totalPages <= 10) increment = 1;
@@ -527,7 +527,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                 // console.log(increment);
 
-                numDots = Math.round(totalPages/increment);
+                var numDots = Math.round(totalPages/increment);
                 // console.log(numDots);
 
                 var li = [];
@@ -590,8 +590,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 createPreview(leftFile, leftPage, leftPanel);
                 createPreview(rightFile, rightPage, rightPanel);
 
-                leftFooter.innerText = "Page " + leftPage + " of " + totalPages + " " + leftFile.filename;
-                rightFooter.innerText = "Page " + rightPage + " of " + totalPages + " " + rightFile.filename;
+                leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
+                rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
             }
         };
     };
