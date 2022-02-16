@@ -873,8 +873,8 @@ if(!bluewave.charts) bluewave.charts={};
         var mapLevel = chartConfig.mapLevel;
         if (mapLevel === "counties"){
 
-            //mapChart.setProjection("AlbersUsa");
-            mapChart.setExtent([-130, 50.5], [-65, 25.8]);
+            mapChart.setProjection("AlbersUsa");
+            //mapChart.setExtent([-130, 50.5], [-65, 25.8]);
 
 
           //Render data
@@ -918,8 +918,9 @@ if(!bluewave.charts) bluewave.charts={};
         }
         else if (mapLevel === "states"){
 
-            //mapChart.setProjection("Albers");
-            mapChart.setExtent([-130, 50.5], [-65, 25.8]);
+            mapChart.setProjection("Albers");
+            //mapChart.setExtent([-130, 50.5], [-65, 25.8]);
+            mapChart.setExtent([-130, 40.5], [-65, 25.8]);
 
 
           //Render countries
