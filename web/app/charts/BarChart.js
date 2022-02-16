@@ -13,7 +13,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        layout: "vertical", 
+        barLayout: "vertical", 
         animationSteps: 1500, //duration in milliseconds
         stackValues: false
     };
