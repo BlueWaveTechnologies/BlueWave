@@ -549,16 +549,20 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         backButton.onclick = function(){
             currPair--;
+            if (currPair >= 0) navbar.updateSelection(currPair);
             this.disabled = true;
             raisePanel(true);
         };
 
         nextButton.onclick = function(){
             currPair++;
+            if (currPair >= 0) navbar.updateSelection(currPair);
             this.disabled = true;
             raisePanel(false);
         };
     };
+
+
 
 
   //**************************************************************************
@@ -603,12 +607,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             // set li elements with links to each page
             var numDots = Math.round(totalPages/increment);
+            var fileIndexList = [];
             for (var i=0; i<numDots; i++){
                 var li = document.createElement("li");
                 li.name = i;
+                fileIndexList.push((i * increment));
                 li.onclick = function(){
-
-                  // find  li index #
+                  // find li index #
                     var liIndex = this.name; // determine which button this is
 
                     var currSelection = -1;
@@ -619,19 +624,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         }
                     }
                     if (currSelection===liIndex) return;
-
-
                     var diff = liIndex-currSelection;
-                    console.log(diff, increment, currPair);
+
                     if (diff>0){
-                        currPair += (diff*increment);
+                        currPair = (liIndex * increment)-1; // counteract button increment
                         nextButton.click();
                     }
                     else{
-                        currPair -= (diff*increment);
+                        currPair = (liIndex * increment)+1; // counteract button increment
                         backButton.click();
                     }
-
 
                     navbar.highlight(liIndex);
 
@@ -639,7 +641,21 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 ul.appendChild(li);
             }
             ul.childNodes[0].className = "active";
+
+            navbar.getFileIndexs = function(){
+              return fileIndexList;
+            };
+
+            navbar.updateSelection = function(){
+              for (var i in fileIndexList){
+                if(currPair === fileIndexList[i]){
+                  navbar.highlight(i);
+                };
+              };
+            };
         };
+
+
 
         navbar.highlight = function(idx){
             for (var i=0; i<ul.childNodes.length; i++){
