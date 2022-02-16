@@ -10,6 +10,7 @@ import java.io.FileOutputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javaxt.http.servlet.ServletException;
@@ -266,6 +267,7 @@ public class DocumentService extends WebService {
             while (it.hasNext()){
                 FormInput input = it.next();
                 String name = input.getName();
+                console.log("New filename: "+ name);
                 FormValue value = input.getValue();
                 if (input.isFile()){
                     JSONObject json = new JSONObject();
@@ -348,17 +350,12 @@ public class DocumentService extends WebService {
                           //Rename the temp file
                             javaxt.io.File file = tempFile.rename(name);
 
-                          //Save the file in the database
-                            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
-                            bluewave.app.File f = getOrCreateFile(file, path);
-                            bluewave.app.Document doc = getOrCreateDocument(f);
-                            doc.save();
+                          //Save and Index the file
+                            addFile(file);
 
-                          //Index the file
-                            pool.add(new Object[]{file, path});
-
-                          //Set response
+                            //Set response
                             json.set("result", "uploaded");
+                            
                         }
                     }
                     catch(Exception e){
@@ -378,47 +375,99 @@ public class DocumentService extends WebService {
     }
 
   //**************************************************************************
-  //** getImage2000
+  //** addFile 
+  //  Adds file to DB and Index
   //**************************************************************************
-    // public ServiceResponse getDocumentsImage2000(ServiceRequest request, Database database)
-    //         throws ServletException {
+    private void addFile(javaxt.io.File file) throws SQLException {
+            //Save the file in the database
+            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+            bluewave.app.File f = getOrCreateFile(file, path);
+            bluewave.app.Document doc = getOrCreateDocument(f);
+            doc.save();
 
-    //   //Get user
-    //     bluewave.app.User user = (bluewave.app.User) request.getUser();
-    //     String kNumber = request.getParameter("k").toString();
-
-
-    //   //Set output directory
-    //   javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
-    //   if (!outputDir.exists()) outputDir.create();
-
-    //   // python api_download.py -k K123456 -u first.last
-    //   //Get script
-    //   javaxt.io.File[] scripts = getScriptDir().getFiles("api_download.py", true);
-    //   if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+            //Index the file
+            pool.add(new Object[]{file, path});
+    }
 
 
-    //   //Compile command line options
-    //   ArrayList<String> params = new ArrayList<>();
-    //   params.add("-k");
-    //   params.add(kNumber);
-    //   params.add("-u");
-    //   params.add(user.getUsername());
-    //   params.add("-o");
-    //   params.add(outputDir.toString());
+  //**************************************************************************
+  //** searchImage2000
+  //**************************************************************************
+    public ServiceResponse searchImage2000(ServiceRequest request, Database database)
+        throws ServletException {
 
-    //   //Execute script
-    //   try{
-    //       executeScript(scripts[0], params);
-    //       String[] arr = pages.split(",");
-    //       javaxt.io.File f = new javaxt.io.File(outputDir, arr[0]+".png");
-    //       return new ServiceResponse(f);
-    //   }
-    //   catch(Exception e){
-    //       return new ServiceResponse(e);
-    //   }
-    //     return new ServiceResponse(new byte[]{});
-    // }
+        //Get user
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        String kNumber = request.getParameter("k").toString().trim();
+
+        //Get script
+        // TODO: confirm this script has the search-only feature in place
+        javaxt.io.File[] scripts = getScriptDir().getFiles("api_download.py", true);
+        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+
+        //Compile command line options
+        // TODO: Confirm the params for the search feature
+        ArrayList<String> params = new ArrayList<>();
+        params.add("-k");
+        params.add(kNumber);
+        params.add("-u");
+        params.add(user.getUsername());
+
+        //Execute script
+        try{
+            JSONObject result = executeScript(scripts[0], params);
+            
+
+        return new ServiceResponse(result);
+        }
+            catch(Exception e){
+            return new ServiceResponse(e);
+        }
+}
+
+
+  //**************************************************************************
+  //** downloadImage2000Document
+  // Precondition - confirm that the requested file does not exist in index
+  //**************************************************************************
+    public ServiceResponse downloadImage2000Document(ServiceRequest request, Database database)
+            throws ServletException {
+
+      //Get user
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        String kNumber = request.getParameter("k").toString().trim();
+
+      //Get script
+        javaxt.io.File[] scripts = getScriptDir().getFiles("api_download.py", true);
+        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+
+
+      //Compile command line options
+        ArrayList<String> params = new ArrayList<>();
+        params.add("-k");
+        params.add(kNumber);
+        params.add("-u");
+        params.add(user.getUsername());
+        params.add("-o");
+        params.add(getUploadDir().toString());
+
+      //Execute script
+        try{
+            JSONObject result = executeScript(scripts[0], params);
+            if(!kNumber.contains(".pdf"))
+                kNumber+= ".pdf";
+
+            javaxt.io.File kNumberFile = new javaxt.io.File(
+                    getUploadDir().toString() + kNumber);
+
+            addFile(kNumberFile);
+
+            return new ServiceResponse(result);
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
 
 
   //**************************************************************************
