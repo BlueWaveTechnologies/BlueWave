@@ -327,6 +327,49 @@ public class DocumentService extends WebService {
         }
     }
 
+  //**************************************************************************
+  //** getImage2000
+  //**************************************************************************
+    // public ServiceResponse getDocumentsImage2000(ServiceRequest request, Database database)
+    //         throws ServletException {
+
+    //   //Get user
+    //     bluewave.app.User user = (bluewave.app.User) request.getUser();
+    //     String kNumber = request.getParameter("k").toString();
+
+
+    //   //Set output directory
+    //   javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
+    //   if (!outputDir.exists()) outputDir.create();
+
+    //   // python api_download.py -k K123456 -u first.last
+    //   //Get script
+    //   javaxt.io.File[] scripts = getScriptDir().getFiles("api_download.py", true);
+    //   if (scripts.length==0) return new ServiceResponse(500, "Script not found");
+
+
+    //   //Compile command line options
+    //   ArrayList<String> params = new ArrayList<>();
+    //   params.add("-k");
+    //   params.add(kNumber);
+    //   params.add("-u");
+    //   params.add(user.getUsername());
+    //   params.add("-o");
+    //   params.add(outputDir.toString());
+
+    //   //Execute script
+    //   try{
+    //       executeScript(scripts[0], params);
+    //       String[] arr = pages.split(",");
+    //       javaxt.io.File f = new javaxt.io.File(outputDir, arr[0]+".png");
+    //       return new ServiceResponse(f);
+    //   }
+    //   catch(Exception e){
+    //       return new ServiceResponse(e);
+    //   }
+    //     return new ServiceResponse(new byte[]{});
+    // }
+
 
   //**************************************************************************
   //** getThumbnail
@@ -379,10 +422,10 @@ public class DocumentService extends WebService {
         params.add("-o");
         params.add(outputDir.toString());
 
-
-        //Execute script
         try{
-            executeScript(scripts[0], params);
+
+          //Execute script
+            JSONObject result = executeScript(scripts[0], params);
             String[] arr = pages.split(",");
             javaxt.io.File f = new javaxt.io.File(outputDir, arr[0]+".png");
             return new ServiceResponse(f);
