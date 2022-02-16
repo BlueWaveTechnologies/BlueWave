@@ -46,6 +46,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
+        td.className = "document-search-search-bar";
         tr.appendChild(td);
         createHeader(td);
 
@@ -233,35 +234,13 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                     var recordNameSpan = document.createElement("div");
                     recordNameSpan.className = "document-search-result";
                     recordNameSpan.innerHTML = record.name;
+                    recordDiv.appendChild(recordNameSpan);
 
 
                     var metadataSpan = document.createElement("span");
                     metadataSpan.className = "document-search-fragment";
-
-                    recordDiv.appendChild(recordNameSpan);
+                    metadataSpan.innerHTML = searchMetadata.highlightFragment;
                     recordDiv.appendChild(metadataSpan);
-
-                    var metadataString = searchMetadata.highlightFragment;
-                    var terms = params.q;
-
-                    var replaceInsensitive = function(string, matchedTerm, replaceWith) {
-
-                        var strLower = string.toLowerCase();
-                        var findLower = String(matchedTerm).toLowerCase();
-                        var strTemp = string.toString();
-
-                        var pos = strLower.length;
-                        while((pos = strLower.lastIndexOf(findLower, pos)) != -1){
-                            strTemp = strTemp.substr(0, pos) + replaceWith + strTemp.substr(pos + findLower.length);
-                            pos--;
-                        }
-                        return strTemp;
-
-                    };
-
-                    for (var term in terms) metadataString = replaceInsensitive(metadataString, terms[term], `<strong>${terms[term]}</strong>` );
-
-                    metadataSpan.innerHTML = metadataString;
 
                     row.set("Name", recordDiv);
                 }

@@ -1024,7 +1024,7 @@ li.tree-node:hover {
 /**************************************************************************/
 
 .search-bar {
-    height: 42px;
+    height: 37px;
     padding: 5px 0 0 0;
 }
 
@@ -1215,9 +1215,46 @@ li.tree-node:hover {
     width: 34px;
 }
 
+.document-analysis-comparison-results a {
+    text-decoration: underline;
+    color: #0000ff;
+    cursor: pointer;
+}
+
+.document-analysis-comparison-results a:hover {
+    color: #ff0000;
+}
+
+.document-analysis-comparison-results .far,
+.document-analysis-comparison-results .fas {
+    padding: 0 5px 0 0;
+}
+
+.document-analysis-comparison-results .fa-exclamation-triangle {
+    color: #ff8013;
+}
+
+.document-analysis-comparison-results .fa-check-circle {
+    color: #009d00;
+}
+
+
+.document-analysis-button-bar {
+    position: relative;
+    height: 35px;
+    padding: 7px -0px 0 0;
+    border-top: 1px solid #ccc;
+    margin-right: 10px;
+}
+
 /**************************************************************************/
 /** Document Search
 /**************************************************************************/
+
+.document-search-search-bar {
+    padding: 0 5px;
+    border-bottom: 1px solid #ccc;
+}
 
 .document-search-result {
     height: 8px;
@@ -1225,12 +1262,14 @@ li.tree-node:hover {
 }
 
 .document-search-fragment {
-    color: #e9a07d;
+    color: #c5b2a3;
     font-size: 11px;
-    font-style: italic;
     padding-left: 0px;
 }
 
+.document-search-fragment b {
+    color: #ee9549;
+}
 
 /**************************************************************************/
 /** Admin Panel
