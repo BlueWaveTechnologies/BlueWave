@@ -4,6 +4,8 @@ import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
 
 import java.util.*;
+import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -248,9 +250,9 @@ public class DocumentService extends WebService {
     }
 
 
-    //**************************************************************************
-    //** uploadFile
-    //**************************************************************************
+  //**************************************************************************
+  //** uploadFile
+  //**************************************************************************
     private ServiceResponse uploadFile(ServiceRequest request, bluewave.app.User user)
             throws ServletException {
 
@@ -269,31 +271,82 @@ public class DocumentService extends WebService {
                     JSONObject json = new JSONObject();
                     json.set("name", name);
 
-                    javaxt.io.File file = getFile(name, user);
-                    if (!file.exists()){
-                        try{
-                            int bufferSize = 2048;
-                            FileOutputStream output = new FileOutputStream(file.toFile());
-                            final ReadableByteChannel inputChannel = Channels.newChannel(value.getInputStream());
-                            final WritableByteChannel outputChannel = Channels.newChannel(output);
-                            final java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocateDirect(bufferSize);
-                            int ttl = 0;
 
-                            while (inputChannel.read(buffer) != -1) {
-                                buffer.flip();
-                                ttl+=outputChannel.write(buffer);
-                                buffer.compact();
-                            }
+                  //Create temp file
+                    javaxt.utils.Date d = new javaxt.utils.Date();
+                    d.setTimeZone("UTC");
+                    javaxt.io.File tempFile = new javaxt.io.File(
+                        getUploadDir().toString() + user.getID() + "/" +
+                        d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
+                    );
+                    if (!tempFile.exists()) tempFile.create();
+
+                    try{
+
+                      //Save temp file
+                        int bufferSize = 2048;
+                        FileOutputStream output = new FileOutputStream(tempFile.toFile());
+                        final ReadableByteChannel inputChannel = Channels.newChannel(value.getInputStream());
+                        final WritableByteChannel outputChannel = Channels.newChannel(output);
+                        final java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocateDirect(bufferSize);
+                        int ttl = 0;
+
+                        while (inputChannel.read(buffer) != -1) {
                             buffer.flip();
-                            while (buffer.hasRemaining()) {
-                                ttl+=outputChannel.write(buffer);
+                            ttl+=outputChannel.write(buffer);
+                            buffer.compact();
+                        }
+                        buffer.flip();
+                        while (buffer.hasRemaining()) {
+                            ttl+=outputChannel.write(buffer);
+                        }
+
+                        //console.log(ttl);
+
+                        inputChannel.close();
+                        outputChannel.close();
+
+
+
+                      //Check whether the file exists
+                        boolean fileExists = false;
+                        String hash = tempFile.getMD5(); //faster than getSHA1()
+                        for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
+                            javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
+                            if (file.getName().equalsIgnoreCase(name) && file.exists()){
+                                BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
+                                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream());
+                                byte[] fileBytes1 = new byte[bufferSize];
+                                byte[] fileBytes2 = new byte[bufferSize];
+                                boolean fileContentDifferenceFound = false;
+                                int readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                                int readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
+                                while(
+                                    readFile1 != -1 && file1Reader.available() != 0 &&
+                                    readFile2 != -1 && file2Reader.available() != 0 )
+                                {
+                                    if(!Arrays.equals(fileBytes1, fileBytes2)) {
+                                        fileContentDifferenceFound = true;
+                                        break;
+                                    }
+                                    readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                                    readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
+                                }
+
+                                fileExists = !fileContentDifferenceFound;
                             }
+                        }
 
-                            //console.log(ttl);
 
-                            inputChannel.close();
-                            outputChannel.close();
+                      //Rename or delete the temp file
+                        if (fileExists){
+                            tempFile.delete();
+                            json.set("result", "exists");
+                        }
+                        else{
 
+                          //Rename the temp file
+                            javaxt.io.File file = tempFile.rename(name);
 
                           //Save the file in the database
                             bluewave.app.Path path = getOrCreatePath(file.getDirectory());
@@ -301,19 +354,16 @@ public class DocumentService extends WebService {
                             bluewave.app.Document doc = getOrCreateDocument(f);
                             doc.save();
 
-
                           //Index the file
                             pool.add(new Object[]{file, path});
 
-
+                          //Set response
                             json.set("result", "uploaded");
                         }
-                        catch(Exception e){
-                            json.set("result", "error");
-                        }
                     }
-                    else{
-                        json.set("result", "exists");
+                    catch(Exception e){
+                        //e.printStackTrace();
+                        json.set("result", "error");
                     }
 
 
@@ -663,6 +713,7 @@ public class DocumentService extends WebService {
             f.setSize(file.getSize());
             f.setDate(new javaxt.utils.Date(file.getDate()));
             f.setType(file.getContentType());
+            f.setHash(file.getMD5());
             f.setPath(path);
             f.save();
             return f;

@@ -150,6 +150,7 @@ var models = {
             {name: 'type',         type: 'string'},
             {name: 'date',         type: 'date'},
             {name: 'size',         type: 'long'},
+            {name: 'hash',         type: 'string'},
             {name: 'metadata',     type: 'json'}
         ],
         constraints: [
