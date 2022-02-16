@@ -78,7 +78,7 @@ import org.apache.pdfbox.text.PDFTextStripper;
 
 public class FileIndex {
 
-    private FSDirectory dir;
+    private Directory dir;
     private Object wmonitor = new Object();
     private Object smonitor = new Object();
     private IndexWriter _indexWriter;
