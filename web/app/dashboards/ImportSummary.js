@@ -14,6 +14,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var me = this;
     var initializing = true;
     var title = "Import Summary";
+
+
+  //Variables for the second panel
     var grid;
     var data = [];
     var lineData = [];
@@ -22,17 +25,161 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var lineChart, barChart, scatterChart;
     var yAxis;
     var nodeView;
-    var companyProfile;    
+
+
+    var companyProfile;
     var waitmask;
-    
-    
+
+
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     var init = function(){
+        if (!config) config = {};
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
-        waitmask = config.waitmask;        
-        
+        waitmask = config.waitmask;
+
+        var mainDiv = document.createElement("div");
+        mainDiv.style.width = "100%";
+        mainDiv.style.height = "100%";
+        parent.appendChild(mainDiv);
+        me.el = mainDiv;
+
+        createDashboardPanel(mainDiv);
+    };
+
+
+  //**************************************************************************
+  //** getTitle
+  //**************************************************************************
+    this.getTitle = function(){
+        return title;
+    };
+
+
+  //**************************************************************************
+  //** clear
+  //**************************************************************************
+    this.clear = function(){
+        data = [];
+        lineData = [];
+        grid.clear();
+        establishmentOptions.setValue("Manufacturer", true);
+        countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
+        productOptions.setValue("All", true);
+        yAxis = "totalLines";
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    this.update = function(){
+        var onReady = function(){
+            me.clear();
+            update();
+        };
+
+        if (initializing){
+            var timer;
+
+            var checkStatus = function(){
+                if (initializing){
+                    timer = setTimeout(checkStatus, 100);
+                }
+                else{
+                    clearTimeout(timer);
+                    onReady();
+                }
+            };
+
+            timer = setTimeout(checkStatus, 100);
+        }
+        else{
+            onReady();
+        }
+    };
+
+
+  //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+
+    };
+
+
+  //**************************************************************************
+  //** createDashboardPanel
+  //**************************************************************************
+    var createDashboardPanel = function(parent){
+
+      //Create table with 2 rows and 2 columns
+        var table = createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+
+
+      //Row 1, column 1
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+
+        td = document.createElement("td");
+        td.style.width = "100%";
+        td.style.height = "100%";
+        tr.appendChild(td);
+        var map = createMapChart(td, {
+
+        });
+        var sankey = createSankeyChart(td, {
+            title: "Consignee to Manufacturer"
+        });
+
+
+
+      //Row 1, column 2
+        td = document.createElement("td");
+        td.style.height = "100%";
+        tr.appendChild(td);
+        var div = document.createElement("div");
+        div.style.width = "300px";
+        div.style.height = "100%";
+        td.appendChild(div);
+        var countryOfOrigin = createBarChart(div, {
+            title: "Country of Origin",
+            height: "33%"
+        });
+        var manufacturers = createBarChart(div, {
+            title: "Manufacturers",
+            height: "33%"
+        });
+        var consignees = createBarChart(div, {
+            title: "Consignees",
+            height: "33%"
+        });
+
+
+
+      //Row 2, column 1 and 2
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+
+        td = document.createElement("td");
+        td.colSpan = 2;
+        td.style.width = "100%";
+        td.style.height = "380px";
+        tr.appendChild(td);
+        //createLineChart(td, {});
+
+        parent.appendChild(table);
+
+    };
+
+
+  //**************************************************************************
+  //** createImportsPanel
+  //**************************************************************************
+    var createImportsPanel = function(parent){
 
       //Create main table
         var table = createTable();
@@ -67,69 +214,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
         parent.appendChild(table);
-        me.el = table;                        
+
     };
 
-
-  //**************************************************************************
-  //** getTitle
-  //**************************************************************************
-    this.getTitle = function(){
-        return title;
-    };
-
-
-  //**************************************************************************
-  //** clear
-  //**************************************************************************
-    this.clear = function(){
-        data = [];
-        lineData = [];
-        grid.clear();
-        establishmentOptions.setValue("Manufacturer", true);
-        countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
-        productOptions.setValue("All", true);
-        yAxis = "totalLines";
-    };
-
-
-  //**************************************************************************
-  //** update
-  //**************************************************************************
-    this.update = function(){
-        var onReady = function(){
-            me.clear();
-            update();
-        };
-        
-        if (initializing){
-            var timer;
-
-            var checkStatus = function(){
-                if (initializing){
-                    timer = setTimeout(checkStatus, 100);
-                }
-                else{
-                    clearTimeout(timer);
-                    onReady();
-                }
-            };
-
-            timer = setTimeout(checkStatus, 100);
-        }
-        else{
-            onReady();
-        }                
-    };
-
-    
-  //**************************************************************************
-  //** resize
-  //**************************************************************************
-    this.resize = function(){
-        
-    };    
-    
 
   //**************************************************************************
   //** update
@@ -137,11 +224,13 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var update = function(){
         if (companyProfile) companyProfile.hide();
         if (grid) grid.setSortIndicator(3, "DESC");
-        
-        
+
+
+        if (true) return;
+
         waitmask.show(500);
-        
-        
+
+
         var establishment = getEstablishment();
         var country = countryOptions.getValue();
         var threshold = parseFloat(thresholdInput.value);
@@ -149,15 +238,15 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
         data = [];
         get("import/summary?country=" + country + "&establishment=" + establishment + "&threshold=" + threshold, {
-            success: function(csv){            
-                var rows = parseCSV(csv, ",");      
+            success: function(csv){
+                var rows = parseCSV(csv, ",");
                 var header = rows.shift();
                 var createRecord = function(row){
-                    var r = {};                    
+                    var r = {};
                     header.forEach((field, i)=>{
                         var val = row[i];
                         if (field==="fei"||field==="manufacturer"||field==="shipper"||
-                            field==="importer"||field==="consignee"||field==="dii"){ 
+                            field==="importer"||field==="consignee"||field==="dii"){
                             val = val.split(",");
                         }
                         else if (field!="name"){
@@ -174,35 +263,35 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 data.sort(function(a,b){
                     return b.totalLines-a.totalLines;
                 });
-                
+
 
               //Update main table
                 grid.update(data);
-                
-                
-                
+
+
+
               //Update line chart
                 lineChart.clear();
                 get("import/history?country=" + country + "&threshold=" + threshold, {
                     success: function(csv){
                         lineData = [];
-                        
-                        var rows = parseCSV(csv, ",");      
+
+                        var rows = parseCSV(csv, ",");
                         var header = rows.shift();
                         var createRecord = function(row){
-                            var r = {};                    
+                            var r = {};
                             header.forEach((field, i)=>{
                                 var val = row[i];
                                 if (field!=="date"){
                                     val = Math.round(parseFloat(val));
-                                }                                                        
+                                }
                                 r[field] = val;
                             });
                             return r;
-                        };                    
-                        
+                        };
+
                         rows.forEach((row)=>{
-                            var d = createRecord(row);                            
+                            var d = createRecord(row);
 
                             var date = new Date(d.date).getTime();
                             if (!isNaN(date)){
@@ -219,19 +308,19 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 //                        var lastDate = new Date(lineData[lineData.length-1].date);
 //                        console.log(lineData.length);
 //                        console.log(firstDate, lastDate);
-                        
+
 
                         lineData.forEach((d)=>{
                             var date = new Date(d.date);
                             d.date = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
-                        });                   
-                        
+                        });
+
                         lineChart.update();
                     }
                 });
 
-                
-                
+
+
               //Update bar chart
                 if (barChart){
                     var chartData = [];
@@ -250,15 +339,15 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
                 scatterChart.update();
-                
+
 
               //Update graph
                 var feis = {};
                 var nodes = [];
-                var links = [];              
+                var links = [];
                 var entityTypes = ["manufacturer","shipper","importer","consignee","dii"];
                 data.forEach((d)=>{
-                    
+
                     entityTypes.forEach((entity)=>{
                         if (entity!==establishment){
                             d[entity].forEach((fei)=>{
@@ -268,57 +357,57 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                             });
                         }
                     });
-                    
+
                     d.fei.forEach((fei)=>{
                         feis[fei] = d.name;
                     });
-                    
+
                     nodes.push({
                         name: d.name,
                         fei: d.fei,
                         type: establishment
                     });
-                    
-                });                
-                
-                
+
+                });
+
+
               //Generate list of FEIs to match
                 var numFEIs = 0;
                 var str = "";
                 for (var fei in feis) {
-                    if (feis.hasOwnProperty(fei)){                        
-                        if (!feis[fei]){                        
+                    if (feis.hasOwnProperty(fei)){
+                        if (!feis[fei]){
                             if (str.length>0) str += ",";
                             str += fei;
                             numFEIs++;
                         }
-                    }   
-                }                     
+                    }
+                }
                 //console.log(nodes.length, numFEIs);
-                
+
               //Match FEIs
                 get("import/EstablishmentNames", str, {
                     success: function(csv){
-                        
+
                       //Update FEIs
-                        var rows = parseCSV(csv, ",");      
+                        var rows = parseCSV(csv, ",");
                         rows.shift(); //remove header
                         rows.forEach((arr)=>{
                             var name = arr[0];
                             var ids = arr[1].split(",");
-                            
+
                             nodes.push({
                                 name: name,
                                 fei: ids
-                            });                            
-                            
+                            });
+
                             ids.forEach((fei)=>{
                                 feis[fei] = name;
                             });
                         });
-                        
-                        
- 
+
+
+
                       //Create Links
                         data.forEach((d)=>{
 
@@ -327,7 +416,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                                     var ids = d[entity];
                                     var name;
                                     for (var fei in feis) {
-                                        if (feis.hasOwnProperty(fei)){  
+                                        if (feis.hasOwnProperty(fei)){
                                             ids.every((id)=>{
                                                 var foundMatch = false;
                                                 if (id===fei){
@@ -338,13 +427,13 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                                             });
                                             if (name) break;
                                         }
-                                    }                                    
-                                    
+                                    }
+
                                     if (d.name!==name){
                                         var source = d.name;
                                         var target = name;
                                         var addLink = true;
-                                        
+
                                         links.every((link)=>{
                                             var foundMatch = false;
                                             if (link.source===source && link.target===target){
@@ -355,7 +444,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                                             }
                                             return !foundMatch;
                                         });
-                                        
+
                                         if (addLink){
                                             links.push({
                                                 source: source,
@@ -366,12 +455,12 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                                     }
                                 }
                             });
-          
-                            
 
-                        });  
-                        
-                        
+
+
+                        });
+
+
                       //Update node.type attributes using realtionships
                         var nodeTypes = {};
                         links.forEach((link)=>{
@@ -390,7 +479,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                                             currRelationships.push(relationship);
                                         }
                                     });
-                                    
+
                                 }
                                 else{
                                     nodeTypes[link.target] = link.relationship.split(",");
@@ -405,12 +494,12 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                                 }
                             }
                         });
-                        
-                        
-                        
+
+
+
                       //Update graph
                         nodeView.update(nodes, links);
-                        
+
                     }
                 });
 
@@ -443,25 +532,25 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
         var td;
-        
+
         var paddingLeft = "15px";
-        var createDropdown = function(label, width){            
-            td = document.createElement("td");            
+        var createDropdown = function(label, width){
+            td = document.createElement("td");
             td.innerHTML = label + ":";
             tr.appendChild(td);
             if (td.previousSibling) td.style.paddingLeft = paddingLeft;
             td = document.createElement("td");
             if (isNaN(width)) width = 200;
             td.style.width = width + "px";
-            tr.appendChild(td);  
+            tr.appendChild(td);
             td.style.paddingLeft = "7px";
             return new javaxt.dhtml.ComboBox(td, {
                 style: config.style.combobox,
                 readOnly: true
             });
         };
-        
-        
+
+
       //Create entity dropdown
         establishmentOptions = createDropdown("Entity Type", 160);
         ["Manufacturer","Shipper","Importer","Consignee","DII"].forEach((n)=>{
@@ -472,30 +561,30 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             update();
         };
 
-        
+
       //Create country dropdown
         countryOptions = createDropdown("Country of Origin", 80);
         countryOptions.add("Any", "");
         countryOptions.setValue("Any");
         countryOptions.onChange = function(name, value){
             update();
-        };        
-      
-        
-      //Create product dropdown 
+        };
+
+
+      //Create product dropdown
         productOptions = createDropdown("Product Code", 100);
         productOptions.add("All", "");
         productOptions.setValue("All");
         productOptions.onChange = function(name, value){
 
         };
-        
-        
+
+
       //Create slider
-        td = document.createElement("td");   
+        td = document.createElement("td");
         td.style.paddingLeft = paddingLeft;
         td.innerHTML = "PREDICT Filter:";
-        tr.appendChild(td);                  
+        tr.appendChild(td);
         td = document.createElement("td");
         td.style.width = "175px";
         td.style.padding = "0 10px";
@@ -511,9 +600,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             var val = this.value-1;
             return val;
         };
-        slider.onchange = function(){ 
+        slider.onchange = function(){
             var val = this.getValue();
-            if (val>0){ 
+            if (val>0){
                 thresholdInput.value = (5*val) + "%";
             }
             else{
@@ -521,7 +610,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             }
             update();
         };
-        td.appendChild(slider);     
+        td.appendChild(slider);
         td = document.createElement("td");
         td.style.width = "45px";
         tr.appendChild(td);
@@ -530,9 +619,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         thresholdInput.style.width = "100%";
         td.appendChild(thresholdInput);
 
-        
-        
-        
+
+
+
       //Get data and populate the dropdowns
         waitmask.show(500);
         getData("Imports_Products", function(csv){
@@ -553,22 +642,22 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     uniqueCountries[countries[j]] = true;
                 }
             }
-            
-            
+
+
           //Update productOptions
             productCodes.sort();
             for (var i=0; i<productCodes.length; i++){
                 var productCode = productCodes[i];
                 productOptions.add(productCode, productCode);
             }
-            
-            
+
+
           //Update countryOptions
             var arr = [];
             for (var country in uniqueCountries) {
                 if (uniqueCountries.hasOwnProperty(country)){
                     arr.push(country);
-                }   
+                }
             }
             arr.sort();
             for (var i=0; i<arr.length; i++){
@@ -580,7 +669,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             initializing = false;
 
             //waitmask.hide();
-        });        
+        });
     };
 
 
@@ -590,7 +679,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var getEstablishment = function(){
         return establishmentOptions.getValue().toLowerCase();
     };
-    
+
 
   //**************************************************************************
   //** createGrid
@@ -610,7 +699,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 {header: 'Label Exams', width:'120px', align:'right', sortable: true},
                 {header: 'Samples', width:'120px', align:'right', sortable: true},
                 {header: '% Elevated Risk', width:'135px', align:'right', sortable: true}
-                
+
             ],
             update: function(row, d){
                 var name = d.name;
@@ -619,21 +708,21 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
                 row.set('Total Lines', formatNumber(d.totalLines));
-                if (d.fieldExams>0){ 
+                if (d.fieldExams>0){
                     var str = formatNumber(d.fieldExams);
                     if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
                     row.set('Field Exams', str);
                 }
-                if (d.labelExams>0){ 
+                if (d.labelExams>0){
                     var str = formatNumber(d.labelExams);
-                    if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";                    
+                    if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";
                     row.set('Label Exams', str);
                 }
                 if (d.totalSamples>0){
-                    var str = formatNumber(d.totalSamples);  
-                    if (d.badSamples>0){ 
-                        str += " (" + formatNumber(d.badSamples) + " Bad)";                  
-                        
+                    var str = formatNumber(d.totalSamples);
+                    if (d.badSamples>0){
+                        str += " (" + formatNumber(d.badSamples) + " Bad)";
+
                     }
                     row.set('Samples', str);
                 }
@@ -652,17 +741,17 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
       //TODO: Update header
         var headerRow = grid.el.getElementsByClassName("table-header")[0];
-        
-        
+
+
       //Add custom update method
         grid.update = function(){
             grid.clear();
-            grid.load(data);     
-        };        
-        
+            grid.load(data);
+        };
+
         grid.setSortIndicator(3, "DESC");
         grid.onSort = function(idx, sortDirection){
-            
+
             var key;
             switch (idx) {
                 case 1:
@@ -676,16 +765,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     break;
                 default:
                     break;
-            }            
-            
+            }
+
             if (key && key!==yAxis){
                 yAxis = key;
                 scatterChart.update();
                 lineChart.update();
             }
-            
-            
-        };        
+
+
+        };
         grid.onRowClick = function(row, e){
             if (e.detail === 2) {
                 showCompanyProfile(row.record);
@@ -706,43 +795,43 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         var tr = document.createElement("tr");
         tbody.appendChild(tr);
         var td;
-        
+
 
       //Create line chart
-        td = document.createElement("td");       
+        td = document.createElement("td");
         td.style.height = "100%";
         td.style.width = "34%";
         td.style.padding = "10px";
         td.style.overflow = "hidden";
         tr.appendChild(td);
         createLineChart(td);
-        
+
 
       //Create bar chart
-        td = document.createElement("td"); 
+        td = document.createElement("td");
         td.style.height = "100%";
         td.style.width = "33%";
-        td.style.padding = "10px 0px";        
+        td.style.padding = "10px 0px";
         td.style.overflow = "hidden";
         tr.appendChild(td);
         //createBarChart(td);
         createRelationshipGraph(td);
-        
-        
+
+
       //Create scatter chart
-        td = document.createElement("td");       
+        td = document.createElement("td");
         td.style.height = "100%";
         td.style.width = "33%";
         td.style.padding = "10px";
         td.style.overflow = "hidden";
-        tr.appendChild(td);        
+        tr.appendChild(td);
         createScatterChart(td);
     };
-    
-    
+
+
   //**************************************************************************
   //** createLineChart
-  //**************************************************************************    
+  //**************************************************************************
     var createLineChart = function(parent){
         var dashboardItem = createDashboardItem(parent,{
             title: "Timeline",
@@ -769,78 +858,93 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 default:
                     break;
             }
-            
 
-            var title = yAxis.replace("total","");            
+
+            var title = yAxis.replace("total","");
             dashboardItem.title.innerText = title + " Per Day";
-            
+
             var rawValueLine = new bluewave.chart.Line({
-                color: "#6699cc" //blue                
+                color: "#6699cc" //blue
             });
-            
+
             var movingAverageLine = new bluewave.chart.Line({
                 color: "#ff7800", //orange
                 smoothing: "movingAverage",
-                smoothingValue: 30                
-            });            
-            
-            lineChart.addLine(rawValueLine, lineData, "date", key);  
-            lineChart.addLine(movingAverageLine, lineData, "date", key);  
-            lineChart._update();         
+                smoothingValue: 30
+            });
+
+            lineChart.addLine(rawValueLine, lineData, "date", key);
+            lineChart.addLine(movingAverageLine, lineData, "date", key);
+            lineChart._update();
         };
     };
-    
-    
+
+
   //**************************************************************************
   //** createBarChart
-  //**************************************************************************    
-    var createBarChart = function(parent){
+  //**************************************************************************
+    var createBarChart = function(parent, config){
         var dashboardItem = createDashboardItem(parent,{
-            title: "Top Shipments",
+            title: config.title,
             width: "100%",
-            height: "360px"
+            height: config.height
         });
         dashboardItem.el.style.margin = "0px";
-        //dashboardItem.el.style.display = "table";
-        barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
+        return new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
     };
-    
-    
+
+
+  //**************************************************************************
+  //** createMapChart
+  //**************************************************************************
+    var createMapChart = function(parent){
+
+    };
+
+
+  //**************************************************************************
+  //** createSankeyChart
+  //**************************************************************************
+    var createSankeyChart = function(parent){
+
+    };
+
+
   //**************************************************************************
   //** createScatterChart
-  //**************************************************************************    
+  //**************************************************************************
     var createScatterChart = function(parent){
         var dashboardItem = createDashboardItem(parent,{
             title: "Exams",
             width: "100%",
             height: "360px"
-        });                
+        });
         dashboardItem.el.style.margin = "0px";
         //dashboardItem.el.style.display = "table";
         scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{
-            
+
         });
         scatterChart._update = scatterChart.update;
         scatterChart.update = function(){
-            
-            var title = yAxis.replace("total","");            
+
+            var title = yAxis.replace("total","");
             dashboardItem.title.innerText = title + " vs Exams";
-            
+
             var chartData = [];
             data.forEach((d)=>{
                 var totalExams = d.totalExams;
                 if (!isNaN(totalExams)){
                     if (totalExams>0){
-                        
+
                         var failedExams = 0;
                         if (!isNaN(d.failedFieldExams)) failedExams+=d.failedFieldExams;
                         if (!isNaN(d.failedLabelExams)) failedExams+=d.failedLabelExams;
-                        
+
                         chartData.push({
                             Exams: totalExams,
                             yAxis: d[yAxis],
                             label: d.name,
-                            failedExams: failedExams                            
+                            failedExams: failedExams
                         });
                     }
                 }
@@ -858,7 +962,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     right: 65,
                     bottom: 32,
                     left: 82
-                },                
+                },
                 pointLabels: true,
                 getPointLabel: function(d){
                     return d.label;
@@ -867,16 +971,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                     if (d.failedExams>0) return "#e66869";
                     return "#6699cc";
                 }
-            },[chartData]);            
+            },[chartData]);
         };
-    };    
-    
-    
+    };
+
+
   //**************************************************************************
   //** createRelationshipGraph
-  //**************************************************************************    
+  //**************************************************************************
     var createRelationshipGraph = function(parent){
-        
+
       //Create dashboard item
         var dashboardItem = createDashboardItem(parent,{
             title: "Relationships",
@@ -885,8 +989,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         });
         dashboardItem.el.style.margin = "0px";
         //dashboardItem.el.style.display = "table";
-        
-        
+
+
       //Get colors
         var themeColors = getColorPalette(true);
         var numColors = themeColors.length/2;
@@ -936,12 +1040,12 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             }
         });
     };
-    
-    
+
+
   //**************************************************************************
   //** showCompanyProfile
   //**************************************************************************
-    var showCompanyProfile = function(d){        
+    var showCompanyProfile = function(d){
         if (!companyProfile){
 
             var win = new javaxt.dhtml.Window(document.body, {
@@ -957,12 +1061,12 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             companyProfile.show = win.show;
             companyProfile.hide = win.hide;
         }
-        
+
         companyProfile.update(d.name,d.fei,getEstablishment());
         companyProfile.show();
     };
-    
-    
+
+
   //**************************************************************************
   //** getArray
   //**************************************************************************
@@ -970,8 +1074,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         str = str.substring(1);
         return str.substring(0, str.length-1).split(", ");
     };
-    
-    
+
+
   //**************************************************************************
   //** Utils
   //**************************************************************************
