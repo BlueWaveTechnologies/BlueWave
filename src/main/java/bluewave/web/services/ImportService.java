@@ -451,6 +451,116 @@ public class ImportService extends WebService {
 
 
   //**************************************************************************
+  //** getProductCode
+  //**************************************************************************
+  /** Returns a list of total lines, quantities, and values by product code
+   */
+    public ServiceResponse getProductCode(ServiceRequest request, Database database)
+    throws ServletException {
+
+        String extraColumn = request.getParameter("include").toString();
+        if (extraColumn==null) extraColumn = "";
+        extraColumn = extraColumn.trim().toLowerCase();
+        //TODO: check if the extraColumn exists in the database
+
+
+      //Get sql
+        String sql = bluewave.queries.Index.getQuery("Imports_By_ProductCode");
+        if (!extraColumn.isEmpty()){
+            sql += ", n." + extraColumn + " as " + extraColumn;
+        }
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Execute query and generate response
+        String[] fields = new String[]{"product_code","lines","quantity","value"};
+        if (!extraColumn.isEmpty()){
+            fields = Arrays.copyOf(fields, fields.length+1);
+            fields[fields.length-1] = extraColumn;
+        }
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            Result rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                str.append("\r\n");
+
+                for (int i=0; i<fields.length; i++){
+                    if (i>0) str.append(",");
+                    Object val = r.get(fields[i]).asObject();
+                    str.append(val);
+                }
+            }
+
+
+            session.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+        return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
+  //** getNetwork
+  //**************************************************************************
+  /** Returns a list of total lines, quantities, and values by product code
+   */
+    public ServiceResponse getNetwork(ServiceRequest request, Database database)
+    throws ServletException {
+
+      //Get sql
+        String sql = bluewave.queries.Index.getQuery("Imports_Network");
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Execute query and generate response
+        String[] fields = new String[]{"manufacturer","lines","quantity","value","consignee","unladed_port"};
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            Result rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                str.append("\r\n");
+
+                for (int i=0; i<fields.length; i++){
+                    if (i>0) str.append(",");
+                    Object val = r.get(fields[i]).asObject();
+                    str.append(val);
+                }
+            }
+
+            session.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+        return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
   //** getShipments
   //**************************************************************************
   /** Returns imports by port of entry for a given establishment type and fei
