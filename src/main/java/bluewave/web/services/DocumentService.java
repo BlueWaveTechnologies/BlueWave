@@ -521,10 +521,10 @@ public class DocumentService extends WebService {
         params.add("-o");
         params.add(outputDir.toString());
 
-        try{
 
-          //Execute script
-            JSONObject result = executeScript(scripts[0], params);
+        //Execute script
+        try{
+            executeScript(scripts[0], params);
             String[] arr = pages.split(",");
             javaxt.io.File f = new javaxt.io.File(outputDir, arr[0]+".png");
             return new ServiceResponse(f);
