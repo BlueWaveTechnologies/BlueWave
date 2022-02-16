@@ -279,10 +279,11 @@ public class DocumentService extends WebService {
                         getUploadDir().toString() + user.getID() + "/" +
                         d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
                     );
-                    if(!tempFile.exists()) 
-                        tempFile.create();
-                        
+                    if (!tempFile.exists()) tempFile.create();
+
                     try{
+
+                      //Save temp file
                         int bufferSize = 2048;
                         FileOutputStream output = new FileOutputStream(tempFile.toFile());
                         final ReadableByteChannel inputChannel = Channels.newChannel(value.getInputStream());
@@ -312,34 +313,27 @@ public class DocumentService extends WebService {
                         String hash = tempFile.getMD5(); //faster than getSHA1()
                         for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
                             javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
-
-                            final int byteNum = 4096;
-                            try (
+                            if (file.getName().equalsIgnoreCase(name) && file.exists()){
                                 BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
-                                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream())) {
-                                byte[] fileBytes1 = new byte[byteNum];
-                                byte[] fileBytes2 = new byte[byteNum]; 
-                                int readFile1 = -1;
-                                int readFile2 = -1;
-                                try {
-                                    boolean fileContentDifferenceFound = false;
-                                    readFile1 = file1Reader.read(fileBytes1, 0, byteNum);
-                                    readFile2 = file2Reader.read(fileBytes2, 0, byteNum);
-                                    while(readFile1 != -1 && file1Reader.available() != 0 && readFile2 != -1 && file2Reader.available() != 0 ) {
-                                        if(!Arrays.equals(fileBytes1, fileBytes2)) {
-                                            fileContentDifferenceFound = true;
-                                            break;
-                                        }
-                                        readFile1 = file1Reader.read(fileBytes1, 0, byteNum);
-                                        readFile2 = file2Reader.read(fileBytes2, 0, byteNum);
+                                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream());
+                                byte[] fileBytes1 = new byte[bufferSize];
+                                byte[] fileBytes2 = new byte[bufferSize];
+                                boolean fileContentDifferenceFound = false;
+                                int readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                                int readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
+                                while(
+                                    readFile1 != -1 && file1Reader.available() != 0 &&
+                                    readFile2 != -1 && file2Reader.available() != 0 )
+                                {
+                                    if(!Arrays.equals(fileBytes1, fileBytes2)) {
+                                        fileContentDifferenceFound = true;
+                                        break;
                                     }
-                                    
-                                    fileExists = !fileContentDifferenceFound;
-                                } catch(Exception e) {
-                                    e.printStackTrace();
+                                    readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                                    readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
                                 }
-                            } catch(Exception e) {
-                                e.printStackTrace();
+
+                                fileExists = !fileContentDifferenceFound;
                             }
                         }
 
@@ -368,10 +362,9 @@ public class DocumentService extends WebService {
                         }
                     }
                     catch(Exception e){
-                        e.printStackTrace();
+                        //e.printStackTrace();
                         json.set("result", "error");
                     }
-
 
 
                     results.add(json);
