@@ -11,7 +11,6 @@ if(!bluewave.analytics) bluewave.analytics={};
  ******************************************************************************/
 
 bluewave.analytics.DocumentAnalysis = function(parent, config) {
-    parent.id = "thisDocAnalysisID";
 
     var me = this;
     var panels = [];
@@ -117,6 +116,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         });
     };
 
+
+  //**************************************************************************
+  //** getTitle
+  //**************************************************************************
+    this.getTitle = function(){
+        return "Document Analysis";
+    };
 
 
   //**************************************************************************
@@ -394,7 +400,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
           //Add run button
             button["run"] = createButton(td, {
-                label: "Run",
+                label: "Compare Documents",
                 icon: "fas fa-play"
             });
             button["run"].disable();
@@ -402,7 +408,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                 grid.forEachRow((row)=>{
                     row.record.similarities = null;
-                    row.set("Similarities", "");
+                    row.set("Comparison Results", "");
                 });
 
 
@@ -480,32 +486,14 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 style: config.style.table,
                 localSort: true,
                 columns: [
-                    {header: 'Name', width:'100%', sortable: true},
-                    {header: 'Similarities', width:'215', sortable: true}
+                    {header: 'Document Name', width:'100%', sortable: true},
+                    {header: 'Comparison Results', width:'300', sortable: true}
                 ],
                 update: function(row, record){
-                    row.set("Name", record.name);
-                    row.set("Similarities", record.similarities);
+                    row.set("Document Name", record.name);
+                    row.set("Comparison Results", record.similarities); //<-- Updated by compareDocuments()
                 }
             });
-
-
-          //Watch for row click events
-            grid.onRowClick = function(row, e){
-                var document = row.record;
-                if (e.detail === 2) { //double click
-                    if (document.similarities){
-                        var numSimilarities = 0;
-                        document.similarities.forEach((similarity)=>{
-                            if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
-                        });
-                        if (numSimilarities>0){
-                            showSimilarityResults(document);
-                        }
-                    }
-                }
-            };
-
         };
 
 
@@ -811,10 +799,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             }
 
             var job = jobs.shift();
-            job.row.set("Similarities", "Pending...");
+            job.row.set("Comparison Results", "Pending...");
             getSimilarities(job.doc, job.otherDocs,
                 function(step, totalSteps, success){
-                    job.row.set("Similarities", Math.round((step/totalSteps)*100) + "%");
+                    job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
                 },
                 function(similarities){
                     var numSimilarities = 0;
@@ -822,15 +810,44 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
                     });
                     job.row.record.similarities = similarities;
-                    var summary;
-                    if (numSimilarities==0){
-                        summary = "No similarities found";
+
+
+                    var summaryIcon, summaryText;
+                    if (numSimilarities===0){
+                        summaryIcon = "far fa-check-circle";
+                        summaryText = "No similarities found";
                     }
                     else{
-                        summary = "Found " + numSimilarities + " matching document";
-                        if (numSimilarities>1) summary+="s";
+                        summaryIcon = "fas fa-exclamation-triangle";
+                        summaryText = "Found " + numSimilarities + " matching document";
+                        if (numSimilarities>1) summaryText+="s";
+
+                        var link = document.createElement("a");
+                        link.innerText = summaryText;
+                        link.document = job.row.record;
+                        link.onclick = function(){
+                            showSimilarityResults(this.document);
+                        };
+                        summaryText = link;
                     }
-                    job.row.set("Similarities", summary);
+
+                    var summary = document.createElement("div");
+                    summary.className = "document-analysis-comparison-results";
+                    var icon = document.createElement("div");
+                    icon.className = summaryIcon;
+                    summary.appendChild(icon);
+                    var span = document.createElement("span");
+                    if (typeof summaryText === "string"){
+                        span.innerText = summaryText;
+                    }
+                    else{
+                        span.appendChild(summaryText);
+                    }
+
+                    summary.appendChild(span);
+
+
+                    job.row.set("Comparison Results", summary);
                     runJob();
                 }
             );
@@ -884,7 +901,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** showSimilarityResults
   //**************************************************************************
-    var showSimilarityResults = function(document){
+    var showSimilarityResults = function(doc){
         if (!similarityResults){
 
             var win = createWindow({
@@ -907,18 +924,23 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     {header: 'Similarities', width:'120', sortable: true}
                 ],
                 update: function(row, record){
-                    row.set("Similar Document", record.name);
+
+                    var link = document.createElement("a");
+                    link.innerText = record.name;
+                    link.record = record;
+                    link.onclick = function(){
+                        showDocumentSimilarities(this.record);
+                    };
+
+                    var div = document.createElement("div");
+                    div.className = "document-analysis-comparison-results";
+                    div.appendChild(link);
+
+                    row.set("Similar Document", div);
                     row.set("Similarities", record.suspicious_pages);
                 }
             });
 
-
-          //Watch for row click events
-            grid.onRowClick = function(row, e){
-                if (e.detail === 2) { //double click
-                    showDocumentSimilarities(row.record);
-                }
-            };
 
 
             similarityResults = {
@@ -966,7 +988,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         }
 
-        similarityResults.update(document);
+        similarityResults.update(doc);
         similarityResults.show();
     };
 
