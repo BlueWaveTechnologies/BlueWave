@@ -21,6 +21,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var suspiciousPages = [];
     var totalPages = 0;
     var currPair = -1;
+    var navbar;
 
 
 
@@ -86,6 +87,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         currPair = -1;
         backButton.disabled = true;
         nextButton.disabled = true;
+
+        navbar.clear();
+        navbar.hide();
 
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
@@ -195,6 +199,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         if (!comparisonPanel) comparisonPanel = createComparisonPanel();
         comparisonPanel.update(0);
         panels[1].div.appendChild(comparisonPanel.el);
+
+
+        navbar.update();
     };
 
 
@@ -463,8 +470,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 createPreview(leftFile, leftPage, leftPanel);
                 createPreview(rightFile, rightPage, rightPanel);
 
-                leftFooter.innerText = "Page " + leftPage + " of " + leftFile.filename;
-                rightFooter.innerText = "Page " + rightPage + " of " + rightFile.filename;
+                leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
+                rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
             }
         };
     };
@@ -486,6 +493,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             fx: config.fx
         });
 
+        onRender(carousel.el, ()=>{
+            console.log("ready!");
+        });
+
+
 
       //Create 2 panels for the carousel
         for (var i=0; i<2; i++){
@@ -497,7 +509,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
       //Add event handlers
         carousel.onChange = function(){
-            if (currPair>=0) backButton.disabled = false;
+            if (currPair>=0){
+                backButton.disabled = false;
+                navbar.show();
+            }
             if (currPair<totalPages-1) nextButton.disabled = false;
         };
 
@@ -508,6 +523,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** createFooter
   //**************************************************************************
     var createFooter = function(parent){
+        createNavBar(parent);
+
         var div = document.createElement("div");
         div.className = "noselect";
         div.style.float = "right";
@@ -521,6 +538,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             input.type = "button";
             input.name = label;
             input.value = label;
+            input.disabled = true;
             div.appendChild(input);
             return input;
         };
@@ -531,15 +549,121 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         backButton.onclick = function(){
             currPair--;
+            if (currPair >= 0) navbar.updateSelection(currPair);
             this.disabled = true;
             raisePanel(true);
         };
 
         nextButton.onclick = function(){
             currPair++;
+            if (currPair >= 0) navbar.updateSelection(currPair);
             this.disabled = true;
             raisePanel(false);
         };
+    };
+
+
+
+
+  //**************************************************************************
+  //** createNavBar
+  //**************************************************************************
+    var createNavBar = function(parent){
+
+        navbar = document.createElement("div");
+        navbar.className = "doc-compare-panel-navbar";
+        addShowHide(navbar);
+        navbar.hide();
+
+        parent.appendChild(navbar);
+        var ul = document.createElement("ul");
+        navbar.appendChild(ul);
+
+        navbar.clear = function(){
+            ul.innerHTML = "";
+        };
+
+        navbar.update = function(){
+            navbar.clear();
+
+            var maxDots = 10; // declare maximum number of dots to add
+            var increment = 1;
+            var bestIncrement = function (n, setMax){
+                // round the number down to the nearest 10
+                n = Math.floor( n /10 ) * 10;
+                return Math.ceil(n / setMax);
+            };
+
+            // if its less than or equal to 10 increment by 1
+            if (totalPages <= 10) increment = 1;
+            // if its more than 10 and less than or equal to 50 then increment by 5
+            if (totalPages > 10 & totalPages <= 50) increment = 5;
+            // if its more than 50 and less than 100 increment by 10
+            if (totalPages > 50 & totalPages <= 100) increment = 10;
+            // if it's more than 100 then increment by whatever divides it best
+            if (totalPages > 100) increment = bestIncrement(totalPages,maxDots);
+
+
+
+            // set li elements with links to each page
+            var numDots = Math.round(totalPages/increment);
+            var fileIndexList = [];
+            for (var i=0; i<numDots; i++){
+                var li = document.createElement("li");
+                li.name = i;
+                fileIndexList.push((i * increment));
+                li.onclick = function(){
+                  // find li index #
+                    var liIndex = this.name; // determine which button this is
+
+                    var currSelection = -1;
+                    for (var i=0; i<ul.childNodes.length; i++){
+                        if (ul.childNodes[i].className==="active"){
+                            currSelection = i;
+                            break;
+                        }
+                    }
+                    if (currSelection===liIndex) return;
+                    var diff = liIndex-currSelection;
+
+                    if (diff>0){
+                        currPair = (liIndex * increment)-1; // counteract button increment
+                        nextButton.click();
+                    }
+                    else{
+                        currPair = (liIndex * increment)+1; // counteract button increment
+                        backButton.click();
+                    }
+
+                    navbar.highlight(liIndex);
+
+                };
+                ul.appendChild(li);
+            }
+            ul.childNodes[0].className = "active";
+
+            navbar.getFileIndexs = function(){
+              return fileIndexList;
+            };
+
+            navbar.updateSelection = function(){
+              for (var i in fileIndexList){
+                if(currPair === fileIndexList[i]){
+                  navbar.highlight(i);
+                };
+              };
+            };
+        };
+
+
+
+        navbar.highlight = function(idx){
+            for (var i=0; i<ul.childNodes.length; i++){
+                ul.childNodes[i].className = "";
+            }
+            ul.childNodes[idx].className = "active";
+        };
+
     };
 
 
@@ -563,12 +687,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             }
         }
         if (!currPage) currPage = panels[0].div; //strange!
-
+        if (!nextPage) nextPage = panels[1].div; //strange!
 
 
       //Update nextPage
         var el = nextPage.firstChild;
         if (currPair<0){
+            navbar.hide();
             if (el){
                 if (el!==summaryPanel.el){
                     nextPage.removeChild(el);
@@ -606,6 +731,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
