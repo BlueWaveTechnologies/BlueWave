@@ -429,7 +429,8 @@ bluewave.Application = function(parent, config) {
                 if (!app) app = eval("bluewave.analytics." + fileName);
                 if (app){
                     raisePanel(app);
-                    me.setTitle(fileName);
+                    if (currApp.getTitle) me.setTitle(currApp.getTitle());
+                    else me.setTitle(fileName);
                     showHomepage = false;
                 }
             }

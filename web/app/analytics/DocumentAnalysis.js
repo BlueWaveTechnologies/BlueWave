@@ -29,6 +29,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         }
     };
 
+    //Button components
+    var mainButton = {};
+
 
   //**************************************************************************
   //** Constructor
@@ -69,6 +72,14 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         tr.appendChild(td);
         createBody(td);
 
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.padding = "0px";
+        tr.appendChild(td);
+        createButtonPanel(td);
+
         parent.appendChild(table);
         me.el = table;
 
@@ -105,6 +116,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         });
     };
 
+
+  //**************************************************************************
+  //** getTitle
+  //**************************************************************************
+    this.getTitle = function(){
+        return "Document Analysis";
+    };
 
 
   //**************************************************************************
@@ -225,6 +243,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             panels.every((panel)=>{
                 if (panel.isSelected()){
                     panel.update(currPanel);
+                    updateButtons();
                     return false;
                 }
                 return true;
@@ -237,7 +256,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** createPanel
   //**************************************************************************
     var createPanel = function(label, _createPanel){
-
 
         var div = document.createElement("div");
         div.style.width = "100%";
@@ -345,6 +363,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         panel.select = function(){
             li.select();
+            updateButtons();
         };
         panel.isSelected = function(){
             return li.selected;
@@ -358,7 +377,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** createResultsPanel
   //**************************************************************************
     var createResultsPanel = function(){
-
 
       //Create toolbar and grid panel
         var grid, button = {};
@@ -382,7 +400,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
           //Add run button
             button["run"] = createButton(td, {
-                label: "Run",
+                label: "Compare Documents",
                 icon: "fas fa-play"
             });
             button["run"].disable();
@@ -390,7 +408,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                 grid.forEachRow((row)=>{
                     row.record.similarities = null;
-                    row.set("Similarities", "");
+                    row.set("Comparison Results", "");
                 });
 
 
@@ -468,32 +486,14 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 style: config.style.table,
                 localSort: true,
                 columns: [
-                    {header: 'Name', width:'100%', sortable: true},
-                    {header: 'Similarities', width:'215', sortable: true}
+                    {header: 'Document Name', width:'100%', sortable: true},
+                    {header: 'Comparison Results', width:'300', sortable: true}
                 ],
                 update: function(row, record){
-                    row.set("Name", record.name);
-                    row.set("Similarities", record.similarities);
+                    row.set("Document Name", record.name);
+                    row.set("Comparison Results", record.similarities); //<-- Updated by compareDocuments()
                 }
             });
-
-
-          //Watch for row click events
-            grid.onRowClick = function(row, e){
-                var document = row.record;
-                if (e.detail === 2) { //double click
-                    if (document.similarities){
-                        var numSimilarities = 0;
-                        document.similarities.forEach((similarity)=>{
-                            if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
-                        });
-                        if (numSimilarities>0){
-                            showSimilarityResults(document);
-                        }
-                    }
-                }
-            };
-
         };
 
 
@@ -561,57 +561,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
             var grid = searchPanel.getDataGrid();
 
-
           //Watch for row click events
             grid.onRowClick = function(row, e){
                 if (e.detail === 2) { //double click
-
-                    var o = row.get("Name");
-                    if (!o.select){
-                        var div = document.createElement("div");
-                        div.className = "document-analysis-selected-row";
-                        div.select = function(){
-                            div.style.left = "0px";
-                        };
-                        div.deselect = function(){
-                            div.style.left = "-34px";
-                        };
-                        div.deselect();
-
-                        var check = document.createElement("div");
-                        check.className = "fas fa-check-square";
-                        div.appendChild(check);
-
-                        var span = document.createElement("span");
-                        if ( //is element?
-                            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
-                            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
-                        ) span.appendChild(o);
-                        else span.innerText = o;
-                        div.appendChild(span);
-
-                        row.set("Name", div);
-                        o = div;
-                    }
-
-
-                  //Add or remove document from the selectedDocuments store
-                    var addDocument = true;
-                    var r = row.record;
-                    selectedDocuments.forEach((d, i)=>{
-                        if (d.id===r.id){
-                            selectedDocuments.removeAt(i);
-                            addDocument = false;
-                            return true;
-                        }
-                    });
-                    if (addDocument){
-                        selectedDocuments.add(r);
-                        o.select();
-                    }
-                    else{
-                        o.deselect();
-                    }
+                    selectRow(row, true, false);
                 }
             };
 
@@ -659,6 +612,88 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy
     };
 
+
+  //**************************************************************************
+  //** selectRow
+  //**************************************************************************
+  /** Selects or deselects the row from Document Search panel and adds it to the Selected Documents panel
+   *  if function is called with mouseEvent true -> unselect row if selected and select the row if unselected
+   *  if function is called with makeSelected true -> select row
+   *  if function is called with makeSelected false -> unselect row
+   */
+    var selectRow = function(row, mouseEvent, makeSelected){
+        var o = row.get("Name");
+
+        if (!o.select){ // runs only once for each row - initialize row with selection capability if not already initialized
+            var div = document.createElement("div");
+            div.className = "document-analysis-selected-row";
+            div.select = function(){
+                div.style.left = "0px";
+            };
+            div.deselect = function(){
+                div.style.left = "-34px";
+            };
+            div.deselect();
+
+            var check = document.createElement("div");
+            check.className = "fas fa-check-square";
+            div.appendChild(check);
+
+            var span = document.createElement("span");
+            if ( //is element?
+                typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+                o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
+            ) span.appendChild(o);
+            else span.innerText = o;
+            div.appendChild(span);
+
+            row.set("Name", div);
+            o = div;
+        }
+
+
+        //Add or remove document from the selectedDocuments store
+        var addDocument = true;
+        var r = row.record;
+        selectedDocuments.forEach((d, i)=>{
+            if (d.id===r.id){
+                addDocument = false;
+
+                if (mouseEvent) {
+                    selectedDocuments.removeAt(i);
+                }
+                else {
+                    if (!makeSelected){
+                        selectedDocuments.removeAt(i);
+                    };
+                };
+                return true;
+            }
+        });
+        // mouse click events
+            if (addDocument && mouseEvent){
+                selectedDocuments.add(r);
+                o.select();
+            }
+            else if (!addDocument && mouseEvent){
+                o.deselect();
+            }
+        // selectAll events
+            else if (!addDocument && !mouseEvent && makeSelected){
+                o.select();
+            }
+            else if (!addDocument && !mouseEvent && !makeSelected){
+                o.deselect();
+            }
+            else if (addDocument && !mouseEvent && !makeSelected){
+                o.deselect();
+            }
+            else if (addDocument && !mouseEvent && makeSelected){
+                selectedDocuments.add(r);
+                o.select();
+            }
+
+    }
 
   //**************************************************************************
   //** onDrop
@@ -764,10 +799,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             }
 
             var job = jobs.shift();
-            job.row.set("Similarities", "Pending...");
+            job.row.set("Comparison Results", "Pending...");
             getSimilarities(job.doc, job.otherDocs,
                 function(step, totalSteps, success){
-                    job.row.set("Similarities", Math.round((step/totalSteps)*100) + "%");
+                    job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
                 },
                 function(similarities){
                     var numSimilarities = 0;
@@ -775,15 +810,44 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
                     });
                     job.row.record.similarities = similarities;
-                    var summary;
-                    if (numSimilarities==0){
-                        summary = "No similarities found";
+
+
+                    var summaryIcon, summaryText;
+                    if (numSimilarities===0){
+                        summaryIcon = "far fa-check-circle";
+                        summaryText = "No similarities found";
                     }
                     else{
-                        summary = "Found " + numSimilarities + " matching document";
-                        if (numSimilarities>1) summary+="s";
+                        summaryIcon = "fas fa-exclamation-triangle";
+                        summaryText = "Found " + numSimilarities + " matching document";
+                        if (numSimilarities>1) summaryText+="s";
+
+                        var link = document.createElement("a");
+                        link.innerText = summaryText;
+                        link.document = job.row.record;
+                        link.onclick = function(){
+                            showSimilarityResults(this.document);
+                        };
+                        summaryText = link;
                     }
-                    job.row.set("Similarities", summary);
+
+                    var summary = document.createElement("div");
+                    summary.className = "document-analysis-comparison-results";
+                    var icon = document.createElement("div");
+                    icon.className = summaryIcon;
+                    summary.appendChild(icon);
+                    var span = document.createElement("span");
+                    if (typeof summaryText === "string"){
+                        span.innerText = summaryText;
+                    }
+                    else{
+                        span.appendChild(summaryText);
+                    }
+
+                    summary.appendChild(span);
+
+
+                    job.row.set("Comparison Results", summary);
                     runJob();
                 }
             );
@@ -805,7 +869,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
             if (!comparisonsEnabled) otherDocs.splice(0,otherDocs.length);
 
-            if (otherDocs.length==0){
+            if (otherDocs.length===0){
                 if (onCompletion) onCompletion.apply(me, [similarities]);
                 return;
             }
@@ -837,7 +901,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** showSimilarityResults
   //**************************************************************************
-    var showSimilarityResults = function(document){
+    var showSimilarityResults = function(doc){
         if (!similarityResults){
 
             var win = createWindow({
@@ -860,18 +924,23 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     {header: 'Similarities', width:'120', sortable: true}
                 ],
                 update: function(row, record){
-                    row.set("Similar Document", record.name);
+
+                    var link = document.createElement("a");
+                    link.innerText = record.name;
+                    link.record = record;
+                    link.onclick = function(){
+                        showDocumentSimilarities(this.record);
+                    };
+
+                    var div = document.createElement("div");
+                    div.className = "document-analysis-comparison-results";
+                    div.appendChild(link);
+
+                    row.set("Similar Document", div);
                     row.set("Similarities", record.suspicious_pages);
                 }
             });
 
-
-          //Watch for row click events
-            grid.onRowClick = function(row, e){
-                if (e.detail === 2) { //double click
-                    showDocumentSimilarities(row.record);
-                }
-            };
 
 
             similarityResults = {
@@ -919,7 +988,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         }
 
-        similarityResults.update(document);
+        similarityResults.update(doc);
         similarityResults.show();
     };
 
@@ -999,6 +1068,140 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         var win = new javaxt.dhtml.Window(document.body, config);
         windows.push(win);
         return win;
+    };
+
+
+  //**************************************************************************
+  //** createButtonPanel
+  //**************************************************************************
+    var createButtonPanel = function(parent){
+
+        var buttonsDiv = document.createElement("div");
+        buttonsDiv.className = "document-analysis-button-bar";
+        parent.appendChild(buttonsDiv);
+
+
+        var rightSideButtons = document.createElement("div");
+        rightSideButtons.style.right = "10px";
+        rightSideButtons.style.position = "absolute";
+
+        buttonsDiv.appendChild(rightSideButtons);
+
+        var leftSideButtons = document.createElement("div");
+        leftSideButtons.style.left = "0px";
+        leftSideButtons.style.position = "absolute";
+
+        buttonsDiv.appendChild(leftSideButtons);
+
+
+        var createButton = function(label, parent){
+            var input = document.createElement('input');
+            input.className = "form-button";
+            input.type = "button";
+            input.name = label;
+            input.value = label;
+            input.disabled = true;
+            input.disable = function(){
+                this.disabled = true;
+            };
+            input.enable = function(){
+                this.disabled = false;
+            };
+            input.setText = function(label){
+                this.name = label;
+                this.value = label;
+            };
+            input.getText = function(){
+                return this.value;
+            };
+            parent.appendChild(input);
+            return input;
+        };
+
+
+      //Add back button
+        mainButton["back"] = createButton("Back", rightSideButtons);
+        mainButton["back"].onclick = function(){
+            for (var i in panels){
+                if (panels[i].name == "Document Search") panels[i].select();
+            }
+        };
+
+
+
+      //Add next button
+        mainButton["next"] = createButton("Next", rightSideButtons);
+        mainButton["next"].onclick = function(){
+            for (var i in panels){
+                if (panels[i].name == "Selected Documents") panels[i].select();
+            }
+        };
+
+
+
+
+      //Add selectAll button
+        mainButton["selectAll"] = createButton("Select All", leftSideButtons);
+        mainButton["selectAll"].style.width = "100px";
+        mainButton["selectAll"].onclick = function(){
+
+            function isElement(element) {
+                return element instanceof Element || element instanceof HTMLDocument;
+            };
+
+            var rows = document.getElementsByClassName("table-row");
+            var actualRows = [];
+
+            for (var row in rows){
+                if (isElement(rows[row])){
+                    actualRows.push(rows[row]);
+                };
+            };
+            rows = actualRows;
+
+            if (this.getText() === "Select All"){
+                for (var row in rows){
+                    selectRow(rows[row], false, true);
+                };
+                this.setText("Deselect All");
+                return;
+            }
+            else {
+                for (var row in rows){
+                    selectRow(rows[row], false, false);
+                };
+                this.setText("Select All");
+                return;
+            };
+        };
+
+        updateButtons();
+    };
+
+
+
+  //**************************************************************************
+  //** updateButtons
+  //**************************************************************************
+    var updateButtons = function(){
+        var selectedPanel;
+
+        for (var panel in panels){
+            if (panels[panel].isSelected()) selectedPanel = panels[panel].name;
+        }
+
+        if (mainButton){ // if Button panel Buttons have been initialized
+            if (selectedPanel == "Document Search") {
+                mainButton["back"].disable();
+                mainButton["next"].enable();
+                mainButton["selectAll"].enable();
+            }
+            else if (selectedPanel == "Selected Documents") {
+                mainButton["back"].enable();
+                mainButton["next"].disable();
+                mainButton["selectAll"].disable();
+            };
+        };
     };
 
 

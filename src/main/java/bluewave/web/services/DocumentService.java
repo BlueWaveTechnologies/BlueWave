@@ -12,7 +12,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
@@ -74,11 +73,44 @@ public class DocumentService extends WebService {
 
 
       //Create index of existing files. Use separate thread so the server doesn't hang
-        try{
-            index = new FileIndex(Config.getIndexDir());
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+
+                  //Instantiate index
+                    index = new FileIndex(Config.getIndexDir());
+
+
+                  //Remove any docs that might have been moved or deleted from the upload directory
+                    for (bluewave.app.Document doc : bluewave.app.Document.find()){
+                        bluewave.app.File f = doc.getFile();
+                        javaxt.io.Directory dir = new javaxt.io.Directory(f.getPath().getDir());
+                        javaxt.io.File file = new javaxt.io.File(dir, f.getName());
+                        if (!file.exists()){
+
+
+                          //Remove any document comparisons associated with the file
+                            Long docId = doc.getID();
+                            Map<String, Long> constraints = new HashMap<>();
+                            constraints.put("a_id=", docId);
+                            constraints.put("b_id=", docId);
+                            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find(constraints)){
+                                dc.delete();
+                            }
+
+
+                          //Remove document from the database
+                            doc.delete();
+
+
+                          //Remove from index
+                            index.removeFile(file);
+                        }
+                    }
+
+
+                  //Add new documents to the index
                     HashMap<javaxt.io.Directory, bluewave.app.Path> paths = new HashMap<>();
                     for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
                         javaxt.io.Directory dir = file.getDirectory();
@@ -89,11 +121,14 @@ public class DocumentService extends WebService {
                             pool.add(new Object[]{file, path});
                         }
                     }
+
                 }
-            }).start();
-        }
-        catch(Exception e){
-        }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
 
 
         scripts = new ConcurrentHashMap<>();
@@ -147,10 +182,10 @@ public class DocumentService extends WebService {
         if (limit==null || limit<1) limit = 50L;
         String orderBy = request.getParameter("orderby").toString();
         if (orderBy==null) orderBy = "name";
-        String q = request.getParameter("q").toString();
+        String[] q = request.getRequest().getParameterValues("q");
 
 
-      //Start compileing response
+      //Start compiling response
         StringBuilder str = new StringBuilder();
         str.append("id,name,type,date,size");
 
@@ -160,10 +195,13 @@ public class DocumentService extends WebService {
         sql.append("select document.id, file.name, file.type, file.date, file.size ");
         sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
         sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
+        HashMap<Long, JSONObject> searchMetadata = new HashMap<>();
         if (q!=null){
             try{
 
-                List<String> searchTerms = Arrays.asList(q.split(" "));
+                List<String> searchTerms = new ArrayList<>();
+                for (String s : q) searchTerms.add(s);
+
 
                 TreeMap<Float, ArrayList<bluewave.app.Document>> results =
                     index.findDocuments(searchTerms, Math.toIntExact(limit));
@@ -180,6 +218,12 @@ public class DocumentService extends WebService {
                         for (bluewave.app.Document document : documents){
                             if (documentIDs.length()>0) documentIDs += ",";
                             documentIDs += document.getID() + "";
+
+                            JSONObject info = document.getInfo();
+                            if (info!=null){
+                                JSONObject md = info.get("searchMetadata").toJSONObject();
+                                if (md!=null) searchMetadata.put(document.getID(), md);
+                            }
                         }
                     }
                     sql.append("WHERE document.id in (");
@@ -198,16 +242,25 @@ public class DocumentService extends WebService {
         sql.append(" LIMIT " + limit);
 
 
+        if (!searchMetadata.isEmpty()) str.append(",info");
+
+
       //Execute query and update response
         Connection conn = null;
         try{
             conn = database.getConnection();
             Recordset rs = new Recordset();
             rs.open(sql.toString(), conn);
-            JSONArray arr = new JSONArray();
             while (rs.hasNext()){
                 str.append("\n");
                 str.append(getString(rs));
+                if (!searchMetadata.isEmpty()) str.append(",");
+                JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
+                if (md!=null){
+                  //Create csv-safe string of the json and append to str
+                    String s = md.toString();
+                    str.append(java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
+                }
                 rs.moveNext();
             }
             rs.close();
