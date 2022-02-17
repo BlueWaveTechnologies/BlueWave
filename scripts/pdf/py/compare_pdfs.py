@@ -33,7 +33,7 @@ from pydivsufsort import divsufsort, kasai
 
 import argparse
 
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 
 TEXT_SEP = '^_^'
 PAGE_SEP = '@@@'
@@ -309,12 +309,13 @@ def compare_images(hash_info_a, hash_info_b):
     info_b = {hsh: (bbx, p) for hsh, bbx, p in hash_info_b}
 
     hashes_a = set(info_a)
-    hashes_b = set(hsh for hsh, bbx, p in hash_info_b)
+    hashes_b = set(info_b)
     common_hashes = hashes_a.intersection(hashes_b)
 
     common_hash_info = []
     for h in common_hashes:
         result = (h, info_a[h], info_b[h])
+        common_hash_info.append(result)
 
     return common_hash_info
 
@@ -760,11 +761,11 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
                                 {
                                     'file_index': a['file_index'],
                                     'page': sus_page_a,
-                                    'bbox': bbox_a,
+                                    'bbox': [bbox_a],
                                 }, {
                                     'file_index': b['file_index'],
                                     'page': sus_page_b,
-                                    'bbox': bbox_b,
+                                    'bbox': [bbox_b],
                                 },
                             ]
                         }
