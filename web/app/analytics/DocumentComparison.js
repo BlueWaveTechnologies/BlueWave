@@ -474,8 +474,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var rightFile;
                 var leftPage = 0;
                 var rightPage = 0;
-                var leftBoxes = [];
-                var rightBoxes = [];
                 var rightIndex = 0;
 
 
@@ -518,20 +516,29 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var leftBoxes = [];
                 var rightBoxes = [];
                 suspiciousPairs.forEach((suspiciousPair)=>{
+
+                    var leftBox = null;
+                    var rightBox = null;
+
                     suspiciousPair.pages.forEach((page)=>{
                         if (page.file_index===fileIndex && page.page===leftPage){
-                            leftBoxes.push({
+                            leftBox = {
                                 type: suspiciousPair.type,
                                 boxes: page.bbox
-                            });
+                            };
                         }
                         if (page.file_index===rightIndex && page.page===rightPage){
-                            rightBoxes.push({
+                            rightBox = {
                                 type: suspiciousPair.type,
                                 boxes: page.bbox
-                            });
+                            };
                         }
                     });
+
+                    if (leftBox && rightBox){
+                        leftBoxes.push(leftBox);
+                        rightBoxes.push(rightBox);
+                    }
                 });
 
 
