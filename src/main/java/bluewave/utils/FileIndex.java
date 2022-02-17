@@ -126,8 +126,13 @@ public class FileIndex {
         customFieldForVectors.setStoreTermVectorOffsets(true);
         customFieldForVectors.setStoreTermVectorPositions(true);
 
+        if(!path.isEmpty()) {
+            removeOrphanDocs();
+        }
+    }
 
-      //Remove any docs that might have been moved or deleted
+    public void removeOrphanDocs() {
+        //Remove any docs that might have been moved or deleted
         IndexReader reader = instanceOfIndexSearcher().getIndexReader();
         console.log("Index has " + reader.numDocs() + " total docs.");
         for (int i=0; i<reader.maxDoc(); i++) {
@@ -142,7 +147,6 @@ public class FileIndex {
 
             }
         }
-
     }
 
 

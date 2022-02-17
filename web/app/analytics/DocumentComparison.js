@@ -409,15 +409,59 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var rightFooter = td;
 
 
-
-        var createPreview = function(file, page, parent){
+      //Function used to create an image
+        var createPreview = function(file, page, parent, boxes){
             parent.innerHTML = "";
             var i = document.createElement("i");
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
+            img.onload = function(){
+                img = this;
+                setTimeout(function(){
+                    getImages(img).forEach((img)=>{
+                        boxes.forEach((box)=>{
+                            var type = box.type;
+                            box.boxes.forEach((bbox)=>{
+                                var x = bbox[0];
+                                var y = bbox[1];
+                                var w = bbox[2]-x;
+                                var h = bbox[3]-y;
+                                var d = document.createElement("div");
+                                d.style.position = "absolute";
+                                d.style.border = "1px solid red";
+                                d.style.left = (x*img.width)+"px";
+                                d.style.top = (y*img.height)+"px";
+                                d.style.width = (w*img.width)+"px";
+                                d.style.height = (h*img.height)+"px";
+                                d.style.zIndex = 2;
+                                img.parentNode.appendChild(d);
+                            });
+                        });
+                    });
+                }, 1200); //add slight delay for the carousel to finish sliding
+            };
             parent.appendChild(img);
+        };
+
+
+      //Function used to find images in the carousel. Note that there may be
+      //more than one image due to idiosyncrasies with the carousel
+        var getImages = function(img){
+            var arr = [];
+            carousel.getPanels().forEach((panel)=>{
+                var panels = panel.div.getElementsByClassName("doc-compare-panel");
+                for (var i=0; i<panels.length; i++){
+                    var images = panels[i].getElementsByTagName("img");
+                    for (var j=0; j<images.length; j++){
+                        if (images[j].src===img.src){
+                            arr.push(images[j]);
+                        }
+                    }
+                }
+            });
+            return arr;
         };
 
 
@@ -430,7 +474,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var rightFile;
                 var leftPage = 0;
                 var rightPage = 0;
+                var rightIndex = 0;
 
+
+              //Get suspiciousPairs associated with this pageIndex
                 var suspiciousPairs = [];
                 var idx = 0;
                 suspiciousPages.every((suspiciousPage)=>{
@@ -451,7 +498,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         if (idx===pageIndex){
                             var arr = similarPages[i].split(",");
                             rightPage = parseInt(arr[1]);
-                            rightFile = files[parseInt(arr[0])];
+                            rightIndex = parseInt(arr[0]);
+                            rightFile = files[rightIndex];
 
                             leftPage = suspiciousPage.pageNumber;
                             suspiciousPairs = suspiciousPage.suspiciousPairs;
@@ -464,11 +512,42 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 });
 
 
+              //Get boxes
+                var leftBoxes = [];
+                var rightBoxes = [];
+                suspiciousPairs.forEach((suspiciousPair)=>{
+
+                    var leftBox = null;
+                    var rightBox = null;
+
+                    suspiciousPair.pages.forEach((page)=>{
+                        if (page.file_index===fileIndex && page.page===leftPage){
+                            leftBox = {
+                                type: suspiciousPair.type,
+                                boxes: page.bbox
+                            };
+                        }
+                        if (page.file_index===rightIndex && page.page===rightPage){
+                            rightBox = {
+                                type: suspiciousPair.type,
+                                boxes: page.bbox
+                            };
+                        }
+                    });
+
+                    if (leftBox && rightBox){
+                        leftBoxes.push(leftBox);
+                        rightBoxes.push(rightBox);
+                    }
+                });
+
+
+
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
 
-                createPreview(leftFile, leftPage, leftPanel);
-                createPreview(rightFile, rightPage, rightPanel);
+                createPreview(leftFile, leftPage, leftPanel, leftBoxes);
+                createPreview(rightFile, rightPage, rightPanel, rightBoxes);
 
                 leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
                 rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
@@ -491,10 +570,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             animationSteps: 600,
             transitionEffect: "easeInOutCubic",
             fx: config.fx
-        });
-
-        onRender(carousel.el, ()=>{
-            console.log("ready!");
         });
 
 
