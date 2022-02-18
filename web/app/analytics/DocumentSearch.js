@@ -74,7 +74,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         me.clear();
-
         grid.update();
     };
 
@@ -162,6 +161,104 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
     };
 
+  //**************************************************************************
+  //** expandSearch
+  //**************************************************************************
+  //* left empty for rewrite by instantiator (documentAnalysis)
+    this.expandSearch = function(){
+    };
+
+  //**************************************************************************
+  //** createNoResultsPanel
+  //**************************************************************************
+    this.createNoResultsPanel = function(parent){
+
+        var createButton = function(parent, label){
+            var input = document.createElement('input');
+            input.className = "form-button";
+            input.type = "button";
+            input.name = label;
+            input.value = label;
+            input.disabled = true;
+            parent.appendChild(input);
+            return input;
+        };
+
+        var createButtonBar = function(parent){
+            // add container
+            var div = document.createElement("div");
+            div.style.textAlign = "center";
+            div.style.padding = "10px 10px 10px 0";
+            parent.appendChild(div);
+            // add search button
+            var button = createButton(div,"Expand Search");
+
+            button.enable = function(){
+            this.disabled = false;
+            };
+
+            button.disable = function(){
+            this.disabled = false;
+            };
+
+            button.enable();
+
+            button.onclick = function(){
+                me.expandSearch();
+            };
+        };
+
+
+        var createSearchResultMessage = function(parent){
+            // create container
+            var div = document.createElement("div");
+            div.className = "doc-external-search-popup-results";
+            div.style.textAlign = "center";
+            // add background
+            var iconContainer = document.createElement("div");
+            iconContainer.className = "doc-external-search-popup-results-background";
+            div.appendChild(iconContainer);
+            // iconContainer.innerHTML ='<i class="fal fa-file-search"></i>';
+            // iconContainer.innerHTML ='<i class="fas fa-not-equal"></i>';
+            // iconContainer.innerHTML ='<i class="fas fa-search-plus"></i>';
+            iconContainer.innerHTML ='<i class="fas fa-search-minus"></i>';
+
+            // add text
+            var text = document.createElement("div");
+            text.className = "doc-external-search-popup-results-text";
+            div.appendChild(text);
+            text.innerText =  "No Results returned - test message";
+
+
+            parent.appendChild(div);
+        };
+            var body = parent;
+            var table = createTable();
+            var tbody = table.firstChild;
+
+            body.appendChild(table);
+            var el = table;
+
+            var tr, td;
+
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            td.style.height = "100%";
+            tr.appendChild(td);
+            createSearchResultMessage(td);
+
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            tr.appendChild(td);
+            createButtonBar(td);
+
+
+            return {
+                el: el
+            };
+    };
 
   //**************************************************************************
   //** createDocumentPanel
@@ -169,9 +266,13 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
     var createDocumentPanel = function(parent){
 
         createGrid(parent);
-
     };
 
+  //**************************************************************************
+  //** onEmptyResults
+  //**************************************************************************
+    this.onEmptyResults = function(){
+    };
 
   //**************************************************************************
   //** createGrid
@@ -272,6 +373,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         };
 
         grid.onLoad = function(){
+            if (grid.el.getElementsByClassName("table-row").length < 1) me.onEmptyResults();
             waitmask.hide();
         };
 
