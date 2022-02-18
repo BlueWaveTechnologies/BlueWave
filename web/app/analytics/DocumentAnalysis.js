@@ -18,6 +18,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var selectedDocuments; //datastore
     var searchPanel;
     var similarityResults, documentSimilarities;
+    var externalSearchPanel;
+    var noResultsPanel;
     var windows = [];
     var waitmask;
     var comparisonsEnabled = true;
@@ -542,7 +544,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
     };
 
-
   //**************************************************************************
   //** createSearchPanel
   //**************************************************************************
@@ -555,6 +556,53 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 dateFormat: config.dateFormat,
                 showCheckboxes: false
             });
+
+            // externalSearchPanel = new bluewave.analytics.DocumentExternalSearch(parent,{
+            //     dateFormat: config.dateFormat,
+            //     showCheckboxes: false
+            // });
+
+            // addShowHide(searchPanel.el);
+            addShowHide(searchPanel);
+
+            // addShowHide(externalSearchPanel.el);
+
+            var searchBarInput, searchBarDiv;
+            searchPanel.onEmptyResults = function(){
+                if (typeof(noResultsPanel) === "undefined"){
+                    //create noResultsPanel
+                        noResultsPanel = this.createNoResultsPanel(parent);
+                        addShowHide(noResultsPanel);
+                }
+
+                // pop the search bar back into the noResultsPanel (from documentSearchPanel)
+                    searchBarDiv = noResultsPanel.el.getElementsByClassName("document-search-search-bar")[0];
+                    searchBarDiv.appendChild(this.searchBar.el);
+                    searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
+
+                searchPanel.hide();
+                noResultsPanel.show();
+                searchBarInput.focus();
+
+                searchPanel.expandSearch = function (){
+                    console.log("expand search button clicked");
+                    noResultsPanel.hide();
+
+                };
+            };
+
+            searchPanel.onPopulatedResults = function(){
+                if (typeof(noResultsPanel) !== "undefined"){
+                    noResultsPanel.hide();
+                    searchPanel.show();
+
+                    // pop the search bar back into the searchPanel (from noResultsPanel)
+                        searchBarDiv = searchPanel.el.getElementsByClassName("document-search-search-bar")[0];
+                        searchBarDiv.appendChild(this.searchBar.el);
+                        searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
+                        searchBarInput.focus();
+                };
+            };
 
             searchPanel.el.addEventListener('dragover', onDragOver, false);
             searchPanel.el.addEventListener('drop', onDrop, false);
@@ -589,7 +637,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         return {
             clear: function(){
-                if (searchPanel) searchPanel.clear();
+                if (searchPanel){
+                    searchPanel.clear();
+                    searchPanel.show();
+                }
             },
             update: function(panel){
                 if (!searchPanel){
