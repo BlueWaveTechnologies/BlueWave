@@ -46,6 +46,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
+        td.className = "document-search-search-bar";
         tr.appendChild(td);
         createHeader(td);
 
@@ -100,11 +101,26 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //** createSearchBar
   //**************************************************************************
     var createSearchBar = function(parent){
+
         searchBar = bluewave.utils.createSearchBar(parent);
         searchBar.onChange = function(q){
-            //console.log(q);
+            // console.log(q);
         };
+
         searchBar.onSearch = function(q){
+
+            if (typeof q === 'string'){
+
+                var q = q.split(/"|'/);
+
+                var ignoredSearches = new Set(["", " "]);
+                q = q.filter((queryParam) => {
+                    return !ignoredSearches.has(queryParam);
+                });
+                for (let value in q) q[value] = q[value].trim();
+
+            }
+
             grid.update(q);
         };
         searchBar.onClear = function(){
@@ -161,7 +177,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //** createGrid
   //**************************************************************************
     var createGrid = function(parent){
-
         var df = d3.timeFormat(getDateFormat(config.dateFormat));
         var columnConfig = [
             {header: 'Name', width:'100%', field: 'name', sortable: true},
@@ -194,6 +209,9 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                         if (field=="id" || field=="size"){
                             v = parseFloat(v);
                         }
+                        else if (field=="info"){
+                            if (v) v = JSON.parse(decodeURIComponent(v));
+                        }
                         r[field] = v;
                     });
                     return r;
@@ -208,7 +226,27 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             },
             update: function(row, record){
                 if (config.showCheckboxes===true) row.set("x", record.id);
-                row.set("Name", record.name);
+
+                var searchMetadata = record.info;
+                if (searchMetadata && searchMetadata.highlightFragment){
+
+                    var recordDiv = document.createElement("div");
+                    var recordNameSpan = document.createElement("div");
+                    recordNameSpan.className = "document-search-result";
+                    recordNameSpan.innerHTML = record.name;
+                    recordDiv.appendChild(recordNameSpan);
+
+
+                    var metadataSpan = document.createElement("span");
+                    metadataSpan.className = "document-search-fragment";
+                    metadataSpan.innerHTML = searchMetadata.highlightFragment;
+                    recordDiv.appendChild(metadataSpan);
+
+                    row.set("Name", recordDiv);
+                }
+                else{
+                    row.set("Name", record.name);
+                }
 
                 var d = Date.parse(record.date);
                 if (!isNaN(d)){
@@ -239,10 +277,8 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
         grid.update = function(q){
-
             if (q) params.q = q;
             else delete params.q;
-
             grid.clear();
             grid.load();
             grid.setSortIndicator(0, "DESC");

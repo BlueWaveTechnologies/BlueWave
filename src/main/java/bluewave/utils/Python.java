@@ -5,6 +5,13 @@ import java.util.*;
 import javaxt.json.JSONObject;
 import static javaxt.utils.Console.console;
 
+//******************************************************************************
+//**  Python
+//******************************************************************************
+/**
+ *   Provides static functions used to execute python commands and parse output
+ *
+ ******************************************************************************/
 
 public class Python {
 
@@ -15,7 +22,10 @@ public class Python {
   //** getPythonCommand
   //**************************************************************************
     public static String getPythonCommand() {
+        if (python!=null) return python;
 
+
+      //Check if a python path is defined in the config file (not common)
         String path = Config.get("python").toString();
         if (path!=null){
             javaxt.io.File f = new javaxt.io.File(path);
@@ -26,7 +36,7 @@ public class Python {
                     javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
                     cmd.run();
                     parseErrors(cmd.getErrors());
-                    console.log("Found python " + cmd.getOutput().get(0));
+                    //console.log("Found python " + cmd.getOutput().get(0));
                     return python;
                 }
                 catch(Exception e){
@@ -36,13 +46,14 @@ public class Python {
         }
 
 
+      //Check which python is installed on the system
         for (String python : new String[]{"python3", "python"}){
             try{
                 String[] cmdarray = new String[]{python, "--version"};
                 javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
                 cmd.run();
                 parseErrors(cmd.getErrors());
-                console.log("Found python " + cmd.getOutput().get(0));
+                //console.log("Found python " + cmd.getOutput().get(0));
                 return python;
             }
             catch(Exception e){
@@ -50,7 +61,7 @@ public class Python {
             }
         }
 
-        console.log("Failed to find python");
+        //console.log("Failed to find python");
 
         return null;
     }

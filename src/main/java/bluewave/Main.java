@@ -11,6 +11,7 @@ import java.net.InetSocketAddress;
 
 import javaxt.sql.*;
 import javaxt.json.*;
+import javaxt.io.File;
 import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
@@ -361,6 +362,12 @@ public class Main {
                 catch(Exception e){
                     console.log("Failed to delete " + s);
                 }
+            }
+        }
+        else if (str.equalsIgnoreCase("DocumentComparison")){
+            Config.initDatabase();
+            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()){
+                dc.delete();
             }
         }
         else if (str.equals("index")){
