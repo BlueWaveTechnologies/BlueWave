@@ -15,6 +15,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var initializing = true;
     var title = "Import Summary";
 
+    var dashboardPanel;
+
 
   //Variables for the second panel
     var grid;
@@ -27,7 +29,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var nodeView;
 
 
-    var companyProfile;
+    var companyProfile; //popup
     var waitmask;
 
 
@@ -45,7 +47,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         parent.appendChild(mainDiv);
         me.el = mainDiv;
 
-        createDashboardPanel(mainDiv);
+        dashboardPanel = createDashboardPanel(mainDiv);
     };
 
 
@@ -61,6 +63,10 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+
+        dashboardPanel.clear();
+
+
         data = [];
         lineData = [];
         grid.clear();
@@ -75,6 +81,14 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
+
+        dashboardPanel.clear();
+        dashboardPanel.show();
+        dashboardPanel.update();
+
+
+        if (true) return;
+
         var onReady = function(){
             me.clear();
             update();
@@ -114,6 +128,13 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     var createDashboardPanel = function(parent){
 
+        var panel = document.createElement("div");
+        panel.style.width = "100%";
+        panel.style.height = "100%";
+        parent.appendChild(panel);
+        addShowHide(panel);
+
+
       //Create table with 2 rows and 2 columns
         var table = createTable();
         var tbody = table.firstChild;
@@ -132,7 +153,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
         });
         var sankey = createSankeyChart(td, {
-            title: "Consignee to Manufacturer"
+            title: "Manufacturer to Consignee"
         });
 
 
@@ -171,8 +192,30 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         tr.appendChild(td);
         //createLineChart(td, {});
 
-        parent.appendChild(table);
+        panel.appendChild(table);
 
+        panel.clear = function(){
+            if (true) return;
+            map.clear();
+            sankey.clear();
+            countryOfOrigin.clear();
+            manufacturers.clear();
+            consignees.clear();
+        };
+
+        panel.update = function(){
+            get("import/network",{
+                success: function(csv){
+                    var data = d3.csvParse(csv);
+                    data.forEach((d)=>{
+                        d.lines = parseFloat(d.lines);
+                    });
+
+                }
+            });
+        };
+
+        return panel;
     };
 
 
@@ -1080,6 +1123,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
