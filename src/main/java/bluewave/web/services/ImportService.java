@@ -28,7 +28,7 @@ public class ImportService extends WebService {
   //** getSummary
   //**************************************************************************
   /** Used to generate an import summary for a given country, product, and
-   *  date range
+   *  date range. Applies a fuzzy match to group establishments.
    */
     public ServiceResponse getSummary(ServiceRequest request, Database database)
     throws ServletException {
@@ -515,7 +515,7 @@ public class ImportService extends WebService {
   //**************************************************************************
   //** getNetwork
   //**************************************************************************
-  /** Returns a list of total lines, quantities, and values by product code
+  /** Returns a csv linking manufacturers->ports->consignee
    */
     public ServiceResponse getNetwork(ServiceRequest request, Database database)
     throws ServletException {
@@ -529,23 +529,53 @@ public class ImportService extends WebService {
         Neo4J graph = bluewave.Config.getGraph(user);
 
 
-      //Execute query and generate response
+      //Execute query
         String[] fields = new String[]{"manufacturer","lines","quantity","value","consignee","unladed_port"};
-        StringBuilder str = new StringBuilder(String.join(",", fields));
+        ArrayList<HashMap<String, Value>> records = new ArrayList<>();
+        HashMap<Long,String> facilities = new HashMap<>();
         Session session = null;
         try{
             session = graph.getSession();
+            HashSet<Long> feis = new HashSet<>();
 
+          //Get records
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
-                str.append("\r\n");
 
-                for (int i=0; i<fields.length; i++){
-                    if (i>0) str.append(",");
-                    Object val = r.get(fields[i]).asObject();
-                    str.append(val);
+                Long manufacturer = new Value(r.get("manufacturer").asObject()).toLong();
+                Long consignee = new Value(r.get("consignee").asObject()).toLong();
+
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field : fields){
+                    Value val = new Value(r.get(field).asObject());
+                    values.put(field, val);
                 }
+                records.add(values);
+                if (manufacturer!=null) feis.add(manufacturer);
+                if (consignee!=null) feis.add(consignee);
+            }
+
+
+          //Get establishment names
+            StringBuilder str = new StringBuilder();
+            str.append("MATCH (n:import_establishment)\n");
+            str.append("WHERE n.fei IN[\n");
+            Iterator<Long> it = feis.iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                str.append(fei);
+                if (it.hasNext()) str.append(",");
+            }
+            str.append("]\n");
+            str.append("RETURN n.fei as fei, n.name as name");
+            sql = str.toString();
+            rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long fei = new Value(r.get("fei").asObject()).toLong();
+                String name = new Value(r.get("name").asObject()).toString();
+                facilities.put(fei, name);
             }
 
             session.close();
@@ -554,6 +584,161 @@ public class ImportService extends WebService {
             e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
+        }
+
+
+      //Fuzzy match facility names and combine entries
+        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
+
+
+      //Merge records by facility
+        ArrayList<HashMap<String, Value>> mergedRecords = new ArrayList<>();
+        Iterator<String> it = uniqueFacilities.keySet().iterator();
+        while (it.hasNext()){
+            String name = it.next();
+            ArrayList<Long> feis = uniqueFacilities.get(name);
+            StringBuilder str = new StringBuilder();
+            for (Long fei : feis){
+                if (str.length()>0) str.append(",");
+                str.append(fei);
+            }
+            String facilityFEIs = str.toString();
+
+
+            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+            for (HashMap<String, Value> record : records){
+                Long manufacturer = record.get("manufacturer").toLong();
+                for (Long fei : feis){
+                    if (fei==manufacturer){
+
+                        Long port = record.get("unladed_port").toLong();
+                        Long consignee = record.get("consignee").toLong();
+                        Float lines = record.get("lines").toFloat();
+                        if (lines==null) lines = 0f;
+                        Float quantity = record.get("quantity").toFloat();
+                        if (quantity==null) quantity = 0f;
+                        Float value = record.get("value").toFloat();
+                        if (value==null) value = 0f;
+
+                        String key = port+"_"+consignee;
+
+                        HashMap<String, Value> g = group.get(key);
+                        if (g==null){
+                            g = new HashMap<>();
+                            g.put("manufacturer", new Value(name));
+                            g.put("manufacturer_fei", new Value(facilityFEIs));
+                            g.put("unladed_port", new Value(port));
+                            g.put("consignee", new Value(consignee));
+                            g.put("lines", new Value(lines));
+                            g.put("quantity", new Value(quantity));
+                            g.put("value", new Value(value));
+                            group.put(key, g);
+                        }
+                        else{
+                            g.put("lines", new Value(lines+g.get("lines").toLong()));
+                            g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                            g.put("value", new Value(lines+g.get("value").toLong()));
+                        }
+
+
+                        break;
+                    }
+                }
+            }
+
+
+            Iterator<String> i2 = group.keySet().iterator();
+            while (i2.hasNext()){
+                HashMap<String, Value> g = group.get(i2.next());
+                mergedRecords.add(g);
+            }
+        }
+
+        console.log("reduced " + records.size() + " to " + mergedRecords.size() + "(merged " + (records.size()-mergedRecords.size()) + " records)");
+
+
+
+      //Merge records by consignee
+        ArrayList<HashMap<String, Value>> mergedRecords2 = new ArrayList<>();
+        it = uniqueFacilities.keySet().iterator();
+        while (it.hasNext()){
+            String name = it.next();
+            ArrayList<Long> feis = uniqueFacilities.get(name);
+            StringBuilder str = new StringBuilder();
+            for (Long fei : feis){
+                if (str.length()>0) str.append(",");
+                str.append(fei);
+            }
+            String facilityFEIs = str.toString();
+
+            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+            for (HashMap<String, Value> record : mergedRecords){
+                Long consignee = record.get("consignee").toLong();
+                for (Long fei : feis){
+                    if (fei==consignee){
+
+                        String manufacturer = record.get("manufacturer").toString();
+                        String manufacturerFEIs = record.get("manufacturer_fei").toString();
+                        Long port = record.get("unladed_port").toLong();
+                        Float lines = record.get("lines").toFloat();
+                        if (lines==null) lines = 0f;
+                        Float quantity = record.get("quantity").toFloat();
+                        if (quantity==null) quantity = 0f;
+                        Float value = record.get("value").toFloat();
+                        if (value==null) value = 0f;
+
+                        String key = port+"_"+manufacturerFEIs;
+
+                        HashMap<String, Value> g = group.get(key);
+                        if (g==null){
+                            g = new HashMap<>();
+                            g.put("manufacturer", new Value(manufacturer));
+                            g.put("manufacturer_fei", new Value(manufacturerFEIs));
+                            g.put("unladed_port", new Value(port));
+
+                            g.put("consignee", new Value(name));
+                            g.put("consignee_fei", new Value(facilityFEIs));
+
+                            g.put("lines", new Value(lines));
+                            g.put("quantity", new Value(quantity));
+                            g.put("value", new Value(value));
+                            group.put(key, g);
+                        }
+                        else{
+                            g.put("lines", new Value(lines+g.get("lines").toLong()));
+                            g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                            g.put("value", new Value(lines+g.get("value").toLong()));
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            Iterator<String> i2 = group.keySet().iterator();
+            while (i2.hasNext()){
+                HashMap<String, Value> g = group.get(i2.next());
+                mergedRecords2.add(g);
+            }
+        }
+
+        console.log("further reduced " + records.size() + " to " + mergedRecords2.size() + "(merged " + (records.size()-mergedRecords2.size()) + " records)");
+
+
+
+      //Generate response
+        fields = new String[]{"manufacturer","manufacturer_fei","lines","quantity","value","consignee","consignee_fei","unladed_port"};
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        for (HashMap<String, Value> record : mergedRecords2){
+            str.append("\r\n");
+
+            for (int i=0; i<fields.length; i++){
+                if (i>0) str.append(",");
+                String val = record.get(fields[i]).toString();
+                if (val==null) val = "";
+                if (val.contains(",")) val = "\"" + val + "\"";
+                str.append(val);
+            }
         }
 
         return new ServiceResponse(str.toString());
