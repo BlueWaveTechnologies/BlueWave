@@ -586,10 +586,14 @@ public class ImportService extends WebService {
             return new ServiceResponse(e);
         }
 
+        console.log("Found " + records.size() + " records and " + facilities.size() + " facilities");
+
 
       //Fuzzy match facility names and combine entries
         HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
 
+
+        console.log("Found " + uniqueFacilities.size() + " unique facilities");
 
       //Merge records by facility
         ArrayList<HashMap<String, Value>> mergedRecords = new ArrayList<>();
@@ -608,8 +612,9 @@ public class ImportService extends WebService {
             HashMap<String, HashMap<String, Value>> group = new HashMap<>();
             for (HashMap<String, Value> record : records){
                 Long manufacturer = record.get("manufacturer").toLong();
+                if (manufacturer==null) continue;
                 for (Long fei : feis){
-                    if (fei==manufacturer){
+                    if (manufacturer.equals(fei)){
 
                         Long port = record.get("unladed_port").toLong();
                         Long consignee = record.get("consignee").toLong();
@@ -654,7 +659,7 @@ public class ImportService extends WebService {
             }
         }
 
-        console.log("reduced " + records.size() + " to " + mergedRecords.size() + "(merged " + (records.size()-mergedRecords.size()) + " records)");
+        console.log("Reduced " + records.size() + " to " + mergedRecords.size() + " (merged " + (records.size()-mergedRecords.size()) + " records)");
 
 
 
@@ -674,8 +679,9 @@ public class ImportService extends WebService {
             HashMap<String, HashMap<String, Value>> group = new HashMap<>();
             for (HashMap<String, Value> record : mergedRecords){
                 Long consignee = record.get("consignee").toLong();
+                if (consignee==null) continue;
                 for (Long fei : feis){
-                    if (fei==consignee){
+                    if (consignee.equals(fei)){
 
                         String manufacturer = record.get("manufacturer").toString();
                         String manufacturerFEIs = record.get("manufacturer_fei").toString();
@@ -722,7 +728,7 @@ public class ImportService extends WebService {
             }
         }
 
-        console.log("further reduced " + records.size() + " to " + mergedRecords2.size() + "(merged " + (records.size()-mergedRecords2.size()) + " records)");
+        console.log("Further reduced " + records.size() + " to " + mergedRecords2.size() + " (merged " + (records.size()-mergedRecords2.size()) + " records)");
 
 
 
