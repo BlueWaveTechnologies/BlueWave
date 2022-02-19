@@ -13,7 +13,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        barLayout: "vertical", 
+        layout: "vertical", 
         animationSteps: 1500, //duration in milliseconds
         stackValues: false
     };
@@ -88,7 +88,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
       //Get chart options
-        var layout = chartConfig.barLayout;
+        var layout = chartConfig.layout;
         var stackValues = chartConfig.stackValues===true;
 
 
@@ -141,13 +141,15 @@ bluewave.charts.BarChart = function(parent, config) {
             .key(function(d){return d[group];})
             .entries(data[0]);
 
-            maxData = d3.nest()
-            .key(function (d) { return d[xKey]; })
-            .rollup(function (d) {
-                return d3.max(d, function (g) {
-                    return parseFloat(g[yKey]);
-                });
-            }).entries(mergedData);
+            if (!stackValues){
+                maxData = d3.nest()
+                .key(function (d) { return d[xKey]; })
+                .rollup(function (d) {
+                    return d3.max(d, function (g) {
+                        return parseFloat(g[yKey]);
+                    });
+                }).entries(mergedData);
+            }
 
             let tempDataSets = [];
             groupData.forEach(function(g){
@@ -279,76 +281,11 @@ bluewave.charts.BarChart = function(parent, config) {
         width = width-(margin.left+margin.right);
 
 
-        if (stackValues){
-
-            //Nest merged data object by X-axis value for stack
-            var groupedStackData = d3.nest()
-                .key((d) => d[xKey])
-                .entries(mergedData);
-
-
-            let stackGroup = [];
-            let stackLength = groupedStackData[0].values.length;
-            for (let i = 0; i < stackLength; i++) {
-                stackGroup.push(i);
-            }
-
-            var stackedData = d3.stack()
-                // .keys(subgroups)
-                .keys(stackGroup)
-                .value(function (d, key) {
-
-                    let v = d.values[key];
-                    return v[yKey];
-
-                })
-                (groupedStackData)
-
-
-            let colorIncrementer = 0;
-            plotArea.append("g")
-                .selectAll("g")
-                .data(stackedData)
-                .enter().append("g")
-                .selectAll("rect")
-
-                .data(function (d) { return d; })
-                .enter().append("rect")
-                .attr("x", function (d) {
-
-                    // return x(new Date(d.data.key));
-                    //keep in case we change how we're handling timescale
-                    return layout === "vertical" ? x(d.data.key) : x(d[0]);
-                })
-                .attr("y", function (d) {
-
-                    return layout === "vertical" ? y(d[1]) : y(d.data.key);
-                })
-                .attr("height", function (d) {
-
-                    return layout === "vertical" ? y(d[0]) - y(d[1]) : y.bandwidth();
-                })
-                .attr("width", function(d){
-
-                    return layout==="vertical" ? x.bandwidth() : x(d[1]) - x(d[0]);
-                });
-
-
-                //Mod through color array assigning barId. Rolls over at number of stacks
-                plotArea.selectAll("rect").attr("barID", function(d, i){
-
-                    if (i%stackLength === 0) colorIncrementer++;
-                    return colorIncrementer-1;
-
-                });
-
-        }
-
-
+ 
+        //Mapping object to store accumulated values for stacking
+        var keyMap = {};
 
         for (let i=0; i<dataSets.length; i++){
-
-            if (stackValues) break;
 
 
             var sumData = arr[i];
@@ -356,6 +293,69 @@ bluewave.charts.BarChart = function(parent, config) {
             let fillOpacity = parseFloat(chartConfig["fillOpacity" + i]);
             if (isNaN(fillOpacity) || fillOpacity<0 || fillOpacity>1) fillOpacity = 1;
 
+            //Only supports vertical layout for now
+            if (stackValues){
+
+
+                let keyType = getType(sumData[0].key);
+                if (keyType == "date") keyType = "string";
+
+                let getX = function (d) {
+
+                    if (keyType === "date") {
+                        return x(new Date(d.key));
+                    } else {
+                        return x(d.key);
+                    }
+
+                };
+
+                let getY = function (d) {
+                    var v = parseFloat(d["value"]);
+                    return y(v);
+                };
+
+
+                let getWidth = function (d) {
+                    return x.bandwidth ? x.bandwidth() : getX(d);
+                };
+
+
+                plotArea
+                    .append("g")
+                    .selectAll("mybar")
+                    .data(sumData)
+                    .enter()
+                    .append("rect")
+                    .attr("x", getX)
+                    .attr("y", function (d) {
+                        var key = d.key;
+                        var val = d.value;
+
+                        //Check if key exists in keyMap and accumulate value
+                        if (!keyMap[key]) keyMap[key] = 0;
+                        var v = parseFloat(val);
+                        keyMap[key] += v;
+
+                        return y(keyMap[key]);
+                    })
+                    .attr("height", function (d) {
+
+                        return y.bandwidth
+                            ? y.bandwidth()
+                            : (height - getY(d));
+                    })
+                    .attr("width", function (d) {
+                        return getWidth(d);
+                    })
+                    .attr("opacity", fillOpacity)
+                    .attr("barID", i)
+
+                
+            };
+
+            //Jump out of loop after stacking is done
+            if (stackValues) continue;
 
             if (barType === "histogram"){
 
@@ -433,7 +433,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
             if (y.bandwidth || x.bandwidth) {
-                if (chartConfig.barLayout === "vertical"){
+                if (chartConfig.layout === "vertical"){
 
                     var getWidth = function(d){
                         if(group){
@@ -473,7 +473,7 @@ bluewave.charts.BarChart = function(parent, config) {
                         })
 
                 }
-                else if(chartConfig.barLayout === "horizontal"){
+                else if(chartConfig.layout === "horizontal"){
                     plotArea
                         .selectAll("mybar")
                         .data(sumData)
@@ -514,7 +514,7 @@ bluewave.charts.BarChart = function(parent, config) {
             //No bandwith
             else {
                 // if(timeAxis === "x")
-                if (chartConfig.barLayout === "vertical") {
+                if (chartConfig.layout === "vertical") {
 
                     if(!group){
                     plotArea
@@ -546,7 +546,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
                 }
                 // else if(timeAxis === "y")
-                else if (chartConfig.barLayout === "horizontal") {
+                else if (chartConfig.layout === "horizontal") {
 
                     plotArea
                         .selectAll("mybar")
@@ -604,6 +604,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
         //Bar transitions
         var animationSteps = chartConfig.animationSteps;
+        if (stackValues) animationSteps = 0;
         if (!isNaN(animationSteps) && animationSteps>50){
             var max = d3.max(maxData, d => parseFloat(d.value));
             if (layout === "vertical"){

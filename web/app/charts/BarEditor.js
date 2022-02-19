@@ -321,7 +321,7 @@ bluewave.charts.BarEditor = function(parent, config) {
                             type: chartLayout
                         },
                         {
-                            name: "stack",
+                            name: "stackValues",
                             label: "Stack Bars",
                             type: "checkbox",
                             options: [
@@ -403,7 +403,7 @@ bluewave.charts.BarEditor = function(parent, config) {
 
       //Set form value for bar layout
         var layoutField = form.findField("layout");
-        var layout = chartConfig.barLayout;
+        var layout = chartConfig.layout;
         layoutField.setValue(layout==="horizontal" ? "horizontal" : "vertical");
 
        //Set initial value for X-gridline
@@ -427,7 +427,7 @@ bluewave.charts.BarEditor = function(parent, config) {
         yLabelField.setValue(yLabel===true ? true : false);
 
 
-        var stackField = form.findField("stack");
+        var stackField = form.findField("stackValues");
         var stack = chartConfig.stackValues;
         stackField.setValue(stack===true ? true : false);
 
@@ -454,7 +454,7 @@ bluewave.charts.BarEditor = function(parent, config) {
 
 
           //Update chartConfig
-            chartConfig.barLayout = settings.layout;
+            chartConfig.layout = settings.layout;
             chartConfig.xGrid = settings.xGrid;
             chartConfig.yGrid = settings.yGrid;
             chartConfig.xLabel = settings.xLabel;
