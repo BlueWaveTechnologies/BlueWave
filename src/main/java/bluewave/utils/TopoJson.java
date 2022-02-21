@@ -14,8 +14,7 @@ import org.locationtech.jts.geom.*;
 
 public class TopoJson {
 
-    private ArrayList<Entry> entries;
-    private JSONArray arcs;
+    private Entry[] entries;
     private double scaleX, scaleY, translateX, translateY;
     private static PrecisionModel precisionModel = new PrecisionModel();
     private static GeometryFactory geometryFactory = new GeometryFactory(precisionModel, 4326);
@@ -31,10 +30,9 @@ public class TopoJson {
   //** Constructor
   //**************************************************************************
     public TopoJson(JSONObject json, String key){
-        entries = new ArrayList<>();
 
-        JSONArray countries = json.get("objects").get(key).get("geometries").toJSONArray();
-        arcs = json.get("arcs").toJSONArray();
+      //Parse header
+        JSONArray arcs = json.get("arcs").toJSONArray();
         JSONArray scale = json.get("transform").get("scale").toJSONArray();
         scaleX = scale.get(0).toDouble();
         scaleY = scale.get(1).toDouble();
@@ -42,36 +40,29 @@ public class TopoJson {
         translateX = translate.get(0).toDouble();
         translateY = translate.get(1).toDouble();
 
-//        console.log(scale, translate);
-//        console.log("Found " + countries.length() + " countries and " + arcs.length() + " arcs");
 
-        
-        for (int i=0; i<countries.length(); i++){
-            JSONObject country = countries.get(i).toJSONObject();
-            JSONObject properties = country.get("properties").toJSONObject();
-
-            Entry entry = new Entry();
-            entry.properties = properties;
-
-
-//            String countryName = properties.get("name").toString();
-//            String countryCode = properties.get("code").toString();
+      //Get entries
+        ArrayList<Entry> entries = new ArrayList<>();
+        JSONArray geometries = json.get("objects").get(key).get("geometries").toJSONArray();
+        for (int i=0; i<geometries.length(); i++){
+            JSONObject geometry = geometries.get(i).toJSONObject();
+            JSONObject properties = geometry.get("properties").toJSONObject();
+            String geometryType = geometry.get("type").toString();
+            JSONArray countryArcs = geometry.get("arcs").toJSONArray();
 
 
-            String geometryType = country.get("type").toString();
-            JSONArray countryArcs = country.get("arcs").toJSONArray();
-
+          //Create JTS geometry
             Geometry geom = null;
             if (geometryType.equals("Polygon")){
-                geom = createPolygon(countryArcs.get(0).toJSONArray());
+                geom = createPolygon(countryArcs.get(0).toJSONArray(), arcs);
             }
             else if (geometryType.equals("MultiPolygon")){
                 ArrayList<Polygon> polygons = new ArrayList<>();
                 for (int j=0; j<countryArcs.length(); j++){
-                    Polygon p = createPolygon(countryArcs.get(j).toJSONArray());
+                    Polygon p = createPolygon(countryArcs.get(j).toJSONArray(), arcs);
                     if (p!=null) polygons.add(p);
                     else{
-//                        console.log("Failed to create polygon for " + i, countryCode, countryName);
+//                        console.log("Failed to create polygon for " + i, properties);
                     }
                 }
 
@@ -83,12 +74,18 @@ public class TopoJson {
                 }
             }
             else{
-
+                //Unsupported geometry type
             }
 
+
+          //Create entry
+            Entry entry = new Entry();
+            entry.properties = properties;
             entry.geometry = geom;
+            entries.add(entry);
 
 
+//          //Test geometry
 //            try{
 //                if (geom!=null){
 //                    Double lat = properties.get("latitude").toDouble();
@@ -96,28 +93,26 @@ public class TopoJson {
 //                    if (lat!=null && lon!=null){
 //                        Point center = geometryFactory.createPoint(new Coordinate(lon, lat));
 //                        if (!center.intersects(geom)){
-//                            //console.log("Invalid centroid for " + i, countryCode, countryName);
+//                            //console.log("Invalid centroid for " + i, properties);
 //                        }
 //                    }
 //                }
 //                else{
-//                    console.log("**Failed to create geometry for " + i, countryCode, countryName);
+//                    console.log("**Failed to create geometry for " + i, properties);
 //                }
 //            }
 //            catch(Exception e){
 //            }
 
-
-
-            entries.add(entry);
         }
+        this.entries = entries.toArray(new Entry[entries.size()]);
     }
 
 
   //**************************************************************************
   //** getEntries
   //**************************************************************************
-    public ArrayList<Entry> getEntries(){
+    public Entry[] getEntries(){
         return entries;
     }
 
@@ -125,7 +120,7 @@ public class TopoJson {
   //**************************************************************************
   //** createPolygon
   //**************************************************************************
-    private Polygon createPolygon(JSONArray countryArcs){
+    private Polygon createPolygon(JSONArray countryArcs, JSONArray arcs){
 
       //Generate list of coordinates
         ArrayList<Coordinate> coordinates = new ArrayList<>();
