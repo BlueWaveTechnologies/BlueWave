@@ -5,6 +5,8 @@ import java.util.*;
 import javaxt.json.*;
 
 import org.locationtech.jts.geom.*;
+import static javaxt.utils.Console.console;
+
 
 //******************************************************************************
 //**  Countries
@@ -16,9 +18,9 @@ import org.locationtech.jts.geom.*;
 
 public class Countries {
 
-    private static SpatialIndex countryIndex;
-    private static HashMap<Integer, JSONObject> countries;
-    static {
+    public static SpatialIndex countryIndex = createSpatialIndex();
+    public static HashMap<Long, JSONObject> countries;
+    private static SpatialIndex createSpatialIndex() {
         javaxt.io.Directory dir = bluewave.Config.getDirectory("webserver","webDir");
 
         try{
@@ -28,18 +30,26 @@ public class Countries {
             String text = countryFile.getText();
             JSONObject json = new JSONObject(text.substring(text.indexOf("\n{")));
             TopoJson topoJson = new TopoJson(json, "countries");
-            TopoJson.Entry[] entries = topoJson.getEntries();
-            for (int i=0; i<entries.length; i++){
-                TopoJson.Entry entry = entries[i];
+            Long id = 0L;
+            for (TopoJson.Entry entry : topoJson.getEntries()){
+                id++;
                 Geometry geom = entry.getGeometry();
-                if (geom!=null) countryIndex.add(geom, i);
-                countries.put(i, entry.getProperties());
+                JSONObject properties = entry.getProperties();
+                if (geom!=null){
+                    countryIndex.add(geom, id);
+                    properties.set("geometry", geom);
+                }
+                countries.put(id, properties);
+                if (geom==null){
+                    //console.log("missing geom for ", properties);
+                }
             }
             countryIndex.build();
         }
         catch(Exception e){
             e.printStackTrace();
         }
+        return countryIndex;
     }
 
 
@@ -55,7 +65,7 @@ public class Countries {
         return new JSONObject();
     }
 
-    
+
   //**************************************************************************
   //** getCountry
   //**************************************************************************
