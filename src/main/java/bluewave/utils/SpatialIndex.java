@@ -103,7 +103,24 @@ public class SpatialIndex {
    */
     public Long[] getIDs(Geometry geom){
         if (geom==null) return new Long[0];
-        return getIDs(geom.getEnvelopeInternal());
+
+
+        Envelope env = geom.getEnvelopeInternal();
+        ArrayList<Long> ids = new ArrayList<>();
+        if (env!=null){
+            for (Object o : strTree.query(env)) {
+                IndexedRegion region = (IndexedRegion) o;
+                try{
+                    if (region.poly.intersects(geom)){
+                        ids.add(region.getID());
+                    }
+                }
+                catch(Exception e){
+                }
+            }
+        }
+
+        return ids.toArray(new Long[ids.size()]);
     }
 
 
