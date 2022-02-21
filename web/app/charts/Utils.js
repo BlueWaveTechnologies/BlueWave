@@ -354,7 +354,7 @@ bluewave.chart.utils = {
         if (xLabel){
 
             var t = xAxis.append("text")
-            .attr("x", (right-left)/2)
+            .attr("x", (xExtents.right-xExtents.left)/2)
             .attr("y", marginBottom+labelOffset)
             .attr("class", "chart-axis-label")
             .style("text-anchor", "middle")

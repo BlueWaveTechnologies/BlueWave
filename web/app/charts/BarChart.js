@@ -91,12 +91,10 @@ bluewave.charts.BarChart = function(parent, config) {
         var layout = chartConfig.layout;
         var stackValues = chartConfig.stackValues===true;
 
-
-
         var xKey;
         var yKey;
-        let xKey2;
-        let yKey2;
+
+
         var barType = chartConfig.barType;
         if (barType === "histogram"){
             xKey = chartConfig.values;
@@ -108,11 +106,6 @@ bluewave.charts.BarChart = function(parent, config) {
         }
         if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
-
-        if (chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-            xKey2 = chartConfig.xAxis2;
-            yKey2 = chartConfig.yAxis2;
-        }
 
         var dataSets = data;
         var colors = bluewave.utils.getColorPalette(true);
@@ -158,12 +151,6 @@ bluewave.charts.BarChart = function(parent, config) {
 
             dataSets = tempDataSets;
 
-            var x0 = d3.scaleBand()
-            .rangeRound([0, width])
-            .paddingInner(0.1);
-
-            var subgroups = groupData.map(function(d) { return d["key"]; });
-            x0.domain(subgroups);
         }
 
 
@@ -183,7 +170,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 yKey = yAxisN;
             }
 
-            // if(!xKey || !yKey) continue;
+
 
             var sumData = d3.nest()
                 .key(function(d){return d[xKey];})
@@ -513,7 +500,7 @@ bluewave.charts.BarChart = function(parent, config) {
             }
             //No bandwith
             else {
-                // if(timeAxis === "x")
+
                 if (chartConfig.layout === "vertical") {
 
                     if(!group){
@@ -524,12 +511,10 @@ bluewave.charts.BarChart = function(parent, config) {
                         .append("rect")
                         .attr("x", function (d) {
                             return getX(d) - width/sumData.length / 2;
-    //                        return x(d[xKey]) - width/data.length / 2;
                         })
                         .attr("y", getY)
                         .attr("height", function (d) {
                             return height - getY(d);
-    //                        return height - y(d[yKey]);
                         })
                         .attr("width", function (d) {
                             return width/sumData.length-5;
@@ -545,7 +530,7 @@ bluewave.charts.BarChart = function(parent, config) {
                     }
 
                 }
-                // else if(timeAxis === "y")
+
                 else if (chartConfig.layout === "horizontal") {
 
                     plotArea
@@ -562,7 +547,7 @@ bluewave.charts.BarChart = function(parent, config) {
                             } else {
                                 return y(d.key) - height/sumData.length / 2;
                             }
-                            // return y(d["key"]) - height/sumData.length / 2;
+
                         })
                         .attr("height", function (d) {
                             return height/sumData.length-5;
