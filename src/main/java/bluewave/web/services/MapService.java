@@ -1,9 +1,7 @@
 package bluewave.web.services;
 import bluewave.Config;
 import bluewave.graph.Neo4J;
-import bluewave.utils.Address;
-import bluewave.utils.Routing;
-import bluewave.utils.SpatialIndex;
+import bluewave.utils.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -107,7 +105,7 @@ public class MapService extends WebService {
                 Double lat = col.get(1).toDouble();
                 Double lon = col.get(2).toDouble();
                 if (lat!=null && lon!=null){
-                    Point pt = SpatialIndex.createPoint(lat, lon);
+                    Point pt = JTS.createPoint(lat, lon);
                     hospitalIndex.add(pt, hospitalID);
                     hospitalPoints.put(hospitalID, pt);
                     hospitalIDs.put(hospitalID, id);
