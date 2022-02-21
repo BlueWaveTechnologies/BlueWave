@@ -183,15 +183,33 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             return input;
         };
 
-        var createButtonBar = function(parent){
-            // add container
+        var createBody = function(parent){
+            // create main container
             var div = document.createElement("div");
-            div.style.textAlign = "center";
-            div.style.padding = "10px 10px 10px 0";
-            parent.appendChild(div);
-            // add search button
-            var button = createButton(div,"Expand Search");
+            div.className = "doc-no-results-panel";
 
+            // add background
+            var iconContainer = document.createElement("div");
+            iconContainer.className = "doc-no-results-background";
+            iconContainer.textAlign = "center";
+            div.appendChild(iconContainer);
+            iconContainer.innerHTML ='<i class="fas fa-search-minus"></i>';
+
+            // add text
+            var text = document.createElement("div");
+            text.className = "doc-no-results-text";
+            div.appendChild(text);
+            text.innerText =  "No local results to show";
+
+            // add button container
+            var buttonContainer = document.createElement("div");
+            buttonContainer.className = "doc-no-results-button";
+            div.appendChild(buttonContainer);
+
+            // add external-search button
+            var button = createButton(buttonContainer,"Expand Search");
+            button.style.display = "inline-block";
+            button.style.width = "110px";
             button.enable = function(){
             this.disabled = false;
             };
@@ -205,29 +223,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             button.onclick = function(){
                 me.expandSearch();
             };
-        };
-
-
-        var createSearchResultMessage = function(parent){
-            // create container
-            var div = document.createElement("div");
-            div.className = "doc-external-search-popup-results";
-            div.style.textAlign = "center";
-            // add background
-            var iconContainer = document.createElement("div");
-            iconContainer.className = "doc-external-search-popup-results-background";
-            div.appendChild(iconContainer);
-            // iconContainer.innerHTML ='<i class="fal fa-file-search"></i>';
-            // iconContainer.innerHTML ='<i class="fas fa-not-equal"></i>';
-            // iconContainer.innerHTML ='<i class="fas fa-search-plus"></i>';
-            iconContainer.innerHTML ='<i class="fas fa-search-minus"></i>';
-
-            // add text
-            var text = document.createElement("div");
-            text.className = "doc-external-search-popup-results-text";
-            div.appendChild(text);
-            text.innerText =  "No Results returned - test message";
-
 
             parent.appendChild(div);
         };
@@ -268,13 +263,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 td = document.createElement("td");
                 td.style.height = "100%";
                 tr.appendChild(td);
-                createSearchResultMessage(td);
-
-                tr = document.createElement("tr");
-                tbody.appendChild(tr);
-                td = document.createElement("td");
-                tr.appendChild(td);
-                createButtonBar(td);
+                createBody(td);
 
 
             return {

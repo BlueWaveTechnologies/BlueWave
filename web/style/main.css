@@ -1272,6 +1272,34 @@ li.tree-node:hover {
 }
 
 /**************************************************************************/
+/** Document No Results Panel
+/**************************************************************************/
+
+.doc-no-results-button {
+    text-align: center;
+    padding: 10px 10px 10px 0;
+    width: 100%;
+}
+
+.doc-no-results-background {
+    position: relative;
+    opacity: 0.9;
+    font-size: 150px;
+    color: #999;
+    padding-bottom: 10px;
+}
+
+.doc-no-results-text {
+    color: #363636;
+    font-size: 15px;
+    padding-bottom: 25px;
+}
+.doc-no-results-panel {
+    text-align: center;
+}
+
+
+/**************************************************************************/
 /** Admin Panel
 /**************************************************************************/
 
