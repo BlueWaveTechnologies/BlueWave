@@ -16,8 +16,6 @@ public class TopoJson {
 
     private Entry[] entries;
     private double scaleX, scaleY, translateX, translateY;
-    private static PrecisionModel precisionModel = new PrecisionModel();
-    private static GeometryFactory geometryFactory = new GeometryFactory(precisionModel, 4326);
     public class Entry {
         private JSONObject properties;
         private Geometry geometry;
@@ -69,7 +67,7 @@ public class TopoJson {
                 if (!polygons.isEmpty()){
                     if (polygons.size()==1) geom = polygons.get(0);
                     else{
-                        geom = geometryFactory.createMultiPolygon(polygons.toArray(new Polygon[polygons.size()]));
+                        geom = JTS.createMultiPolygon(polygons);
                     }
                 }
             }
@@ -154,7 +152,7 @@ public class TopoJson {
       //Create polygon
         if (coordinates.size()>2){
             coordinates.add(coordinates.get(0));
-            return geometryFactory.createPolygon(coordinates.toArray(new Coordinate[coordinates.size()]));
+            return JTS.createPolygon(coordinates);
         }
         else{
             return null;
