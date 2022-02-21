@@ -46,21 +46,21 @@ public class TopoJson {
             JSONObject geometry = geometries.get(i).toJSONObject();
             JSONObject properties = geometry.get("properties").toJSONObject();
             String geometryType = geometry.get("type").toString();
-            JSONArray countryArcs = geometry.get("arcs").toJSONArray();
+            JSONArray geometryArcs = geometry.get("arcs").toJSONArray();
 
 
           //Create JTS geometry
             Geometry geom = null;
             if (geometryType.equals("Polygon")){
-                geom = createPolygon(countryArcs.get(0).toJSONArray(), arcs);
+                geom = createPolygon(geometryArcs, arcs);
             }
             else if (geometryType.equals("MultiPolygon")){
                 ArrayList<Polygon> polygons = new ArrayList<>();
-                for (int j=0; j<countryArcs.length(); j++){
-                    Polygon p = createPolygon(countryArcs.get(j).toJSONArray(), arcs);
+                for (int j=0; j<geometryArcs.length(); j++){
+                    Polygon p = createPolygon(geometryArcs.get(j).toJSONArray(), arcs);
                     if (p!=null) polygons.add(p);
                     else{
-//                        console.log("Failed to create polygon for " + i, properties);
+                        console.log("Failed to create polygon for " + i, properties);
                     }
                 }
 
@@ -118,33 +118,42 @@ public class TopoJson {
   //**************************************************************************
   //** createPolygon
   //**************************************************************************
-    private Polygon createPolygon(JSONArray countryArcs, JSONArray arcs){
+    private Polygon createPolygon(JSONArray geometryArcs, JSONArray arcs){
 
       //Generate list of coordinates
         ArrayList<Coordinate> coordinates = new ArrayList<>();
-        for (int j=0; j<countryArcs.length(); j++){
-            Integer arcID = countryArcs.get(j).toInteger();
-            if (arcID==null) continue;
-
-            JSONArray points = arcs.get(arcID).toJSONArray();
-            if (points==null){
-                //console.log("Missing arc for entry " + i);
+        for (int i=0; i<geometryArcs.length(); i++){
+            JSONArray arr = geometryArcs.get(i).toJSONArray();
+            if (arr==null){
                 continue;
             }
 
-            double x = 0;
-            double y = 0;
+            for (int j=0; j<arr.length(); j++){
+                Integer arcID = arr.get(j).toInteger();
+                //if (arcID==null) console.log("Missing arcID", arr.get(j));
+                if (arcID==null) continue;
+                if (arcID<0) arcID = ~arcID;
 
-            for (int k=0; k<points.length(); k++){
-                JSONArray point = points.get(k).toJSONArray();
-                double x1 = point.get(0).toDouble();
-                double y1 = point.get(1).toDouble();
-                //console.log(x1, y1);
+                JSONArray points = arcs.get(arcID).toJSONArray();
+                if (points==null){
+                    //console.log("Missing arc for entry " + arr.get(j));
+                    continue;
+                }
 
-                x1 = (x+=x1) * scaleX + translateX;
-                y1 = (y+=y1) * scaleY + translateY;
+                double x = 0;
+                double y = 0;
 
-                coordinates.add(new Coordinate(x1, y1));
+                for (int k=0; k<points.length(); k++){
+                    JSONArray point = points.get(k).toJSONArray();
+                    double x1 = point.get(0).toDouble();
+                    double y1 = point.get(1).toDouble();
+                    //console.log(x1, y1);
+
+                    x1 = (x+=x1) * scaleX + translateX;
+                    y1 = (y+=y1) * scaleY + translateY;
+
+                    coordinates.add(new Coordinate(x1, y1));
+                }
             }
         }
 
