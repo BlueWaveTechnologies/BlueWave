@@ -1744,16 +1744,16 @@ bluewave.Explorer = function(parent, config) {
             return node;
         };
 
-
       //Get data
         var data = [];
         for (var key in node.inputs) {
             if (node.inputs.hasOwnProperty(key)){
                 var csv = node.inputs[key].csv;
-                data.push(csv);
+                if (csv){
+                    data.push(csv);
+                }
             }
         }
-
 
       //Get config
         var chartConfig = {};
@@ -1761,6 +1761,8 @@ bluewave.Explorer = function(parent, config) {
 
         chartConfig.chartType = node.type; //is this used for anything?
         editor.update(chartConfig, data);
+
+
         editor.show();
     };
 
@@ -1831,11 +1833,48 @@ bluewave.Explorer = function(parent, config) {
         sankeyEditor.show();
     };
 
+  //**************************************************************************
+  //** editLineChart
+  //**************************************************************************
+    var editLineChart = function(node, hide){
+        if (!lineEditor){
+            lineEditor = createNodeEditor({
+                title: "Edit Line Chart",
+                width: 1680,
+                height: 920,
+                resizable: true,
+                editor: bluewave.charts.LineEditor
+            });
+        }
+        lineEditor.getNode = function(){
+            return node;
+        };
+
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+
+                data.push(csv);
+            };
+        };
+
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+        lineEditor.update(chartConfig, data);
+
+        if (hide===true) return lineEditor;
+
+    //Show lineEditor when we are in the editor view
+        lineEditor.show();
+    };
 
   //**************************************************************************
   //** editPie
   //**************************************************************************
-    var editPie = function(node){
+    var editPie = function(node, hide){
         if (!pieEditor){
             pieEditor = createNodeEditor({
                 title: "Edit Pie Chart",
@@ -1870,9 +1909,182 @@ bluewave.Explorer = function(parent, config) {
         }
 
         pieEditor.update(chartConfig, data);
+        if (hide===true) return pieEditor;
+
         pieEditor.show();
     };
 
+  //**************************************************************************
+  //** editBar
+  //**************************************************************************
+    var editBar = function(node, hide){
+        if (!barEditor){
+            barEditor = createNodeEditor({
+                title: "Edit Bar Chart",
+                width: 1060,
+                height: 600,
+                resizable: true,
+                editor: bluewave.charts.BarEditor
+            });
+        }
+        barEditor.getNode = function(){
+            return node;
+        };
+
+
+    //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+    //Get data
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
+            }
+        }
+
+        barEditor.update(chartConfig, data);
+        if (hide===true) return barEditor;
+
+        barEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** editScatter
+  //**************************************************************************
+    var editScatter = function(node, hide){
+        if (!scatterEditor){
+            scatterEditor = createNodeEditor({
+                title: "Edit Scatter Chart",
+                width: 1060,
+                height: 600,
+                resizable: true,
+                editor: bluewave.charts.ScatterEditor
+            });
+        }
+        scatterEditor.getNode = function(){
+            return node;
+        };
+
+
+    //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+    //Get data
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
+            }
+        }
+
+        scatterEditor.update(chartConfig, data);
+        if (hide===true) return scatterEditor;
+
+        scatterEditor.show();
+    };
+  //**************************************************************************
+  //** editCalendar
+  //**************************************************************************
+    var editCalendar = function(node, hide){
+        if (!calendarEditor){
+            calendarEditor = createNodeEditor({
+                title: "Edit Calendar Chart",
+                width: 1060,
+                height: 600,
+                resizable: true,
+                editor: bluewave.charts.CalendarEditor
+            });
+        }
+        calendarEditor.getNode = function(){
+            return node;
+        };
+
+
+    //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+    //Get data
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
+            }
+        }
+
+        calendarEditor.update(chartConfig, data);
+        if (hide===true) return calendarEditor;
+
+        calendarEditor.show();
+    };
+
+  //**************************************************************************
+  //** editTreeMap
+  //**************************************************************************
+    var editTreeMap = function(node, hide){
+        if (!treeMapEditor){
+            treeMapEditor = createNodeEditor({
+                title: "Edit TreeMap Chart",
+                width: 1060,
+                height: 600,
+                resizable: true,
+                editor: bluewave.charts.TreeMapEditor
+            });
+        }
+        treeMapEditor.getNode = function(){
+            return node;
+        };
+
+
+    //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+
+
+    //Get data
+        var data = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if(csv === undefined){
+                    var inputConfig = node.inputs[key].config;
+                    data.push(inputConfig);
+                }else {
+                    data.push(csv);
+                }
+            }
+        }
+
+        treeMapEditor.update(chartConfig, data);
+        if (hide===true) return treeMapEditor;
+
+        treeMapEditor.show();
+    };
 
   //**************************************************************************
   //** editSupplyChain
@@ -2041,7 +2253,6 @@ bluewave.Explorer = function(parent, config) {
             beforeClose: null
         });
 
-
         var style = merge({
             body: {
                 padding: "0px"
@@ -2112,8 +2323,6 @@ bluewave.Explorer = function(parent, config) {
                 }
             }
         });
-
-
         if (editor){
             editor = new editor(win.getBody(), config);
 
@@ -2617,10 +2826,16 @@ bluewave.Explorer = function(parent, config) {
    *  in s layout.
    */
     var updateSVG = function(dashboardItem){
+
         var svgs = dashboardItem.getElementsByTagName("svg");
         if (svgs.length>0){
             var svg = svgs[0];
             var chartContainer = svg.parentNode;
+
+          // update SVG parent div to have percentage-scaling dimensions
+            chartContainer.parentNode.style.width = "100%";
+            chartContainer.parentNode.style.height = "100%";
+
             var rect = javaxt.dhtml.utils.getRect(chartContainer.parentNode);
 
 
@@ -2628,83 +2843,6 @@ bluewave.Explorer = function(parent, config) {
             d3.select(svg)
             .attr("width",rect.width)
             .attr("height",rect.height);
-
-
-          //Get attributes of the second "g" element in the svg. Assumes that
-          //the first "g" element is reserved exclusively for us to manipulate
-          //in this class. All chart types should have a outer "g" like this.
-            var g = svg.getElementsByTagName("g")[0]; //reserved for explorer
-            var g2 = g.getElementsByTagName("g")[0]; //used by individual charts
-            var box = g2.getBBox();
-            var width = box.width;
-            var height = box.height;
-            var scaleX = 1;
-            var scaleY = 1;
-            var translateX = 0;
-            var translateY = 0;
-            var transformList = g2.transform.baseVal;
-            for (var i=0; i<transformList.numberOfItems; i++){
-                var transform = transformList.getItem(i);
-                var m = transform.matrix;
-                switch (transform.type){
-                  case 2:
-                    translateX = m.e;
-                    translateY = m.f;
-                    break;
-                  case 3:
-                    scaleX = m.a;
-                    scaleY = m.d;
-                    break;
-                }
-            }
-
-
-
-          //Compute scale
-            var scale;
-            var scaledWidth = (width)*scaleX;
-            var scaledHeight = (height)*scaleY;
-            if (width>=height){
-                scale = rect.width/scaledWidth;
-                var h = scaledHeight*scale;
-                if (h>rect.height){
-                    scale = rect.height/scaledHeight;
-                }
-            }
-            else{
-                scale = rect.height/scaledHeight;
-                var w = scaledWidth*scale;
-                if (w>rect.width){
-                    scale = rect.width/scaledWidth;
-                }
-            }
-
-
-
-          //Compute x/y offset
-            var x = 0;
-            var y = 0;
-            if (translateX===0){ //center the chart
-                x = (rect.width/2)-((scaledWidth*scale)/2);
-            }
-            else{
-                //TODO: center chart using translateX
-            }
-
-            if (translateY===0){ //center the chart
-                y = (rect.height/2)-((scaledHeight*scale)/2);
-            }
-            else{
-                //TODO: center chart using translateY
-            }
-
-
-          //Apply transform to the first g
-            d3.select(g).attr("transform",
-                "translate(" + x + "," + y + ") " +
-                "scale(" + scale + ")"
-            );
-
         }
     };
 
@@ -2812,12 +2950,10 @@ bluewave.Explorer = function(parent, config) {
         dashboardPanel.clear();
 
 
-
       //Render dashboard items
         for (var key in layoutNode.config) {
+
             if (layoutNode.config.hasOwnProperty(key)){
-
-
                 var layout = layoutNode.config[key];
                 var node = nodes[key];
                 var connected = checkConnection(layoutNode, node);
@@ -2870,7 +3006,6 @@ bluewave.Explorer = function(parent, config) {
                     var chartContainer = document.createElement("div");
                     chartContainer.style.position = "absolute";
                     chartContainer.style.top = 0;
-                    innerDiv.style.overflow = "hidden";
                     chartContainer.style.width = layout.imageWidth + "px";
                     chartContainer.style.height = layout.imageHeight + "px";
                     innerDiv.appendChild(chartContainer);
@@ -2931,6 +3066,8 @@ bluewave.Explorer = function(parent, config) {
 
                     }
                     else{
+
+                        //Get data
                         var data = [];
                         for (var key in node.inputs) {
                             if (node.inputs.hasOwnProperty(key)){
@@ -2941,28 +3078,54 @@ bluewave.Explorer = function(parent, config) {
                             }
                         }
                         if (node.type==="pieChart"){
-                            var pieChart = new bluewave.charts.PieChart(createChartContainer(),{});
-                            pieChart.update(chartConfig, data);
+                            //Instantiate pieEditor as needed
+                                if (!pieEditor) pieEditor = editPie(node, true);
+
+                            //Render pieChart
+                                var pieChart = new bluewave.charts.PieChart(createChartContainer(),{});
+                                pieChart.update(pieEditor.getNode().config, data);
                         }
                         else if (node.type==="barChart"){
-                            var barChart = new bluewave.charts.BarChart(createChartContainer(),{});
-                            barChart.update(chartConfig, data);
+                            //Instantiate barEditor as needed
+                                if (!barEditor) barEditor = editBar(node, true);
+
+                            //Render barChart
+                                var barChart = new bluewave.charts.BarChart(createChartContainer(),{});
+                                barChart.update(barEditor.getNode().config, data);
                         }
                         else if (node.type==="lineChart"){
-                            var lineChart = new bluewave.charts.LineChart(createChartContainer(),{});
-                            lineChart.update(chartConfig, data);
+                            //Instantiate lineEditor as needed
+                                if (!lineEditor) lineEditor = editLineChart(node, true);
+
+                            //Render lineChart
+                                var lineChart = new bluewave.charts.LineChart(createChartContainer(), {});
+                                lineChart.setConfig(lineEditor.getConfig());
+                                lineChart.setLayers(lineEditor.getConfig().layers);
+                                lineChart.update();
                         }
                         else if (node.type==="scatterChart"){
-                            var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
-                            scatterChart.update(chartConfig, data);
+                            //Instantiate scatterEditor as needed
+                                if (!scatterEditor) scatterEditor = editScatter(node, true);
+
+                            //Render scatterChart
+                                var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
+                                scatterChart.update(scatterEditor.getNode().config, data);
                         }
                         else if (node.type==="calendarChart"){
-                            var calendarChart = new bluewave.charts.CalendarChart(createChartContainer(),{});
-                            calendarChart.update(chartConfig, data);
+                            //Instantiate calendarEditor as needed
+                            if (!calendarEditor) calendarEditor = editCalendar(node, true);
+
+                            //Render calendarChart
+                                var calendarChart = new bluewave.charts.CalendarChart(createChartContainer(),{});
+                                calendarChart.update(calendarEditor.getNode().config, data);
                         }
                         else if (node.type==="treeMapChart"){
-                            var treeMapChart = new bluewave.charts.TreeMapChart(createChartContainer(),{});
-                            treeMapChart.update(chartConfig, data);
+                            //Instantiate calendarEditor as needed
+                                if (!treeMapEditor) treeMapEditor = editTreeMap(node, true);
+
+                            //Render calendarChart
+                                var treeMapChart = new bluewave.charts.TreeMapChart(createChartContainer(),{});
+                                treeMapChart.update(treeMapEditor.getNode().config, data);
                         }
                         else if (node.type==="mapChart"){
 
