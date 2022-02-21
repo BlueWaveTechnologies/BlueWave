@@ -538,7 +538,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     if (selectedDocuments.length>1) button["run"].enable();
                     if (selectedDocuments.length>0) button["clear"].enable();
                 }
-
             }
         };
 
@@ -562,7 +561,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             //     showCheckboxes: false
             // });
 
-            // addShowHide(searchPanel.el);
             addShowHide(searchPanel);
 
             // addShowHide(externalSearchPanel.el);
@@ -592,6 +590,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             };
 
             searchPanel.onPopulatedResults = function(){
+                searchPanel.clear();
+                grid.forEachRow((row)=>{
+                    selectedDocuments.forEach((document)=>{
+                        if (row.record.id == document.id) selectRow(row, false, true);
+                    });
+                });
+
                 if (typeof(noResultsPanel) !== "undefined"){
                     noResultsPanel.hide();
                     searchPanel.show();
@@ -637,10 +642,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         return {
             clear: function(){
-                if (searchPanel){
-                    searchPanel.clear();
-                    searchPanel.show();
-                }
+                if (searchPanel) searchPanel.clear();
             },
             update: function(panel){
                 if (!searchPanel){
@@ -1195,32 +1197,19 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         mainButton["selectAll"] = createButton("Select All", leftSideButtons);
         mainButton["selectAll"].style.width = "100px";
         mainButton["selectAll"].onclick = function(){
-
-            function isElement(element) {
-                return element instanceof Element || element instanceof HTMLDocument;
-            };
-
-            var rows = document.getElementsByClassName("table-row");
-            var actualRows = [];
-
-            for (var row in rows){
-                if (isElement(rows[row])){
-                    actualRows.push(rows[row]);
-                };
-            };
-            rows = actualRows;
+            var grid = searchPanel.getDataGrid();
 
             if (this.getText() === "Select All"){
-                for (var row in rows){
-                    selectRow(rows[row], false, true);
-                };
+                grid.forEachRow((row)=>{
+                    selectRow(row, false, true);
+                });
                 this.setText("Deselect All");
                 return;
             }
             else {
-                for (var row in rows){
-                    selectRow(rows[row], false, false);
-                };
+                grid.forEachRow((row)=>{
+                    selectRow(row, false, false);
+                });
                 this.setText("Select All");
                 return;
             };
