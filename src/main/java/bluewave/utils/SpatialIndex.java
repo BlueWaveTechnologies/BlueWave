@@ -21,8 +21,6 @@ public class SpatialIndex {
 
 
     private STRtree strTree;
-    private static PrecisionModel precisionModel = new PrecisionModel();
-    private static GeometryFactory geometryFactory = new GeometryFactory(precisionModel, 4326);
     private Envelope extents;
     private HashMap<Long, Object> map;
 
@@ -121,11 +119,6 @@ public class SpatialIndex {
             }
         }
         return ids.toArray(new Long[ids.size()]);
-    }
-
-
-    public static Point createPoint(double lat, double lon){
-        return geometryFactory.createPoint(new Coordinate(lon, lat));
     }
 
 
