@@ -1,9 +1,13 @@
 package bluewave.web.services;
+
 import bluewave.graph.Neo4J;
+import static bluewave.graph.Utils.*;
+
 import bluewave.utils.Routing;
 import bluewave.utils.Address;
-import static bluewave.graph.Utils.*;
+import bluewave.utils.JTS;
 import static bluewave.utils.StringUtils.*;
+import bluewave.data.Countries;
 
 import java.util.*;
 import java.math.BigDecimal;
@@ -21,6 +25,8 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
+
+import org.locationtech.jts.geom.*;
 
 public class ImportService extends WebService {
 
@@ -520,6 +526,10 @@ public class ImportService extends WebService {
     public ServiceResponse getNetwork(ServiceRequest request, Database database)
     throws ServletException {
 
+        Boolean mergeFacilities = request.getParameter("merge").toBoolean();
+        if (mergeFacilities==null) mergeFacilities = false;
+
+
       //Get sql
         String sql = bluewave.queries.Index.getQuery("Imports_Network");
 
@@ -532,7 +542,8 @@ public class ImportService extends WebService {
       //Execute query
         String[] fields = new String[]{"manufacturer","lines","quantity","value","consignee","unladed_port"};
         ArrayList<HashMap<String, Value>> records = new ArrayList<>();
-        HashMap<Long,String> facilities = new HashMap<>();
+        HashMap<Long, String> facilities = new HashMap<>();
+        HashMap<Long, Point> coordinates = new HashMap<>();
         Session session = null;
         try{
             session = graph.getSession();
@@ -568,14 +579,23 @@ public class ImportService extends WebService {
                 if (it.hasNext()) str.append(",");
             }
             str.append("]\n");
-            str.append("RETURN n.fei as fei, n.name as name");
+            str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
+            str.append("RETURN n.fei as fei, n.name as name, a.lat as lat, a.lon as lon");
             sql = str.toString();
             rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
                 Long fei = new Value(r.get("fei").asObject()).toLong();
                 String name = new Value(r.get("name").asObject()).toString();
+                Double lat = new Value(r.get("lat").asObject()).toDouble();
+                Double lon = new Value(r.get("lon").asObject()).toDouble();
                 facilities.put(fei, name);
+                try{
+                    coordinates.put(fei, JTS.createPoint(lat, lon));
+                }
+                catch(Exception e){
+                    console.log("No coordinate for " + fei);
+                }
             }
 
             session.close();
@@ -587,75 +607,156 @@ public class ImportService extends WebService {
         }
 
         console.log("Found " + records.size() + " records and " + facilities.size() + " facilities");
+        console.log("Found " + coordinates.size() + " points for " + facilities.size() + " facilities");
 
 
-      //Fuzzy match facility names and combine entries
-        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
-
-
-        console.log("Found " + uniqueFacilities.size() + " unique facilities");
-
-      //Merge records by facility
-        ArrayList<HashMap<String, Value>> mergedRecords = new ArrayList<>();
-        Iterator<String> it = uniqueFacilities.keySet().iterator();
-        while (it.hasNext()){
-            String name = it.next();
-            ArrayList<Long> feis = uniqueFacilities.get(name);
-            StringBuilder str = new StringBuilder();
-            for (Long fei : feis){
-                if (str.length()>0) str.append(",");
-                str.append(fei);
-            }
-            String facilityFEIs = str.toString();
-
-
-            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+      //Return early as requested
+        if (!mergeFacilities){
+            fields = new String[]{"manufacturer","lines","quantity","value","consignee","unladed_port"};
+            StringBuilder str = new StringBuilder(String.join(",", fields));
             for (HashMap<String, Value> record : records){
-                Long manufacturer = record.get("manufacturer").toLong();
-                if (manufacturer==null) continue;
-                for (Long fei : feis){
-                    if (manufacturer.equals(fei)){
+                str.append("\r\n");
 
-                        Long port = record.get("unladed_port").toLong();
-                        Long consignee = record.get("consignee").toLong();
-                        Float lines = record.get("lines").toFloat();
-                        if (lines==null) lines = 0f;
-                        Float quantity = record.get("quantity").toFloat();
-                        if (quantity==null) quantity = 0f;
-                        Float value = record.get("value").toFloat();
-                        if (value==null) value = 0f;
+                for (int i=0; i<fields.length; i++){
+                    if (i>0) str.append(",");
+                    String val = record.get(fields[i]).toString();
+                    if (val==null) val = "";
+                    if (val.contains(",")) val = "\"" + val + "\"";
+                    str.append(val);
 
-                        String key = port+"_"+consignee;
+                    Long manufacturer = record.get("manufacturer").toLong();
 
-                        HashMap<String, Value> g = group.get(key);
-                        if (g==null){
-                            g = new HashMap<>();
-                            g.put("manufacturer", new Value(name));
-                            g.put("manufacturer_fei", new Value(facilityFEIs));
-                            g.put("unladed_port", new Value(port));
-                            g.put("consignee", new Value(consignee));
-                            g.put("lines", new Value(lines));
-                            g.put("quantity", new Value(quantity));
-                            g.put("value", new Value(value));
-                            group.put(key, g);
-                        }
-                        else{
-                            g.put("lines", new Value(lines+g.get("lines").toLong()));
-                            g.put("quantity", new Value(lines+g.get("quantity").toLong()));
-                            g.put("value", new Value(lines+g.get("value").toLong()));
-                        }
-
-
-                        break;
-                    }
                 }
             }
 
+            return new ServiceResponse(str.toString());
+        }
 
-            Iterator<String> i2 = group.keySet().iterator();
+
+
+      //Get country codes associated with each facility
+        HashMap<Long, String> countryCodes = new HashMap<>();
+        HashMap<String, HashSet<Long>> facilitiesByCountry = new HashMap<>();
+        try {
+            Iterator<Long> it = coordinates.keySet().iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                Point point = coordinates.get(fei);
+                if (point==null) continue;
+
+                JSONObject country = Countries.getCountry(point);
+                if (country==null) console.log(point);
+                if (country==null) continue;
+
+
+                String countryCode = country.get("code").toString();
+                countryCodes.put(fei, countryCode);
+
+                HashSet<Long> feis = facilitiesByCountry.get(countryCode);
+                if (feis==null){
+                    feis = new HashSet<>();
+                    facilitiesByCountry.put(countryCode, feis);
+                }
+                feis.add(fei);
+
+            }
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+
+
+        console.log("Found facilities in " +  facilitiesByCountry.keySet().size() + " countries");
+
+
+      //Fuzzy match facility names and combine entries
+        HashMap<String, HashMap<String, ArrayList<Long>>> uniqueFacilities = new HashMap<>();
+        Iterator<String> it = facilitiesByCountry.keySet().iterator();
+        while (it.hasNext()){
+            String countryCode = it.next();
+            HashSet<Long> feis = facilitiesByCountry.get(countryCode);
+            HashMap<Long, String> f = new HashMap<>();
+            Iterator<Long> i2 = feis.iterator();
             while (i2.hasNext()){
-                HashMap<String, Value> g = group.get(i2.next());
-                mergedRecords.add(g);
+                Long fei = i2.next();
+                f.put(fei, facilities.get(fei));
+            }
+            HashMap<String, ArrayList<Long>> uf = mergeCompanies(f);
+            console.log("Found " + uf.size() + " unique facilities in " + countryCode);
+            uniqueFacilities.put(countryCode, uf);
+        }
+
+
+
+      //Merge records by facility
+        ArrayList<HashMap<String, Value>> mergedRecords = new ArrayList<>();
+        it = uniqueFacilities.keySet().iterator();
+        while (it.hasNext()){
+            String countryCode = it.next();
+            HashMap<String, ArrayList<Long>> uf = uniqueFacilities.get(countryCode);
+
+            Iterator<String> i2 = uf.keySet().iterator();
+            while (i2.hasNext()){
+                String facilityName = i2.next();
+                ArrayList<Long> feis = uf.get(facilityName);
+
+                StringBuilder str = new StringBuilder();
+                for (Long fei : feis){
+                    if (str.length()>0) str.append(",");
+                    str.append(fei);
+                }
+                String facilityFEIs = str.toString();
+
+
+                HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+                for (HashMap<String, Value> record : records){
+                    Long manufacturer = record.get("manufacturer").toLong();
+                    if (manufacturer==null) continue;
+                    for (Long fei : feis){
+                        if (manufacturer.equals(fei)){
+
+                            Long port = record.get("unladed_port").toLong();
+                            Long consignee = record.get("consignee").toLong();
+                            Float lines = record.get("lines").toFloat();
+                            if (lines==null) lines = 0f;
+                            Float quantity = record.get("quantity").toFloat();
+                            if (quantity==null) quantity = 0f;
+                            Float value = record.get("value").toFloat();
+                            if (value==null) value = 0f;
+
+                            String key = port+"_"+consignee;
+
+                            HashMap<String, Value> g = group.get(key);
+                            if (g==null){
+                                g = new HashMap<>();
+                                g.put("manufacturer_name", new Value(facilityName));
+                                g.put("manufacturer_fei", new Value(facilityFEIs));
+                                g.put("manufacturer_cc", new Value(countryCode));
+                                g.put("unladed_port", new Value(port));
+                                g.put("consignee", new Value(consignee));
+                                g.put("lines", new Value(lines));
+                                g.put("quantity", new Value(quantity));
+                                g.put("value", new Value(value));
+                                group.put(key, g);
+                            }
+                            else{
+                                g.put("lines", new Value(lines+g.get("lines").toLong()));
+                                g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                                g.put("value", new Value(lines+g.get("value").toLong()));
+                            }
+
+
+                            break;
+                        }
+                    }
+                }
+
+
+                Iterator<String> i3 = group.keySet().iterator();
+                while (i3.hasNext()){
+                    HashMap<String, Value> g = group.get(i3.next());
+                    mergedRecords.add(g);
+                }
             }
         }
 
@@ -667,64 +768,76 @@ public class ImportService extends WebService {
         ArrayList<HashMap<String, Value>> mergedRecords2 = new ArrayList<>();
         it = uniqueFacilities.keySet().iterator();
         while (it.hasNext()){
-            String name = it.next();
-            ArrayList<Long> feis = uniqueFacilities.get(name);
-            StringBuilder str = new StringBuilder();
-            for (Long fei : feis){
-                if (str.length()>0) str.append(",");
-                str.append(fei);
-            }
-            String facilityFEIs = str.toString();
+            String countryCode = it.next();
+            HashMap<String, ArrayList<Long>> uf = uniqueFacilities.get(countryCode);
 
-            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
-            for (HashMap<String, Value> record : mergedRecords){
-                Long consignee = record.get("consignee").toLong();
-                if (consignee==null) continue;
+            Iterator<String> i2 = uf.keySet().iterator();
+            while (i2.hasNext()){
+                String facilityName = i2.next();
+                ArrayList<Long> feis = uf.get(facilityName);
+
+
+
+                StringBuilder str = new StringBuilder();
                 for (Long fei : feis){
-                    if (consignee.equals(fei)){
+                    if (str.length()>0) str.append(",");
+                    str.append(fei);
+                }
+                String facilityFEIs = str.toString();
 
-                        String manufacturer = record.get("manufacturer").toString();
-                        String manufacturerFEIs = record.get("manufacturer_fei").toString();
-                        Long port = record.get("unladed_port").toLong();
-                        Float lines = record.get("lines").toFloat();
-                        if (lines==null) lines = 0f;
-                        Float quantity = record.get("quantity").toFloat();
-                        if (quantity==null) quantity = 0f;
-                        Float value = record.get("value").toFloat();
-                        if (value==null) value = 0f;
+                HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+                for (HashMap<String, Value> record : mergedRecords){
+                    Long consignee = record.get("consignee").toLong();
+                    if (consignee==null) continue;
+                    for (Long fei : feis){
+                        if (consignee.equals(fei)){
 
-                        String key = port+"_"+manufacturerFEIs;
+                            String manufacturerName = record.get("manufacturer_name").toString();
+                            String manufacturerFEIs = record.get("manufacturer_fei").toString();
+                            String manufacturerCC = record.get("manufacturer_cc").toString();
+                            Long port = record.get("unladed_port").toLong();
+                            Float lines = record.get("lines").toFloat();
+                            if (lines==null) lines = 0f;
+                            Float quantity = record.get("quantity").toFloat();
+                            if (quantity==null) quantity = 0f;
+                            Float value = record.get("value").toFloat();
+                            if (value==null) value = 0f;
 
-                        HashMap<String, Value> g = group.get(key);
-                        if (g==null){
-                            g = new HashMap<>();
-                            g.put("manufacturer", new Value(manufacturer));
-                            g.put("manufacturer_fei", new Value(manufacturerFEIs));
-                            g.put("unladed_port", new Value(port));
+                            String key = port+"_"+manufacturerFEIs;
 
-                            g.put("consignee", new Value(name));
-                            g.put("consignee_fei", new Value(facilityFEIs));
+                            HashMap<String, Value> g = group.get(key);
+                            if (g==null){
+                                g = new HashMap<>();
+                                g.put("manufacturer_name", new Value(manufacturerName));
+                                g.put("manufacturer_fei", new Value(manufacturerFEIs));
+                                g.put("manufacturer_cc", new Value(manufacturerCC));
+                                g.put("unladed_port", new Value(port));
 
-                            g.put("lines", new Value(lines));
-                            g.put("quantity", new Value(quantity));
-                            g.put("value", new Value(value));
-                            group.put(key, g);
+                                g.put("consignee_name", new Value(facilityName));
+                                g.put("consignee_fei", new Value(facilityFEIs));
+                                g.put("consignee_cc", new Value(countryCode));
+
+                                g.put("lines", new Value(lines));
+                                g.put("quantity", new Value(quantity));
+                                g.put("value", new Value(value));
+                                group.put(key, g);
+                            }
+                            else{
+                                g.put("lines", new Value(lines+g.get("lines").toLong()));
+                                g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                                g.put("value", new Value(lines+g.get("value").toLong()));
+                            }
+
+                            break;
                         }
-                        else{
-                            g.put("lines", new Value(lines+g.get("lines").toLong()));
-                            g.put("quantity", new Value(lines+g.get("quantity").toLong()));
-                            g.put("value", new Value(lines+g.get("value").toLong()));
-                        }
-
-                        break;
                     }
                 }
-            }
 
-            Iterator<String> i2 = group.keySet().iterator();
-            while (i2.hasNext()){
-                HashMap<String, Value> g = group.get(i2.next());
-                mergedRecords2.add(g);
+                Iterator<String> i3 = group.keySet().iterator();
+                while (i3.hasNext()){
+                    HashMap<String, Value> g = group.get(i3.next());
+                    mergedRecords2.add(g);
+                }
             }
         }
 
@@ -733,7 +846,8 @@ public class ImportService extends WebService {
 
 
       //Generate response
-        fields = new String[]{"manufacturer","manufacturer_fei","lines","quantity","value","consignee","consignee_fei","unladed_port"};
+        fields = new String[]{"manufacturer_name","manufacturer_fei","manufacturer_cc",
+            "lines","quantity","value","consignee_name","consignee_fei","consignee_cc","unladed_port"};
         StringBuilder str = new StringBuilder(String.join(",", fields));
         for (HashMap<String, Value> record : mergedRecords2){
             str.append("\r\n");
