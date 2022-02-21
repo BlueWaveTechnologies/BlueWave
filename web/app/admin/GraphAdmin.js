@@ -108,10 +108,10 @@ bluewave.GraphAdmin = function(parent, config) {
                 });
             }
         });
-        
+
         nodeView.update();
     };
-    
+
 
   //**************************************************************************
   //** createHeader
@@ -392,20 +392,20 @@ bluewave.GraphAdmin = function(parent, config) {
 
         };
     };
-    
-    
+
+
   //**************************************************************************
   //** createNodeView
   //**************************************************************************
     var createNodeView = function(parent){
-        
+
         var panel = createDashboardItem(parent, {
             width: (360*3)+(2*40)+4, //3 panels wide + padding btw panels + border width
             height: 360,
             title: "Nodes"
         });
-        
-        nodeView = new bluewave.NodeView(panel.innerDiv, config);
+
+        nodeView = new bluewave.graph.NodeView(panel.innerDiv, config);
     };
 
 

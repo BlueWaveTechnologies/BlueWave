@@ -1084,6 +1084,203 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
+/** NodeSearch
+/**************************************************************************/
+
+/* Main panel in the NodeSearch */
+
+.node-search-main-panel {
+    border: 1px solid #cdd5d9;
+    background-color:#f1faff;
+    border-radius: 0 5px 5px 0;
+}
+
+
+/* Tabs in the main panel */
+
+.node-search-nav {
+  margin: 0px;
+  padding: 0px;
+  list-style: none;
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  z-index: 2;
+}
+
+.node-search-nav li {
+  position: relative;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  display: inline-block;
+  padding: 0;
+  margin: 0 3px;
+  color: #0b3c56;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+
+.node-search-nav li:after{
+  content: '';
+  position: absolute;
+  width: 0; height: 1px;
+  display: block;
+  margin-top: 2px;
+  right: 0;
+  background: #0b3c56;
+  transition: width .15s ease;
+  -webkit-transition: width .15s ease;
+}
+
+.node-search-nav li:hover, .node-search-nav li:active, .node-search-nav li:focus, .node-search-nav li.selected{
+    opacity: 1.0;
+    transition: all .4s ease;
+    -webkit-transition: all .4s ease;
+    outline: 0 none;
+}
+
+.node-search-nav li:hover:after{
+  width: 100%;
+  left: 0;
+  background: #0b3c56;
+  opacity: 0.6;
+}
+
+
+
+/* Search list (left panel in the NodeSearch) */
+
+.node-search-list {
+    border: 1px solid #0b3c56;
+    background-color: #0b3c56;
+    border-radius: 5px 0 0 5px;
+}
+
+/* iScroll styles for the search list */
+
+.node-search-list .iScrollVerticalScrollbar {
+    width: 16px;
+    bottom: 2px;
+    top: 2px;
+    right: -5px;
+    padding-left: 8px;
+}
+
+.node-search-list .iScrollIndicator {
+    position: absolute;
+    background: #627783;
+    border: 0 none;
+    border-radius: 4px;
+    box-shadow: 0px 0px 8px 5px #0b3c56;
+}
+
+.node-search-list .iScrollVerticalScrollbar .iScrollIndicator {
+    width: 8px;
+}
+
+
+/* Style for individual nodes in the search list */
+
+.node-search-list-item {
+    font-size: 12px;
+    /*color: #8a9ea9;
+    #d2d2d2 with opacity 0.65 looks like #8a9ea9;*/
+    color: #fff;
+    padding: 1px 5px;
+    cursor: pointer;
+}
+
+.node-search-list-item:hover,
+.node-search-list-item:focus,
+.node-search-list-item.highlight {
+    background-color: #1a75a7;
+    border-radius: 3px;
+}
+
+.node-search-list-item-count {
+    position:absolute;
+    font-size:9px;
+    top: -3px;
+    right: 0px;
+    background-color: #df4444;
+    border-radius: 6px;
+    padding: 0px 4px;
+}
+
+
+
+/* D3 network graph */
+
+.node-search-graph text {
+    font-size: 12px;
+    cursor: pointer;
+}
+
+
+/* Grid/table with search results */
+
+.node-search-grid {
+    border: 1px solid #dcdcdc;
+    transition: all 0.8s cubic-bezier(0.39, 0.575, 0.565, 1);
+    border-radius: 5px;
+}
+
+.node-search-grid .table-col,
+.node-search-grid .table-header-col {
+    font-size: 12px;
+    height: 28px;
+    line-height: 28px;
+}
+.node-search-grid .table-header {
+    height: 28px;
+}
+
+.node-search-grid .keyword {
+    background-color: #e66869;
+    color: #fff;
+    border: 1px solid #de3535;
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
+
+/* Node select */
+
+.node-select-list {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor:pointer;
+}
+
+.node-select-list > div> div {
+    padding: 0px 3px 0px 9px; /*extra padding on left to align with list label */
+    font-size: 12px;
+    color: #505050;
+}
+
+.node-select-list > div> div:first-child{
+    margin-top: 9px; /*extra padding on first item to sit below list label */
+}
+
+.node-select-list > div > div:hover {
+    background-color: #e2f2ff; /*light blue*/
+}
+
+.node-select-list .selected {
+    background-color: #b2dbff; /*darker blue*/
+}
+
+.node-select-list-label {
+    position: absolute;
+    top: -10px;
+    left: 7px;
+    background-color: #fff;
+    padding: 0 4px;
+    color: #dd6600;
+}
+
+/**************************************************************************/
 /** Document Comparison Panel
 /**************************************************************************/
 
@@ -1503,6 +1700,38 @@ li.tree-node:hover {
     width: 12px;
     height: 12px;
     padding: 12px;
+}
+
+/**************************************************************************/
+/** CodeMirror Overrides
+/**************************************************************************/
+
+.CodeMirror {
+    height: 100%;
+}
+
+.CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like{
+    background-color: #fff;
+    z-index: 4;
+}
+
+.CodeMirror-linenumber {
+    margin-left:-30px;
+}
+
+.CodeMirror-scroll {
+    margin-right: 0px;
+    padding-bottom: 0px;
+}
+
+.CodeMirror-sizer {
+    position: relative;
+    border-left: 25px solid transparent;
+    border-right: 6px solid transparent;
+}
+
+.CodeMirror-gutters {
+    left: -2px !important;
 }
 
 
