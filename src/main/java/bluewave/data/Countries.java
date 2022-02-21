@@ -48,11 +48,21 @@ public class Countries {
   //**************************************************************************
   /** Returns a country that intersects the given point
    */
-    public static JSONObject getCountry(double lat, double lon){
-        for (Long id : countryIndex.getIDs(JTS.createPoint(lat, lon))){
+    public static JSONObject getCountry(Point point){
+        for (Long id : countryIndex.getIDs(point)){
             return countries.get(id);
         }
         return new JSONObject();
+    }
+
+    
+  //**************************************************************************
+  //** getCountry
+  //**************************************************************************
+  /** Returns a country that intersects the given point
+   */
+    public static JSONObject getCountry(double lat, double lon){
+        return getCountry(JTS.createPoint(lat, lon));
     }
 
 }
