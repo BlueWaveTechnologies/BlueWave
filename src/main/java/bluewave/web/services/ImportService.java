@@ -544,6 +544,7 @@ public class ImportService extends WebService {
         ArrayList<HashMap<String, Value>> records = new ArrayList<>();
         HashMap<Long, String> facilities = new HashMap<>();
         HashMap<Long, Point> coordinates = new HashMap<>();
+        HashMap<Long, Point> ports = new HashMap<>();
         Session session = null;
         try{
             session = graph.getSession();
@@ -556,6 +557,7 @@ public class ImportService extends WebService {
 
                 Long manufacturer = new Value(r.get("manufacturer").asObject()).toLong();
                 Long consignee = new Value(r.get("consignee").asObject()).toLong();
+                Long port = new Value(r.get("unladed_port").asObject()).toLong();
 
                 HashMap<String, Value> values = new HashMap<>();
                 for (String field : fields){
@@ -565,10 +567,11 @@ public class ImportService extends WebService {
                 records.add(values);
                 if (manufacturer!=null) feis.add(manufacturer);
                 if (consignee!=null) feis.add(consignee);
+                if (ports!=null) ports.put(port, null);
             }
 
 
-          //Get establishment names
+          //Get establishment names and coordinates
             StringBuilder str = new StringBuilder();
             str.append("MATCH (n:import_establishment)\n");
             str.append("WHERE n.fei IN[\n");
@@ -598,6 +601,37 @@ public class ImportService extends WebService {
                 }
             }
 
+
+          //Get port names and coordinates
+            str = new StringBuilder();
+            str.append("MATCH (n:port_of_entry)\n");
+            str.append("WHERE n.id IN[\n");
+            it = ports.keySet().iterator();
+            while (it.hasNext()){
+                Long id = it.next();
+                str.append(id);
+                if (it.hasNext()) str.append(",");
+            }
+            str.append("]\n");
+            str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
+            str.append("RETURN n.id as id, n.name as name, a.lat as lat, a.lon as lon");
+            sql = str.toString();
+            ports.clear();
+            rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long id = new Value(r.get("id").asObject()).toLong();
+                String name = new Value(r.get("name").asObject()).toString();
+                Double lat = new Value(r.get("lat").asObject()).toDouble();
+                Double lon = new Value(r.get("lon").asObject()).toDouble();
+                try{
+                    ports.put(id, JTS.createPoint(lat, lon));
+                }
+                catch(Exception e){
+                    console.log("No coordinate for port " + id);
+                }
+            }
+
             session.close();
         }
         catch(Exception e){
@@ -608,24 +642,47 @@ public class ImportService extends WebService {
 
         console.log("Found " + records.size() + " records and " + facilities.size() + " facilities");
         console.log("Found " + coordinates.size() + " points for " + facilities.size() + " facilities");
+        console.log("Found " + ports.size() + " ports with coordinates");
 
 
       //Return early as requested
         if (!mergeFacilities){
-            fields = new String[]{"manufacturer","lines","quantity","value","consignee","unladed_port"};
+            fields = new String[]{
+            "manufacturer","manufacturer_lat","manufacturer_lon",
+            "unladed_port", "unladed_port_lat", "unladed_port_lon",
+            "consignee","consignee_lat","consignee_lon",
+            "lines","quantity","value"};
             StringBuilder str = new StringBuilder(String.join(",", fields));
             for (HashMap<String, Value> record : records){
                 str.append("\r\n");
 
+
+                Point pt = ports.get(record.get("unladed_port").toLong());
+                if (pt!=null) {
+                    record.put("unladed_port_lat", new Value(pt.getY()));
+                    record.put("unladed_port_lon", new Value(pt.getX()));
+                }
+
+                pt = coordinates.get(record.get("manufacturer").toLong());
+                if (pt!=null) {
+                    record.put("manufacturer_lat", new Value(pt.getY()));
+                    record.put("manufacturer_lon", new Value(pt.getX()));
+                }
+
+                pt = coordinates.get(record.get("consignee").toLong());
+                if (pt!=null) {
+                    record.put("consignee_lat", new Value(pt.getY()));
+                    record.put("consignee_lon", new Value(pt.getX()));
+                }
+
+
                 for (int i=0; i<fields.length; i++){
                     if (i>0) str.append(",");
-                    String val = record.get(fields[i]).toString();
+                    Value v = record.get(fields[i]);
+                    String val = v==null ? null : v.toString();
                     if (val==null) val = "";
                     if (val.contains(",")) val = "\"" + val + "\"";
                     str.append(val);
-
-                    Long manufacturer = record.get("manufacturer").toLong();
-
                 }
             }
 
