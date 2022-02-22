@@ -11,6 +11,7 @@ import bluewave.data.Countries;
 
 import java.util.*;
 import java.math.BigDecimal;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javaxt.express.ServiceRequest;
 import javaxt.express.ServiceResponse;
@@ -20,15 +21,166 @@ import javaxt.http.servlet.ServletException;
 import javaxt.sql.Database;
 import javaxt.sql.Value;
 import javaxt.json.*;
+import javaxt.utils.ThreadPool;
 
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
-
 import org.locationtech.jts.geom.*;
 
+
+//******************************************************************************
+//**  ImportSummary
+//******************************************************************************
+/**
+ *   Used generate reports using imports data
+ *
+ ******************************************************************************/
+
 public class ImportService extends WebService {
+
+
+    private ConcurrentHashMap<Long, String> firmNames;
+    private ConcurrentHashMap<Long, Point> firmLocations;
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
+    public ImportService() throws Exception {
+        firmNames = new ConcurrentHashMap<>();
+        firmLocations = new ConcurrentHashMap<>();
+        updateFirmNames();
+    }
+
+
+  //**************************************************************************
+  //** updateFirmNames
+  //**************************************************************************
+  /** Used to generate a list of firm names using fuzzy matching by country
+   */
+    private void updateFirmNames() throws Exception {
+
+        HashMap<Long, String> facilities = new HashMap<>();
+        HashMap<Long, Point> coordinates = new HashMap<>();
+
+        Session session = null;
+        try{
+        Neo4J graph = bluewave.Config.getGraph(null);
+            session = graph.getSession();
+
+
+          //Get establishment names and coordinates
+            StringBuilder str = new StringBuilder();
+            str.append("MATCH (n:import_establishment)\n");
+            str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
+            str.append("RETURN n.fei as fei, n.name as name, a.lat as lat, a.lon as lon");
+            Result rs = session.run(str.toString());
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long fei = new Value(r.get("fei").asObject()).toLong();
+                String name = new Value(r.get("name").asObject()).toString();
+                Double lat = new Value(r.get("lat").asObject()).toDouble();
+                Double lon = new Value(r.get("lon").asObject()).toDouble();
+                facilities.put(fei, name);
+                try{
+                    if (lat.equals(0D) && lon.equals(0D)) throw new Exception();
+                    coordinates.put(fei, JTS.createPoint(lat, lon));
+                }
+                catch(Exception e){
+                    console.log("No coordinate for " + fei);
+                }
+            }
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }
+
+
+
+        synchronized (firmLocations){
+            Iterator<Long> it = coordinates.keySet().iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                Point point = coordinates.get(fei);
+                if (point==null) continue;
+                firmLocations.put(fei, point);
+            }
+            firmLocations.notify();
+        }
+
+
+
+      //Get country codes associated with each facility
+        HashMap<Long, String> countryCodes = new HashMap<>();
+        HashMap<String, HashSet<Long>> facilitiesByCountry = new HashMap<>();
+        try {
+            Iterator<Long> it = coordinates.keySet().iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                Point point = coordinates.get(fei);
+                if (point==null) continue;
+
+                JSONObject country = Countries.getCountry(point);
+                if (country==null) continue;
+
+
+                String countryCode = country.get("code").toString();
+                countryCodes.put(fei, countryCode);
+
+                HashSet<Long> feis = facilitiesByCountry.get(countryCode);
+                if (feis==null){
+                    feis = new HashSet<>();
+                    facilitiesByCountry.put(countryCode, feis);
+                }
+                feis.add(fei);
+
+            }
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+
+
+        ThreadPool pool = new ThreadPool(6){
+            public void process(Object obj){
+                HashMap<Long, String> f = (HashMap<Long, String>) obj;
+                HashMap<String, ArrayList<Long>> uf = mergeCompanies(f);
+
+                synchronized(firmNames){
+                    Iterator<String> it = uf.keySet().iterator();
+                    while (it.hasNext()){
+                        String name = it.next();
+                        for (Long fei : uf.get(name)){
+                            firmNames.put(fei, name);
+                        }
+                    }
+                    firmNames.notify();
+                }
+            }
+        }.start();
+
+
+      //Fuzzy match facility names and combine entries
+        Iterator<String> it = facilitiesByCountry.keySet().iterator();
+        while (it.hasNext()){
+            String countryCode = it.next();
+            HashSet<Long> feis = facilitiesByCountry.get(countryCode);
+            HashMap<Long, String> f = new HashMap<>();
+            Iterator<Long> i2 = feis.iterator();
+            while (i2.hasNext()){
+                Long fei = i2.next();
+                f.put(fei, facilities.get(fei));
+            }
+            pool.add(f);
+        }
+
+        pool.done();
+        pool.join();
+    }
+
 
   //**************************************************************************
   //** getSummary
@@ -92,13 +244,9 @@ public class ImportService extends WebService {
 
       //Execute query
         HashMap<Long,HashMap<String, Value>> entries = new HashMap<>();
-        HashMap<Long,String> facilities = new HashMap<>();
         Session session = null;
         try{
             session = graph.getSession();
-
-
-          //Get entries
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
@@ -112,43 +260,30 @@ public class ImportService extends WebService {
                 }
                 entries.put(fei, values);
             }
-
-
-          //Get establishment names
-            StringBuilder str = new StringBuilder();
-            str.append("MATCH (n:import_establishment)\n");
-            str.append("WHERE n.fei IN[\n");
-            Iterator<Long> it = entries.keySet().iterator();
-            while (it.hasNext()){
-                Long fei = it.next();
-                str.append(fei);
-                if (it.hasNext()) str.append(",");
-            }
-            str.append("]\n");
-            str.append("RETURN n.fei as fei, n.name as name");
-            sql = str.toString();
-            rs = session.run(sql);
-            while (rs.hasNext()){
-                Record r = rs.next();
-                Long fei = new Value(r.get("fei").asObject()).toLong();
-                String name = new Value(r.get("name").asObject()).toString();
-                facilities.put(fei, name);
-            }
-
-
             session.close();
         }
         catch(Exception e){
-            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
 
 
 
-      //Fuzzy match facility names and combine entries
-        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
-
+      //Get facility names and combine entries
+        HashMap<String, ArrayList<Long>> uniqueFacilities = new HashMap<>();
+        synchronized(firmNames){
+            Iterator<Long> i2 = entries.keySet().iterator();
+            while (i2.hasNext()){
+                Long fei = i2.next();
+                String name = firmNames.get(fei);
+                ArrayList<Long> arr = uniqueFacilities.get(name);
+                if (arr==null){
+                    arr = new ArrayList<>();
+                    uniqueFacilities.put(name, arr);
+                }
+                arr.add(fei);
+            }
+        }
 
 
 
@@ -732,13 +867,20 @@ public class ImportService extends WebService {
         while (it.hasNext()){
             String countryCode = it.next();
             HashSet<Long> feis = facilitiesByCountry.get(countryCode);
-            HashMap<Long, String> f = new HashMap<>();
-            Iterator<Long> i2 = feis.iterator();
-            while (i2.hasNext()){
-                Long fei = i2.next();
-                f.put(fei, facilities.get(fei));
+            HashMap<String, ArrayList<Long>> uf = new HashMap<>();
+            synchronized(firmNames){
+                Iterator<Long> i2 = feis.iterator();
+                while (i2.hasNext()){
+                    Long fei = i2.next();
+                    String name = firmNames.get(fei);
+                    ArrayList<Long> arr = uf.get(name);
+                    if (arr==null){
+                        arr = new ArrayList<>();
+                        uf.put(name, arr);
+                    }
+                    arr.add(fei);
+                }
             }
-            HashMap<String, ArrayList<Long>> uf = mergeCompanies(f);
             console.log("Found " + uf.size() + " unique facilities in " + countryCode);
             uniqueFacilities.put(countryCode, uf);
         }
@@ -1207,45 +1349,19 @@ public class ImportService extends WebService {
         if (ids==null) return new ServiceResponse(400, "id is required");
 
 
-      //Get graph
-        bluewave.app.User user = (bluewave.app.User) request.getUser();
-        Neo4J graph = bluewave.Config.getGraph(user);
-
-
-      //Get establishment names
-        HashMap<Long,String> facilities = new HashMap<>();
-        Session session = null;
-        try{
-            session = graph.getSession();
-
-
-            StringBuilder str = new StringBuilder();
-            str.append("MATCH (n:import_establishment)\n");
-            str.append("WHERE n.fei IN[\n");
-            str.append(ids);
-            str.append("]\n");
-            str.append("RETURN n.fei as fei, n.name as name");
-
-            Result rs = session.run(str.toString());
-            while (rs.hasNext()){
-                Record r = rs.next();
-                Long fei = new Value(r.get("fei").asObject()).toLong();
-                String name = new Value(r.get("name").asObject()).toString();
-                facilities.put(fei, name);
+        HashMap<String, ArrayList<Long>> uniqueFacilities = new HashMap<>();
+        synchronized(firmNames){
+            for (String id : ids.split(",")){
+                Long fei = Long.parseLong(id);
+                String name = firmNames.get(fei);
+                ArrayList<Long> arr = uniqueFacilities.get(name);
+                if (arr==null){
+                    arr = new ArrayList<>();
+                    uniqueFacilities.put(name, arr);
+                }
+                arr.add(fei);
             }
-
-
-            session.close();
         }
-        catch(Exception e){
-            if (session!=null) session.close();
-            return new ServiceResponse(e);
-        }
-
-
-
-      //Fuzzy match facility names and combine entries
-        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
 
 
 
