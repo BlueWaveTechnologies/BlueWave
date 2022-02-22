@@ -556,14 +556,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 showCheckboxes: false
             });
 
-            // externalSearchPanel = new bluewave.analytics.DocumentExternalSearch(parent,{
-            //     dateFormat: config.dateFormat,
-            //     showCheckboxes: false
-            // });
 
             addShowHide(searchPanel);
 
-            // addShowHide(externalSearchPanel.el);
 
             var searchBarInput, searchBarDiv;
             searchPanel.onEmptyResults = function(){
@@ -583,8 +578,27 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 searchBarInput.focus();
 
                 searchPanel.expandSearch = function (){
-                    console.log("expand search button clicked");
                     noResultsPanel.hide();
+                    searchPanel.hide();
+
+                    if (!externalSearchPanel){
+                        externalSearchPanel = new bluewave.analytics.DocumentExternalSearch(parent,{
+                            dateFormat: config.dateFormat,
+                            showCheckboxes: false
+                        });
+
+                        addShowHide(externalSearchPanel);
+                    };
+
+                        // pop the search bar into the externalResultsPanel (from noResultsPanel)
+                        searchBarDiv = externalSearchPanel.el.getElementsByClassName("document-search-search-bar")[0];
+                        searchBarDiv.appendChild(this.searchBar.el);
+                        searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
+
+                    externalSearchPanel.show();
+                    mainButton["Download"].show();
+                    mainButton["Download"].enable();
+
 
                 };
             };
@@ -1180,8 +1194,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             }
         };
 
-
-
       //Add next button
         mainButton["next"] = createButton("Next", rightSideButtons);
         mainButton["next"].onclick = function(){
@@ -1189,8 +1201,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 if (panels[i].name == "Selected Documents") panels[i].select();
             }
         };
-
-
 
 
       //Add selectAll button
@@ -1215,6 +1225,17 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             };
         };
 
+        // add download button (for use on externalResultsPanel)
+        mainButton["Download"] = createButton("Download", leftSideButtons);
+        mainButton["Download"].style.width = "100px";
+        mainButton["Download"].onclick = function(){
+            console.log(JSON.stringify(panels,null,4))
+            console.log("download button was clicked!");
+            if (externalSearchPanel) externalSearchPanel.download();
+        };
+
+        addShowHide(mainButton["Download"]);
+
         updateButtons();
     };
 
@@ -1230,16 +1251,19 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             if (panels[panel].isSelected()) selectedPanel = panels[panel].name;
         }
 
+
         if (mainButton){ // if Button panel Buttons have been initialized
             if (selectedPanel == "Document Search") {
                 mainButton["back"].disable();
                 mainButton["next"].enable();
                 mainButton["selectAll"].enable();
+                mainButton["Download"].hide();
             }
             else if (selectedPanel == "Selected Documents") {
                 mainButton["back"].enable();
                 mainButton["next"].disable();
                 mainButton["selectAll"].disable();
+                mainButton["Download"].hide();
             };
         };
     };
