@@ -36,7 +36,7 @@ if(!bluewave.charts) bluewave.charts={};
     };
     var styleEditor, colorPicker;
 
-    var countyData, countryData; //raw json
+
     var counties, states, countries; //topojson
     var options = []; //aggregation options
 
@@ -1496,34 +1496,15 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** getMapData
   //**************************************************************************
-  /** Used to download and parse counties and countries and calls the callback
-   *  when ready
+  /** Used to get counties, states, and countries (TopoJson data)
    */
     var getMapData = function(callback){
-        if (counties){
-            if (countries) callback();
-            else{
-                getData("countries", function(countryData){
-                    countries = topojson.feature(countryData, countryData.objects.countries);
-                    callback();
-                });
-            }
-        }
-        else{
-            getData("counties", function(json){
-                countyData = json;
-                counties = topojson.feature(countyData, countyData.objects.counties);
-                states = topojson.feature(countyData, countyData.objects.states);
-                if (countries) callback();
-                else{
-                    getData("countries", function(json){
-                        countryData = json;
-                        countries = topojson.feature(countryData, countryData.objects.countries);
-                        callback();
-                    });
-                }
-            });
-        }
+        bluewave.utils.getMapData(function(mapData){
+            counties = mapData.counties;
+            states = mapData.states;
+            countries = mapData.countries;
+            callback();
+        });
     };
 
 
