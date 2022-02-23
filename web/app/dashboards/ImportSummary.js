@@ -17,6 +17,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
     var dashboardPanel;
 
+  //Variables for the map panel
+    var counties, countries, states;
+
 
   //Variables for the second panel
     var grid;
@@ -135,69 +138,83 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         addShowHide(panel);
 
 
-      //Create table with 2 rows and 2 columns
+      //Create table with 2 columns
         var table = createTable();
         var tbody = table.firstChild;
         var tr, td;
+        panel.appendChild(table);
 
 
-      //Row 1, column 1
+      //Row 1
         tr = document.createElement("tr");
         tbody.appendChild(tr);
 
+
+      //Column 1
         td = document.createElement("td");
         td.style.width = "100%";
         td.style.height = "100%";
+        td.style.verticalAlign = "top";
         tr.appendChild(td);
-        var map = createMapChart(td, {
 
-        });
-        var sankey = createSankeyChart(td, {
-            title: "Manufacturer to Consignee"
-        });
+        var map = createWorldMap(td);
 
 
 
-      //Row 1, column 2
+//        var sankey = createSankeyChart(td, {
+//            title: "Manufacturer to Consignee"
+//        });
+
+
+
+      //Column 2
         td = document.createElement("td");
         td.style.height = "100%";
         tr.appendChild(td);
+
+
         var div = document.createElement("div");
-        div.style.width = "300px";
+        div.style.width = "400px";
         div.style.height = "100%";
         td.appendChild(div);
-        var countryOfOrigin = createBarChart(div, {
+
+        table = createTable();
+        tbody = table.firstChild;
+        div.appendChild(table);
+
+        var createCell = function(){
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            td.style.width = "100%";
+            td.style.height = "33%";
+            td.style.padding= "0 10px 10px 10px";
+            tr.appendChild(td);
+            return td;
+        };
+
+
+        var countryOfOrigin = createBarChart(createCell(), {
             title: "Country of Origin",
-            height: "33%"
+            height: "100%"
         });
-        var manufacturers = createBarChart(div, {
+
+        var manufacturers = createBarChart(createCell(), {
             title: "Manufacturers",
-            height: "33%"
+            height: "100%"
         });
-        var consignees = createBarChart(div, {
+        var consignees = createBarChart(createCell(), {
             title: "Consignees",
-            height: "33%"
+            height: "100%"
         });
 
 
 
-      //Row 2, column 1 and 2
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-
-        td = document.createElement("td");
-        td.colSpan = 2;
-        td.style.width = "100%";
-        td.style.height = "380px";
-        tr.appendChild(td);
-        //createLineChart(td, {});
-
-        panel.appendChild(table);
 
         panel.clear = function(){
             if (true) return;
-            map.clear();
-            sankey.clear();
+            //map.clear();
+            //sankey.clear();
             countryOfOrigin.clear();
             manufacturers.clear();
             consignees.clear();
@@ -213,6 +230,14 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
                 }
             });
+
+            get("test/imports/network4", {
+                success: function (text) {
+                    //updateWorldMap(text, map);
+                }
+            });
+
+
         };
 
         return panel;
@@ -932,7 +957,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             width: "100%",
             height: config.height
         });
-        dashboardItem.el.style.margin = "0px";
+        //dashboardItem.el.style.margin = "0px";
         return new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
     };
 
@@ -940,8 +965,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
   //** createMapChart
   //**************************************************************************
-    var createMapChart = function(parent){
-
+    var createMapChart = function(parent, config){
+        var map = new bluewave.charts.MapChart(parent, {});
+        return map;
     };
 
 
@@ -1120,11 +1146,213 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
   //**************************************************************************
+  //** createWorldMap
+  //**************************************************************************
+    var createWorldMap = function(parent){
+
+        var div = document.createElement("div");
+        div.style.width = "990px";
+        div.style.height = "485px";
+        div.style.display = "inline-block";
+        parent.appendChild(div);
+
+        var map = new bluewave.charts.MapChart(div, {});
+        map.disablePan();
+        map.update();
+
+        bluewave.utils.getMapData(function(mapData){
+
+
+            var countries = mapData.countries;
+            map.addPolygons(countries.features, {
+                name: "countries",
+                style: {
+                    fill: "#DEDDE0"
+                },
+                onClick: function(o){
+                    console.log(o);
+                }
+            });
+
+            //map.setExtent([60, 74], [59, -58]); //US in the middle
+
+            map.update();
+
+
+
+        });
+        return map;
+    };
+
+
+  //**************************************************************************
+  //** updateWorldMap
+  //**************************************************************************
+    var updateWorldMap = function(csv, map){
+        var data = d3.csvParse(csv);
+
+        var links = {};
+        var manufacturers = {};
+        var consignees = {};
+        var ports = {};
+
+        var z = 9;
+        data.forEach((d)=>{
+
+            if (d.manufacturer_lat==0 && d.manufacturer_lon==0) return;
+            if (d.unladed_port_lat==0 && d.unladed_port_lon==0) return;
+            if (d.consignee_lat==0 && d.consignee_lat==0) return;
+
+            var m = kartographia.utils.getTileCoordinate(d.manufacturer_lat, d.manufacturer_lon, z);
+            var p = kartographia.utils.getTileCoordinate(d.unladed_port_lat, d.unladed_port_lon, z);
+            var c = kartographia.utils.getTileCoordinate(d.consignee_lat, d.consignee_lon, z);
+            var v = parseFloat(d.lines);
+
+
+            var val = manufacturers[m.join()];
+            if (!val) val = 0;
+            manufacturers[m.join()] = val + v;
+
+            var val = ports[p.join()];
+            if (!val) val = 0;
+            ports[p.join()] = val + v;
+
+            var val = consignees[c.join()];
+            if (!val) val = 0;
+            consignees[c.join()] = val + v;
+
+
+            var link = m.join() + "," + p.join(); // + "," + c.join();
+            var val = links[link];
+            if (!val) val = 0;
+            links[link] = val + v;
+        });
+
+
+
+
+
+        var addPoints = function(facilities, color){
+            //var points = [];
+            var features = [];
+
+            var extent = d3.extent(Object.values(facilities));
+            var maxVal = extent[1];
+            var maxRadius = 10;
+
+            Object.keys(facilities).forEach((tileCoord)=>{
+                var arr = tileCoord.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var lat = tile2lat(arr[1], z);
+                var lon = tile2lon(arr[0], z);
+                //points.push([lon, lat]);
+
+                var feature = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: [lon, lat]
+                    },
+                    properties: {
+                        value: facilities[tileCoord]
+                    }
+                };
+
+                features.push(feature);
+            });
+
+            map.addPoints(features, {
+                style: {
+                    fill: color,
+                    opacity: 0.5,
+                    radius: function(d){
+                        var r = Math.round((d.properties.value/maxVal)*maxRadius);
+                        if (r<1) r = 1;
+                        return r;
+                    }
+                }
+            });
+        };
+
+        var addLines = function(){
+
+            var lines = [];
+            Object.keys(links).forEach((link)=>{
+                var arr = link.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var manufacturer_lat = tile2lat(arr[1], z);
+                var manufacturer_lon = tile2lon(arr[0], z);
+                var unladed_port_lat = tile2lat(arr[3], z);
+                var unladed_port_lon = tile2lon(arr[2], z);
+                var value = links[link];
+
+
+                var line = [[manufacturer_lon, manufacturer_lat], [unladed_port_lon, unladed_port_lat]];
+                var midPoint = null;
+
+                if (unladed_port_lon<-90){
+                    midPoint = map.getMidPoint(line, 0.2, "north");
+                }
+                else{
+                    if (manufacturer_lat>20){
+                        midPoint = map.getMidPoint(line, 0.2, "north");
+                    }
+                    else{
+                        midPoint = map.getMidPoint(line, 0.2, "south");
+                    }
+                }
+
+                if (midPoint){ line.splice(1, 0, midPoint);
+                lines.push(line);
+                }
+
+            });
+
+            map.addLines(lines, {
+                name: "links",
+                style: {
+                    color: "steelblue",
+                    opacity: 0.05,
+                    width: 1,
+                    smoothing: "curveNatural"
+                }
+            });
+        };
+
+        addLines();
+        addPoints(manufacturers, "green");
+        addPoints(consignees, "orange");
+        addPoints(ports, "red");
+
+        map.update();
+    };
+
+    Math.toDegrees = function(radians) {
+        return radians * (180/Math.PI);
+    };
+
+    var tile2lon = function(x, z) {
+        return x / Math.pow(2.0, z) * 360.0 - 180;
+    };
+
+    var tile2lat = function(y, z) {
+        var n = Math.PI - (2.0 * Math.PI * y) / Math.pow(2.0, z);
+        return Math.toDegrees(Math.atan(Math.sinh(n)));
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var onRender = javaxt.dhtml.utils.onRender;
     var round = javaxt.dhtml.utils.round;
+
     var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
     var parseCSV = bluewave.utils.parseCSV;
