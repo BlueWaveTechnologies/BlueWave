@@ -500,6 +500,10 @@ bluewave.charts.MapChart = function(parent, config) {
                 if (callback) callback();
             });
         }
+        else{
+            setExtent(extent);
+            if (callback) callback();
+        }
     };
 
 
@@ -593,8 +597,8 @@ bluewave.charts.MapChart = function(parent, config) {
         projection
             .rotate([-center[0], 0])
             .center([0, center[1]]);
-        
- 
+
+
         // draw();
 
         setExtent(extent, --base);
@@ -858,7 +862,16 @@ bluewave.charts.MapChart = function(parent, config) {
                 .style("z-index", zIndex);
             }
 
-            if (highlight) d3.select(this).transition().duration(100).attr("opacity", "0.8");
+            var el = d3.select(this);
+            if (highlight){
+                el.transition().duration(100);
+                el.attr("opacity", "0.8");
+            }
+
+            if (config.onMouseOver) config.onMouseOver.apply(me, [{
+                element: el,
+                layer: layer
+            }]);
         };
 
         var mousemove = function() {
@@ -873,12 +886,24 @@ bluewave.charts.MapChart = function(parent, config) {
             .style("opacity", 0)
             .style("display", "none");
 
-            if (highlight) d3.select(this).transition().duration(100).attr("opacity", "1");
+            var el = d3.select(this);
+            if (highlight){
+                el.transition().duration(100);
+                el.attr("opacity", "1");
+            }
+
+            if (config.onMouseLeave) config.onMouseLeave.apply(me, [{
+                element: el,
+                layer: layer
+            }]);
         };
 
 
         var fill = style.fill;
         if (!fill) fill = "#DEDDE0";
+
+        var stroke = style.stroke;
+        if (!stroke) stroke = "#fff";
 
         var polygons = g.selectAll("*")
         .data(layer.features)
@@ -891,7 +916,8 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             else return fill;
         })
-        .attr('stroke', 'white')
+        .attr('stroke', stroke)
+        .style("stroke-width", 0.4)
         .on("mouseover", mouseover)
         .on("mousemove", mousemove)
         .on("mouseleave", mouseleave)
