@@ -6,25 +6,37 @@ import static javaxt.utils.Console.console;
 
 
 public class StringUtils {
-    
-    
+
+
   //Common suffixes found in company name. Order is important
     private static String[] companySuffixes = new String[]{
     "LTD","LIMITED","LLC","INC","SDN BHD","AB","GMBH",
     "CO","CORP","CORPORATION",
     "PUBLIC COMPANY","GLOBAL COMPANY","COMPANY","PUBLIC"};
-        
-    
+
+
   //**************************************************************************
   //** mergeCompanies
   //**************************************************************************
   /** Used to fuzzy match company names
    *  @return map with a company name and all associated IDs
    */
-    public static HashMap<String, ArrayList<Long>> mergeCompanies(HashMap<Long, String> companies){        
+    public static HashMap<String, ArrayList<Long>> mergeCompanies(HashMap<Long, String> companies){
         HashMap<String, ArrayList<Long>> results = new HashMap<>();
+
+      //Return early if there's only one entry in companies
+        if (companies.size()==1){
+            Long id = companies.keySet().iterator().next();
+            String name = companies.get(id);
+            ArrayList<Long> arr = new ArrayList<>();
+            arr.add(id);
+            results.put(name, arr);
+            return results;
+        }
+
+
         HashSet<Integer> matches = new HashSet<>();
-        
+
         int x = 0;
         Iterator<Long> it = companies.keySet().iterator();
         while (it.hasNext()){
@@ -32,22 +44,16 @@ public class StringUtils {
             String name = companies.get(id);
             name = getCompanyName(name);
             String uname = name.toUpperCase();
-            
-//if (id!=3017556735L){ 
-//    x++;
-//    continue;
-//}
+            if (!matches.contains(x)){
 
-            if (!matches.contains(x)){ 
 
-            
                 matches.add(x);
 
                 ArrayList<Long> ids = results.get(name);
                 if (ids==null){
                     ids = new ArrayList<>();
                     results.put(name, ids);
-                    ids.add(id);                
+                    ids.add(id);
                 }
 
 
@@ -60,7 +66,7 @@ public class StringUtils {
 
 
                     if (!matches.contains(y)){
-                        
+
 
                         n = getCompanyName(n);
                         String un = n.toUpperCase();
@@ -88,15 +94,15 @@ public class StringUtils {
 
                     y++;
                 }
-            
-            }            
-            
+
+            }
+
             x++;
         }
-        
-        
+
+
       //Update key in the results with the simpliest company name
-        HashMap<String, ArrayList<Long>> output = new HashMap<>();              
+        HashMap<String, ArrayList<Long>> output = new HashMap<>();
         //console.log("Reduced " + companies.size() + " companies to " + results.size());
         int numIDs = 0;
         Iterator<String> i2 = results.keySet().iterator();
@@ -104,11 +110,11 @@ public class StringUtils {
             String name = i2.next();
             ArrayList<Long> ids = results.get(name);
             numIDs+=ids.size();
-            
-            
-          //If there are multiple companies, find simplest name          
+
+
+          //If there are multiple companies, find simplest name
             if (ids.size()>1){
-            
+
                 TreeMap<Integer, String> names = new TreeMap<>();
                 for (Long id : ids){
                     String n = companies.get(id);
@@ -132,22 +138,22 @@ public class StringUtils {
                 }
             }
 
-            
+
             output.put(name, ids);
             //console.log(name, ids);
-            
+
         }
         //console.log("Results contain " + numIDs + "/" + companies.size() + " IDs");
-        return output;        
-    }      
-    
-    
+        return output;
+    }
+
+
   //**************************************************************************
   //** getCompanyName
   //**************************************************************************
   /** Used to clean up a company name by removing company suffixes, unwanted
    *  punctuation, and words in parenthesis
-   */    
+   */
     public static String getCompanyName(String name){
         name = name.replaceAll("[^a-zA-Z0-9() ]", " ");
         name = name.replace("(", " (").replace(")", ") ");
@@ -155,13 +161,13 @@ public class StringUtils {
         while (name.contains("  ")) name = name.replace("  ", " ");
         name = name.trim();
 
-        
+
         name = removeParenthesis(name);
         name = removeCompanySuffix(name);
         return name;
     }
-    
-    
+
+
   //**************************************************************************
   //** removeCompanySuffix
   //**************************************************************************
@@ -174,15 +180,15 @@ public class StringUtils {
                 int len = uname.length() - (s.length()+1);
                 uname = uname.substring(0,len).trim();
                 name = name.substring(0,len).trim();
-            }            
+            }
         }
         return name;
     }
-    
-    
+
+
   //**************************************************************************
   //** removeParenthesis
-  //**************************************************************************    
+  //**************************************************************************
     private static String removeParenthesis(String name){
         while (true){
             int idx = name.indexOf("(");
@@ -197,5 +203,5 @@ public class StringUtils {
         while (name.contains("  ")) name = name.replace("  ", " ");
         return name.trim();
     }
-    
+
 }
