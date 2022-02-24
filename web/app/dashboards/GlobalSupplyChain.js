@@ -15,10 +15,20 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     var title = "Import Summary";
 
     var dashboardPanel;
+    var yAxis = "lines";
+    var colors = [
+        "#4e79a7", //dark blue
+        "#a0cbe8", //light blue
+        "#f28e2b", //dark orange
+        "#ffbe7d", //light orange
+        "#59a14f"  //green
+    ];
 
   //Variables for the map panel
     var mapData = {};
     var worldMapIsReady = false;
+
+
 
     var waitmask;
 
@@ -147,46 +157,6 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         };
 
 
-
-        var getTopValues = function(data, key, value, numBars){
-
-            //Hopefully this isn't slow =(
-            var sumData = d3.nest()
-            .key(function(d){return d[key];})
-            .rollup(function(d){
-                return d3.sum(d,function(g){
-                    return g[value];
-                });
-            })
-            .entries(data)
-            .sort(function(a, b){
-                return d3.ascending(a.value, b.value);
-            });
-
-            var topVals = sumData.slice(sumData.length - numBars);
-            return topVals.map(d => d.key);
-        };
-
-
-        var createBarChart = function(parent, data, xAxis, yAxis, groupBy, numBars) {
-
-            var config = {
-                xAxis: xAxis,
-                yAxis: yAxis,
-                group: groupBy,
-                stackValues: true
-            };
-
-
-            var topKeys = getTopValues(data, xAxis, yAxis, numBars);
-            var filteredData = data.filter(function (d) {
-                return topKeys.includes(d[xAxis]);
-            });
-            var barChart = new bluewave.charts.BarChart(parent, {});
-            barChart.update(config, [filteredData]);
-        };
-
-
         var countryOfOrigin = createDashboardItem(createCell(), {
             title: "Country of Origin",
             width: "100%",
@@ -217,15 +187,6 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         };
 
         panel.update = function(){
-            get("import/network",{
-                success: function(csv){
-                    var data = d3.csvParse(csv);
-                    data.forEach((d)=>{
-                        d.lines = parseFloat(d.lines);
-                    });
-
-                }
-            });
 
             get("test/imports/network4", {
                 success: function(text) {
@@ -257,26 +218,116 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             get("test/imports/country_of_origin.csv", {
                 success: function(text) {
                     var data = d3.csvParse(text);
-                    createBarChart(countryOfOrigin.innerDiv, data, "country_of_origin", "lines", "product_code", 10);
-                }
-            });
 
-            get("test/imports/manufacturer", {
-                success: function(text) {
-                    var data = d3.csvParse(text);
-                    createBarChart(manufacturers.innerDiv, data, "manufacturer", "lines", "product_code", 10);
-                }
-            });
+                  //Get product codes and values
+                    var productValues = {};
+                    data.forEach((d)=>{
+                        var val = parseFloat(d[yAxis]);
+                        var productCode = d.product_code;
+                        var currVal = productValues[productCode];
+                        if (isNaN(currVal)) currVal = 0;
+                        productValues[productCode] = currVal + val;
+                    });
 
-            get("test/imports/consignee", {
-                success: function(text) {
-                    var data = d3.csvParse(text);
-                    createBarChart(consignees.innerDiv, data, "consignee", "lines", "product_code", 10);
+                  //Sort product codes by value
+                    var arr = [];
+                    for (var productCode in productValues) {
+                        if (productValues.hasOwnProperty(productCode)){
+                            arr.push({
+                                productCode: productCode,
+                                value: productValues[productCode]
+                            });
+                        }
+                    }
+                    arr.sort((a, b)=>{
+                        return b.value - a.value;
+                    });
+
+
+                  //Create color map
+                    var colorMap = {};
+                    for (var i=0; i<colors.length; i++){
+                        if (i>arr.length) break;
+                        colorMap[arr[i].productCode] = colors[i];
+                    }
+
+                    createBarChart(countryOfOrigin.innerDiv, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
+
+
+                    get("test/imports/manufacturer", {
+                        success: function(text) {
+                            var data = d3.csvParse(text);
+                            data.forEach((d)=>{
+                                d.manufacturer = "m" + d.manufacturer;
+                            });
+                            createBarChart(manufacturers.innerDiv, data, "manufacturer", yAxis, "product_code", 10, colorMap);
+                        }
+                    });
+
+                    get("test/imports/consignee", {
+                        success: function(text) {
+                            var data = d3.csvParse(text);
+                            data.forEach((d)=>{
+                                d.consignee = "c" + d.consignee;
+                            });
+                            createBarChart(consignees.innerDiv, data, "consignee", yAxis, "product_code", 10, colorMap);
+                        }
+                    });
+
+
                 }
             });
         };
 
         return panel;
+    };
+
+
+    var getTopValues = function(data, key, value, numBars){
+
+        //Hopefully this isn't slow =(
+        var sumData = d3.nest()
+        .key(function(d){return d[key];})
+        .rollup(function(d){
+            return d3.sum(d,function(g){
+                return g[value];
+            });
+        })
+        .entries(data)
+        .sort(function(a, b){
+            return d3.ascending(a.value, b.value);
+        });
+
+        var topVals = sumData.slice(sumData.length - numBars);
+        return topVals.map(d => d.key);
+    };
+
+
+  //**************************************************************************
+  //** createBarChart
+  //**************************************************************************
+    var createBarChart = function(parent, data, xAxis, yAxis, groupBy, numBars, colorMap) {
+
+        var config = {
+            xAxis: xAxis,
+            yAxis: yAxis,
+            group: groupBy,
+            stackValues: true
+        };
+
+
+        var topKeys = getTopValues(data, xAxis, yAxis, numBars);
+        var filteredData = data.filter(function (d) {
+            return topKeys.includes(d[xAxis]);
+        });
+        var barChart = new bluewave.charts.BarChart(parent, {});
+        barChart.getBarColor = function(d, i){
+            var productCode = d.product_code;
+            var color = colorMap[productCode];
+            if (!color) color = "#bebcc1";
+            return color;
+        };
+        barChart.update(config, [filteredData]);
     };
 
 
