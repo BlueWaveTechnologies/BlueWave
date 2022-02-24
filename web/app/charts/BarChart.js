@@ -139,6 +139,13 @@ bluewave.charts.BarChart = function(parent, config) {
         //Get sum of tallest bar
         //TODO: axis being set by first dataset - set with largest data
 
+        //Sort bars if option checked
+        var sort = chartConfig.sort;
+        if (sort) {
+            maxData.sort(function (a, b) {
+                return d3[sort](a.value, b.value)
+            })
+        };
 
 
         //Reformat data if "group by" is selected
