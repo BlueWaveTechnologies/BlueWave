@@ -1517,9 +1517,12 @@ li.tree-node:hover {
 .global-supply-chain .chart-title {
     font-size: 14px;
     text-align: left;
-    padding-bottom: 10px;
 }
 
+.global-supply-chain .sankey-node text {
+    font-size: 11px;
+    fill: #777;
+}
 
 
 /**************************************************************************/
