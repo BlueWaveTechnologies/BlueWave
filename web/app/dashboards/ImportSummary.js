@@ -18,7 +18,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var dashboardPanel;
 
   //Variables for the map panel
-    var counties, countries, states;
+    var mapData = {};
+    var worldMapIsReady = false;
 
 
   //Variables for the second panel
@@ -156,7 +157,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         td.style.height = "100%";
         td.style.verticalAlign = "top";
         tr.appendChild(td);
-
         var map = createWorldMap(td);
 
 
@@ -188,23 +188,65 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             td = document.createElement("td");
             td.style.width = "100%";
             td.style.height = "33%";
-            td.style.padding= "0 10px 10px 10px";
+            td.style.padding= "0 10px 10px 0px";
             tr.appendChild(td);
             return td;
         };
 
 
-        var countryOfOrigin = createBarChart(createCell(), {
-            title: "Country of Origin",
-            height: "100%"
-        });
 
-        var manufacturers = createBarChart(createCell(), {
-            title: "Manufacturers",
+        var getTopValues = function(data, key, value, numBars){
+
+            //Hopefully this isn't slow =(
+            var sumData = d3.nest()
+            .key(function(d){return d[key];})
+            .rollup(function(d){
+                return d3.sum(d,function(g){
+                    return g[value];
+                });
+            })
+            .entries(data)
+            .sort(function(a, b){
+                return d3.ascending(a.value, b.value);
+            });
+
+            var topVals = sumData.slice(sumData.length - numBars);
+            return topVals.map(d => d.key);
+        };
+
+
+        var createBarChart = function(parent, data, xAxis, yAxis, groupBy, numBars) {
+
+            var config = {
+                xAxis: xAxis,
+                yAxis: yAxis,
+                group: groupBy,
+                stackValues: true
+            };
+
+
+            var topKeys = getTopValues(data, xAxis, yAxis, numBars);
+            var filteredData = data.filter(function (d) {
+                return topKeys.includes(d[xAxis]);
+            });
+            var barChart = new bluewave.charts.BarChart(parent, {});
+            barChart.update(config, [filteredData]);
+        };
+
+
+        var countryOfOrigin = createDashboardItem(createCell(), {
+            title: "Country of Origin",
+            width: "100%",
             height: "100%"
         });
-        var consignees = createBarChart(createCell(), {
+        var manufacturers = createDashboardItem(createCell(), {
+            title: "Manufacturers",
+            width: "100%",
+            height: "100%"
+        });
+        var consignees = createDashboardItem(createCell(), {
             title: "Consignees",
+            width: "100%",
             height: "100%"
         });
 
@@ -215,7 +257,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             if (true) return;
             //map.clear();
             //sankey.clear();
-            countryOfOrigin.clear();
+            countryOfOrigin.innerDiv.innerHTML = "";
+            //countryOfOrigin.clear();
             manufacturers.clear();
             consignees.clear();
         };
@@ -232,12 +275,52 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             });
 
             get("test/imports/network4", {
-                success: function (text) {
-                    //updateWorldMap(text, map);
+                success: function(text) {
+
+
+                    if (!worldMapIsReady){
+                        var timer;
+
+                        var checkWidth = function(){
+                            if (!worldMapIsReady){
+                                timer = setTimeout(checkWidth, 200);
+                            }
+                            else{
+                                clearTimeout(timer);
+                                updateWorldMap(text, map);
+                            }
+                        };
+
+                        timer = setTimeout(checkWidth, 200);
+                    }
+                    else{
+                        updateWorldMap(text, map);
+                    }
+
+
                 }
             });
 
+            get("test/imports/country_of_origin.csv", {
+                success: function(text) {
+                    var data = d3.csvParse(text);
+                    createBarChart(countryOfOrigin.innerDiv, data, "country_of_origin", "lines", "product_code", 10);
+                }
+            });
 
+            get("test/imports/manufacturer", {
+                success: function(text) {
+                    var data = d3.csvParse(text);
+                    createBarChart(manufacturers.innerDiv, data, "manufacturer", "lines", "product_code", 10);
+                }
+            });
+
+            get("test/imports/consignee", {
+                success: function(text) {
+                    var data = d3.csvParse(text);
+                    createBarChart(consignees.innerDiv, data, "consignee", "lines", "product_code", 10);
+                }
+            });
         };
 
         return panel;
@@ -1152,34 +1235,40 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
         var div = document.createElement("div");
         div.style.width = "990px";
-        div.style.height = "485px";
+        //div.style.height = "485px";
+        div.style.height = "65%";
         div.style.display = "inline-block";
+        div.style.position = "realtive";
+        div.style.overflow = "hidden";
+        div.style.border = "1px solid #e0e0e0";
         parent.appendChild(div);
 
-        var map = new bluewave.charts.MapChart(div, {});
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "990px";
+        innerDiv.style.height = "560px";
+        innerDiv.style.ansolute = "realtive";
+        div.appendChild(innerDiv);
+
+
+        var map = new bluewave.charts.MapChart(innerDiv, {});
         map.disablePan();
         map.update();
 
-        bluewave.utils.getMapData(function(mapData){
-
-
+        bluewave.utils.getMapData(function(data){
+            mapData = data;
             var countries = mapData.countries;
             map.addPolygons(countries.features, {
                 name: "countries",
                 style: {
-                    fill: "#DEDDE0"
-                },
-                onClick: function(o){
-                    console.log(o);
+                    fill: "#f8f8f8",
+                    stroke: "#ccc"
                 }
             });
 
-            //map.setExtent([60, 74], [59, -58]); //US in the middle
-
-            map.update();
-
-
-
+            map.setExtent([60, 70], [59, -68]); //US in the middle
+            map.update(function(){
+                worldMapIsReady = true;
+            });
         });
         return map;
     };
@@ -1230,10 +1319,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
 
-
-
         var addPoints = function(facilities, color){
-            //var points = [];
             var features = [];
 
             var extent = d3.extent(Object.values(facilities));
@@ -1247,7 +1333,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 });
                 var lat = tile2lat(arr[1], z);
                 var lon = tile2lon(arr[0], z);
-                //points.push([lon, lat]);
 
                 var feature = {
                     type: "Feature",
@@ -1328,6 +1413,28 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         addPoints(consignees, "orange");
         addPoints(ports, "red");
 
+
+      //Add overlay for clicking purposes
+        map.addPolygons(mapData.countries.features, {
+            name: "countryOverlay",
+            style: {
+                fill: "rgba(0,0,0,0.0)",
+                stroke: "none"
+            },
+            onClick: function(o){
+                console.log(o.feature.properties);
+            },
+            onMouseOver: function(o){
+                o.element.transition().duration(100);
+                o.element.attr("fill", "rgba(0,0,0,0.3)");
+            },
+            onMouseLeave: function(o){
+                o.element.transition().duration(100);
+                o.element.attr("fill", "rgba(0,0,0,0.0)");
+            }
+        });
+
+
         map.update();
     };
 
@@ -1350,7 +1457,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
-    var onRender = javaxt.dhtml.utils.onRender;
     var round = javaxt.dhtml.utils.round;
 
     var get = bluewave.utils.get;
