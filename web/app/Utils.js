@@ -102,6 +102,53 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** getMapData
+  //**************************************************************************
+  /** Used to get counties, states, and countries (TopoJson data)
+   */
+    getMapData: function(callback){
+
+        var getData = bluewave.utils.getData;
+        if (!bluewave.data) bluewave.data = {};
+        if (!bluewave.data.mapData) bluewave.data.mapData = {};
+        var counties = bluewave.data.mapData.counties;
+        var countries = bluewave.data.mapData.countries;
+
+        if (counties){
+            if (countries) callback.apply(this, [bluewave.data.mapData]);
+            else{
+                getData("countries", function(countryData){
+                    countries = topojson.feature(countryData, countryData.objects.countries);
+                    bluewave.data.mapData.countries = countries;
+
+                    callback.apply(this, [bluewave.data.mapData]);
+                });
+            }
+        }
+        else{
+            getData("counties", function(countyData){
+
+                counties = topojson.feature(countyData, countyData.objects.counties);
+                bluewave.data.mapData.counties = counties;
+
+                var states = topojson.feature(countyData, countyData.objects.states);
+                bluewave.data.mapData.states = states;
+
+                if (countries) callback.apply(this, [bluewave.data.mapData]);
+                else{
+                    getData("countries", function(countryData){
+                        countries = topojson.feature(countryData, countryData.objects.countries);
+                        bluewave.data.mapData.countries = countries;
+
+                        callback.apply(this, [bluewave.data.mapData]);
+                    });
+                }
+            });
+        }
+    },
+
+
+  //**************************************************************************
   //** addOverflow
   //**************************************************************************
     addOverflow: function(parent, config){

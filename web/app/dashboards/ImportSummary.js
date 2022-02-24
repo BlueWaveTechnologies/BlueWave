@@ -14,11 +14,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var me = this;
     var initializing = true;
     var title = "Import Summary";
-
-    var dashboardPanel;
-
-
-  //Variables for the second panel
     var grid;
     var data = [];
     var lineData = [];
@@ -27,8 +22,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     var lineChart, barChart, scatterChart;
     var yAxis;
     var nodeView;
-
-
     var companyProfile; //popup
     var waitmask;
 
@@ -41,13 +34,42 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
 
-        var mainDiv = document.createElement("div");
-        mainDiv.style.width = "100%";
-        mainDiv.style.height = "100%";
-        parent.appendChild(mainDiv);
-        me.el = mainDiv;
 
-        dashboardPanel = createDashboardPanel(mainDiv);
+      //Create main table
+        var table = createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+
+
+      //Create toolbar
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        tr.appendChild(td);
+        createToolbar(td);
+
+
+      //Create grid
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.width = "100%";
+        td.style.height = "100%";
+        tr.appendChild(td);
+        createGrid(td);
+
+
+      //Create charts
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "350px";
+        tr.appendChild(td);
+        createCharts(td);
+
+
+        parent.appendChild(table);
+        me.el = table;
     };
 
 
@@ -63,10 +85,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-
-        dashboardPanel.clear();
-
-
         data = [];
         lineData = [];
         grid.clear();
@@ -81,14 +99,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
-
-        dashboardPanel.clear();
-        dashboardPanel.show();
-        dashboardPanel.update();
-
-
-        if (true) return;
-
         var onReady = function(){
             me.clear();
             update();
@@ -124,152 +134,12 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
   //**************************************************************************
-  //** createDashboardPanel
-  //**************************************************************************
-    var createDashboardPanel = function(parent){
-
-        var panel = document.createElement("div");
-        panel.style.width = "100%";
-        panel.style.height = "100%";
-        parent.appendChild(panel);
-        addShowHide(panel);
-
-
-      //Create table with 2 rows and 2 columns
-        var table = createTable();
-        var tbody = table.firstChild;
-        var tr, td;
-
-
-      //Row 1, column 1
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-
-        td = document.createElement("td");
-        td.style.width = "100%";
-        td.style.height = "100%";
-        tr.appendChild(td);
-        var map = createMapChart(td, {
-
-        });
-        var sankey = createSankeyChart(td, {
-            title: "Manufacturer to Consignee"
-        });
-
-
-
-      //Row 1, column 2
-        td = document.createElement("td");
-        td.style.height = "100%";
-        tr.appendChild(td);
-        var div = document.createElement("div");
-        div.style.width = "300px";
-        div.style.height = "100%";
-        td.appendChild(div);
-        var countryOfOrigin = createBarChart(div, {
-            title: "Country of Origin",
-            height: "33%"
-        });
-        var manufacturers = createBarChart(div, {
-            title: "Manufacturers",
-            height: "33%"
-        });
-        var consignees = createBarChart(div, {
-            title: "Consignees",
-            height: "33%"
-        });
-
-
-
-      //Row 2, column 1 and 2
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-
-        td = document.createElement("td");
-        td.colSpan = 2;
-        td.style.width = "100%";
-        td.style.height = "380px";
-        tr.appendChild(td);
-        //createLineChart(td, {});
-
-        panel.appendChild(table);
-
-        panel.clear = function(){
-            if (true) return;
-            map.clear();
-            sankey.clear();
-            countryOfOrigin.clear();
-            manufacturers.clear();
-            consignees.clear();
-        };
-
-        panel.update = function(){
-            get("import/network",{
-                success: function(csv){
-                    var data = d3.csvParse(csv);
-                    data.forEach((d)=>{
-                        d.lines = parseFloat(d.lines);
-                    });
-
-                }
-            });
-        };
-
-        return panel;
-    };
-
-
-  //**************************************************************************
-  //** createImportsPanel
-  //**************************************************************************
-    var createImportsPanel = function(parent){
-
-      //Create main table
-        var table = createTable();
-        var tbody = table.firstChild;
-        var tr, td;
-
-      //Create toolbar
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        createToolbar(td);
-
-
-      //Create grid
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        td.style.width = "100%";
-        td.style.height = "100%";
-        tr.appendChild(td);
-        createGrid(td);
-
-
-      //Create charts
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        td.style.height = "350px";
-        tr.appendChild(td);
-        createCharts(td);
-
-
-        parent.appendChild(table);
-
-    };
-
-
-  //**************************************************************************
   //** update
   //**************************************************************************
     var update = function(){
         if (companyProfile) companyProfile.hide();
         if (grid) grid.setSortIndicator(3, "DESC");
 
-
-        if (true) return;
 
         waitmask.show(500);
 
@@ -932,7 +802,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             width: "100%",
             height: config.height
         });
-        dashboardItem.el.style.margin = "0px";
+        //dashboardItem.el.style.margin = "0px";
         return new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
     };
 
@@ -940,8 +810,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
   //** createMapChart
   //**************************************************************************
-    var createMapChart = function(parent){
-
+    var createMapChart = function(parent, config){
+        var map = new bluewave.charts.MapChart(parent, {});
+        return map;
     };
 
 
@@ -1123,7 +994,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
-    var addShowHide = javaxt.dhtml.utils.addShowHide;
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
     var getData = bluewave.utils.getData;
