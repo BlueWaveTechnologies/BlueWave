@@ -16,6 +16,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
+    var selectedExternalDocuments; //datastore - downloading files from external resource
     var searchPanel;
     var similarityResults, documentSimilarities;
     var externalSearchPanel;
@@ -544,6 +545,68 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     };
 
   //**************************************************************************
+  //** createExternalSearchPanel
+  //**************************************************************************
+    var createExternalSearchPanel = function(parent){
+        var grid;
+        externalSearchPanel = new bluewave.analytics.DocumentExternalSearch(parent,{
+            dateFormat: config.dateFormat,
+            showCheckboxes: false
+        });
+        if (!selectedExternalDocuments) selectedExternalDocuments = new javaxt.dhtml.DataStore();
+
+        addShowHide(externalSearchPanel);
+
+        externalSearchPanel.getSelectedDocuments = function(){
+            return selectedExternalDocuments;
+        };
+
+        // add download button functionality
+            externalSearchPanel.download = function (){
+                var downloadingFiles = [];
+                if (selectedExternalDocuments.length > 0){
+                    selectedExternalDocuments.forEach((d, i)=>{
+                        // console.log(d.name);
+                        // console.log(d.link); // to be populated via Java callback
+                        downloadingFiles.push({"filename":d.name, "fileLink":d.link});
+                    });
+
+                    console.log(`queued to download - not yet implemented!`);
+                    console.log(downloadingFiles);
+                };
+            };
+
+
+
+
+        externalSearchPanel.refresh = function(){
+            // clear dataStore and externalSearch grid to refresh page
+                selectedExternalDocuments.clear();
+                var grid = externalSearchPanel.getDataGrid();
+                grid.update();
+
+            // populate the datastore with all of the rows (functionality test using dataGrid from searchPanel)
+                grid.update("pdf"); // base random
+
+
+
+            // pop the search bar into the externalResultsPanel (from noResultsPanel)
+                searchBarDiv = externalSearchPanel.el.getElementsByClassName("document-search-search-bar")[0];
+                searchBarDiv.appendChild(searchPanel.searchBar.el);
+                searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
+
+            externalSearchPanel.show();
+            noResultsPanel.hide();
+            searchPanel.hide();
+            externalSearchPanel.selectAllStatus = false; // reset status of select button
+            updateButtons();
+        };
+
+        externalSearchPanel.selectAllStatus = false; // default status of the coordinated selectAll button
+
+    };
+
+  //**************************************************************************
   //** createSearchPanel
   //**************************************************************************
     var createSearchPanel = function(){
@@ -560,54 +623,52 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             addShowHide(searchPanel);
 
 
+            searchPanel.getSelectedDocuments = function (){
+                return selectedDocuments;
+            };
+
             var searchBarInput, searchBarDiv;
             searchPanel.onEmptyResults = function(){
-                if (typeof(noResultsPanel) === "undefined"){
+                if (typeof(noResultsPanel) === "undefined"){ // lazy load noResultsPanel
                     //create noResultsPanel
                         noResultsPanel = this.createNoResultsPanel(parent);
                         addShowHide(noResultsPanel);
-                }
 
-                // pop the search bar back into the noResultsPanel (from documentSearchPanel)
-                    searchBarDiv = noResultsPanel.el.getElementsByClassName("document-search-search-bar")[0];
-                    searchBarDiv.appendChild(this.searchBar.el);
-                    searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
+                        noResultsPanel.refresh = function(){
+                            // pop the search bar back into the noResultsPanel (from documentSearchPanel)
+                                searchBarDiv = this.el.getElementsByClassName("document-search-search-bar")[0];
+                                searchBarDiv.appendChild(searchPanel.searchBar.el);
+                                searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
 
-                searchPanel.hide();
-                noResultsPanel.show();
-                searchBarInput.focus();
+                            searchPanel.hide();
+                            this.show();
+                            searchBarInput.focus();
 
-                searchPanel.expandSearch = function (){
-                    noResultsPanel.hide();
-                    searchPanel.hide();
+                            searchPanel.expandSearch = function (){
+                                this.hide();
+                                searchPanel.hide();
 
-                    if (!externalSearchPanel){
-                        externalSearchPanel = new bluewave.analytics.DocumentExternalSearch(parent,{
-                            dateFormat: config.dateFormat,
-                            showCheckboxes: false
-                        });
-
-                        addShowHide(externalSearchPanel);
-                    };
-
-                        // pop the search bar into the externalResultsPanel (from noResultsPanel)
-                        searchBarDiv = externalSearchPanel.el.getElementsByClassName("document-search-search-bar")[0];
-                        searchBarDiv.appendChild(this.searchBar.el);
-                        searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
-
-                    externalSearchPanel.show();
-                    mainButton["Download"].show();
-                    mainButton["Download"].enable();
-
-
+                                if (!externalSearchPanel){ // lazy load externalSearchPanel
+                                    createExternalSearchPanel(parent);
+                                };
+                                externalSearchPanel.refresh();
+                            };
+                        };
                 };
+
+                noResultsPanel.refresh();
             };
 
             searchPanel.onPopulatedResults = function(){
+                searchPanel.refresh();
+            };
+
+            searchPanel.refresh = function(){
+                var grid = searchPanel.getDataGrid();
                 searchPanel.clear();
                 grid.forEachRow((row)=>{
                     selectedDocuments.forEach((document)=>{
-                        if (row.record.id == document.id) selectRow(row, false, true);
+                        if (row.record.id == document.id) grid.selectRow(row, false, true);
                     });
                 });
 
@@ -621,17 +682,21 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
                         searchBarInput.focus();
                 };
+
+                updateButtons();
             };
+
 
             searchPanel.el.addEventListener('dragover', onDragOver, false);
             searchPanel.el.addEventListener('drop', onDrop, false);
 
             var grid = searchPanel.getDataGrid();
+            searchPanel.selectAllStatus = false;
 
           //Watch for row click events
             grid.onRowClick = function(row, e){
                 if (e.detail === 2) { //double click
-                    selectRow(row, true, false);
+                    grid.selectRow(row, true, false);
                 }
             };
 
@@ -680,87 +745,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     };
 
 
-  //**************************************************************************
-  //** selectRow
-  //**************************************************************************
-  /** Selects or deselects the row from Document Search panel and adds it to the Selected Documents panel
-   *  if function is called with mouseEvent true -> unselect row if selected and select the row if unselected
-   *  if function is called with makeSelected true -> select row
-   *  if function is called with makeSelected false -> unselect row
-   */
-    var selectRow = function(row, mouseEvent, makeSelected){
-        var o = row.get("Name");
 
-        if (!o.select){ // runs only once for each row - initialize row with selection capability if not already initialized
-            var div = document.createElement("div");
-            div.className = "document-analysis-selected-row";
-            div.select = function(){
-                div.style.left = "0px";
-            };
-            div.deselect = function(){
-                div.style.left = "-34px";
-            };
-            div.deselect();
-
-            var check = document.createElement("div");
-            check.className = "fas fa-check-square";
-            div.appendChild(check);
-
-            var span = document.createElement("span");
-            if ( //is element?
-                typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
-                o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
-            ) span.appendChild(o);
-            else span.innerText = o;
-            div.appendChild(span);
-
-            row.set("Name", div);
-            o = div;
-        }
-
-
-        //Add or remove document from the selectedDocuments store
-        var addDocument = true;
-        var r = row.record;
-        selectedDocuments.forEach((d, i)=>{
-            if (d.id===r.id){
-                addDocument = false;
-
-                if (mouseEvent) {
-                    selectedDocuments.removeAt(i);
-                }
-                else {
-                    if (!makeSelected){
-                        selectedDocuments.removeAt(i);
-                    };
-                };
-                return true;
-            }
-        });
-        // mouse click events
-            if (addDocument && mouseEvent){
-                selectedDocuments.add(r);
-                o.select();
-            }
-            else if (!addDocument && mouseEvent){
-                o.deselect();
-            }
-        // selectAll events
-            else if (!addDocument && !mouseEvent && makeSelected){
-                o.select();
-            }
-            else if (!addDocument && !mouseEvent && !makeSelected){
-                o.deselect();
-            }
-            else if (addDocument && !mouseEvent && !makeSelected){
-                o.deselect();
-            }
-            else if (addDocument && !mouseEvent && makeSelected){
-                selectedDocuments.add(r);
-                o.select();
-            }
-
-    }
 
   //**************************************************************************
   //** onDrop
@@ -1207,19 +1192,34 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         mainButton["selectAll"] = createButton("Select All", leftSideButtons);
         mainButton["selectAll"].style.width = "100px";
         mainButton["selectAll"].onclick = function(){
-            var grid = searchPanel.getDataGrid();
+            var grid, selectedPanel;
 
-            if (this.getText() === "Select All"){
+            if (searchPanel.isVisible()){
+                grid = searchPanel.getDataGrid();
+                selectedPanel = searchPanel;
+
+            }
+            else if (externalSearchPanel){
+                if (externalSearchPanel.isVisible()){
+                    grid = externalSearchPanel.getDataGrid();
+                    selectedPanel = externalSearchPanel;
+
+                };
+            };
+
+            if (selectedPanel.selectAllStatus === false){
                 grid.forEachRow((row)=>{
-                    selectRow(row, false, true);
+                    grid.selectRow(row, false, true);
                 });
+                selectedPanel.selectAllStatus = true;
                 this.setText("Deselect All");
                 return;
             }
             else {
                 grid.forEachRow((row)=>{
-                    selectRow(row, false, false);
+                    grid.selectRow(row, false, false);
                 });
+                selectedPanel.selectAllStatus = false;
                 this.setText("Select All");
                 return;
             };
@@ -1228,9 +1228,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         // add download button (for use on externalResultsPanel)
         mainButton["Download"] = createButton("Download", leftSideButtons);
         mainButton["Download"].style.width = "100px";
+        mainButton["Download"].style.backgroundColor = "#007cba";
+        mainButton["Download"].style.textShadow = "1px 1px 0px #363636";
+        mainButton["Download"].style.color = "#e4e4e4";
+
         mainButton["Download"].onclick = function(){
-            console.log(JSON.stringify(panels,null,4))
-            console.log("download button was clicked!");
             if (externalSearchPanel) externalSearchPanel.download();
         };
 
@@ -1239,31 +1241,48 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         updateButtons();
     };
 
-
-
   //**************************************************************************
   //** updateButtons
   //**************************************************************************
     var updateButtons = function(){
-        var selectedPanel;
+        var selectedPanelName, selectedSelectAllPanel;
 
         for (var panel in panels){
-            if (panels[panel].isSelected()) selectedPanel = panels[panel].name;
-        }
-
+            if (panels[panel].isSelected()) selectedPanelName = panels[panel].name;
+            else if (externalSearchPanel){
+                if (externalSearchPanel.isVisible()){
+                    selectedPanelName = "externalSearchPanel";
+                };
+            };
+        };
 
         if (mainButton){ // if Button panel Buttons have been initialized
-            if (selectedPanel == "Document Search") {
+            if (selectedPanelName == "Document Search") {
                 mainButton["back"].disable();
                 mainButton["next"].enable();
                 mainButton["selectAll"].enable();
                 mainButton["Download"].hide();
+                selectedSelectAllPanel = searchPanel;
+
             }
-            else if (selectedPanel == "Selected Documents") {
+            else if (selectedPanelName == "Selected Documents") {
                 mainButton["back"].enable();
                 mainButton["next"].disable();
                 mainButton["selectAll"].disable();
                 mainButton["Download"].hide();
+            }
+            else if(selectedPanelName == "externalSearchPanel"){
+                mainButton["selectAll"].enable();
+                mainButton["back"].disable();
+                mainButton["next"].enable();
+                mainButton["Download"].enable();
+                mainButton["Download"].show();
+                selectedSelectAllPanel = externalSearchPanel;
+            };
+            // update SelectAll button text
+            if (selectedSelectAllPanel){
+                if (!selectedSelectAllPanel.selectAllStatus) mainButton["selectAll"].setText("Select All");
+                else mainButton["selectAll"].setText("Deselect All");
             };
         };
     };

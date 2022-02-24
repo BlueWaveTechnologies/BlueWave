@@ -168,6 +168,14 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
     };
 
   //**************************************************************************
+  //** getSelectedDocuments
+  //**************************************************************************
+  //* left empty for rewrite by instantiator (documentAnalysis)
+    this.getSelectedDocuments = function(){
+
+    };
+
+  //**************************************************************************
   //** createNoResultsPanel
   //**************************************************************************
     this.createNoResultsPanel = function(parent){
@@ -267,7 +275,10 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
             return {
-                el: el
+                el: el,
+                refresh: function(){
+                    //* left empty for rewrite by instantiator (documentAnalysis)
+                }
             };
     };
 
@@ -406,8 +417,98 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             grid.setSortIndicator(0, "DESC");
 
         };
+
+        grid.selectRow = function(row, mouseEvent, makeSelected){
+            selectRow(row, mouseEvent, makeSelected);
+        };
     };
 
+
+
+  //**************************************************************************
+  //** selectRow
+  //**************************************************************************
+  /** Selects or deselects the row from Document Search panel and adds it to the Selected Documents panel
+   *  if function is called with mouseEvent true -> unselect row if selected and select the row if unselected
+   *  if function is called with makeSelected true -> select row
+   *  if function is called with makeSelected false -> unselect row
+   */
+   var selectRow = function(row, mouseEvent, makeSelected){
+
+    var selectedDocuments = me.getSelectedDocuments();
+
+    var o = row.get("Name");
+
+    if (!o.select){ // runs only once for each row - initialize row with selection capability if not already initialized
+        var div = document.createElement("div");
+        div.className = "document-analysis-selected-row";
+        div.select = function(){
+            div.style.left = "0px";
+        };
+        div.deselect = function(){
+            div.style.left = "-34px";
+        };
+        div.deselect();
+
+        var check = document.createElement("div");
+        check.className = "fas fa-check-square";
+        div.appendChild(check);
+
+        var span = document.createElement("span");
+        if ( //is element?
+            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
+        ) span.appendChild(o);
+        else span.innerText = o;
+        div.appendChild(span);
+
+        row.set("Name", div);
+        o = div;
+    }
+
+
+    //Add or remove document from the selectedDocuments store
+    var addDocument = true;
+    var r = row.record;
+    selectedDocuments.forEach((d, i)=>{
+        if (d.id===r.id){
+            addDocument = false;
+
+            if (mouseEvent) {
+                selectedDocuments.removeAt(i);
+            }
+            else {
+                if (!makeSelected){
+                    selectedDocuments.removeAt(i);
+                };
+            };
+            return true;
+        }
+    });
+    // mouse click events
+        if (addDocument && mouseEvent){
+            selectedDocuments.add(r);
+            o.select();
+        }
+        else if (!addDocument && mouseEvent){
+            o.deselect();
+        }
+    // selectAll events
+        else if (!addDocument && !mouseEvent && makeSelected){
+            o.select();
+        }
+        else if (!addDocument && !mouseEvent && !makeSelected){
+            o.deselect();
+        }
+        else if (addDocument && !mouseEvent && !makeSelected){
+            o.deselect();
+        }
+        else if (addDocument && !mouseEvent && makeSelected){
+            selectedDocuments.add(r);
+            o.select();
+        }
+
+    };
 
   //**************************************************************************
   //** Utils

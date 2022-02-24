@@ -16,8 +16,6 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
     var grid;
 
 
-
-
   //**************************************************************************
   //** Constructor
   //**************************************************************************
@@ -89,6 +87,109 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
   this.downloadFile = function(){
 
   };
+
+  //**************************************************************************
+  //** getSelectedDocuments
+  //**************************************************************************
+  //* left empty for rewrite by instantiator (documentAnalysis)
+  this.getSelectedDocuments = function(){
+
+  };
+
+  //**************************************************************************
+  //** selectRow
+  //**************************************************************************
+  /** Selects or deselects the row from Document Search panel and adds it to the Selected Documents panel
+   *  if function is called with mouseEvent true -> unselect row if selected and select the row if unselected
+   *  if function is called with makeSelected true -> select row
+   *  if function is called with makeSelected false -> unselect row
+   */
+   var selectRow = function(row, mouseEvent, makeSelected){
+
+    var selectedDocuments = me.getSelectedDocuments();
+
+
+
+
+    var o = row.get("Name");
+
+    if (!o.select){ // runs only once for each row - initialize row with selection capability if not already initialized
+        var div = document.createElement("div");
+        div.className = "document-analysis-selected-row";
+        div.select = function(){
+            div.style.left = "0px";
+        };
+        div.deselect = function(){
+            div.style.left = "-34px";
+        };
+        div.deselect();
+
+        var check = document.createElement("div");
+        check.className = "fas fa-download";
+        div.appendChild(check);
+
+        var span = document.createElement("span");
+        if ( //is element?
+            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
+        ) span.appendChild(o);
+        else span.innerText = o;
+        div.appendChild(span);
+
+        row.set("Name", div);
+        o = div;
+    }
+
+
+    //Add or remove document from the selectedDocuments store
+    var addDocument = true;
+    var r = row.record;
+    selectedDocuments.forEach((d, i)=>{
+        if (d.id===r.id){
+            addDocument = false;
+
+            if (mouseEvent) {
+                selectedDocuments.removeAt(i);
+            }
+            else {
+                if (!makeSelected){
+                    selectedDocuments.removeAt(i);
+                };
+            };
+            return true;
+        }
+    });
+    // mouse click events
+        if (addDocument && mouseEvent){
+            selectedDocuments.add(r);
+            o.select();
+        }
+        else if (!addDocument && mouseEvent){
+            o.deselect();
+        }
+    // selectAll events
+        else if (!addDocument && !mouseEvent && makeSelected){
+            o.select();
+        }
+        else if (!addDocument && !mouseEvent && !makeSelected){
+            o.deselect();
+        }
+        else if (addDocument && !mouseEvent && !makeSelected){
+            o.deselect();
+        }
+        else if (addDocument && !mouseEvent && makeSelected){
+            selectedDocuments.add(r);
+            o.select();
+        };
+
+
+    console.log("selected documents below are ");
+    var s = [];
+    selectedDocuments.forEach((d)=>{
+      s.push(d.name);
+    });
+    console.log(s);
+    }
 
 
   //**************************************************************************
@@ -196,9 +297,55 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
             return data;
         },
         update: function(row, record){
+          // callback for populating the elements of the grid
+          if (config.showCheckboxes===true) row.set("x", record.id);
 
-        }
+          var searchMetadata = record.info;
+          if (searchMetadata && searchMetadata.highlightFragment){
+
+              var recordDiv = document.createElement("div");
+              var recordNameSpan = document.createElement("div");
+              recordNameSpan.className = "document-search-result";
+              recordNameSpan.innerHTML = record.name;
+              recordDiv.appendChild(recordNameSpan);
+
+
+              var metadataSpan = document.createElement("span");
+              metadataSpan.className = "document-search-fragment";
+              metadataSpan.innerHTML = searchMetadata.highlightFragment;
+              recordDiv.appendChild(metadataSpan);
+
+              row.set("Name", recordDiv);
+          }
+          else{
+              row.set("Name", record.name);
+          }
+
+          var d = Date.parse(record.date);
+          if (!isNaN(d)){
+              var date = new Date(d);
+              var label = df(date);
+              if (label.indexOf("0")===0) label = label.substring(1);
+              label = label.replaceAll("/0", "/");
+              label = label.replaceAll(" 0", " ");
+              row.set("Date", label);
+          }
+
+          var size = parseInt(record.size);
+          if (size<1024) size = "1 KB";
+          else{
+              size = formatNumber(Math.round(size/1024)) + " KB";
+          }
+          row.set("Size", size);
+      }
     });
+
+      //Watch for row click events
+    grid.onRowClick = function(row, e){
+        if (e.detail === 2) { //double click
+            grid.selectRow(row, true, false);
+        };
+    };
 
     grid.onBeforeLoad = function(){
         waitmask.show();
@@ -210,9 +357,18 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
 
 
     grid.update = function(q){
+      if (q) params.q = q;
+      else delete params.q;
+      grid.clear();
+      grid.load();
+      grid.setSortIndicator(0, "DESC");
+    };
 
+    grid.selectRow = function(row, mouseEvent, makeSelected){
+      selectRow(row, mouseEvent, makeSelected);
     };
   };
+
 
   //**************************************************************************
   //** Utils
@@ -224,6 +380,8 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
     // var round = javaxt.dhtml.utils.round;
     // var get = bluewave.utils.get;
     var getDateFormat = bluewave.chart.utils.getDateFormat;
+    var parseCSV = bluewave.utils.parseCSV;
+    var formatNumber = bluewave.utils.formatNumber;
 
 
     init();
