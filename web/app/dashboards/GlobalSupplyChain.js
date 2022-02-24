@@ -12,7 +12,7 @@ if(!bluewave.dashboards) bluewave.dashboards={};
 bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
     var me = this;
-    var title = "Import Summary";
+    var title = "Global Supply Chain";
 
     var dashboardPanel;
     var yAxis = "lines";
@@ -42,12 +42,22 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         waitmask = config.waitmask;
 
         var mainDiv = document.createElement("div");
-        mainDiv.style.width = "100%";
+        mainDiv.className = "global-supply-chain center";
+        mainDiv.style.position = "relative";
+        mainDiv.style.width = "1400px";
         mainDiv.style.height = "100%";
         parent.appendChild(mainDiv);
         me.el = mainDiv;
 
-        dashboardPanel = createDashboardPanel(mainDiv);
+
+        var panel = document.createElement("div");
+        panel.style.width = "100%";
+        panel.style.height = "100%";
+        mainDiv.appendChild(panel);
+
+
+
+        dashboardPanel = createDashboardPanel(panel);
     };
 
 
@@ -75,7 +85,6 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     this.update = function(){
 
         dashboardPanel.clear();
-        dashboardPanel.show();
         dashboardPanel.update();
 
     };
@@ -92,14 +101,8 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
   //**************************************************************************
   //** createDashboardPanel
   //**************************************************************************
-    var createDashboardPanel = function(parent){
+    var createDashboardPanel = function(panel){
 
-        var panel = document.createElement("div");
-        panel.className = "global-supply-chain";
-        panel.style.width = "100%";
-        panel.style.height = "100%";
-        parent.appendChild(panel);
-        addShowHide(panel);
 
 
       //Create table with 2 columns
@@ -122,7 +125,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         tr.appendChild(td);
         var map = createWorldMap(td);
 
-
+        var sankey = createSankey(td);
 
 //        var sankey = createSankeyChart(td, {
 //            title: "Manufacturer to Consignee"
@@ -163,12 +166,12 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             height: "100%"
         });
         var manufacturers = createDashboardItem(createCell(), {
-            title: "Manufacturers",
+            title: "Top Manufacturers",
             width: "100%",
             height: "100%"
         });
         var consignees = createDashboardItem(createCell(), {
-            title: "Consignees",
+            title: "Top Consignees",
             width: "100%",
             height: "100%"
         });
@@ -177,18 +180,15 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
         panel.clear = function(){
-            if (true) return;
-            //map.clear();
-            //sankey.clear();
             countryOfOrigin.innerDiv.innerHTML = "";
-            //countryOfOrigin.clear();
-            manufacturers.clear();
-            consignees.clear();
+            manufacturers.innerDiv.innerHTML = "";
+            consignees.innerDiv.innerHTML = "";
         };
 
         panel.update = function(){
 
-            get("test/imports/network4", {
+          //Update map
+            get("import/network", {
                 success: function(text) {
 
 
@@ -215,7 +215,17 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                 }
             });
 
-            get("test/imports/country_of_origin.csv", {
+
+          //Update sankey
+            get("import/network2", {
+                success: function(text) {
+                    updateSankey(text, sankey);
+                }
+            });
+
+
+          //Update bar charts
+            get("import/ProductCode?include=country_of_origin", {
                 success: function(text) {
                     var data = d3.csvParse(text);
 
@@ -254,7 +264,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                     createBarChart(countryOfOrigin.innerDiv, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
 
 
-                    get("test/imports/manufacturer", {
+                    get("import/ProductCode?include=manufacturer", {
                         success: function(text) {
                             var data = d3.csvParse(text);
                             data.forEach((d)=>{
@@ -264,7 +274,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                         }
                     });
 
-                    get("test/imports/consignee", {
+                    get("import/ProductCode?include=consignee", {
                         success: function(text) {
                             var data = d3.csvParse(text);
                             data.forEach((d)=>{
@@ -312,7 +322,8 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             xAxis: xAxis,
             yAxis: yAxis,
             group: groupBy,
-            stackValues: true
+            stackValues: true,
+            sort: "descending"
         };
 
 
@@ -329,6 +340,218 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         };
         barChart.update(config, [filteredData]);
     };
+    
+    
+  //**************************************************************************
+  //** createSankey
+  //**************************************************************************
+    var createSankey = function(parent){
+        
+        var div = document.createElement("div");
+        div.style.width = "990px";
+        div.style.height = "33%";
+        div.style.display = "inline-block";
+        div.style.position = "relative";
+        div.style.overflow = "hidden";
+        parent.appendChild(div);
+        
+        var panel = createDashboardItem(div, {
+            title: "Supply Chain from Source to Consignee",
+            subtitle: "Top manufacturers to top consignee",
+            width: "100%",
+            height: "100%"
+        });
+        
+        
+        var outerDiv = document.createElement("div");
+        outerDiv.style.width = "100%";
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflow = "hidden";
+        outerDiv.style.overflowY = "auto";
+        panel.innerDiv.appendChild(outerDiv);
+        
+
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "990px";
+        innerDiv.style.height = "500px";
+        innerDiv.style.position = "absolute";
+        outerDiv.appendChild(innerDiv);
+        
+
+        
+        var sankey = new bluewave.charts.SankeyChart(innerDiv, {});
+        sankey.getNodeLabel = function(node){
+            var name = node.name;
+            var idx = name.indexOf("_");
+            if (idx>-1) name = name.substring(0,idx);
+            return name;
+        };
+        return sankey;
+    };
+    
+    
+  //**************************************************************************
+  //** updateSankey
+  //**************************************************************************
+    var updateSankey = function(csv, sankey){
+        
+        var data = d3.csvParse(csv);
+        data.forEach((d)=>{
+            d[yAxis] = parseFloat(d[yAxis]);
+        });
+        
+        var getString = function(s){
+            if (!s) return null;
+            s = (s+"").trim();
+            if (s.length==0 || s=='null' || s=='undefined') s = null;
+            return s;
+        };
+        
+        var getTopManufacturers = function(data){
+
+
+            var manufacturers = {};
+            var totalLines = 0;
+            data.forEach((d)=>{
+                var manufacturer = getString(d.manufacturer_name);
+                var v = manufacturers[manufacturer];
+                if (isNaN(v)) v = 0;
+                manufacturers[manufacturer] = (v+d.lines);
+                totalLines += d.lines;
+            });
+
+            var arr = [];
+            for (var manufacturer in manufacturers){
+                if (manufacturers.hasOwnProperty(manufacturer)){
+                    var val = manufacturers[manufacturer];
+                    arr.push({
+                        manufacturer: manufacturer,
+                        lines: val
+                    });
+                }
+            }
+
+            arr.sort(function(a,b){
+                return b.lines-a.lines;
+            });
+
+            manufacturers = {};
+            var topLines = 0;
+            arr.slice(0, Math.min(data.length, 20)).forEach((d)=>{
+                manufacturers[d.manufacturer] = d.lines;
+                topLines += d.lines;
+            });
+            manufacturers["Other"] = totalLines-topLines;
+            return manufacturers;
+        };
+
+
+        var getTopConsignees = function(data){
+
+
+            var consignees = {};
+            var totalLines = 0;
+            data.forEach((d)=>{
+                var consignee = getString(d.consignee_name);
+                var v = consignees[consignee];
+                if (isNaN(v)) v = 0;
+                consignees[consignee] = (v+d.lines);
+                totalLines += d.lines;
+            });
+
+            var arr = [];
+            for (var consignee in consignees){
+                if (consignees.hasOwnProperty(consignee)){
+                    var val = consignees[consignee];
+                    arr.push({
+                        consignee: consignee,
+                        lines: val
+                    });
+                }
+            }
+
+            arr.sort(function(a,b){
+                return b.lines-a.lines;
+            });
+
+            consignees = {};
+            var topLines = 0;
+            arr.slice(0, Math.min(data.length, 20)).forEach((d)=>{
+                consignees[d.consignee] = d.lines;
+                topLines += d.lines;
+            });
+            consignees["Other"] = totalLines-topLines;
+            return consignees;
+        };
+        
+
+      //Reduce data to the top 10 manufacturers
+        var topManufacturers = getTopManufacturers(data);
+        var data2 = [];
+        data.forEach((d)=>{
+            var manufacturer = getString(d.manufacturer_name);
+            if (topManufacturers[manufacturer]) data2.push(d);
+        });
+        data = data2;
+
+      //Reduce data to the top 10 consignees
+        var topConsignees = getTopConsignees(data);
+
+
+
+
+        var nodes = {};
+        var createNode = function(name, group){
+            var node = {
+                name: name,
+                group: group
+            };
+            var key = node.name+"_"+node.group;
+            nodes[key] = node;
+        };
+
+
+
+      //Add links
+        data.forEach((d)=>{
+            var value = d.lines;
+            var country = getString(d.manufacturer_cc);
+            var manufacturer = getString(d.manufacturer_name);
+            var consignee = getString(d.consignee_name);
+            //var port = getString(d.unladed_port);
+
+            if (!topConsignees[consignee]) return;
+
+
+
+          //Stringify FEIs
+            if (manufacturer) manufacturer+="_m";
+            if (consignee) consignee+="_c";
+            //if (port) port+="_p";
+
+            if (country) createNode(country, "country");
+            if (manufacturer) createNode(manufacturer, "manufacturer");
+            if (consignee) createNode(consignee, "consignee");
+            //if (port) createNode(port, "port");
+
+            if (country && manufacturer && consignee){
+                sankey.addLink(country, manufacturer, value);
+                sankey.addLink(manufacturer, consignee, value);
+            }
+        });
+
+
+      //Add nodes
+        Object.values(nodes).forEach((node)=>{
+            sankey.addNode(node);
+        });
+
+        sankey.update();
+        
+        sankey.getChart().attr("transform", "scale(0.95,0.95)");
+        
+    };
 
 
   //**************************************************************************
@@ -341,7 +564,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         //div.style.height = "485px";
         div.style.height = "65%";
         div.style.display = "inline-block";
-        div.style.position = "realtive";
+        div.style.position = "relative";
         div.style.overflow = "hidden";
         div.style.border = "1px solid #e0e0e0";
         parent.appendChild(div);
