@@ -712,11 +712,15 @@ bluewave.charts.MapChart = function(parent, config) {
         .attr("stroke-width", outlineWidth)
         .attr("stroke-opacity", opacity)
         .on("click", function(feature, idx, siblings){
-            if (config.onClick) config.onClick.apply(me, [{
-                feature: feature,
-                element: siblings[idx],
-                layer: layer
-            }]);
+            if (config.onClick){
+                var e = d3.event;
+                config.onClick.apply(me, [{
+                    feature: feature,
+                    element: siblings[idx],
+                    layer: layer,
+                    event: e
+                }]);
+            }
         });
 
         layer.elements = points;
@@ -773,6 +777,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         layer.elements = lines;
     };
+
 
   //**************************************************************************
   //** renderGridLayer
@@ -922,11 +927,15 @@ bluewave.charts.MapChart = function(parent, config) {
         .on("mousemove", mousemove)
         .on("mouseleave", mouseleave)
         .on("click", function(feature, idx, siblings){
-            if (config.onClick) config.onClick.apply(me, [{
-                feature: feature,
-                element: siblings[idx],
-                layer: layer
-            }]);
+            if (config.onClick){
+                var e = d3.event;
+                config.onClick.apply(me, [{
+                    feature: feature,
+                    element: siblings[idx],
+                    layer: layer,
+                    event: e
+                }]);
+            }
         });
 
         layer.elements = polygons;
