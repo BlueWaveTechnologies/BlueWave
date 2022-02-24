@@ -27,7 +27,8 @@ bluewave.charts.SankeyChart = function(parent, config) {
     var svg, chart, sankeyArea;
     var nodes = [];
     var links = [];
-
+    var getColor = d3.scaleOrdinal(d3.schemeCategory10);
+    
 
   //**************************************************************************
   //** Constructor
@@ -49,6 +50,22 @@ bluewave.charts.SankeyChart = function(parent, config) {
     this.setConfig = function(chartConfig){
         if (!chartConfig) config = defaultConfig;
         else config = merge(chartConfig, defaultConfig);
+    };
+    
+    
+  //**************************************************************************
+  //** getChart
+  //**************************************************************************
+    this.getChart = function(){
+        return sankeyArea;
+    };
+
+
+  //**************************************************************************
+  //** getNodeColor
+  //**************************************************************************
+    this.getNodeColor = function(d){
+        return getColor(d.name.replace(/ .*/, ""));
     };
 
 
@@ -176,8 +193,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
         var formatNumber = d3.format(",.0f"); // zero decimal places
 
 
-      //Create function to colorize categorical data
-        var getColor = d3.scaleOrdinal(d3.schemeCategory10);
+
 
 
 
@@ -235,7 +251,7 @@ bluewave.charts.SankeyChart = function(parent, config) {
           })
           .attr("width", sankey.nodeWidth())
           .style("fill", function (d) {
-            return (d.color = getColor(d.name.replace(/ .*/, "")));
+            return (d.color = me.getNodeColor(d));
           })
           .style("stroke", function (d) {
             return d3.rgb(d.color).darker(2);
