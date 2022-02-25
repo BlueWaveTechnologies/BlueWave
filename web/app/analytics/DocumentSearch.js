@@ -207,7 +207,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             var text = document.createElement("div");
             text.className = "doc-no-results-text";
             div.appendChild(text);
-            text.innerText =  "No local results to show";
+            text.innerText =  "No Local Search Results found";
 
             // add button container
             var buttonContainer = document.createElement("div");
