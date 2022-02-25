@@ -84,17 +84,26 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
   //** downloadFile
   //**************************************************************************
   //* left empty for rewrite by instantiator (documentAnalysis)
-  this.downloadFile = function(){
+    this.downloadFile = function(){
 
   };
+
+  //**************************************************************************
+  //** getDownloadButton
+  //**************************************************************************
+  //* left empty for rewrite by instantiator (documentAnalysis)
+    this.getDownloadButton = function(){
+
+    };
+
 
   //**************************************************************************
   //** getSelectedDocuments
   //**************************************************************************
   //* left empty for rewrite by instantiator (documentAnalysis)
-  this.getSelectedDocuments = function(){
+    this.getSelectedDocuments = function(){
 
-  };
+    };
 
   //**************************************************************************
   //** selectRow
@@ -107,7 +116,7 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
    var selectRow = function(row, mouseEvent, makeSelected){
 
     var selectedDocuments = me.getSelectedDocuments();
-
+    var downloadButton = me.getDownloadButton();
 
 
 
@@ -182,11 +191,13 @@ bluewave.analytics.DocumentExternalSearch = function(parent, config) {
             o.select();
         };
 
+    if (selectedDocuments.length < 1) downloadButton.disable()
+    else downloadButton.enable();
 
     console.log("selected documents below are ");
     var s = [];
     selectedDocuments.forEach((d)=>{
-      s.push(d.name);
+        s.push(d.name);
     });
     console.log(s);
     }

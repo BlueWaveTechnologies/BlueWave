@@ -602,6 +602,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             updateButtons();
         };
 
+        externalSearchPanel.getDownloadButton = function(){
+            return mainButton["Download"];
+        };
+
         externalSearchPanel.selectAllStatus = false; // default status of the coordinated selectAll button
 
     };
@@ -682,6 +686,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
                         searchBarInput.focus();
                 };
+                if (externalSearchPanel) externalSearchPanel.hide();
+                if (noResultsPanel) noResultsPanel.hide();
 
                 updateButtons();
             };
@@ -1275,7 +1281,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 mainButton["selectAll"].enable();
                 mainButton["back"].disable();
                 mainButton["next"].enable();
-                mainButton["Download"].enable();
+                mainButton["Download"].disable();
                 mainButton["Download"].show();
                 selectedSelectAllPanel = externalSearchPanel;
             };
