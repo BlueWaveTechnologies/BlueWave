@@ -848,7 +848,9 @@ bluewave.charts.MapChart = function(parent, config) {
         if (tooltip || config.onClick) highlight = true;
 
 
-        var mouseover = function(d) {
+        var mouseover = function(feature, idx, siblings) {
+            var d = feature;
+
             if (tooltip){
 
               //Get label
@@ -874,6 +876,7 @@ bluewave.charts.MapChart = function(parent, config) {
             }
 
             if (config.onMouseOver) config.onMouseOver.apply(me, [{
+                feature: feature,
                 element: el,
                 layer: layer
             }]);
@@ -886,7 +889,7 @@ bluewave.charts.MapChart = function(parent, config) {
             .style('left', (e.clientX + 20) + "px");
         };
 
-        var mouseleave = function() {
+        var mouseleave = function(feature, idx, siblings) {
             if (tooltip) tooltip
             .style("opacity", 0)
             .style("display", "none");
@@ -898,6 +901,7 @@ bluewave.charts.MapChart = function(parent, config) {
             }
 
             if (config.onMouseLeave) config.onMouseLeave.apply(me, [{
+                feature: feature,
                 element: el,
                 layer: layer
             }]);
