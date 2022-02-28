@@ -272,11 +272,15 @@ bluewave.chart.utils = {
         if (!chartConfig.xFormat) updateDefaultTicks(xAxis, xType);
 
 
-      //Rotate x-axis labels as needed
-        var xBoxes = getBoxes(xAxis);
-        
-        var foundIntersection = function(boxes){
+        var foundIntersection = function(boxes, buffer=0){
             var foundIntersection = false;
+
+            boxes.forEach(function(box){
+                box.top -= buffer;
+                box.left -= buffer;
+                box.right += buffer;
+                box.bottom += buffer;
+            });
             
             for (var i = 0; i < boxes.length; i++) {
                 var box = boxes[i];
@@ -293,7 +297,10 @@ bluewave.chart.utils = {
             return foundIntersection;
         };
 
-        var xLabelsIntersect = foundIntersection(xBoxes);
+      //Rotate x-axis labels as needed
+        var xBoxes = getBoxes(xAxis);
+        var xLabelsIntersect = foundIntersection(xBoxes, 3);
+
         if (xLabelsIntersect){
             xAxis
             .selectAll("text")
@@ -319,7 +326,7 @@ bluewave.chart.utils = {
 
       //Hide every other y-tick if they're crowded
         var yBoxes = getBoxes(yAxis);
-        var yLabelsIntersect = foundIntersection(yBoxes);
+        var yLabelsIntersect = foundIntersection(yBoxes, 3);
 
         if (yLabelsIntersect) {
 
