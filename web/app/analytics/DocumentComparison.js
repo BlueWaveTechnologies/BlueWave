@@ -22,7 +22,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var totalPages = 0;
     var currPair = -1;
     var navbar;
-    var ratings;
 
 
 
@@ -91,8 +90,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         navbar.clear();
         navbar.hide();
-        ratings.clear();
-        ratings.hide();
 
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
@@ -590,7 +587,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             if (currPair>=0){
                 backButton.disabled = false;
                 navbar.show();
-                ratings.show();
             }
             if (currPair<totalPages-1) nextButton.disabled = false;
         };
@@ -603,7 +599,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
     var createFooter = function(parent){
         createNavBar(parent);
-        createRatings(parent);
 
         var div = document.createElement("div");
         div.className = "noselect";
@@ -644,64 +639,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
 
-  //**************************************************************************
-  //** createRatings
-  //**************************************************************************
-    var createRatings = function(parent){ // lazy loaded
-        var thumbsDown, thumbsUp;
 
-        var createButton = function(buttonClassName){
-
-            var icon = document.createElement("div");
-            icon.className = "doc-compare-panel-ratings-icon";
-            // icon.innerHTML = buttonClassName;
-            icon.innerHTML =`<i class="${buttonClassName}"></i>`;
-            return icon;
-        };
-
-        ratings = document.createElement("div");
-        ratings.className = "doc-compare-panel-ratings";
-        addShowHide(ratings);
-        ratings.hide();
-        // ratings.show();
-
-        parent.appendChild(ratings);
-        var div = document.createElement("div");
-        div.className = "doc-compare-panel-ratings-container";
-        ratings.appendChild(div);
-
-        var thumbsUp = createButton("fas fa-thumbs-up");
-
-        thumbsUp.onclick = function(){
-            console.log("clicked the thumbsup button");
-
-        };
-
-        var thumbsDown = createButton("fas fa-thumbs-down");
-
-        thumbsDown.onclick = function(){
-            console.log("clicked the thumbsDown button");
-        };
-
-        div.appendChild(thumbsUp);
-        div.appendChild(thumbsDown);
-
-        ratings.clear = function(){
-
-        };
-
-        ratings.update = function(){
-            ratings.clear();
-
-
-        };
-
-        ratings.select = function(currPair){
-
-        };
-
-
-    }
   //**************************************************************************
   //** createNavBar
   //**************************************************************************
@@ -831,7 +769,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var el = nextPage.firstChild;
         if (currPair<0){
             navbar.hide();
-            ratings.hide();
             if (el){
                 if (el!==summaryPanel.el){
                     nextPage.removeChild(el);
