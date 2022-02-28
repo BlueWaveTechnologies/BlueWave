@@ -641,7 +641,8 @@ public class ImportService extends WebService {
             fields = Arrays.copyOf(fields, fields.length+1);
             fields[fields.length-1] = extraColumn;
         }
-        StringBuilder str = new StringBuilder(String.join(",", fields));
+
+        ArrayList<HashMap<String, Value>> records = new ArrayList<>();
         Session session = null;
         try{
             session = graph.getSession();
@@ -649,13 +650,13 @@ public class ImportService extends WebService {
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
-                str.append("\r\n");
 
-                for (int i=0; i<fields.length; i++){
-                    if (i>0) str.append(",");
-                    Object val = r.get(fields[i]).asObject();
-                    str.append(val);
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field : r.keys()){
+                    Value val = new Value(r.get(field).asObject());
+                    values.put(field, val);
                 }
+                records.add(values);
             }
 
 
@@ -665,6 +666,62 @@ public class ImportService extends WebService {
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
+
+
+        if (extraColumn.equals("manufacturer") || extraColumn.equals("consignee")){
+            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+            synchronized (firmNames){
+                for (HashMap<String, Value> record : records){
+                    Long fei = record.get(extraColumn).toLong();
+                    String name = firmNames.get(fei);
+                    String productCode = record.get("product_code").toString();
+
+
+                    Float lines = record.get("lines").toFloat();
+                    if (lines==null) lines = 0f;
+                    Float quantity = record.get("quantity").toFloat();
+                    if (quantity==null) quantity = 0f;
+                    Float value = record.get("value").toFloat();
+                    if (value==null) value = 0f;
+
+                    String key = productCode + "->" + name;
+                    HashMap<String, Value> g = group.get(key);
+                    if (g==null){
+                        g = new HashMap<>();
+                        g.put(extraColumn, new Value(name));
+                        g.put("product_code", new Value(productCode));
+                        g.put("lines", new Value(lines));
+                        g.put("quantity", new Value(quantity));
+                        g.put("value", new Value(value));
+                        group.put(key, g);
+                    }
+                    else{
+                        g.put("lines", new Value(lines+g.get("lines").toLong()));
+                        g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                        g.put("value", new Value(lines+g.get("value").toLong()));
+                    }
+                }
+            }
+            records = new ArrayList<>();
+            Iterator<String> it = group.keySet().iterator();
+            while (it.hasNext()){
+                HashMap<String, Value> record = group.get(it.next());
+                records.add(record);
+            }
+        }
+
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        for (HashMap<String, Value> record : records){
+            str.append("\r\n");
+            for (int i=0; i<fields.length; i++){
+                if (i>0) str.append(",");
+                String val = record.get(fields[i]).toString();
+                if (val==null) val = "";
+                if (val.contains(",")) val = "\"" + val + "\"";
+                str.append(val);
+            }
+        }
+
 
         return new ServiceResponse(str.toString());
     }
