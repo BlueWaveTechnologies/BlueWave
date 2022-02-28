@@ -285,11 +285,23 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                     createBarChart(countryPanel.innerDiv, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
 
 
+                    var maxLen = 10;
+                    var getLabel = function(str){
+                        if (isNumeric(str)){
+                            return str+"_";
+                        }
+                        else{
+                            if (str.length<=maxLen) return str;
+                            str = str.substring(0, maxLen-3) + "...";
+                            return str;
+                        }
+                    };
+
                     get("import/ProductCode?include=manufacturer", {
                         success: function(text) {
                             var data = d3.csvParse(text);
                             data.forEach((d)=>{
-                                d.manufacturer = "m" + d.manufacturer;
+                                d.manufacturer = getLabel(d.manufacturer);
                             });
                             createBarChart(manufacturerPanel.innerDiv, data, "manufacturer", yAxis, "product_code", 10, colorMap);
                         }
@@ -299,7 +311,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                         success: function(text) {
                             var data = d3.csvParse(text);
                             data.forEach((d)=>{
-                                d.consignee = "c" + d.consignee;
+                                d.consignee = getLabel(d.consignee);
                             });
                             createBarChart(consigneePanel.innerDiv, data, "consignee", yAxis, "product_code", 10, colorMap);
                         }
@@ -1043,7 +1055,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
-    var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var isNumeric = javaxt.dhtml.utils.isNumber;
     var get = bluewave.utils.get;
     var createDashboardItem = bluewave.utils.createDashboardItem;
 
