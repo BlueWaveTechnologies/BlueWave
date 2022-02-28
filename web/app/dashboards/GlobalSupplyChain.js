@@ -28,6 +28,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     var mapData = {};
     var worldMapIsReady = false;
 
+    var usMap;
     var importSummary; //popup
     var waitmask;
 
@@ -778,7 +779,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                     if (!countries[countryCode]) return;
 
                     if (countryCode==='US'){
-
+                        showUSMap(data);
                     }
                     else{
                         showImportSummary([], Object.keys(countries), countryCode);
@@ -803,6 +804,215 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
         map.update();
+    };
+
+
+  //**************************************************************************
+  //** updateUSMap
+  //**************************************************************************
+    var updateUSMap = function(data, map){
+        //var data = d3.csvParse(csv);
+
+        var links = {};
+        var consignees = {};
+        var ports = {};
+
+        var z = 15;
+        data.forEach((d)=>{
+
+            if (d.unladed_port_lat==0 && d.unladed_port_lon==0) return;
+            if (d.consignee_lat==0 && d.consignee_lat==0) return;
+
+            var p = kartographia.utils.getTileCoordinate(d.unladed_port_lat, d.unladed_port_lon, z);
+            var c = kartographia.utils.getTileCoordinate(d.consignee_lat, d.consignee_lon, z);
+            var v = parseFloat(d.lines);
+
+
+            var val = ports[p.join()];
+            if (!val) val = 0;
+            ports[p.join()] = val + v;
+
+            var val = consignees[c.join()];
+            if (!val) val = 0;
+            consignees[c.join()] = val + v;
+
+
+            var link = p.join() + "," + c.join(); // + "," + c.join();
+            var val = links[link];
+            if (!val) val = 0;
+            links[link] = val + v;
+        });
+
+
+
+        var addPoints = function(facilities, color){
+            var features = [];
+
+            var extent = d3.extent(Object.values(facilities));
+            var maxVal = extent[1];
+            var maxRadius = 10;
+
+            Object.keys(facilities).forEach((tileCoord)=>{
+                var arr = tileCoord.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var lat = tile2lat(arr[1], z);
+                var lon = tile2lon(arr[0], z);
+
+                var feature = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: [lon, lat]
+                    },
+                    properties: {
+                        value: facilities[tileCoord]
+                    }
+                };
+
+                features.push(feature);
+            });
+
+            map.addPoints(features, {
+                style: {
+                    fill: color,
+                    opacity: 0.5,
+                    radius: function(d){
+                        var r = Math.round((d.properties.value/maxVal)*maxRadius);
+                        if (r<1) r = 1;
+                        return r;
+                    }
+                }
+            });
+        };
+
+        var addLines = function(){
+
+            var lines = [];
+            Object.keys(links).forEach((link)=>{
+                var arr = link.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var manufacturer_lat = tile2lat(arr[1], z);
+                var manufacturer_lon = tile2lon(arr[0], z);
+                var unladed_port_lat = tile2lat(arr[3], z);
+                var unladed_port_lon = tile2lon(arr[2], z);
+                var value = links[link];
+
+
+                var line = [[manufacturer_lon, manufacturer_lat], [unladed_port_lon, unladed_port_lat]];
+                var midPoint = null;
+
+                if (unladed_port_lon<-90){
+                    midPoint = map.getMidPoint(line, 0.2, "north");
+                }
+                else{
+                    if (manufacturer_lat>20){
+                        midPoint = map.getMidPoint(line, 0.2, "north");
+                    }
+                    else{
+                        midPoint = map.getMidPoint(line, 0.2, "south");
+                    }
+                }
+
+                if (midPoint){ line.splice(1, 0, midPoint);
+                lines.push(line);
+                }
+
+            });
+
+            map.addLines(lines, {
+                name: "links",
+                style: {
+                    color: "steelblue",
+                    opacity: 0.05,
+                    width: 1,
+                    smoothing: "curveNatural"
+                }
+            });
+        };
+
+        addLines();
+        addPoints(consignees, "orange");
+        addPoints(ports, "red");
+
+
+      //Add overlay for clicking purposes
+        map.addPolygons(mapData.countries.features, {
+            name: "countryOverlay",
+            style: {
+                fill: "rgba(0,0,0,0.0)",
+                stroke: "none"
+            }
+        });
+
+
+        map.update();
+    };
+
+
+    var showUSMap = function(data){
+        if (!usMap){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "US Network",
+                width: 1060,
+                height: 600,
+                modal: true,
+                style: config.style.window,
+                resizable: true
+            });
+
+
+            var map = new bluewave.charts.MapChart(win.getBody(), {});
+            map.disablePan();
+            map.update();
+
+            bluewave.utils.getMapData(function(data){
+                mapData = data;
+                var countries = mapData.countries;
+                map.addPolygons(countries.features, {
+                    name: "countries",
+                    style: {
+                        fill: "#f8f8f8",
+                        stroke: "#ccc"
+                    }
+                });
+
+                var states = mapData.states;
+                map.addPolygons(states.features, {
+                    name: "states",
+                    style: {
+                        fill: "#f8f8f8",
+                        stroke: "#ccc"
+                    }
+                });
+
+                map.setProjection("Albers");
+                //map.setExtent([-130, 50.5], [-65, 25.8]);
+                map.setExtent([-130, 40.5], [-65, 25.8]);
+                map.update();
+            });
+
+
+            usMap = {
+                update: function(data){
+                    updateUSMap(data, map);
+                },
+                show: function(){
+                    win.show();
+                },
+                hide: function(){
+                    win.hide();
+                }
+            };
+
+        }
+
+        usMap.show();
+        usMap.update(data);
+
     };
 
 
