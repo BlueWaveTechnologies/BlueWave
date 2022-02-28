@@ -28,8 +28,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     var mapData = {};
     var worldMapIsReady = false;
 
-
-
+    var importSummary; //popup
     var waitmask;
 
 
@@ -104,7 +103,6 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     var createDashboardPanel = function(panel){
 
 
-
       //Create table with 2 columns
         var table = createTable();
         var tbody = table.firstChild;
@@ -123,26 +121,42 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         td.style.height = "100%";
         td.style.verticalAlign = "top";
         tr.appendChild(td);
-        var map = createWorldMap(td);
-
-        var sankey = createSankey(td);
-
-//        var sankey = createSankeyChart(td, {
-//            title: "Manufacturer to Consignee"
-//        });
-
+        var leftCol = td;
 
 
       //Column 2
         td = document.createElement("td");
         td.style.height = "100%";
         tr.appendChild(td);
+        var rightCol = td;
+
+
+
+      //Populate left column
+        table = createTable();
+        leftCol.appendChild(table);
+        tbody = table.firstChild;
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "1px";
+        tr.appendChild(td);
+        var map = createWorldMap(td);
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.verticalAlign = "top";
+        td.style.padding = "10px 0 0";
+        tr.appendChild(td);
+        var sankey = createSankey(td);
+
 
 
         var div = document.createElement("div");
         div.style.width = "400px";
         div.style.height = "100%";
-        td.appendChild(div);
+        rightCol.appendChild(div);
 
         table = createTable();
         tbody = table.firstChild;
@@ -153,25 +167,30 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             tbody.appendChild(tr);
             td = document.createElement("td");
             td.style.width = "100%";
-            td.style.height = "33%";
-            td.style.padding= "0 10px 10px 0px";
+            td.style.height = "25%";
+            td.style.padding = (tbody.childNodes.length>1 ? "10px" : "0") + " 10px 0px 0px";
             tr.appendChild(td);
             return td;
         };
 
 
-        var countryOfOrigin = createDashboardItem(createCell(), {
-            title: "Country of Origin",
+        var productPanel = createDashboardItem(createCell(), {
+            title: "Top ProCodes",
             width: "100%",
             height: "100%"
         });
-        var manufacturers = createDashboardItem(createCell(), {
-            title: "Top Manufacturers",
+        var countryPanel = createDashboardItem(createCell(), {
+            title: "Top Countries by ProCode",
             width: "100%",
             height: "100%"
         });
-        var consignees = createDashboardItem(createCell(), {
-            title: "Top Consignees",
+        var manufacturerPanel = createDashboardItem(createCell(), {
+            title: "Top Manufacturers by ProCode",
+            width: "100%",
+            height: "100%"
+        });
+        var consigneePanel = createDashboardItem(createCell(), {
+            title: "Top Consignees by ProCode",
             width: "100%",
             height: "100%"
         });
@@ -180,9 +199,10 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
         panel.clear = function(){
-            countryOfOrigin.innerDiv.innerHTML = "";
-            manufacturers.innerDiv.innerHTML = "";
-            consignees.innerDiv.innerHTML = "";
+            productPanel.innerDiv.innerHTML = "";
+            countryPanel.innerDiv.innerHTML = "";
+            manufacturerPanel.innerDiv.innerHTML = "";
+            consigneePanel.innerDiv.innerHTML = "";
         };
 
         panel.update = function(){
@@ -210,8 +230,6 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                     else{
                         updateWorldMap(text, map);
                     }
-
-
                 }
             });
 
@@ -225,7 +243,8 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
           //Update bar charts
-            get("import/ProductCode?include=country_of_origin", {
+            //get("import/ProductCode?include=country_of_origin", {
+            get("test/imports/country_of_origin.csv", {
                 success: function(text) {
                     var data = d3.csvParse(text);
 
@@ -261,7 +280,8 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                         colorMap[arr[i].productCode] = colors[i];
                     }
 
-                    createBarChart(countryOfOrigin.innerDiv, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
+                    createBarChart(productPanel.innerDiv, data, "product_code", yAxis, null, 10, colorMap);
+                    createBarChart(countryPanel.innerDiv, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
 
 
                     get("import/ProductCode?include=manufacturer", {
@@ -270,7 +290,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                             data.forEach((d)=>{
                                 d.manufacturer = "m" + d.manufacturer;
                             });
-                            createBarChart(manufacturers.innerDiv, data, "manufacturer", yAxis, "product_code", 10, colorMap);
+                            createBarChart(manufacturerPanel.innerDiv, data, "manufacturer", yAxis, "product_code", 10, colorMap);
                         }
                     });
 
@@ -280,7 +300,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                             data.forEach((d)=>{
                                 d.consignee = "c" + d.consignee;
                             });
-                            createBarChart(consignees.innerDiv, data, "consignee", yAxis, "product_code", 10, colorMap);
+                            createBarChart(consigneePanel.innerDiv, data, "consignee", yAxis, "product_code", 10, colorMap);
                         }
                     });
 
@@ -340,29 +360,29 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         };
         barChart.update(config, [filteredData]);
     };
-    
-    
+
+
   //**************************************************************************
   //** createSankey
   //**************************************************************************
     var createSankey = function(parent){
-        
+
         var div = document.createElement("div");
         div.style.width = "990px";
-        div.style.height = "33%";
+        div.style.height = "100%";
         div.style.display = "inline-block";
         div.style.position = "relative";
         div.style.overflow = "hidden";
         parent.appendChild(div);
-        
+
         var panel = createDashboardItem(div, {
             title: "Supply Chain from Source to Consignee",
-            subtitle: "Top manufacturers to top consignee",
+            subtitle: "Top manufacturers to top consignees",
             width: "100%",
             height: "100%"
         });
-        
-        
+
+
         var outerDiv = document.createElement("div");
         outerDiv.style.width = "100%";
         outerDiv.style.height = "100%";
@@ -370,16 +390,16 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         outerDiv.style.overflow = "hidden";
         outerDiv.style.overflowY = "auto";
         panel.innerDiv.appendChild(outerDiv);
-        
+
 
         var innerDiv = document.createElement("div");
         innerDiv.style.width = "990px";
         innerDiv.style.height = "500px";
         innerDiv.style.position = "absolute";
         outerDiv.appendChild(innerDiv);
-        
 
-        
+
+
         var sankey = new bluewave.charts.SankeyChart(innerDiv, {});
         sankey.getNodeLabel = function(node){
             var name = node.name;
@@ -389,25 +409,25 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         };
         return sankey;
     };
-    
-    
+
+
   //**************************************************************************
   //** updateSankey
   //**************************************************************************
     var updateSankey = function(csv, sankey){
-        
+
         var data = d3.csvParse(csv);
         data.forEach((d)=>{
             d[yAxis] = parseFloat(d[yAxis]);
         });
-        
+
         var getString = function(s){
             if (!s) return null;
             s = (s+"").trim();
             if (s.length==0 || s=='null' || s=='undefined') s = null;
             return s;
         };
-        
+
         var getTopManufacturers = function(data){
 
 
@@ -484,7 +504,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             consignees["Other"] = totalLines-topLines;
             return consignees;
         };
-        
+
 
       //Reduce data to the top 10 manufacturers
         var topManufacturers = getTopManufacturers(data);
@@ -548,9 +568,9 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         });
 
         sankey.update();
-        
+
         sankey.getChart().attr("transform", "scale(0.95,0.95)");
-        
+
     };
 
 
@@ -561,8 +581,8 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
         var div = document.createElement("div");
         div.style.width = "990px";
-        //div.style.height = "485px";
-        div.style.height = "65%";
+        div.style.height = "485px";
+        //div.style.height = "65%";
         div.style.display = "inline-block";
         div.style.position = "relative";
         div.style.overflow = "hidden";
@@ -610,6 +630,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         var manufacturers = {};
         var consignees = {};
         var ports = {};
+        var countries = {};
 
         var z = 9;
         data.forEach((d)=>{
@@ -636,6 +657,9 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             if (!val) val = 0;
             consignees[c.join()] = val + v;
 
+            var val = countries[d.manufacturer_cc];
+            if (!val) val = 0;
+            countries[d.manufacturer_cc] = val + v;
 
             var link = m.join() + "," + p.join(); // + "," + c.join();
             var val = links[link];
@@ -748,18 +772,30 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                 stroke: "none"
             },
             onClick: function(o){
-                console.log(o.feature.properties);
+                var e = o.event;
+                if (e.detail === 2) { //double click
+                    var countryCode = o.feature.properties.code;
+                    if (!countries[countryCode]) return;
 
-//                if (e.detail === 2) {
-//                    showCompanyProfile(row.record);
-//                }
+                    if (countryCode==='US'){
 
+                    }
+                    else{
+                        showImportSummary([], Object.keys(countries), countryCode);
+                    }
+                }
             },
             onMouseOver: function(o){
+                var countryCode = o.feature.properties.code;
+                if (!countries[countryCode]) return;
+
                 o.element.transition().duration(100);
                 o.element.attr("fill", "rgba(0,0,0,0.3)");
             },
             onMouseLeave: function(o){
+                var countryCode = o.feature.properties.code;
+                if (!countries[countryCode]) return;
+
                 o.element.transition().duration(100);
                 o.element.attr("fill", "rgba(0,0,0,0.0)");
             }
@@ -768,6 +804,36 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
         map.update();
     };
+
+
+  //**************************************************************************
+  //** showImportSummary
+  //**************************************************************************
+    var showImportSummary = function(countryCode){
+        if (!importSummary){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Import Summary",
+                width: 1410,
+                height: (1080-300),
+                modal: false,
+                style: config.style.window,
+                resizable: true
+            });
+
+            importSummary = new bluewave.dashboards.ImportSummary(win.getBody(), config);
+            importSummary.show = function(){
+                win.show();
+            };
+            importSummary.hide = function(){
+                win.hide();
+            };
+        }
+
+        importSummary.clear();
+        importSummary.show();
+        importSummary.update(countryCode);
+    };
+
 
     Math.toDegrees = function(radians) {
         return radians * (180/Math.PI);
