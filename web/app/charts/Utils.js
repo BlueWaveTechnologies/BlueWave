@@ -273,27 +273,33 @@ bluewave.chart.utils = {
 
 
       //Rotate x-axis labels as needed
-        var boxes = getBoxes(xAxis);
-        var foundIntersection = false;
-        for (var i=0; i<boxes.length; i++){
-            var box = boxes[i];
-            for (var j=0; j<boxes.length; j++){
-                if (j===i) continue;
-                var b = boxes[j];
-                if (javaxt.dhtml.utils.intersects(box, b)){
-                    foundIntersection = true;
-                    break;
+        var xBoxes = getBoxes(xAxis);
+        
+        var foundIntersection = function(boxes){
+            var foundIntersection = false;
+            
+            for (var i = 0; i < boxes.length; i++) {
+                var box = boxes[i];
+                for (var j = 0; j < boxes.length; j++) {
+                    if (j === i) continue;
+                    var b = boxes[j];
+                    if (javaxt.dhtml.utils.intersects(box, b)) {
+                        foundIntersection = true;
+                        break;
+                    }
                 }
+                if (foundIntersection) break;
             }
-            if (foundIntersection) break;
-        }
-        if (foundIntersection){
+            return foundIntersection;
+        };
+
+        var xLabelsIntersect = foundIntersection(xBoxes);
+        if (xLabelsIntersect){
             xAxis
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
         }
-
 
 
 
@@ -311,7 +317,25 @@ bluewave.chart.utils = {
 
         if (!chartConfig.yFormat) updateDefaultTicks(yAxis, yType);
 
+      //Hide every other y-tick if they're crowded
+        var yBoxes = getBoxes(yAxis);
+        var yLabelsIntersect = foundIntersection(yBoxes);
 
+        if (yLabelsIntersect) {
+
+            let length = yAxis.selectAll("text").size();
+
+            yAxis
+                .selectAll("text")
+                .attr("visibility", function (text, i) {
+                    //Check cardinality to ensure top tick is always displayed
+                    if (length%2) {
+                        return (i + 1) % 2 === 0 ? "hidden" : "visible";
+                    }
+                    else return i % 2 === 0 ? "hidden" : "visible";
+                })
+
+        }
 
       //Calculate margins required to fit the labels
         var xExtents = javaxt.dhtml.utils.getRect(xAxis.node());
