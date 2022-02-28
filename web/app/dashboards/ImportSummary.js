@@ -12,7 +12,6 @@ if(!bluewave.dashboards) bluewave.dashboards={};
 bluewave.dashboards.ImportSummary = function(parent, config) {
 
     var me = this;
-    var initializing = true;
     var title = "Import Summary";
     var grid;
     var data = [];
@@ -88,9 +87,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         data = [];
         lineData = [];
         grid.clear();
+        productOptions.clear();
+        countryOptions.clear();
         establishmentOptions.setValue("Manufacturer", true);
-        countryOptions.setValue("TH", true); //Select Thailand by default for demo purposes
-        productOptions.setValue("All", true);
         yAxis = "totalLines";
     };
 
@@ -98,29 +97,76 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(){
+    this.update = function(productCodes, countryCodes, defaultCountry){
+        me.clear();
+
         var onReady = function(){
-            me.clear();
+            productOptions.setValue("All", true);
+            if (!defaultCountry) defaultCountry = "TH"; //Select Thailand by default for demo purposes
+            countryOptions.setValue(defaultCountry, true);
             update();
         };
 
-        if (initializing){
-            var timer;
 
-            var checkStatus = function(){
-                if (initializing){
-                    timer = setTimeout(checkStatus, 100);
-                }
-                else{
-                    clearTimeout(timer);
-                    onReady();
-                }
-            };
+        if (arguments.length===0){
 
-            timer = setTimeout(checkStatus, 100);
+          //Get data and populate the dropdowns
+            waitmask.show(500);
+            getData("Imports_Products", function(csv){
+
+                var productCodes = [];
+                var uniqueCountries = {};
+
+              //Parse csv
+                var rows = parseCSV(csv, ",");
+                for (var i=1; i<rows.length; i++){ //skip header
+                    var col = rows[i];
+                    var productCode = col[0];
+                    var productCount = parseFloat(col[1]);
+                    var countries = getArray(col[2]);
+
+                    productCodes.push(productCode);
+                    for (var j=0; j<countries.length; j++){
+                        uniqueCountries[countries[j]] = true;
+                    }
+                }
+
+
+              //Update productOptions
+                productCodes.sort();
+                for (var i=0; i<productCodes.length; i++){
+                    var productCode = productCodes[i];
+                    productOptions.add(productCode, productCode);
+                }
+
+
+              //Update countryOptions
+                var arr = [];
+                for (var country in uniqueCountries) {
+                    if (uniqueCountries.hasOwnProperty(country)){
+                        arr.push(country);
+                    }
+                }
+                arr.sort();
+                for (var i=0; i<arr.length; i++){
+                    var country = arr[i];
+                    countryOptions.add(country, country);
+                }
+
+
+                waitmask.hide();
+            });
         }
         else{
-            onReady();
+
+            productCodes.forEach((productCode)=>{
+                productOptions.add(productCode, productCode);
+            });
+
+            countryCodes.forEach((countryCode)=>{
+                countryOptions.add(countryCode, countryCode);
+            });
+
         }
     };
 
@@ -531,58 +577,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         thresholdInput.className = "form-input";
         thresholdInput.style.width = "100%";
         td.appendChild(thresholdInput);
-
-
-
-
-      //Get data and populate the dropdowns
-        waitmask.show(500);
-        getData("Imports_Products", function(csv){
-
-            var productCodes = [];
-            var uniqueCountries = {};
-
-          //Parse csv
-            var rows = parseCSV(csv, ",");
-            for (var i=1; i<rows.length; i++){ //skip header
-                var col = rows[i];
-                var productCode = col[0];
-                var productCount = parseFloat(col[1]);
-                var countries = getArray(col[2]);
-
-                productCodes.push(productCode);
-                for (var j=0; j<countries.length; j++){
-                    uniqueCountries[countries[j]] = true;
-                }
-            }
-
-
-          //Update productOptions
-            productCodes.sort();
-            for (var i=0; i<productCodes.length; i++){
-                var productCode = productCodes[i];
-                productOptions.add(productCode, productCode);
-            }
-
-
-          //Update countryOptions
-            var arr = [];
-            for (var country in uniqueCountries) {
-                if (uniqueCountries.hasOwnProperty(country)){
-                    arr.push(country);
-                }
-            }
-            arr.sort();
-            for (var i=0; i<arr.length; i++){
-                var country = arr[i];
-                countryOptions.add(country, country);
-            }
-
-
-            initializing = false;
-
-            //waitmask.hide();
-        });
     };
 
 
