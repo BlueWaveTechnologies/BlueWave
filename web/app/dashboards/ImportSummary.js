@@ -86,6 +86,10 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
     this.clear = function(){
         data = [];
         lineData = [];
+        if (lineChart) lineChart.clear();
+        if (barChart) barChart.clear();
+        if (scatterChart) scatterChart.clear();
+        if (nodeView) nodeView.clear();
         grid.clear();
         productOptions.clear();
         countryOptions.clear();
@@ -154,7 +158,11 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 }
 
 
+                onReady();
+
                 waitmask.hide();
+                
+                
             });
         }
         else{
@@ -166,6 +174,8 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             countryCodes.forEach((countryCode)=>{
                 countryOptions.add(countryCode, countryCode);
             });
+            
+            onReady();
 
         }
     };

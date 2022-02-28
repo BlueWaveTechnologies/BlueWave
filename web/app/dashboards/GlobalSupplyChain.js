@@ -12,7 +12,7 @@ if(!bluewave.dashboards) bluewave.dashboards={};
 bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
     var me = this;
-    var title = "Global Supply Chain";
+    var title = "Medical Glove Supply Chain";
 
     var dashboardPanel;
     var yAxis = "lines";
@@ -74,7 +74,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     this.clear = function(){
 
         dashboardPanel.clear();
-
+        if (importSummary) importSummary.hide();
     };
 
 
@@ -243,8 +243,8 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
           //Update bar charts
-            //get("import/ProductCode?include=country_of_origin", {
-            get("test/imports/country_of_origin.csv", {
+            get("import/ProductCode?include=country_of_origin", {
+            //get("test/imports/country_of_origin.csv", {
                 success: function(text) {
                     var data = d3.csvParse(text);
 
@@ -773,7 +773,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             },
             onClick: function(o){
                 var e = o.event;
-                if (e.detail === 2) { //double click
+                //if (e.detail === 2) { //double click
                     var countryCode = o.feature.properties.code;
                     if (!countries[countryCode]) return;
 
@@ -783,7 +783,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                     else{
                         showImportSummary([], Object.keys(countries), countryCode);
                     }
-                }
+                //}
             },
             onMouseOver: function(o){
                 var countryCode = o.feature.properties.code;
@@ -809,13 +809,13 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
   //**************************************************************************
   //** showImportSummary
   //**************************************************************************
-    var showImportSummary = function(countryCode){
+    var showImportSummary = function(productCodes, countryCodes, countryCode){
         if (!importSummary){
             var win = new javaxt.dhtml.Window(document.body, {
                 title: "Import Summary",
                 width: 1410,
                 height: (1080-300),
-                modal: false,
+                modal: true,
                 style: config.style.window,
                 resizable: true
             });
@@ -831,7 +831,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
         importSummary.clear();
         importSummary.show();
-        importSummary.update(countryCode);
+        importSummary.update(productCodes, countryCodes, countryCode);
     };
 
 
