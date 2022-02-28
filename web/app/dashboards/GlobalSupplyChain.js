@@ -903,25 +903,16 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
                 var line = [[manufacturer_lon, manufacturer_lat], [unladed_port_lon, unladed_port_lat]];
-                var midPoint = null;
+                var midPoint = null; //map.getMidPoint(line, 0.1);
 
-                if (unladed_port_lon<-90){
-                    midPoint = map.getMidPoint(line, 0.2, "north");
-                }
-                else{
-                    if (manufacturer_lat>20){
-                        midPoint = map.getMidPoint(line, 0.2, "north");
-                    }
-                    else{
-                        midPoint = map.getMidPoint(line, 0.2, "south");
-                    }
-                }
 
                 if (midPoint){ line.splice(1, 0, midPoint);
-                lines.push(line);
+                //
                 }
+                lines.push(line);
 
             });
+
 
             map.addLines(lines, {
                 name: "links",
@@ -937,17 +928,6 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         addLines();
         addPoints(consignees, "orange");
         addPoints(ports, "red");
-
-
-      //Add overlay for clicking purposes
-        map.addPolygons(mapData.countries.features, {
-            name: "countryOverlay",
-            style: {
-                fill: "rgba(0,0,0,0.0)",
-                stroke: "none"
-            }
-        });
-
 
         map.update();
     };
