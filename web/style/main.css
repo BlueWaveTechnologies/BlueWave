@@ -1193,6 +1193,93 @@ li.tree-node:hover {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.doc-compare-panel-ratings {
+    position: relative;
+    display: inline-block;
+    /* text-align: center; */
+    left: 30%;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-compare-panel-ratings-container {
+    cursor: default;
+    list-style: none;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-compare-panel-ratings-icon {
+    position: relative;
+    display: block;
+    float: left;
+    margin: 14px 16px 4px;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    background-color: #ff9800;
+    /* border-radius: 50%; */
+    transition: 0.2s;
+}
+
+
+.doc-compare-panel-ratings-icon .fas.fa-thumbs-up {
+    position: relative;
+    display: block;
+    float: left;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #008809;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
+
+.doc-compare-panel-ratings-icon .fas.fa-thumbs-down {
+    position: relative;
+    display: block;
+    float: right;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #ff0000;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
+
+
+.doc-compare-panel-ratings-icon:hover {
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.46);
+}
+
+
+
 /**************************************************************************/
 /** Document Analysis
 /**************************************************************************/

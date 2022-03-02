@@ -340,6 +340,60 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
     };
 
+  //**************************************************************************
+  //** createRatings
+  //**************************************************************************
+  var createRatings = function(parent){ // lazy loaded when a similarity is selected
+    var thumbsDown, thumbsUp;
+
+        var createButton = function(buttonClassName){
+
+            var icon = document.createElement("div");
+            icon.className = "doc-compare-panel-ratings-icon";
+            // icon.innerHTML = buttonClassName;
+            icon.innerHTML =`<i class="${buttonClassName}"></i>`;
+            return icon;
+        };
+
+        el = document.createElement("div");
+        el.className = "doc-compare-panel-ratings";
+        addShowHide(el);
+        el.hide();
+        // el.show();
+
+        parent.appendChild(el);
+        var div = document.createElement("div");
+        div.className = "doc-compare-panel-ratings-container";
+        el.appendChild(div);
+
+        var thumbsUp = createButton("fas fa-thumbs-up");
+        var thumbsDown = createButton("fas fa-thumbs-down");
+
+        div.appendChild(thumbsUp);
+        div.appendChild(thumbsDown);
+
+        thumbsUp.onclick = function(){
+            console.log("clicked the thumbsup button");
+
+        };
+
+        thumbsDown.onclick = function(){
+            console.log("clicked the thumbsDown button");
+        };
+
+
+        return {
+            el:el,
+            clear: function(){
+            },
+            update: function(){
+                el.clear();
+            }
+        };
+    };
+
+
+
 
   //**************************************************************************
   //** createComparisonPanel
@@ -442,11 +496,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 var h = bbox[3]-y;
                                 var d = document.createElement("div");
 
-                                var innerDiv = document.createElement("div");
-                                innerDiv.innerHTML = '<i class="fa-solid fa-thumbs-up"></i>';
-                                innerDiv.zIndex = 3;
-
-                                d.appendChild(innerDiv);
                                 img.d.push(d);
 
                                 // set resize listeners
@@ -483,14 +532,35 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                     this.style.top = `${newY}px`;
                                 };
 
+                                d.clear = function(){
+                                    this.innerHTML = "";
+                                    this.style.backgroundColor = ""; // add a class to replace this, in-active class
+                                    this.style.opacity = ""; // add a class to replace this, in-active class
+                                    this.isSelected = false;
+                                };
+
                                 d.select = function(){
                                     console.log("selected this similarity div");
+                                    // if its already selected then return
+                                        if (this.isSelected) return;
+
+                                    this.isSelected = true;
+                                    this.highlight();
+                                    // this.scrollTo(); // add this later for scrolling down to the highlighted element
 
                                 };
 
+                                d.highlight = function(){
+                                    this.style.backgroundColor = "blue"; // add a class to replace this, active class
+                                    this.style.opacity = "50%"; // add a class to replace this, active class
+                                };
+
+                                d.removeSimilarity = function(){
+                                    this.hide();
+                                };
 
 
-                                d.style.position = "absolute";
+                                d.style.position = "absolute"; // add a class here
                                 d.style.border = "1px solid red";
                                 d.style.left = (x*img.width)+"px";
                                 d.style.top = (y*img.height)+"px";
@@ -507,7 +577,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 img.parentNode.appendChild(d);
 
                                 var tag = document.createElement("div");
-                                tag.style.color = "white";
+                                tag.style.color = "white"; // add a class here
                                 tag.style.width = "30px";
                                 tag.style.height = "20px";
                                 tag.style.textAlign = "left";
@@ -548,20 +618,34 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                                 tag.onclick = function (){
                                     console.log("tag clicked");
-                                    console.log(this.d);
-                                    // this.d.style.border = "";
-                                    // this.hide();
-                                    // this.d.hide();
+                                    console.log(this.d.select());
+
                                     console.log("the type of this is");
                                     console.log(this.type);
-                                    this.d.style.backgroundColor = "blue";
-                                    this.d.style.opacity = "35%";
+                                };
+
+                                tag.removeSimilarity = function(){
+                                    this.hide();
+                                    this.d.removeSimilarity();
                                 };
 
                                 tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
                                     console.log("mouse is hovering over tag");
                                     console.log(this.type);
+                                    this.showTooltip();
+                                    this.d.highlight();
                                 };
+
+                                tag.onmouseleave = function(){
+                                    this.d.clear();
+                                }
+
+                                tag.showTooltip = function(){
+                                    console.log("calling show tooltip");
+                                    console.log("not yet implemented!")
+
+                                };
+
                             });
                         });
                     });
