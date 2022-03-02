@@ -441,6 +441,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 var w = bbox[2]-x;
                                 var h = bbox[3]-y;
                                 var d = document.createElement("div");
+
+                                var innerDiv = document.createElement("div");
+                                innerDiv.innerHTML = '<i class="fa-solid fa-thumbs-up"></i>';
+                                innerDiv.zIndex = 3;
+
+                                d.appendChild(innerDiv);
                                 img.d.push(d);
 
                                 // set resize listeners
@@ -460,14 +466,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                     });
                                 };
 
-                                // addResizeListener(parent.parentNode, resizeListener);
                                 addResizeListener(parent, resizeListener);
 
 
                                 d.rescale = function(scaleW, scaleH){
                                     console.log("rescale called for d!");
 
-                                    var rect = javaxt.dhtml.utils.getRect(this);
                                     var newHeight = this.originalHeight * scaleH;
                                     var newWidth = this.originalWidth * scaleW;
                                     var newX = this.originalX * scaleW;
@@ -478,6 +482,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                     this.style.left = `${newX}px`;
                                     this.style.top = `${newY}px`;
                                 };
+
+                                d.select = function(){
+                                    console.log("selected this similarity div");
+
+                                };
+
+
 
                                 d.style.position = "absolute";
                                 d.style.border = "1px solid red";
@@ -787,26 +798,39 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             };
 
             // if its less than or equal to 10 increment by 1
-            if (totalPages <= 10) increment = 1;
-            // if its more than 10 and less than or equal to 50 then increment by 5
-            if (totalPages > 10 & totalPages <= 50) increment = 5;
-            // if its more than 50 and less than 100 increment by 10
-            if (totalPages > 50 & totalPages <= 100) increment = 10;
-            // if it's more than 100 then increment by whatever divides it best
-            if (totalPages > 100) increment = bestIncrement(totalPages,maxDots);
+            if (totalPages <= 10) {
+                increment = 1;
+                var numDots = Math.round(totalPages/increment);
 
+            }
+            else {
+                increment = bestIncrement(totalPages,maxDots-1);
+                var numDots = Math.round(totalPages/increment)+1;
+            };
 
 
             // set li elements with links to each page
-            var numDots = Math.round(totalPages/increment);
             var fileIndexList = [];
-            for (var i=0; i<numDots; i++){
+            for (var i=0; i < numDots; i++){
                 var li = document.createElement("li");
                 li.name = i;
-                fileIndexList.push((i * increment));
+                if (i == 0){ // if it's the first dot then index at file index 0
+                     fileIndexList.push(0);
+                     li.indexedPage = 0;
+                }
+                else if (i == numDots-1){// if its the last dot then index at last file index
+                    fileIndexList.push(totalPages-1);
+                    li.indexedPage = (totalPages-1);
+                }
+                else{
+                    fileIndexList.push(i * increment);
+                    li.indexedPage = (i * increment-1);
+                }
+
                 li.onclick = function(){
                   // find li index #
                     var liIndex = this.name; // determine which button this is
+                    var pageIndex = this.indexedPage; // determine page number associated with this button
 
                     var currSelection = -1;
                     for (var i=0; i<ul.childNodes.length; i++){
@@ -819,11 +843,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     var diff = liIndex-currSelection;
 
                     if (diff>0){
-                        currPair = (liIndex * increment)-1; // counteract button increment
+                        currPair = pageIndex-1; // counteract button increment
                         nextButton.click();
                     }
                     else{
-                        currPair = (liIndex * increment)+1; // counteract button increment
+                        currPair = pageIndex+1; // counteract button increment
                         backButton.click();
                     }
 
