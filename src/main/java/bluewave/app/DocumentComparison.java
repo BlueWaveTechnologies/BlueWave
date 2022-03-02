@@ -4,29 +4,29 @@ import java.sql.SQLException;
 
 
 //******************************************************************************
-//**  UserPreference Class
+//**  DocumentComparison Class
 //******************************************************************************
 /**
- *   Used to represent a UserPreference
+ *   Used to represent a DocumentComparison
  *
  ******************************************************************************/
 
-public class UserPreference extends javaxt.sql.Model {
+public class DocumentComparison extends javaxt.sql.Model {
 
-    private String key;
-    private String value;
-    private User user;
+    private Document a;
+    private Document b;
+    private JSONObject info;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public UserPreference(){
-        super("application.user_preference", java.util.Map.ofEntries(
+    public DocumentComparison(){
+        super("application.document_comparison", java.util.Map.ofEntries(
             
-            java.util.Map.entry("key", "key"),
-            java.util.Map.entry("value", "value"),
-            java.util.Map.entry("user", "user_id")
+            java.util.Map.entry("a", "a_id"),
+            java.util.Map.entry("b", "b_id"),
+            java.util.Map.entry("info", "info")
 
         ));
         
@@ -38,7 +38,7 @@ public class UserPreference extends javaxt.sql.Model {
   //**************************************************************************
   /** Creates a new instance of this class using a record ID in the database.
    */
-    public UserPreference(long id) throws SQLException {
+    public DocumentComparison(long id) throws SQLException {
         this();
         init(id);
     }
@@ -48,9 +48,9 @@ public class UserPreference extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
   /** Creates a new instance of this class using a JSON representation of a
-   *  UserPreference.
+   *  DocumentComparison.
    */
-    public UserPreference(JSONObject json){
+    public DocumentComparison(JSONObject json){
         this();
         update(json);
     }
@@ -65,14 +65,18 @@ public class UserPreference extends javaxt.sql.Model {
 
         try{
             this.id = getValue(rs, "id").toLong();
-            this.key = getValue(rs, "key").toString();
-            this.value = getValue(rs, "value").toString();
-            Long userID = getValue(rs, "user_id").toLong();
+            Long aID = getValue(rs, "a_id").toLong();
+            Long bID = getValue(rs, "b_id").toLong();
+            this.info = new JSONObject(getValue(rs, "info").toString());
 
 
 
-          //Set user
-            if (userID!=null) user = new User(userID);
+          //Set a
+            if (aID!=null) a = new Document(aID);
+
+
+          //Set b
+            if (bID!=null) b = new Document(bID);
 
         }
         catch(Exception e){
@@ -85,48 +89,56 @@ public class UserPreference extends javaxt.sql.Model {
   //**************************************************************************
   //** update
   //**************************************************************************
-  /** Used to update attributes with attributes from another UserPreference.
+  /** Used to update attributes with attributes from another DocumentComparison.
    */
     public void update(JSONObject json){
 
         Long id = json.get("id").toLong();
         if (id!=null && id>0) this.id = id;
-        this.key = json.get("key").toString();
-        this.value = json.get("value").toString();
-        if (json.has("user")){
-            user = new User(json.get("user").toJSONObject());
+        if (json.has("a")){
+            a = new Document(json.get("a").toJSONObject());
         }
-        else if (json.has("userID")){
+        else if (json.has("aID")){
             try{
-                user = new User(json.get("userID").toLong());
+                a = new Document(json.get("aID").toLong());
             }
             catch(Exception e){}
         }
+        if (json.has("b")){
+            b = new Document(json.get("b").toJSONObject());
+        }
+        else if (json.has("bID")){
+            try{
+                b = new Document(json.get("bID").toLong());
+            }
+            catch(Exception e){}
+        }
+        this.info = json.get("info").toJSONObject();
     }
 
 
-    public String getKey(){
-        return key;
+    public Document getA(){
+        return a;
     }
 
-    public void setKey(String key){
-        this.key = key;
+    public void setA(Document a){
+        this.a = a;
     }
 
-    public String getValue(){
-        return value;
+    public Document getB(){
+        return b;
     }
 
-    public void setValue(String value){
-        this.value = value;
+    public void setB(Document b){
+        this.b = b;
     }
 
-    public User getUser(){
-        return user;
+    public JSONObject getInfo(){
+        return info;
     }
 
-    public void setUser(User user){
-        this.user = user;
+    public void setInfo(JSONObject info){
+        this.info = info;
     }
     
     
@@ -135,25 +147,25 @@ public class UserPreference extends javaxt.sql.Model {
   //**************************************************************************
   //** get
   //**************************************************************************
-  /** Used to find a UserPreference using a given set of constraints. Example:
-   *  UserPreference obj = UserPreference.get("key=", key);
+  /** Used to find a DocumentComparison using a given set of constraints. Example:
+   *  DocumentComparison obj = DocumentComparison.get("a_id=", a_id);
    */
-    public static UserPreference get(Object...args) throws SQLException {
-        Object obj = _get(UserPreference.class, args);
-        return obj==null ? null : (UserPreference) obj;
+    public static DocumentComparison get(Object...args) throws SQLException {
+        Object obj = _get(DocumentComparison.class, args);
+        return obj==null ? null : (DocumentComparison) obj;
     }
 
 
   //**************************************************************************
   //** find
   //**************************************************************************
-  /** Used to find UserPreferences using a given set of constraints.
+  /** Used to find DocumentComparisons using a given set of constraints.
    */
-    public static UserPreference[] find(Object...args) throws SQLException {
-        Object[] obj = _find(UserPreference.class, args);
-        UserPreference[] arr = new UserPreference[obj.length];
+    public static DocumentComparison[] find(Object...args) throws SQLException {
+        Object[] obj = _find(DocumentComparison.class, args);
+        DocumentComparison[] arr = new DocumentComparison[obj.length];
         for (int i=0; i<arr.length; i++){
-            arr[i] = (UserPreference) obj[i];
+            arr[i] = (DocumentComparison) obj[i];
         }
         return arr;
     }

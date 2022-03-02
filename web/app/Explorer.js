@@ -18,7 +18,7 @@ bluewave.Explorer = function(parent, config) {
     var tooltip, tooltipTimer, lastToolTipEvent; //tooltip
     var drawflow, nodes = {}; //drawflow
     var dbView, lineEditor, barEditor, sankeyEditor, layoutEditor, nameEditor,
-    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, userManager,
+    histogramEditor, supplyChainEditor, pieEditor, scatterEditor, mapEditor, calendarEditor, treeMapEditor, userManager,
     fileViewer, docComparer; //popup dialogs
     var windows = [];
     var zoom = 0;
@@ -419,6 +419,9 @@ bluewave.Explorer = function(parent, config) {
                         }
                         if (node.type==="supplyChain"){
                             button.mapChart.enable();
+                        }
+                        if (node.type==="pdf"){
+                            button.compareDocs.enable();
                         }
                         numNodes++;
                     }
@@ -982,8 +985,8 @@ bluewave.Explorer = function(parent, config) {
         createMenuButton("histogramChart", "fas fa-chart-area", "Histogram Chart", menubar);
         createMenuButton("scatterChart", "fas fa-braille", "Scatter Chart" , menubar);
         createMenuButton("mapChart", "fas fa-globe-americas", "Map", menubar);
-        //createMenuButton("treemapChart", "fas fa-border-all", "Treemap Chart", menubar);
-        //createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
+        createMenuButton("treeMapChart", "fas fa-border-all", "Treemap Chart", menubar);
+        createMenuButton("calendarChart", "fas fa-calendar-alt", "Calendar Chart", menubar);
         createMenuButton("sankeyChart", "fas fa-random", "Sankey", menubar);
         createMenuButton("supplyChain", "fas fa-link", "Supply Chain", menubar);
         createMenuButton("compareDocs", "fas fa-not-equal", "Document Analysis", menubar);
@@ -1432,6 +1435,7 @@ bluewave.Explorer = function(parent, config) {
                             title: "Edit Scatter Chart",
                             width: 1060,
                             height: 600,
+                            resizable: true,
                             editor: bluewave.charts.ScatterEditor
                         });
                     }
@@ -1471,6 +1475,36 @@ bluewave.Explorer = function(parent, config) {
                     }
 
                     editChart(this, barEditor);
+                };
+                break;
+            case "calendarChart" :
+                node.ondblclick = function(){
+
+                    if (!calendarEditor){
+                        calendarEditor = createNodeEditor({
+                            title: "Edit Calendar Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.CalendarEditor
+                        });
+                    }
+
+                    editChart(this, calendarEditor);
+                };
+                break;
+            case "treeMapChart" :
+                node.ondblclick = function(){
+                    if (!treeMapEditor){
+                        treeMapEditor = createNodeEditor({
+                            title: "Edit Tree Map Chart",
+                            width: 1060,
+                            height: 600,
+                            resizable: true,
+                            editor: bluewave.charts.TreeMapEditor
+                        });
+                    }
+                    editChart(this, treeMapEditor);
                 };
                 break;
 
@@ -1807,6 +1841,7 @@ bluewave.Explorer = function(parent, config) {
                 title: "Edit Pie Chart",
                 width: 1060,
                 height: 600,
+                resizable: true,
                 editor: bluewave.charts.PieEditor
             });
         }
@@ -2920,6 +2955,14 @@ bluewave.Explorer = function(parent, config) {
                         else if (node.type==="scatterChart"){
                             var scatterChart = new bluewave.charts.ScatterChart(createChartContainer(),{});
                             scatterChart.update(chartConfig, data);
+                        }
+                        else if (node.type==="calendarChart"){
+                            var calendarChart = new bluewave.charts.CalendarChart(createChartContainer(),{});
+                            calendarChart.update(chartConfig, data);
+                        }
+                        else if (node.type==="treeMapChart"){
+                            var treeMapChart = new bluewave.charts.TreeMapChart(createChartContainer(),{});
+                            treeMapChart.update(chartConfig, data);
                         }
                         else if (node.type==="mapChart"){
 

@@ -52,7 +52,8 @@ public class WebServices extends WebService {
 
 
       //Sync bluewave user accounts with the graph database
-        bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
+        Neo4J graph = Config.getGraph(null);
+        if (graph!=null) bluewave.graph.Maintenance.syncUsers(graph);
 
 
       //Get database
@@ -66,10 +67,17 @@ public class WebServices extends WebService {
         reportService = new ReportService();
         dataService = new DataService(new javaxt.io.Directory(web + "data"));
         queryService = new QueryService(webConfig);
-        graphService = new GraphService();
-        importService = new ImportService();
         documentService = new DocumentService();
-        supplyChainService = new SupplyChainService();
+
+
+        if (graph!=null){
+            graphService = new GraphService();
+            importService = new ImportService();
+            supplyChainService = new SupplyChainService();
+        }
+        else{
+            console.log("Graph services offline");
+        }
 
 
 
@@ -228,7 +236,7 @@ public class WebServices extends WebService {
         else if (service.equals("import")){
             ws = importService;
         }
-        else if (service.equals("document")){
+        else if (service.equals("document") || service.equals("documents")){
             ws = documentService;
         }
         else if (service.equals("supplychain")){
@@ -243,7 +251,8 @@ public class WebServices extends WebService {
                 ws = dashboardService;
                 String p = serviceRequest.getPath(1).toString();
                 if (p!=null){
-                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups")){
+                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups") ||
+                        p.equalsIgnoreCase("group") || p.equalsIgnoreCase("permissions")){
                         serviceRequest = new ServiceRequest(service, request);
                     }
                 }

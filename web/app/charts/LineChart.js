@@ -13,17 +13,16 @@ bluewave.charts.LineChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: {
-            top: 25,
-            right: 75,
-            bottom: 65,
-            left: 82
-        }
+        xGrid: false,
+        yGrid: false,
+        scaling: "linear", //"logarithmic"
+        stackValues: false,
+        endTags: false,
+        animationSteps: 1500
     };
     var svg, chart, plotArea;
     var x, y;
-    var dataSets;
-    var scaleOption;
+    var layers=[];
 
 
   //**************************************************************************
@@ -31,7 +30,7 @@ bluewave.charts.LineChart = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        config = merge(config, defaultConfig);
+        me.setConfig(config);
 
 
         initChart(parent, function(s, g){
@@ -42,222 +41,156 @@ bluewave.charts.LineChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** setConfig
+  //**************************************************************************
+    this.setConfig = function(chartConfig){
+        if (!chartConfig) config = defaultConfig;
+        else config = merge(chartConfig, defaultConfig);
+
+        me.setScaling(config.scaling);
+    };
+
+
+  //**************************************************************************
+  //** setScaling
+  //**************************************************************************
+  /** Used to set the horizontal scaling option. Options include "logarithmic"
+   *  and "linear" (default)
+   */
+    this.setScaling = function(scale){
+        config.scaling = scale==="logarithmic" ? "logarithmic" : "linear";
+    };
+
+
+  //**************************************************************************
+  //** displayEndTags
+  //**************************************************************************
+  /** Used to specify whether to display tags at the end of the lines
+   */
+    this.displayEndTags = function(b){
+        config.endTags = b===true ? true : false;
+    };
+
+
+  //**************************************************************************
   //** clear
   //**************************************************************************
     this.clear = function(){
-        if (chart) chart.selectAll("*").remove();
+        clearChart();
+        layers=[];
     };
 
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(chartConfig, data){
-        me.clear();
-
+    this.update = function(){
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-            renderChart(chartConfig, data, parent);
+            renderChart(parent);
         });
+    };
+
+
+  //**************************************************************************
+  //** addLine
+  //**************************************************************************
+    this.addLine = function(line, data, xAxis, yAxis){
+        layers.push({
+            line: line,
+            data: data,
+            xAxis: xAxis+"",
+            yAxis: yAxis+""
+        });
+    };
+
+
+  //**************************************************************************
+  //** getLayers
+  //**************************************************************************
+    this.getLayers = function(){
+        return layers;
+    };
+
+
+  //**************************************************************************
+  //** setLayers
+  //**************************************************************************
+    this.setLayers = function(arr){
+        layers = arr;
+    };
+
+
+  //**************************************************************************
+  //** clearChart
+  //**************************************************************************
+    var clearChart = function(){
+        if (chart) chart.selectAll("*").remove();
     };
 
 
   //**************************************************************************
   //** renderChart
   //**************************************************************************
-    var renderChart = function(chartConfig, data, parent){
-        me.clear();
+    var renderChart = function(parent){
+        clearChart();
+
+        var chartConfig = config;
+        var data = layers.map( d => d.data );
+        if (data.length === 0) return;
+
 
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
-        var margin = config.margin;
-        var axisHeight = height - margin.top - margin.bottom;
-        var axisWidth = width - margin.left - margin.right;
-        var plotHeight = height - margin.top - margin.bottom;
-        var plotWidth = width - margin.left - margin.right;
+        var axisHeight = height;
+        var axisWidth = width;
         plotArea = chart.append("g");
         plotArea
-            .attr("width", plotWidth)
-            .attr("height", plotHeight)
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + (margin.top) + ")"
-            );
+            .attr("width", width)
+            .attr("height", height);
 
-
-
-
-      //Check that axis exist and are populated
-        var xKey = chartConfig.xAxis;
-        var yKey = chartConfig.yAxis;
-        if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
 
       //Get chart options
-        scaleOption = chartConfig.scaleOption;
-        if (!scaleOption) scaleOption = "linear";
-        var group = chartConfig.group;
         var showLabels = chartConfig.endTags;
         if (showLabels===true || showLabels===false){}
         else showLabels = data.length>1;
-        var stack = chartConfig.stack;
-        var ticks = chartConfig.ticks;
-        if (isNaN(ticks)) ticks = 10;
+        var stackValues = chartConfig.stackValues===true;
+        var accumulateValues = chartConfig.accumulateValues===true;
 
 
-        var data1 = data[0];
-        dataSets = data;
-        data = data1;
-
-        var globalxKeyType = getType(data1[0][xKey]);
-
-        var mergedData = d3.merge(dataSets);
-
-        
-            //Get max line
-        //     var maxData = d3.nest()
-        //         .key(function (d) { return d[xKey]; })
-        //         .rollup(function (d) {
-        //             return d3.max(d, function (g) {
-        //                 return parseFloat(g[yKey]);
-        //             });
-        //         }).entries(mergedData);
-        // }
-        
-        //Consolidate all this into max/sum/min function
-        //Get max line or sum of lines for stack
-        var maxData = d3.nest()
-            .key(function (d) { return d[xKey]; })
-            .rollup(function (d) {
-
-                if (stack) {
-                    return d3.sum(d, function (g) {
-                        return parseFloat(g[yKey]);
-                    });
-                } else {
-                    return d3.max(d, function (g) {
-                        return parseFloat(g[yKey]);
-                    });
-                }
-
-            }).entries(mergedData);
-
-        //Get minimum line
-        var minData = d3.nest()
-            .key(function (d) { return d[xKey]; })
-            .rollup(function (d) {
-                return d3.min(d, function (g) {
-                    return parseFloat(g[yKey]);
-                });
-            }).entries(mergedData);
-
-
-      //Render X/Y axis
-        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, scaleOption, "lineChart", ticks);
-        x = axes.x;
-        y = axes.y;
-
-
-      //Reformat data if "group by" is selected
-        if(group !== null && group !== undefined && group !==""){
-
-            let groupData = d3.nest()
-            .key(function(d){return d[group];})
-            .entries(data);
-
-            let tempDataSets = [];
-            groupData.forEach(function(g){
-
-                tempDataSets.push(g.values)
-            })
-
-            dataSets = tempDataSets;
-            var subgroups = groupData.map(function(d) { return d["key"]; });
-        }
-
-        if (stack){
-        //Nest merged data object by X-axis value for stacked area
-        var groupedStackData = d3.nest()
-            .key( (d) => d[xKey])
-            .entries(mergedData)
-
-
-        let stackGroup=[];
-        let stackLength = groupedStackData[0].values.length;
-        for (let i=0; i<stackLength; i++){
-            stackGroup.push(i);
-        }
-
-        var stackedData = d3.stack()
-            // .keys(subgroups) no idea why this doesn't work
-            .keys(stackGroup)
-            .value(function (d, key) {
-
-                let v = d.values[key];
-                return v[yKey];
-
-            })
-            (groupedStackData)
-
-
-        var colors = bluewave.utils.getColorPalette(true);
-
-        plotArea
-            .selectAll("stacks")
-            .data(stackedData)
-            .enter()
-            .append("path")
-            .attr("dataset", (d, i) => i )
-            .style("fill", function(d, i){
-                //Get color from config or mod through color array
-                return chartConfig["lineColor" + i] || colors[i%colors.length];
-            })
-            .style("opacity", function(d, i){
-                return chartConfig["opacity" + i];
-            })
-            .attr("d", d3.area()
-                .x(function (d, i) {
-
-                    let subData = d.data;
-                    let subKey = d.data.key;
-
-                    if (globalxKeyType === "date"){
-                        subKey = new Date(subKey)
+      //Generate unique list of x-values across all layers
+        var xKeys = [];
+        layers.forEach(function(layer){
+            if (!layer.data) return;
+            layer.data.forEach(function(d){
+                var xKey = d[layer.xAxis];
+                var addKey = true;
+                for (var i=0; i<xKeys.length; i++){
+                    if (xKeys[i]==xKey){
+                        addKey = false;
+                        break;
                     }
-
-                    return x(subKey);
-
-                })
-                .y0(function (d) { return y(d[0]); })
-                .y1(function (d) { return y(d[1]); })
-            )
-            .attr("class", "stackarea")
-            .on("click", function(d){
-                var datasetID = parseInt(d3.select(this).attr("dataset"));
-                me.onClick(this, datasetID, d);
+                }
+                if (addKey) xKeys.push(xKey);
             });
-
-        }
+        });
 
 
 
       //Create dataset to render
         var arr = [];
-        for (let i=0; i<dataSets.length; i++){
+        for (let i=0; i<layers.length; i++){
+            if (!layers[i].line) continue;
 
-            let xAxisN = chartConfig[`xAxis${i+1}`];
-            let yAxisN = chartConfig[`yAxis${i+1}`];
+
+            let xKey = layers[i].xAxis;
+            let yKey = layers[i].yAxis;
+
 
             //If axes not picked, skip pushing/rendering this dataset
-            if ((!xAxisN || !yAxisN) && !group && i>0) continue;
+            if (!xKey || !yKey) continue;
 
-            if (chartConfig.hasOwnProperty(`xAxis${i+1}`) && chartConfig.hasOwnProperty(`yAxis${i+1}`)){
-
-                xKey = xAxisN;
-                yKey = yAxisN;
-            }
-
-            // if(!xKey || !yKey) continue;
 
             var sumData = d3.nest()
                 .key(function(d){return d[xKey];})
@@ -265,30 +198,419 @@ bluewave.charts.LineChart = function(parent, config) {
                     return d3.sum(d,function(g){
                         return g[yKey];
                     });
-            }).entries(dataSets[i]);
+            }).entries(layers[i].data);
+
+
+          //Get lineConfig
+            var lineConfig = layers[i].line.getConfig();
+
+
+          //Accumulate y-values as needed
+            if (accumulateValues){
+                sumData.forEach(function(d, idx){
+                    var val = sumData[idx].value;
+                    if (isNaN(val)) sumData[idx].value = 0;
+                    if (idx>0){
+                        sumData[idx].value += sumData[idx-1].value;
+                    }
+                });
+            }
 
 
           //Smooth the data as needed
-            var smoothingType = chartConfig["smoothingType" + i];
+            var smoothingType = lineConfig.smoothing;
             if (smoothingType){
-                var smoothingValue = chartConfig["smoothingValue" + i];
+                var smoothingValue = lineConfig.smoothingValue;
                 applySmoothing(smoothingType, smoothingValue, sumData);
             }
 
-            arr.push(sumData);
-        }
+
+            arr.push( {lineConfig: lineConfig, sumData: sumData} );
+        };
 
 
 
-      //Update chartConfig with line colors
-        var colors = bluewave.utils.getColorPalette(true);
-        for (let i=0; i<arr.length; i++){
-            var lineColor = chartConfig["lineColor" + i];
-            if (!lineColor){
-                lineColor = colors[i%colors.length];
-                chartConfig["lineColor" + i] = lineColor;
+      //Stack values
+        if (stackValues){
+
+
+          //Sort arr by largest data set for stacking
+            if (accumulateValues){
+                arr.sort(function(a, b){
+                    a = a.sumData;
+                    a = a[a.length-1].value;
+                    b = b.sumData;
+                    b = b[b.length-1].value;
+                    return b-a;
+                });
             }
+            else{
+                var temp = [];
+                arr.forEach(function(d){
+                    var sumData = d.sumData;
+                    var sumValue = 0;
+                    sumData.forEach((d) => sumValue+=d.value);
+                    temp.push({
+                        sumValue: sumValue,
+                        sumData: sumData,
+                        lineConfig: d.lineConfig
+                    });
+                });
+                temp.sort(function(a, b){
+                    return b.sumValue-a.sumValue;
+                });
+
+                arr = [];
+                temp.forEach((d) => arr.push({
+                    sumData: d.sumData,
+                    lineConfig: d.lineConfig
+                }));
+            }
+
+
+
+          //Analyze all the keys and get key type (e.g. number, string, date)
+            var xType = getType(xKeys);
+
+
+          //Analyze keys in each dataset and determine sort direction
+            var xSorts = {};
+            arr.forEach(function(d, i){
+                var sumData = d.sumData;
+
+                var sortDir = "none";
+                var asc = 0;
+                var desc = 0;
+                var unk = 0;
+
+
+                if (sumData.length<2){
+                    //No sort if there are only 1 or 0 elements
+                }
+                else{
+                    for (var j=0; j<sumData.length-1; j++){
+
+                        var currKey = sumData[j].key;
+                        var nextKey = sumData[j+1].key;
+
+                        if (xType=="date"){
+                            currKey = new Date(currKey).getTime();
+                            nextKey = new Date(nextKey).getTime();
+                            if (nextKey>=currKey) asc++;
+                            if (nextKey<=currKey) desc++;
+                        }
+                        else if (xType=="number"){
+                            currKey = parseFloat(currKey);
+                            nextKey = parseFloat(nextKey);
+                            if (nextKey>currKey) asc++;
+                            if (nextKey<currKey) desc++;
+                            if (nextKey==currKey) unk++;
+                        }
+                        else {
+                            var x = currKey.localeCompare(nextKey);
+                            if (x<0) asc++;
+                            if (x>0) desc++;
+                            if (x==0) unk++;
+                        }
+                    }
+
+                    //console.log("asc", asc+unk, sumData.length-1);
+                    //console.log("desc", desc+unk, sumData.length-1);
+                    if (asc+unk==sumData.length-1) sortDir = "asc";
+                    if (desc+unk==sumData.length-1) sortDir = "desc";
+                    //console.log(d.lineConfig.label, xType, sortDir);
+
+                    var sort = xSorts[sortDir];
+                    if (!sort){
+                        sort = [];
+                        xSorts[sortDir] = sort;
+                    }
+                    sort.push(i);
+                }
+
+            });
+
+
+            var sortKeys = Object.keys(xSorts);
+            var xSort = sortKeys.length==1 ? sortKeys[0] : null;
+
+
+          //Sort xKeys
+            if (xSort){
+                xKeys.sort(function(a, b){
+                    if (xType=='number'){
+                        if (xSort=="asc"){
+                            return parseFloat(a)-parseFloat(b);
+                        }
+                        else{
+                            return parseFloat(b)-parseFloat(a);
+                        }
+                    }
+                    else if (xType=='date'){
+                        if (xSort=="asc"){
+                            return (new Date(a).getTime())-(new Date(b).getTime());
+                        }
+                        else{
+                            return (new Date(b).getTime())-(new Date(a).getTime());
+                        }
+                    }
+                    else{
+                        if (xSort=="asc"){
+                            return a.localeCompare(b);
+                        }
+                        else{
+                            return b.localeCompare(a);
+                        }
+                    }
+                });
+
+            }
+
+
+
+          //Fill in missing values
+            arr.forEach(function(d){
+                var sumData = d.sumData;
+                var newData = [];
+
+              //Get value for each key
+                xKeys.forEach(function(key){
+
+                    var val;
+                    for (var i=0; i<sumData.length; i++){
+                        var k = sumData[i].key;
+                        var v = sumData[i].value;
+                        if (k==key){
+                            val = v;
+                            break;
+                        }
+                    }
+
+                    newData.push({
+                        key: key,
+                        value: val
+                    });
+
+                });
+
+
+              //Trim leading null values
+                while (newData.length>0){
+                    var firstVal = newData[0].value;
+                    if (!isNaN(firstVal)) break;
+                    if (isNaN(firstVal)) newData.shift();
+                }
+
+
+                d.sumData = newData;
+
+            });
+
+
+
+
+          //Compute new values for each entry in arr
+            var arr2 = [];
+            arr.forEach(function(d, i){
+                var sumData = d.sumData;
+
+
+
+              //Clone sumData into newData
+                var newData = [];
+                sumData.forEach(function(d){
+                    newData.push({
+                        key: d.key,
+                        value: d.value
+                    });
+                });
+
+
+              //Update values in the newData
+                sumData.forEach(function(data, idx){
+                    var key = data.key;
+                    var val = data.value;
+
+
+                  //If val is null, use previous value in this series
+                    if (isNaN(val)){
+
+                        for (var n=idx-1; n>-1; n--){
+                            var prevVal = sumData[n].value;
+                            if (!isNaN(prevVal)){
+                                val = prevVal;
+                                break;
+                            }
+                        }
+
+                        if (isNaN(val)) val = 0;
+                    }
+
+
+                  //Find value under the current line
+                    var prevVals;
+                    for (var j=0; j<arr2.length; j++){
+                        var prevSumData = arr2[j].sumData;
+                        prevSumData.every(function(d){
+                            var k = d.key;
+                            var v = d.value;
+                            if (k==key){
+                                if (!isNaN(v)){
+                                    prevVals = v;
+                                    return false;
+                                }
+                            }
+                            return true;
+                        });
+                    }
+
+
+                  //Update val
+                    if (!isNaN(prevVals)) val+=prevVals;
+
+
+                  //Set value in the newData array
+                    newData[idx].value = val;
+
+                });
+
+
+              //Update arr2 with newData
+                arr2.push( {lineConfig: d.lineConfig, sumData: newData} );
+            });
+
+            arr = arr2;
         }
+
+
+
+
+      //Generate min/max datasets
+        var minData = [];
+        var maxData = [];
+        arr.forEach(function(a){
+            var sumData = a.sumData;
+            xKeys.forEach(function(key){
+
+                for (var i=0; i<sumData.length; i++){
+                    var d = sumData[i];
+                    var xKey = d.key;
+                    if (xKey===key){
+                        var val = d.value;
+
+                      //Update minData array
+                        var foundMatch = false;
+                        for (var j=0; j<minData.length; j++){
+                            var entry = minData[j];
+                            if (entry.key==key){
+                                foundMatch = true;
+                                entry.value = Math.min(entry.value, val);
+                            }
+                        }
+                        if (!foundMatch){
+                            minData.push({
+                                key: key,
+                                value: val
+                            });
+                        }
+
+                      //Update maxData array
+                        var foundMatch = false;
+                        for (var j=0; j<maxData.length; j++){
+                            var entry = maxData[j];
+                            if (entry.key==key){
+                                foundMatch = true;
+                                entry.value = Math.max(entry.value, val);
+                            }
+                        }
+                        if (!foundMatch){
+                            maxData.push({
+                                key: key,
+                                value: val
+                            });
+                        }
+
+                    }
+                }
+            });
+        });
+
+
+
+
+
+      //Render X/Y axis
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config);
+
+
+      //Update X/Y axis as needed
+        var margin = axes.margin;
+        if (margin){
+
+            var marginLeft = margin.left;
+            var marginRight = margin.right;
+            var marginTop = margin.top;
+            var marginBottom = margin.bottom;
+
+
+          //Update right margin as needed
+            if (showLabels){
+                var maxLabelWidth = 0;
+                var labelHeight = 0;
+                layers.forEach(function(layer, i){
+                    if (!layer.line) return;
+                    var label = layer.line.getLabel();
+                    if (!label) label = "Series " + (i+1);
+
+
+                    if (label){
+                        var temp = plotArea.append("text")
+                            .attr("dy", ".35em")
+                            .attr("text-anchor", "start")
+                            .text(label);
+                        var box = temp.node().getBBox();
+                        temp.remove();
+
+                        var w = Math.max(box.width+8, 60)+5;
+                        labelHeight = box.height;
+                        maxLabelWidth = Math.max(w, maxLabelWidth);
+                    }
+                });
+                // marginRight+=maxLabelWidth;
+                marginRight = maxLabelWidth + 5;
+                if (labelHeight>0){
+                    marginTop = Math.max((labelHeight/2), marginTop);
+                }
+            }
+
+
+
+            if (marginTop>0 || marginBottom>0 || marginLeft>0 || marginRight>0){
+                axisHeight-=(marginTop+marginBottom);
+                axisWidth-=(marginLeft+marginRight);
+                plotArea.selectAll("*").remove();
+                plotArea
+                    .attr(
+                        "transform",
+                        "translate(" + marginLeft + "," + marginTop + ")"
+                    );
+
+                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, minData, config);
+            }
+            margin = {
+                top: marginTop,
+                right: marginRight,
+                bottom: marginBottom,
+                left: marginLeft
+            };
+        }
+
+
+      //Get x and y functions from the axes
+        x = axes.x;
+        y = axes.y;
+
+
 
 
         var chartElements = [];
@@ -309,12 +631,16 @@ bluewave.charts.LineChart = function(parent, config) {
         fillGroup.attr("name", "fill");
         for (let i=0; i<arr.length; i++){
 
-            if(stack) break;
-            var sumData = arr[i];
+            //if(stack) break;
+            var sumData = arr[i].sumData;
 
-            let lineColor = chartConfig["lineColor" + i];
-            let startOpacity = chartConfig["startOpacity" + i];
-            let endOpacity = chartConfig["endOpacity" + i];
+            let fillConfig = arr[i].lineConfig.fill;
+
+            let lineColor = fillConfig.color;
+            let startOpacity = fillConfig.startOpacity;
+            let endOpacity = fillConfig.endOpacity;
+            var smoothingType = arr[i].lineConfig.smoothing;
+
             let keyType = getType(sumData[0].key);
 
             var getX = function(d){
@@ -325,10 +651,9 @@ bluewave.charts.LineChart = function(parent, config) {
                 }
             };
 
-// Why are we adding 1 here if I forget to ask? to avoid log(0)=-inf?
             var getY = function(d){
                 var v = parseFloat(d["value"]);
-                return (scaleOption === "logarithmic") ? y(v+1):y(v);
+                return (config.scaling === "logarithmic") ? y(v+1):y(v);
             };
 
           //Don't render area if the start and end opacity is 0
@@ -348,7 +673,7 @@ bluewave.charts.LineChart = function(parent, config) {
                 .attr(
                     "d", d3.area()
                     .x(getX)
-                    .y0(plotHeight)
+                    .y0(axisHeight)
                     .y1(getY)
                 );
 
@@ -363,24 +688,19 @@ bluewave.charts.LineChart = function(parent, config) {
         lineGroup.attr("name", "lines");
         for (let i=0; i<arr.length; i++){
 
-            if(stack) break;
-            var sumData = arr[i];
+            var sumData = arr[i].sumData;
+            let lineConfig = arr[i].lineConfig;
+            let pointConfig = lineConfig.point;
 
-            let lineColor = chartConfig["lineColor" + i];
-            let lineStyle = chartConfig["lineStyle" + i];
-            let lineWidth = chartConfig["lineWidth" + i];
-            let opacity = chartConfig["opacity" + i];
+            let lineColor = lineConfig.color;
+            let lineStyle = lineConfig.style;
+            let lineWidth = lineConfig.width;
+            let opacity = lineConfig.opacity;
 
-            let pointRadius = parseFloat(chartConfig["pointRadius" + i]);
-            if (isNaN(pointRadius) || pointRadius<0) pointRadius = 0;
-            let pointColor = chartConfig["pointColor" + i];
+            let pointRadius = pointConfig.radius;
+            let pointColor = pointConfig.color;
 
-            if (lineWidth == null) lineWidth = 1;
-            if (opacity == null) opacity = 1;
-            if (lineStyle == null) lineStyle = "solid";
-
-
-            var smoothingType = chartConfig["smoothingType" + i];
+            var smoothingType = lineConfig.smoothing;
 
             var getLine = function(){
                 if (smoothingType && smoothingType==="spline"){
@@ -444,38 +764,99 @@ bluewave.charts.LineChart = function(parent, config) {
                         raiseLine(chartElements[datasetID]);
                         me.onClick(this, datasetID, d);
                     });
-            }
+            };
 
-
+            
           //Display end tags if checked
             if (showLabels){
-                var label;
-                if (group){
-                    let d = dataSets[i][0];
-                    label = d[group];
-                    if (!label) label = group + " " + i;
-                }
-                else{
-                    var labelKey = "label" + (i>0 ? i+1 : "");
-                    label = chartConfig[labelKey];
-                    if (!label) label = "Series " + (i+1);
-                }
+                var label = lineConfig.label;
+                if (!label) label = "Series " + (i+1);
+
                 var line = chartElements[i].line2;
                 chartElements[i].tag = createTag(sumData, lineColor, label, line);
+
             }
+        
         };
 
+        //Add animations
+        var animationSteps = chartConfig.animationSteps;
+        if (!isNaN(animationSteps) && animationSteps > 50) {
 
+            let lines = lineGroup.selectAll("path");
+            let circles = circleGroup.selectAll("circle");
+            let fill = fillGroup.selectAll("path");
+
+            let min = d3.min(minData, d => parseFloat(d.value));
+            let scaleY = config.scaling === "logarithmic" ? y(min) : y(0);
+
+            //playing with rendering lines one at a time
+            // function animateLine(){
+            //     let length = this.getTotalLength();
+            //     i = d3.interpolateString("0," + length, length + "," + length);
+            //     return function (t) { return i(t); };
+            // }
+            
+            //Reset lines to y=0
+            lines.attr("d", d3.line().x(getX).y(scaleY));
+
+            circles.attr("cx", getX).attr("cy", scaleY);
+
+            fill.attr("d", d3.area()
+                    .x(getX)
+                    .y0( axisHeight )
+                    .y1(scaleY)
+                );
+
+            //Transition back to calculated y-values
+            lines.transition().duration(animationSteps)
+                .attr("d", getLine())
+
+                // .delay(function(d, i) { return i * 2000; })
+                // .attrTween("stroke-dasharray", animateLine)
+
+            circles.transition().duration(animationSteps)
+                .attr("cx", getX).attr("cy", getY)
+
+            fill.transition().duration(animationSteps)
+                .attr(
+                    "d", d3.area()
+                    .x(getX)
+                    .y0(axisHeight)
+                    .y1(getY)
+                    );
+
+            if (showLabels) {
+                for (var i = 0; i < chartElements.length; i++) {
+
+                    var poly = chartElements[i].tag.poly;
+                    var text = chartElements[i].tag.text;
+
+                    var polyTransform = poly.attr("transform");
+                    var textTransform = text.attr("transform");
+
+                    //Get x-coordinate from transform string
+                    var polyX = polyTransform.slice(10).split(",")[0];
+                    var textX = textTransform.slice(10).split(",")[0];
+
+                    //Set polygon vertex to (x, 0)
+                    poly.attr("transform", "translate(" + (polyX) + "," + (axisHeight - 9.6) + ")");
+                    text.attr("transform", "translate(" + (textX) + "," + (axisHeight) + ")");
+
+                    poly.transition().duration(animationSteps)
+                        .attr("transform", polyTransform)
+
+                    text.transition().duration(animationSteps)
+                        .attr("transform", textTransform)
+
+                }
+            };
+
+        };
 
       //Draw grid lines if option is checked
         if (chartConfig.xGrid || chartConfig.yGrid){
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
-        }
-
-      //Draw labels if checked
-        if (chartConfig.xLabel || chartConfig.yLabel){
-            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                axisHeight, axisWidth, margin, chartConfig.xAxis, chartConfig.yAxis);
         }
     };
 
@@ -503,7 +884,7 @@ bluewave.charts.LineChart = function(parent, config) {
             var tx = x(lastKey)
         }
 
-        var ty = (scaleOption==="logarithmic") ? y(lastVal+1) : y(lastVal);
+        var ty = (config.scaling==="logarithmic") ? y(lastVal+1) : y(lastVal);
 
         var temp = plotArea.append("text")
             .attr("dy", ".35em")
@@ -704,7 +1085,6 @@ bluewave.charts.LineChart = function(parent, config) {
     var initChart = bluewave.chart.utils.initChart;
     var getType = bluewave.chart.utils.getType;
     var drawAxes = bluewave.chart.utils.drawAxes;
-    var drawLabels = bluewave.chart.utils.drawLabels;
     var drawGridlines = bluewave.chart.utils.drawGridlines;
 
     init();

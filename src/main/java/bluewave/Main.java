@@ -6,10 +6,12 @@ import bluewave.web.WebApp;
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
+import com.google.gson.JsonObject;
 import java.net.InetSocketAddress;
 
 import javaxt.sql.*;
 import javaxt.json.*;
+import javaxt.io.File;
 import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
@@ -34,7 +36,7 @@ public class Main {
    */
     public static void main(String[] arr) throws Exception {
         HashMap<String, String> args = console.parseArgs(arr);
-    
+
 
       //Get jar file and schema
         Jar jar = new Jar(Main.class);
@@ -244,7 +246,7 @@ public class Main {
         return pw;
     }
 
-    
+
   //**************************************************************************
   //** importData
   //**************************************************************************
@@ -254,10 +256,10 @@ public class Main {
             importPremier(args);
         }
         else if (str.equalsIgnoreCase("Imports")){
-            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));            
+            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
             //imports.exportSummary();
             //imports.removeDuplicateEstablishments();
-        }     
+        }
         else if (str.equalsIgnoreCase("Establishments")){
             Neo4J database = Config.getGraph(null);
             Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
@@ -271,7 +273,7 @@ public class Main {
             }
         }
     }
-    
+
 
   //**************************************************************************
   //** importFile
@@ -305,14 +307,14 @@ public class Main {
                 keys[i] = Integer.parseInt(arr[i]);
             }
         }
-        
-        
+
+
       //Get number of threads
         String numThreads = args.get("-threads");
         if (numThreads==null) numThreads = args.get("-t");
         if (numThreads==null) numThreads = "1";
 
-        
+
       //Import file
         Neo4J graph = Config.getGraph(null);
         if (fileType.equals("csv")){
@@ -324,8 +326,8 @@ public class Main {
         }
         graph.close();
     }
-    
-    
+
+
   //**************************************************************************
   //** importPremier
   //**************************************************************************
@@ -333,13 +335,13 @@ public class Main {
         String localPath = args.get("-path");
         javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
         if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
-        
+
         Neo4J graph = Config.getGraph(null);
         Premier.importShards(dir, graph);
         graph.close();
     }
-    
-    
+
+
   //**************************************************************************
   //** delete
   //**************************************************************************
@@ -361,6 +363,35 @@ public class Main {
                     console.log("Failed to delete " + s);
                 }
             }
+        }
+        else if (str.equalsIgnoreCase("DocumentComparison")){
+            Config.initDatabase();
+            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()){
+                dc.delete();
+            }
+        }
+        else if (str.equals("index")){
+            Config.initDatabase();
+            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find()){
+                dc.delete();
+            }
+            for (bluewave.app.Document d : bluewave.app.Document.find()){
+                d.delete();
+            }
+            for (bluewave.app.File f : bluewave.app.File.find()){
+                f.delete();
+            }
+            javaxt.io.Directory dir = Config.getIndexDir();
+            boolean deletedDir = dir.delete();
+            if (deletedDir){
+                System.out.println("Sucessfully deleted index: " + dir);
+            }
+            else{
+                System.out.println("Failed to delete index: " + dir);
+            }
+        }
+        else{
+            System.out.println("Unsupported delete option: " + str);
         }
     }
 
@@ -441,16 +472,50 @@ public class Main {
         else if (test.equals("company")){
 
             String name = args.get("-name");
-            console.log(name);            
+            console.log(name);
             console.log(getCompanyName(name));
-                
+
+        }
+        else if (test.equalsIgnoreCase("document")){
+            javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
+            javaxt.io.Directory indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
+            javaxt.io.Directory searchDir = Config.getDirectory("webserver", "uploadDir");
+            if (searchDir==null) searchDir = new javaxt.io.Directory(jobDir.toString()+"uploads");
+
+            console.log("Searching:", searchDir);
+            console.log("Using Index:", indexDir);
+
+            bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(indexDir);
+            for (javaxt.io.File file : searchDir.getFiles("*.pdf", true)){
+                try{
+                    index.addFile(file);
+                }
+                catch(Exception e){
+                    //e.printStackTrace();
+                }
+            }
+
+
+            int totalHits = 0;
+            TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(args.get("-query"));
+            Iterator<Float> it = results.descendingKeySet().iterator();
+            while (it.hasNext()){
+                float score = it.next();
+                ArrayList<javaxt.io.File> files = results.get(score);
+                for (javaxt.io.File file : files){
+                    console.log(score, file);
+                    totalHits++;
+                }
+            }
+
+            console.log("done! hits: " + totalHits);
         }
         else{
             console.log("Unsupported test: " + test);
         }
     }
-    
-    
+
+
   //**************************************************************************
   //** download
   //**************************************************************************
@@ -465,7 +530,7 @@ public class Main {
             console.log("Unsupported download: " + download);
         }
     }
-    
+
 
   //**************************************************************************
   //** rtrim

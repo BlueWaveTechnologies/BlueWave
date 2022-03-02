@@ -14,14 +14,17 @@ bluewave.charts.MapChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         style: {
+            backgroundColor: "#fff"
         }
     };
     var svg, mapArea; //d3 elements
-    var countyData, countryData; //raw json
-    var counties, states, countries; //topojson
-    var options = []; //aggregation options
-    var projection;
-    var readOnly;
+    var projection, scale, translate, rotate, center;
+    var panningDisabled = false;
+    var background;
+    var layers = [];
+    var extent = {};
+    var projectionType = "Mercator";
+
 
   //**************************************************************************
   //** Constructor
@@ -35,9 +38,112 @@ bluewave.charts.MapChart = function(parent, config) {
         });
 
 
-        readOnly = false;
-        svg.call(d3.zoom().scaleExtent([1, 1])
-            .on('zoom', recenter));
+      //Watch for panning and zooming events
+        svg.call(
+            d3.zoom().scaleExtent([1, 1])
+            .on('zoom', recenter) //vs .on('end'
+        );
+
+      //Watch for mouse click events
+        svg.on("click", function(e) {
+            var projection = me.getProjection();
+            if (!projection) return;
+
+            var point = d3.mouse(this);
+            var coord = projection.invert(point);
+            me.onMouseClick(coord[1], coord[0], e);
+        });
+    };
+
+
+  //**************************************************************************
+  //** addPoints
+  //**************************************************************************
+  /** Used to add points to the map
+   *  @param points Accepts an array of [long, lat] points or a GeoJson object
+   *  @param config Style and other rendering options
+   */
+    this.addPoints = function(points, config){
+        layers.push({
+            type: "points",
+            features: points,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
+  //** addLines
+  //**************************************************************************
+  /** Used to add lines to the map
+   *  @param lines Accepts an array of lines, each defined by an array of points,
+   *  or a GeoJson object
+   *  @param config Style and other rendering options
+   */
+    this.addLines = function(lines, config){
+        layers.push({
+            type: "lines",
+            features: lines,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
+  //** addPolygons
+  //**************************************************************************
+  /** Used to add polygons to the map
+   *  @param labels Accepts a GeoJson object with polygons
+   *  @param config Style and other rendering options
+   */
+    this.addPolygons = function(polygons, config){
+        layers.push({
+            type: "polygons",
+            features: polygons,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
+  //** addLabels
+  //**************************************************************************
+  /** Used to add lables to the map
+   *  @param labels Accepts a GeoJson object with coordinates and properties
+   *  @param config Style and other rendering options
+   */
+    this.addLabels = function(labels, config){
+        layers.push({
+            type: "labels",
+            features: labels,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
+  //** addGrid
+  //**************************************************************************
+  /** Used to add graticule to the map
+   *  @param config Style and other rendering options
+   */
+    this.addGrid = function(config){
+        layers.push({
+            type: "grid",
+            features: null,
+            config: config
+        });
+    };
+
+
+  //**************************************************************************
+  //** setBackgroundColor
+  //**************************************************************************
+    this.setBackgroundColor = function(color){
+        config.style.backgroundColor = color;
+        if (color){
+            if (background) background.attr("fill", color);
+        }
     };
 
 
@@ -50,6 +156,41 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** setProjection
+  //**************************************************************************
+    this.setProjection = function(name){
+        projectionType = name;
+        projection = d3["geo"+name]();
+    };
+
+
+  //**************************************************************************
+  //** getCentroid
+  //**************************************************************************
+  /** Returns center point of a given feature
+   */
+    this.getCentroid = function(feature){
+        if (!feature) return null;
+        if (!projection) me.setProjection("Mercator");
+        var path = d3.geoPath(projection);
+        if (isArray(feature)){
+            var type = "Point";
+            if (isArray(feature[0])) type = "Polygon"; //not always true
+            feature = {
+                type: "Feature",
+                geometry: {
+                    type: type,
+                    coordinates: feature
+                }
+            };
+        }
+        var centroid = path.centroid(feature);
+        centroid = projection.invert(centroid);
+        return centroid;
+    };
+
+
+  //**************************************************************************
   //** onRecenter
   //**************************************************************************
   /** Called whenever the center point of the map is changed
@@ -58,18 +199,34 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** onUpdate
+  //** onRedraw
   //**************************************************************************
-  /** Called after the map has been rendered, after an update
+  /** Called whenever the zoom event ends
    */
-    this.onUpdate = function(){};
+    this.onRedraw = function(){};
 
 
   //**************************************************************************
-  //** setReadOnly
+  //** onMouseClick
   //**************************************************************************
-    this.setReadOnly = function(readonly){
-        readOnly = (readonly===false) ? false : true;
+  /** Called whenever the user clicks on the map
+   */
+    this.onMouseClick = function(lat, lon, e){};
+
+
+  //**************************************************************************
+  //** enablePan
+  //**************************************************************************
+    this.enablePan = function(){
+        panningDisabled = false;
+    };
+
+
+  //**************************************************************************
+  //** disablePan
+  //**************************************************************************
+    this.disablePan = function(){
+        panningDisabled = true;
     };
 
 
@@ -77,9 +234,18 @@ bluewave.charts.MapChart = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+        clearChart();
+        projection = scale = translate = rotate = center = null;
+        layers = [];
+    };
+
+
+  //**************************************************************************
+  //** clearChart
+  //**************************************************************************
+    var clearChart = function(){
         mapArea.node().innerHTML = "";
         mapArea.attr("transform", null);
-        options = [];
     };
 
 
@@ -92,383 +258,149 @@ bluewave.charts.MapChart = function(parent, config) {
         }
     };
 
+  //**************************************************************************
+  //** setCenter
+  //**************************************************************************
+   /**
+   * @param center Array of [long, lat] coordinate
+   */
+    this.setCenter = function(center, scale){
+
+      var width = parent.offsetWidth;
+      var height = parent.offsetHeight;
+
+      if (!scale) scale = width / 2 / Math.PI;
+
+      projection
+      .rotate([-center[0], 0])
+      .center([0, center[1]])
+      .scale(scale)
+      .translate([width / 2, height / 2]);
+
+    };
+
 
   //**************************************************************************
-  //** update
+  //** getMidPoint
   //**************************************************************************
-    this.update = function(chartConfig, data){
-        me.clear();
-        getMapData(function(){
-            var parent = svg.node().parentNode;
-            onRender(parent, function(){
-                update(parent, chartConfig, data);
-            });
-        });
+  /** Returns the midpoint between a pair of coordinates with an optional
+   *  perpendicular offset
+   *  @param ratio Perpendicular offset (optional). Defined as a ratio of the
+   *  distance between the start/end coordinates
+   */
+    this.getMidPoint = function(coordinates, ratio, inclination){
+
+        if (!projection) me.setProjection("Mercator");
+        if (isNaN(ratio)) ratio = 0;
+
+        if (inclination === "south") {
+            inclination = 1;
+        } else {
+            inclination = -1;
+        }
+        var coords = coordinates.slice();
+        //coordinates is a pair of [long, lat] coords
+        coords[0] = projection(coords[0]);
+        coords[1] = projection(coords[1]);
+
+        //Flip coordinates if line is east to west
+        if ((coords[1][0] - coords[0][0]) < 0) coords.reverse();
+
+        var midPointX = (coords[0][0] + coords[1][0])/2;
+        var midPointY = (coords[0][1] + coords[1][1])/2;
+
+        var deltaX = coords[1][0] - coords[0][0];
+        var deltaY = coords[1][1] - coords[0][1];
+
+        //Vector normal to line from origin scaled by ratio
+        var normVector = [-deltaY * ratio * inclination, deltaX * ratio * inclination];
+
+        //Translate vector from origin to midpoint
+        var pseudoPoint = [ (normVector[0] + midPointX) , (normVector[1] + midPointY) ];
+        pseudoPoint = projection.invert(pseudoPoint);
+
+        return pseudoPoint;
+
     };
 
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    var update = function(parent, chartConfig, data){
+    this.update = function(callback){
+        clearChart();
+
+        var parent = svg.node().parentNode;
+        onRender(parent, function(){
+            update(parent);
+            if (callback) callback();
+        });
+
+    };
+
+
+  //**************************************************************************
+  //** update
+  //**************************************************************************
+    var update = function(parent){
+        clearChart();
+
+
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
 
-        //set the color the 'water'
-        var backgroundColor = chartConfig.backgroundColor;
-        if(!backgroundColor){
-            backgroundColor = "white";
+
+        var centerLat = parseFloat(config.lat);
+        var centerLon = parseFloat(config.lon);
+        if (isNaN(centerLat)) centerLat = 0;
+        if (isNaN(centerLon)) centerLon = 0;
+
+
+        if (!projection) me.setProjection("Mercator");
+
+        if (projectionType === "AlbersUsa"){
+          projection.translate([width / 2, height / 2]);
+          draw();
+          return;
         }
-        svg.style('background-color', backgroundColor);
 
-        //Set the color of the land
-        var landColor = chartConfig.landColor;
-        if(!landColor){
-            landColor = "lightgray";
-        }
-
-      //Get min/max values
-        var extent = d3.extent(data, function(d) { return parseFloat(d[chartConfig.mapValue]); });
-
-
-      //Set color scale
-        var colorScale = {
-            "blue": d3.scaleQuantile(extent, d3.schemeBlues[7]),
-            "red": d3.scaleQuantile(extent, d3.schemeReds[7])
-        };
-        if (!chartConfig.colorScale) chartConfig.colorScale = "red";
-
-        var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-
-        var mapLevel = chartConfig.mapLevel;
-        if (mapLevel === "counties"){
-
-            projection = d3.geoAlbersUsa(); //.fitSize([width,height],counties);
-            var path = d3.geoPath(projection);
-
-          //Create map layer
-            var countyMap = mapArea.append("g");
-
-
-          //Render county polygons
-            var renderCounties = function(){
-                return countyMap.selectAll("path")
-                  .data(counties.features)
-                  .join("path")
-                  .attr("fill", 'none')
-                  .attr("d", path);
-            };
-
-
-          //Render state boundaries
-            var renderStates = function(renderPolygons){
-                if (renderPolygons===true){
-                    return countyMap.selectAll("whatever")
-                    .data(states.features)
-                    .enter()
-                    .append("path")
-                    .attr('d', path)
-                    .attr('fill', 'none')
-                    .attr('stroke', 'white');
-                }
-                else{
-                    countyMap
-                      .append("path")
-                      .attr("fill", "none")
-                      .attr("stroke", "white")
-                      .attr("d", path(
-                          topojson.mesh(
-                            countyData,
-                            countyData.objects.states,
-                            function(a, b) {
-                              return a !== b;
-                            }
-                          )
-                        )
-                      );
-                }
-            };
-
-
-          //Render data
-            if (chartConfig.mapType === "Point"){
-
-              //Render counties
-                var countyPolygons = renderCounties();
-                countyPolygons.each(function() {
-                    var path = d3.select(this);
-                    path.attr('fill', function(d){
-                        return landColor;
-                    });
-                });
-
-
-              //Render states
-                renderStates();
-
-
-              //Get points
-                var points = {};
-                if (chartConfig.pointData==="geoCoords") {
-                    points = getPoints(data, chartConfig, projection);
-                }
-                else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, states, chartConfig, path, projection);
-                }
-
-
-              //Render points
-                renderPoints(points, chartConfig, extent);
-
-            }
-            else if(chartConfig.mapType === "Area"){
-
-                var area = selectArea(data, chartConfig);
-                if (area==="counties"){
-
-                  //Render Counties
-                    var countyPolygons = renderCounties();
+        projection
+            // .geoMercator()
+            // .geoConicConformal()
+            // .geoAlbers()
+            // .geoEquirectangular()
+            .scale(width / 2 / Math.PI)
+            .rotate([-centerLon, 0])
+            .center([0, centerLat])
+            .translate([width / 2, height / 2]);
 
 
 
-                  //Map countyIDs to data values
-                    var values = {};
-                    data.forEach(function(d){
-                        var countyID = d[chartConfig.mapLocation];
-                        values[countyID] = d[chartConfig.mapValue];
-                    });
+
+      //Save original projection params as class variable
+        scale = projection.scale();
+        translate = projection.translate();
+        rotate = projection.rotate();
+        center = projection.center();
 
 
-                  //Update fill color of county polygons
-                    countyPolygons.each(function() {
-                        var path = d3.select(this);
-                        var fillColor = path.attr('fill');
-                        path.attr('fill', function(d){
-                            var v = parseFloat(values[d.id]);
-                            if (isNaN(v) || v<0) v = 0;
-                            var fill = colorScale[chartConfig.colorScale](v);
-                            if (!fill) return fillColor;
-                            return fill;
-                        });
-                    });
+        setExtent(extent);
 
+        //Manual rotation tesing for ortho
+        // projection
+        // .geoMercator()
+        // .geoConicConformal()
+        // .geoAlbers()
+        // .geoEquirectangular()
+        // .scale(width / 2 / Math.PI)
+        // .rotate([-116 - 180, 0])
+        // .center([0, 40])
+        // .translate([width / 2, height / 2]);
 
-                  //Render state boundaries
-                    renderStates();
-                }
-                else if (area==="states"){ //render states
-                    var statePolygons = renderStates(true);
-                    updateStatePolygons(data, statePolygons, chartConfig, colorScale);
-                }
-                else if (area==="censusDivisions"){ //render census divisions
-                    var statePolygons = renderStates(true);
-                    updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
-                }
-                else{
-                    renderCounties();
-                    renderStates();
-                }
-            }
+      //Render layers
+        draw();
 
-            me.onUpdate();
-        }
-        else if (mapLevel === "states"){
-            var centerLon, centerLat
-            if(chartConfig.lat && chartConfig.lon){
-                centerLon = chartConfig.lon;
-                centerLat = chartConfig.lat;
-            }else{
-                centerLon = 38.7;
-                centerLat = -0.6;
-                chartConfig.lon = centerLon;
-                chartConfig.lat = centerLat;
-            }
-            //Might no longer be needed, will comment out for now.
-//            centerLat = centerLat + 96;
-            projection = d3.geoAlbers()
-                .scale(1070)
-                .center([centerLat, centerLon])
-                .rotate([96, 0]);
-
-            var path = d3.geoPath(projection);
-
-          //Create map layer
-            var worldMap = mapArea.append("g");
-
-
-          //Render countries
-            worldMap
-                .selectAll("whatever")
-                .data(countries.features)
-                .enter().append("path")
-                .attr('d', path)
-                .attr('fill', landColor)
-                .attr('stroke', 'white');
-
-
-          //Render states
-            var renderStates = function(){
-                return worldMap.selectAll("whatever")
-                .data(states.features)
-                .enter()
-                .append("path")
-                .attr('d', path)
-                .attr('fill', 'none')
-                .attr('stroke', 'white');
-            };
-
-
-          //Render data
-            if (chartConfig.mapType === "Point"){
-
-              //Render states
-                renderStates();
-
-
-              //Get points
-                var points = {};
-                if (chartConfig.pointData==="geoCoords"){
-                    points = getPoints(data, chartConfig, projection);
-                }
-                else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, states, chartConfig, path, projection);
-                }
-
-
-              //Render points
-                renderPoints(points, chartConfig, extent);
-
-            }
-            else if(chartConfig.mapType === "Area"){
-
-
-              //Render data using the most suitable geometry type
-                var area = selectArea(data, chartConfig);
-                if (area==="counties"){ //render counties
-
-                    var values = {};
-                    data.forEach(function(d){
-                        var countyID = d[chartConfig.mapLocation];
-                        values[countyID] = d[chartConfig.mapValue];
-                    });
-
-                    worldMap.selectAll("whatever")
-                    .data(counties.features)
-                    .enter()
-                    .append("path")
-                    .attr('d', path)
-                    .attr('fill', function(county){
-                        var v = parseFloat(values[county.id]);
-                        if (isNaN(v) || v<0) v = 0;
-                        var fill = colorScale[chartConfig.colorScale](v);
-                        if (!fill) return 'none';
-                        return fill;
-                    });
-                    renderStates();
-                }
-                else if (area==="states"){ //render states
-                    var statePolygons = renderStates();
-                    updateStatePolygons(data, statePolygons, chartConfig, colorScale);
-                }
-                else if (area==="censusDivisions"){ //render census divisions
-                    var statePolygons = renderStates();
-                    updateCensusPolygons(data, statePolygons, chartConfig, colorScale);
-                }
-                else{
-                    renderStates();
-                }
-            }
-            else if(chartConfig.mapType === "Links"){
-                getData("PortsOfEntry", function(ports){
-                    renderLinks(data, countries, ports, path, projection, mapLevel);
-                });
-            }
-
-            me.onUpdate();
-        }
-        else if(mapLevel === "world"){
-            var centerLon, centerLat;
-            if(chartConfig.lat && chartConfig.lon){
-                centerLon = parseFloat(chartConfig.lon);
-                centerLat = parseFloat(chartConfig.lat);
-            }else{
-                centerLon = -98.5;
-                centerLat = 39.5;
-                chartConfig.lon = centerLon;
-                chartConfig.lat = centerLat;
-            }
-            projection = d3.geoMercator().center([centerLon, centerLat]).scale(360).translate([width / 2, height / 2]);
-            var path = d3.geoPath(projection);
-          //Render countries
-            mapArea.selectAll("path")
-                .data(countries.features)
-                .enter()
-                .append("path")
-                .attr('d', path)
-                .attr('fill', landColor)
-                .attr('stroke', 'white');
-
-            if (chartConfig.mapType === "Point"){
-
-              //Get points
-                var points = {};
-                if (chartConfig.pointData==="geoCoords"){
-                    points = getPoints(data, chartConfig, projection);
-                }
-                else if (chartConfig.pointData==="adminArea"){
-                    points = getCentroids(data, countries, chartConfig, path, projection);
-                }
-
-              //Render points
-                renderPoints(points, chartConfig, extent);
-            }
-            else if(chartConfig.mapType === "Area"){
-                var aggregateState = 0;
-                data.forEach(function(d){
-                    var state;
-                    var country;
-                    if(d.state) {
-                        state = d.state;
-                        aggregateState = aggregateState + parseFloat(d[chartConfig.mapValue]);
-                    }
-                   if(d.country) country = d.country;
-                    for(var i = 0; i < countries.features.length; i++){
-                        if(country == countries.features[i].properties.code){
-                            countries.features[i].properties.inData = true;
-                            countries.features[i].properties.mapValue = d[chartConfig.mapValue];
-                        }else if(countries.features[i].properties.code == "US" &&
-                                aggregateState > 0){
-                            countries.features[i].properties.inData = true;
-                            countries.features[i].properties.mapValue = aggregateState;
-                        }
-                    }
-                });
-                mapArea.selectAll("path")
-                    .data(countries.features)
-                    .enter()
-                    .append("path")
-                    .attr('d', path)
-                    .attr('stroke', 'white')
-                    .attr('fill', function(d){
-                        var inData = d.properties.inData;
-                        if(inData){
-                            return colorScale[chartConfig.colorScale](d.properties.mapValue);
-                        }else{
-                            return landColor;
-                        }
-                    });
-            }
-            else if(chartConfig.mapType === "Links"){
-                getData("PortsOfEntry", function(ports){
-                    renderLinks(data, countries, ports, path, projection, mapLevel);
-                });
-            }
-
-            me.onUpdate();
-        }
     };
-
-
 
 
   //**************************************************************************
@@ -477,542 +409,638 @@ bluewave.charts.MapChart = function(parent, config) {
   /** Used to recenter the map using d3 mouse events
    */
     var recenter = function(){
-        if (!readOnly){
-            mapArea.attr('transform', d3.event.transform);
-            var projection = me.getProjection();
-            if (projection){
-                var rect = javaxt.dhtml.utils.getRect(svg.node());
-                var w = rect.width;
-                var h = rect.height;
-                var t = d3.event.transform;
-                var x = (w/2)-t.x;
-                var y = (h/2)-t.y;
-                var p = projection.invert([x,y]);
-                me.onRecenter(p[1],p[0]);
-            }
-        }
+
+        var projection = me.getProjection();
+        if (!projection || panningDisabled) return;
+
+
+        //mapArea.attr('transform', d3.event.transform); //<--not what we want
+
+
+      //Get center point of the map
+        var rect = javaxt.dhtml.utils.getRect(svg.node());
+        var w = rect.width;
+        var h = rect.height;
+        var t = d3.event.transform;
+        var x = (w/2)-t.x;
+        var y = (h/2)-t.y;
+        var p = projection.invert([x,y]);
+        // console.log(p); //I'm not sure this is stil correct - need to validate
+
+
+
+      //Redraw map
+        var getLat = d3.scaleLinear()
+          .domain([0, h])
+          .range([0, 180]); //not sure if this is truly valid - some projections only go 84 N/S
+
+        var getLon = d3.scaleLinear()
+          .domain([0, w])
+          .range([0, 360]);
+
+
+      //Get x/y pixel offsets
+        var tx = translate[0] - t.invertX(translate[0]);
+        var ty = translate[1] - t.invertY(translate[1]);
+
+
+        var lat = (getLat(ty)/2)+center[1];
+        var lon = getLon(tx)+rotate[0];
+
+        projection.rotate([lon, rotate[1], rotate[2]]);
+        projection.center([0, lat]);
+
+
+        draw();
+
+
+
+      //Fire onRecenter event
+        me.onRecenter(p[1],p[0]);
     };
 
 
   //**************************************************************************
-  //** renderLinks
+  //** getExtent
   //**************************************************************************
-    var renderLinks = function(data, countries, ports, path, projection, mapLevel){
-        var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-        var nodes = data.nodes;
-        var links = data.links;
-        var linkArray = []
-        var connections = [];
-        var coords = [];
-        //Split Links up into the component parts.
-        for (var link in links){
-            if(links.hasOwnProperty(link)){
-                var linkage = link.split('->');
-                linkage.push(links[link].quantity);
-                linkArray.push(linkage);
-            }
-        };
-        if(mapLevel==="states"){
-            linkArray.forEach(function(d){
-                var connection = {};
-                var stateCodeOne = nodes[d[0]].state;
-                var stateCodeTwo = nodes[d[1]].state;
-                var stateValue = d[2];
-                connection.stateCodeOne = stateCodeOne;
-                connection.stateCodeTwo = stateCodeTwo;
-                connection.quantity = stateValue;
-                connections.push(connection);
-            });
-            connections.forEach(function(d){
-                var stateOne = d.stateCodeOne;
-                var stateTwo = d.stateCodeTwo;
-                var quantity = d.quantity;
-                var coordOne = [];
-                var coordTwo = [];
-                var connectionPath = [];
-                for (var i = 0; i < states.features.length; i++){
-                    var stateCenter = states.features[i];
-                    if (stateOne === stateCenter.properties.code){
-                        var lat = stateCenter.properties.latitude;
-                        var lon = stateCenter.properties.longitude;
-                        coordOne.push(lat);
-                        coordOne.push(lon);
-                        connectionPath.push(coordOne);
-                        break;
-                    }
-                }
-                for(var i = 0; i < states.features.length; i++){
-                    var stateCenter = states.features[i];
-                    if(stateTwo === stateCenter.properties.code){
-                        var lat = stateCenter.properties.latitude;
-                        var lon = stateCenter.properties.longitude;
-                        coordTwo.push(lat);
-                        coordTwo.push(lon);
-                        connectionPath.push(coordTwo);
-                        connectionPath.push(quantity);
-                        break;
-                    }
-                }
-                coords.push(connectionPath);
-            });
-        }else if(mapLevel==="world"){
-            linkArray.forEach(function(d){
-                var connection = {};
-                var countryCodeOne = nodes[d[0]].country;
-                var countryCodeTwo = nodes[d[1]].country;
-                var countryValue = d[2];
-                if (countryCodeOne && countryCodeTwo){
-                    connection.countryCodeOne = countryCodeOne;
-                    connection.countryCodeTwo = countryCodeTwo;
-                    connection.quantity = countryValue;
-                    connections.push(connection);
-                }
-            });
-            connections.forEach(function(d){
-                var countryOne = d.countryCodeOne;
-                var countryTwo = d.countryCodeTwo;
-                var quantity = d.quantity;
-                var coordOne = [];
-                var coordTwo = [];
-                var connectionPath = [];
-                if(countryOne !== 'US' && countryTwo === 'US'){
-                    for(var i = 0; i < ports.length; i++){
-                        if(countryOne === ports[i].iso2){
-                            coordOne.push(ports[i].exlatitude);
-                            coordOne.push(ports[i].exlongitude);
-                            coordTwo.push(ports[i].imlatitude);
-                            coordTwo.push(ports[i].imlongitude);
-                            connectionPath.push(coordOne);
-                            connectionPath.push(coordTwo);
-                            connectionPath.push(quantity);
-                            coords.push(connectionPath);
-                        }
-                    }
-                }else{
-                    for (var i = 0; i < countries.features.length; i++){
-                        var countryCenter = countries.features[i];
-                        if (countryOne === countryCenter.properties.code){
-                            var lat = countryCenter.properties.latitude;
-                            var lon = countryCenter.properties.longitude;
-                            coordOne.push(lat);
-                            coordOne.push(lon);
-                            connectionPath.push(coordOne);
-                            break;
-                        }
-                    }
-                    for(var i = 0; i < countries.features.length; i++){
-                        var countryCenter = countries.features[i];
-                        if(countryTwo === countryCenter.properties.code){
-                            var lat = countryCenter.properties.latitude;
-                            var lon = countryCenter.properties.longitude;
-                            coordTwo.push(lat);
-                            coordTwo.push(lon);
-                            connectionPath.push(coordTwo);
-                            connectionPath.push(quantity);
-                            break;
-                        }
-                    }
-                    coords.push(connectionPath);
-                }
-            });
-        }
-        var quantities = [];
-        coords.forEach(function(d){
-            quantities.push(d[2]);
-        });
-        var thicknessExtent = d3.extent(quantities);
-        var thicknessScale = d3.scaleQuantile()
-            .domain(thicknessExtent)
-            .range([6 ,8, 10, 12, 14]);
-        mapArea.selectAll("#connection-path").remove();
-        mapArea.selectAll("#connection-path")
-            .data(coords)
-            .enter()
-            .append("path")
-            .attr("id", "#connection-path")
-            .attr("d", function(d) {
-                return path({
-                    type: "LineString",
-                    coordinates: [
-                        [d[0][1], d[0][0]],
-                        [d[1][1], d[1][0]]
-                    ],
-                });
-            })
-            .style("fill", "none")
-            .style("stroke-opacity", 0.5)
-            .style('stroke-width', (d) =>{
-                return thicknessScale(d[2]);
-            })
-            .style('stroke', (d) =>{
-                return getColor(d);
-            })
+    this.getExtent = function(){
+        var projection = me.getProjection();
+        if (!projection) return;
 
-        mapArea.selectAll("#connection-dot").remove();
-        let dots = mapArea
-            .append("g")
-            .attr("id", "connection-dot")
-            .selectAll("#connection-dot")
-            .data(coords)
-            .enter();
+        var rect = javaxt.dhtml.utils.getRect(svg.node());
+        var w = rect.width;
+        var h = rect.height;
 
-        dots.append("circle")
-            .attr("cx", function(d){
-                let lat = d[0][0];
-                let lon = d[0][1];
-                return projection([lon, lat])[0];
-            })
-            .attr("cy", function(d){
-                let lat = d[0][0];
-                let lon = d[0][1];
-                return projection([lon, lat])[1];
-            })
-            .attr("r", 6)
-            .attr("fill", (d) =>{
-                return getColor(d);
-            });
-
-        dots.append("circle")
-            .attr("cx", function(d){
-                let lat = d[1][0];
-                let lon = d[1][1];
-                return projection([lon, lat])[0];
-            })
-            .attr("cy", function(d){
-                let lat = d[1][0];
-                let lon = d[1][1];
-                return projection([lon, lat])[1];
-            })
-            .attr("r", 6)
-            .attr("fill", (d) =>{
-                return getColor(d[0]);
-            });
-    };
+        var ul = projection.invert([0,0]);
+        //var ll = projection.invert([0,h]);
+        //var ur = projection.invert([w,0]);
+        var lr = projection.invert([w,h]);
 
 
-  //**************************************************************************
-  //** getPoints
-  //**************************************************************************
-    var getPoints = function(data, chartConfig, projection){
-        var coords = [];
-        var hasValue = false;
-        data.forEach(function(d){
-            var lat = parseFloat(d[chartConfig.latitude]);
-            var lon = parseFloat(d[chartConfig.longitude]);
-            if (isNaN(lat) || isNaN(lon)) return;
-            var coord = projection([lon, lat]);
-            if (!coord) return;
-            if (isNaN(coord[0]) || isNaN(coord[1])) return;
-            var val = parseFloat(d[chartConfig.mapValue]);
-            if (!isNaN(val)){
-                coord.push(val);
-                hasValue = true;
-            }
-            coords.push(coord);
-        });
         return {
-            coords: coords,
-            hasValue: hasValue
+            left: ul[0],
+            right: lr[0],
+            top: ul[1],
+            bottom: lr[1]
         };
     };
 
 
+
   //**************************************************************************
-  //** getCentroids
+  //** setExtent
   //**************************************************************************
-    var getCentroids = function(data, mapData, chartConfig, path, projection){
-        var coords = [];
-        var hasValue = false;
-        data.forEach(function(d){
-            var value = d[chartConfig.mapLocation];
-            mapData.features.every(function(feature){
-                var properties = feature.properties;
-                if (value === properties.code){
+    this.setExtent = function(upperLeft, lowerRight, callback){
+        extent.upperLeft = upperLeft;
+        extent.lowerRight = lowerRight;
 
-                  //Get centroid
-                    var centroid;
-                    if (!isNaN(properties.latitude) && !isNaN(properties.longitude)){
-                        centroid = projection([properties.longitude, properties.latitude]);
-                    }
-                    else{
-                        centroid = path.centroid(feature);
-                    }
-
-                  //Update coords
-                    if (centroid){
-                        if (isNaN(centroid[0]) || isNaN(centroid[0])) centroid = null;
-                        else coords.push(centroid);
-                    }
-
-                  //Set value
-                    if (centroid && chartConfig.mapValue){
-                        var val = parseFloat(d[chartConfig.mapValue]);
-                        if (!isNaN(val)){
-                            hasValue = true;
-                            centroid.push(val);
-                        }
-                    }
-
-                    return false;
-                }
-                return true;
+        if (!projection){
+            me.update(function(){
+                setExtent(extent);
+                if (callback) callback();
             });
-        });
-        return {
-            coords: coords,
-            hasValue: hasValue
-        };
+        }
+        else{
+            setExtent(extent);
+            if (callback) callback();
+        }
     };
 
 
   //**************************************************************************
-  //** renderPoints
+  //** setExtent
   //**************************************************************************
-    var renderPoints = function(points, chartConfig, extent){
+    var setExtent = function(extent, base=10){
 
-        var opacity = chartConfig.opacity;
-        if(!opacity){
-            opacity = 1.0;
+        //Base case
+        if (base<0 || isNaN(base)) return;
+
+        //TODO: Write a real base case ex: if (extent is within a certain epsilon) break. Keep emergency one though
+
+        if (!projection) return;
+        if (projectionType === "AlbersUsa") return;
+        if (!extent.upperLeft || !extent.lowerRight) return;
+
+        var upperLeft = extent.upperLeft;
+        var lowerRight = extent.lowerRight;
+
+        var scale = projection.scale();
+        var windowExtent = me.getExtent();
+
+        var rect = javaxt.dhtml.utils.getRect(svg.node());
+        var w = rect.width;
+        var h = rect.height;
+
+        if (projectionType == "Albers"){
+
+          //"The greatest accuracy is obtained if the selected standard parallels enclose two-thirds the height of the map"
+          projection.parallels( [lowerRight[1] + Math.abs(lowerRight[1]*(1/6)), upperLeft[1] - Math.abs(upperLeft[1]*(1/6))] );
         }
-        else {
-            opacity = opacity/100;
+
+
+        //Need to map to svg coords with projection first to avoid trig and invert after calculations
+        var initialUpperLeft = projection([windowExtent.left, windowExtent.top]);
+        var initialLowerRight = projection([windowExtent.right, windowExtent.bottom]);
+
+        //Initial extent needed for ratio
+        var extentLongDiff = Math.abs(initialUpperLeft[0] - initialLowerRight[0]);
+        var extentLatDiff = Math.abs(initialUpperLeft[1] - initialLowerRight[1]);
+
+        //If lower right extent is set over the edge of the map, flip the map. Not gonna work for albers
+        if (projection(upperLeft)[0] > projection(lowerRight)[0]){
+            projection.rotate([-upperLeft[0]-180, 0]);
+        }
+
+        var ulCartesian = projection(upperLeft);
+        var lrCartesian = projection(lowerRight);
+
+        var longitudeDiff = Math.abs(ulCartesian[0] - lrCartesian[0]);
+
+        var scaleRatio;
+        scaleRatio = longitudeDiff/extentLongDiff;
+
+
+        //Scale by longtitude first
+        projection.scale(scale / scaleRatio);
+
+
+        //New coords for scaled projection
+        ulCartesian = projection(upperLeft);
+        lrCartesian = projection(lowerRight);
+
+        var centerCartesian = [ulCartesian[0] + w/2, ulCartesian[1] + h/2];
+        var center = projection.invert(centerCartesian);
+
+
+        projection
+        .rotate([-center[0], 0])
+        .center([0, center[1]]);
+
+        //True center
+        center = me.getMidPoint([upperLeft, lowerRight]);
+        //Check if lowerRight is below bottom extent and scale by latitude then center accordingly
+        var extentCheck = me.getExtent();
+        var latitudeDiff = Math.abs(lowerRight[1] - extentCheck.bottom);
+
+        if(lowerRight[1] < extentCheck.bottom){
+          let windowExtent = extentCheck.top - extentCheck.bottom;
+
+          let scaleRatio = latitudeDiff/windowExtent;
+          scaleRatio++;
+
+          let scale = projection.scale();
+
+          projection
+            .scale(scale / scaleRatio)
+        };
+
+        projection
+            .rotate([-center[0], 0])
+            .center([0, center[1]]);
+
+
+        // draw();
+
+        setExtent(extent, --base);
+    };
+
+
+  //**************************************************************************
+  //** draw
+  //**************************************************************************
+    var draw = function(){
+        clearChart();
+
+      //Create background
+        var backgroundGroup = mapArea.append("g");
+        backgroundGroup.attr("name", "background");
+        background = backgroundGroup.append("rect")
+        .attr("width", "100%")
+        .attr("height", "100%");
+        if (config.style.backgroundColor){
+            background.attr("fill", config.style.backgroundColor);
         }
 
 
-        var r = parseInt(chartConfig.pointRadius);
-        if (isNaN(r)) r = 3;
-        if (r<0) r = 1;
+      //Add layers
+        var layerGroup = mapArea.append("g");
+        layerGroup.attr("name", "layers");
+        var path = d3.geoPath(projection);
+        layers.forEach(function(layer, i){
 
-        var c = chartConfig.pointColor || "#ff3c38"; //red default
-
-        var oc = chartConfig.outlineColor;
-        if (!oc) oc = c;
-
-
-        var outlineWidth = parseFloat(chartConfig.outlineWidth);
-        if (isNaN(outlineWidth) || outlineWidth<0) outlineWidth = 0;
-        if (outlineWidth>r) outlineWidth = r;
-
+          //Create group
+            if(!layer.config) layer.config={};
+            var name = layer.config.name;
+            if (!name) name = "layer"+i;
+            var g = layerGroup.append("g");
+            g.attr("name", name);
 
 
-        mapArea.append("g")
-        .selectAll("*")
-        .data(points.coords)
+          //Render layer
+            if (layer.type === "points"){
+                renderPointLayer(layer, g, path);
+            }
+            else if (layer.type === "lines"){
+                renderLineLayer(layer, g, path);
+            }
+            if (layer.type === "polygons"){
+                renderPolygonLayer(layer, g, path);
+            }
+            else if (layer.type === "labels"){
+                renderLabelLayer(layer, g, path);
+            }
+            else if (layer.type === "grid"){
+                renderGridLayer(layer, g, path)
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderPointLayer
+  //**************************************************************************
+    var renderPointLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var config = layer.config;
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var tooltip;
+        if (config.showTooltip===true) tooltip = createTooltip();
+
+
+        var highlight = false;
+        if (tooltip || config.onClick) highlight = true;
+
+        var color = style.fill;
+        if(!color) color = "red";
+
+        var opacity = style.opacity;
+        if (!opacity) opacity = 1.0;
+
+        var radius = parseInt(style.radius);
+        if (isNaN(radius)) radius = 3;
+        if (radius < 0) radius = 1;
+
+
+        var outlineWidth = parseFloat(style.outlineWidth);
+        if (isNaN(outlineWidth)) outlineWidth = 1;
+
+        var outlineColor = style.outlineColor;
+
+
+        var points = g.selectAll("*")
+        .data(layer.features)
         .enter()
         .append("circle")
-        .attr("r",function(coord){
-            if (points.hasValue){
-                var val = coord[2];
-                if (isNaN(val) || val<=0) return r;
-                var p = val/extent[1];
-                var maxSize = r;
-                if (p > 0){
-                    return maxSize*p;
-                }
-                else{
-                    return maxSize*.25;
-                }
+        //.attr("class", config.className)
+        .attr('r', function(d){
+            if (typeof style.radius === 'function') {
+                return style.radius(d);
             }
-            return r;
+            else return radius;
         })
-        .attr("transform", function(d) {
-            return "translate(" + [d[0],d[1]] + ")";
+        .attr("transform", function (d) {
+            var coords = getCoordinates(d);
+            if (coords) coords = projection(coords);
+            return coords ? "translate(" + coords + ")" : "";
         })
-        .attr("fill-opacity", opacity)
-        .style("fill", c)
-        .style("stroke", oc)
-        .style("stroke-width", outlineWidth + "px");
-    };
-
-
-  //**************************************************************************
-  //** selectArea
-  //**************************************************************************
-  /** Returns most suitable map type based on the "mapLocation" config
-   */
-    var selectArea = function(data, chartConfig){
-
-      //Analyze data
-        var numStates = 0;
-        var numCounties = 0;
-        var numCensusDivisions = 0;
-        data.forEach(function(d){
-            var location = d[chartConfig.mapLocation];
-            if (typeof location === 'undefined') return;
-            var censusDivision = getCensusDivision(d[chartConfig.mapLocation]);
-
-
-            counties.features.every(function(county){
-                if (county.id===location){
-                    numCounties++;
-                    return false;
-                }
-                return true;
-            });
-
-            states.features.every(function(state){
-                var foundMatch = false;
-
-                if (state.properties.name===location || state.properties.code===location){
-                    numStates++;
-                    foundMatch = true;
-                }
-
-                if (!isNaN(censusDivision)){
-                    if (state.properties.censusDivision===censusDivision){
-                        numCensusDivisions++;
-                        foundMatch = true;
-                    }
-                }
-
-                return !foundMatch;
-            });
-
-        });
-
-
-      //Render data using the most suitable geometry type
-        var maxMatches = Math.max(numStates, numCounties, numCensusDivisions);
-        if (maxMatches>0){
-            if (maxMatches===numCounties){
-                return "counties";
-            }
-            else if (maxMatches===numStates){
-                return "states";
-            }
-            else if (maxMatches===numCensusDivisions){
-                return "censusDivisions";
-            }
-        }
-        return null;
-    };
-
-
-  //**************************************************************************
-  //** updateStatePolygons
-  //**************************************************************************
-  /** Used to update the fill color for states using the "mapValue"
-   */
-    var updateStatePolygons = function(data, statePolygons, chartConfig, colorScale){
-        var values = {};
-        data.forEach(function(d){
-            var location = d[chartConfig.mapLocation];
-            if (typeof location === 'undefined') return;
-            values[location] = d[chartConfig.mapValue];
-        });
-
-        statePolygons.each(function() {
-            var path = d3.select(this);
-            path.attr('fill', function(state){
-                var v = parseFloat(values[state.properties.name]);
-                if (isNaN(v)) v = parseFloat(values[state.properties.code]);
-                if (isNaN(v) || v<0) v = 0;
-                var fill = colorScale[chartConfig.colorScale](v);
-                if (!fill) return 'none';
-                return fill;
-            });
-        });
-    };
-
-
-  //**************************************************************************
-  //** updateCensusPolygons
-  //**************************************************************************
-  /** Used to update the fill color for states by census division using "mapValue"
-   */
-    var updateCensusPolygons = function(data, statePolygons, chartConfig, colorScale){
-        var values = {};
-        data.forEach(function(d){
-            var censusDivision = getCensusDivision(d[chartConfig.mapLocation]);
-            if (!isNaN(censusDivision)){
-                values[censusDivision+""] = d[chartConfig.mapValue];
+        .attr("opacity", opacity)
+        .style("fill", color)
+        .attr("stroke", outlineColor)
+        .attr("stroke-width", outlineWidth)
+        .attr("stroke-opacity", opacity)
+        .on("click", function(feature, idx, siblings){
+            if (config.onClick){
+                var e = d3.event;
+                config.onClick.apply(me, [{
+                    feature: feature,
+                    element: siblings[idx],
+                    layer: layer,
+                    event: e
+                }]);
             }
         });
 
-        statePolygons.each(function() {
-            var path = d3.select(this);
-            path.attr('fill', function(state){
-                var v = parseFloat(values[state.properties.censusDivision+""]);
-                if (isNaN(v) || v<0) v = 0;
-                var fill = colorScale[chartConfig.colorScale](v);
-                if (!fill) return 'none';
-                return fill;
-            });
+        layer.elements = points;
+    };
+
+
+  //**************************************************************************
+  //** renderLineLayer
+  //**************************************************************************
+    var renderLineLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var width = parseInt(style.width);
+        if (isNaN(width)) width = 1;
+
+        var lineStyle = style.lineStyle;
+        if (!lineStyle) lineStyle = "solid";
+
+        var smoothing = style.smoothing;
+        if (!smoothing || smoothing==="none") smoothing = "curveLinear";
+
+
+        var color = style.color;
+        if(!color) color = "red";
+
+        var opacity = style.opacity;
+        if (!opacity) opacity = 1.0;
+
+
+        var lines = g.selectAll("*")
+        .data(layer.features)
+        .enter()
+        .append("path")
+        //.attr("class", config.className)
+        .attr("d", function(d){
+            var curve = d3.line().curve(d3[smoothing]);
+            var arr = d.map(coord => projection(coord));
+            return curve(arr);
+        })
+        .attr("fill", "none")
+        .attr("opacity", opacity)
+        .style("stroke", color)
+        .style("stroke-width", width)
+        .attr("stroke-dasharray", function(d){
+          if(lineStyle==="dashed") return "10, 10";
+          else if(lineStyle==="dotted") return "0, 10";
+        })
+        .attr("stroke-linecap", function(d){
+          if(lineStyle==="dotted") return "round";
         });
+
+        layer.elements = lines;
     };
 
 
   //**************************************************************************
-  //** getCensusDivision
+  //** renderGridLayer
   //**************************************************************************
-  /** Used to parse a given string and returns an integer value (1-9)
-   */
-    var getCensusDivision = function(str){
+    var renderGridLayer = function(layer, g, path){
 
-        if (typeof str === 'undefined') return null;
-        var censusDivision = parseInt(censusDivision);
-        if (!isNaN(censusDivision)) return censusDivision;
+        if (!layer.config) layer.config = {};
+        var style = layer.config.style;
+        if (!style) style = {};
 
-        str = str.toLowerCase();
-        if (str.indexOf("new england")>-1) return 1;
-        if (str.indexOf("middle atlantic")>-1 || str.indexOf("mid atlantic")>-1) return 2;
-        if (str.indexOf("east north central")>-1) return 3;
-        if (str.indexOf("west north central")>-1) return 4;
-        if (str.indexOf("south atlantic")>-1) return 5;
-        if (str.indexOf("east south central")>-1) return 6;
-        if (str.indexOf("west south central")>-1) return 7;
-        if (str.indexOf("mountain")>-1) return 8;
-        if (str.indexOf("pacific")>-1) return 9;
+        var width = parseInt(style.width);
+        if (isNaN(width)) width = 0.5;
 
-        return null;
+        var lineStyle = style.lineStyle;
+        if (!lineStyle) lineStyle = "solid";
+
+        var color = style.color;
+        if(!color) color = "gray";
+
+        var opacity = style.opacity;
+        if (!opacity) opacity = 0.5;
+
+        var longSteps = style.longSteps;
+        if (!longSteps) longSteps = 10;
+
+        var latSteps = style.latSteps;
+        if (!latSteps) latSteps = 10;
+
+        var graticule = d3.geoGraticule()
+        .step([longSteps, latSteps]);
+
+        var lines = g.selectAll("*")
+        .data([graticule()])
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .attr("fill", "none")
+        .attr("opacity", opacity)
+        .style("stroke", color)
+        .style("stroke-width", width)
+        .attr("stroke-dasharray", function(d){
+        if(lineStyle==="dashed") return "10, 10";
+        else if(lineStyle==="dotted") return "0, 10";
+        })
+        .attr("stroke-linecap", function(d){
+        if(lineStyle==="dotted") return "round";
+        });
+
+        layer.elements = lines;
     };
 
 
   //**************************************************************************
-  //** getMapData
+  //** renderPolygonLayer
   //**************************************************************************
-  /** Used to download and parse counties and countries and calls the callback
-   *  when ready
-   */
-    var getMapData = function(callback){
-        if (counties){
-            if (countries) callback();
+    var renderPolygonLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var config = layer.config;
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var tooltip;
+        if (config.showTooltip===true) tooltip = createTooltip();
+
+
+        var highlight = false;
+        if (tooltip || config.onClick) highlight = true;
+
+
+        var mouseover = function(feature, idx, siblings) {
+            var d = feature;
+
+            if (tooltip){
+
+              //Get label
+                var label = me.getTooltipLabel(d.data);
+
+              //Get zIndex
+                var highestElements = getHighestElements();
+                var zIndex = highestElements.zIndex;
+                if (!highestElements.contains(tooltip.node())) zIndex++;
+
+              //Update tooltip
+                tooltip
+                .html(label)
+                .style("opacity", 1)
+                .style("display", "block")
+                .style("z-index", zIndex);
+            }
+
+            var el = d3.select(this);
+            if (highlight){
+                el.transition().duration(100);
+                el.attr("opacity", "0.8");
+            }
+
+            if (config.onMouseOver) config.onMouseOver.apply(me, [{
+                feature: feature,
+                element: el,
+                layer: layer
+            }]);
+        };
+
+        var mousemove = function() {
+            var e = d3.event;
+            if (tooltip) tooltip
+            .style('top', (e.clientY) + "px")
+            .style('left', (e.clientX + 20) + "px");
+        };
+
+        var mouseleave = function(feature, idx, siblings) {
+            if (tooltip) tooltip
+            .style("opacity", 0)
+            .style("display", "none");
+
+            var el = d3.select(this);
+            if (highlight){
+                el.transition().duration(100);
+                el.attr("opacity", "1");
+            }
+
+            if (config.onMouseLeave) config.onMouseLeave.apply(me, [{
+                feature: feature,
+                element: el,
+                layer: layer
+            }]);
+        };
+
+
+        var fill = style.fill;
+        if (!fill) fill = "#DEDDE0";
+
+        var stroke = style.stroke;
+        if (!stroke) stroke = "#fff";
+
+        var polygons = g.selectAll("*")
+        .data(layer.features)
+        .enter()
+        .append("path")
+        .attr('d', path)
+        .attr('fill', function(d){
+            if (typeof style.fill === 'function') {
+                return style.fill(d);
+            }
+            else return fill;
+        })
+        .attr('stroke', stroke)
+        .style("stroke-width", 0.4)
+        .on("mouseover", mouseover)
+        .on("mousemove", mousemove)
+        .on("mouseleave", mouseleave)
+        .on("click", function(feature, idx, siblings){
+            if (config.onClick){
+                var e = d3.event;
+                config.onClick.apply(me, [{
+                    feature: feature,
+                    element: siblings[idx],
+                    layer: layer,
+                    event: e
+                }]);
+            }
+        });
+
+        layer.elements = polygons;
+    };
+
+
+  //**************************************************************************
+  //** renderLabelLayer
+  //**************************************************************************
+    var renderLabelLayer = function(layer, g, path){
+
+        if (!layer.config) layer.config = {};
+        var config = layer.config;
+        var style = layer.config.style;
+        if (!style) style = {};
+
+        var fontSize = parseFloat(style.fontSize);
+        if (isNaN(fontSize)) fontSize = 12;
+
+        var color = style.color;
+        if (!color) color = style.fill;
+        if (!color) color = "#000";
+
+        var textAlign = style.textAlign;
+        if (!textAlign) textAlign = "left";
+
+
+        var labels = g.selectAll("text")
+        .data(layer.features)
+        .enter()
+        .append("text")
+        .attr("transform", function (d) {
+            var coords = getCoordinates(d);
+            if (coords){
+                coords = projection(coords);
+                var x = coords[0];
+                var y = coords[1];
+                if (isNaN(x) || isNaN(y)) return "";
+                else return `translate(  ${x}, ${y}  )`;
+            }
+            return "";
+        })
+        .attr("font-size", fontSize)
+        .attr("text-anchor", ()=>{
+            if (textAlign=="center") return "middle";
+            return textAlign;
+        })
+        //.attr("font-weight", 900)
+        .style("fill", color)
+        //.style("stroke", color)
+        //.style("stroke-width", 1)
+        .text((d)=>{
+            if (d.properties && layer.config.label){
+                return d.properties[layer.config.label];
+            }
             else{
-                getData("countries", function(countryData){
-                    countries = topojson.feature(countryData, countryData.objects.countries);
-                    callback();
-                });
+                return "";
             }
-        }
-        else{
-            getData("counties", function(json){
-                countyData = json;
-                counties = topojson.feature(countyData, countyData.objects.counties);
-                states = topojson.feature(countyData, countyData.objects.states);
-                if (countries) callback();
-                else{
-                    getData("countries", function(json){
-                        countryData = json;
-                        countries = topojson.feature(countryData, countryData.objects.countries);
-                        callback();
-                    });
-                }
-            });
-        }
+        })
+        .on("click", function(feature, idx, siblings){
+            if (config.onClick) config.onClick.apply(me, [{
+                feature: feature,
+                element: siblings[idx],
+                layer: layer
+            }]);
+        });
+
+
+        layer.elements = labels;
     };
 
 
   //**************************************************************************
-  //** getData
+  //** createTooltip
   //**************************************************************************
-    var getData = function(name, callback){
-        if (!bluewave.data) bluewave.data = {};
-        if (bluewave.data[name]){
-            callback.apply(this, [bluewave.data[name]]);
+    var createTooltip = function(){
+        var tooltip = bluewave.charts.MapChart.Tooltip;
+        if (!tooltip){
+            tooltip = bluewave.charts.MapChart.Tooltip =
+            d3.select(document.body)
+            .append("div")
+            .style("opacity", 0)
+            .attr("class", "tooltip");
+        }
+        return tooltip;
+    };
+
+
+  //**************************************************************************
+  //** getCoordinates
+  //**************************************************************************
+    var getCoordinates = function(d){
+        if (isArray(d)){
+            return d;
         }
         else{
-            bluewave.utils.getData(name, callback);
+            if (d.geometry){
+                return d.geometry.coordinates;
+            }
         }
+        return null;
     };
 
 
@@ -1020,6 +1048,7 @@ bluewave.charts.MapChart = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var isArray = javaxt.dhtml.utils.isArray;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
 

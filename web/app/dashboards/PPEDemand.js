@@ -150,8 +150,10 @@ bluewave.dashboards.PPEDemand = function(parent, config) {
             }
 
             var options = monthOptions.getOptions();
-            monthOptions.setValue(options[0].value);
-            slider.setAttribute("max", options.length);
+            if (options.length>0){
+                monthOptions.setValue(options[0].value);
+                slider.setAttribute("max", options.length);
+            }
         });
 
     };

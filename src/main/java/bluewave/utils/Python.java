@@ -3,6 +3,15 @@ package bluewave.utils;
 import bluewave.Config;
 import java.util.*;
 import javaxt.json.JSONObject;
+import static javaxt.utils.Console.console;
+
+//******************************************************************************
+//**  Python
+//******************************************************************************
+/**
+ *   Provides static functions used to execute python commands and parse output
+ *
+ ******************************************************************************/
 
 public class Python {
 
@@ -13,15 +22,38 @@ public class Python {
   //** getPythonCommand
   //**************************************************************************
     public static String getPythonCommand() {
+        if (python!=null) return python;
 
+
+      //Check if a python path is defined in the config file (not common)
+        String path = Config.get("python").toString();
+        if (path!=null){
+            javaxt.io.File f = new javaxt.io.File(path);
+            if (f.exists()){
+                try{
+                    String python = f.toString();
+                    String[] cmdarray = new String[]{python, "--version"};
+                    javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
+                    cmd.run();
+                    parseErrors(cmd.getErrors());
+                    //console.log("Found python " + cmd.getOutput().get(0));
+                    return python;
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+
+
+      //Check which python is installed on the system
         for (String python : new String[]{"python3", "python"}){
-            String[] cmdarray = new String[]{python, "--version"};
-
-            javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
-            cmd.run();
-
             try{
+                String[] cmdarray = new String[]{python, "--version"};
+                javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
+                cmd.run();
                 parseErrors(cmd.getErrors());
+                //console.log("Found python " + cmd.getOutput().get(0));
                 return python;
             }
             catch(Exception e){
@@ -29,7 +61,20 @@ public class Python {
             }
         }
 
+        //console.log("Failed to find python");
+
         return null;
+    }
+
+
+  //**************************************************************************
+  //** getScriptVersion
+  //**************************************************************************
+    public static String getScriptVersion(javaxt.io.File script) throws Exception {
+        ArrayList<String> params = new ArrayList<>();
+        params.add("--version");
+        List<String> output = execute(script, params);
+        return output.get(0);
     }
 
 
@@ -37,6 +82,15 @@ public class Python {
   //** executeScript
   //**************************************************************************
     public static JSONObject executeScript(javaxt.io.File script, ArrayList<String> params)
+    throws Exception {
+        return parseOutput(execute(script, params));
+    }
+
+
+  //**************************************************************************
+  //** execute
+  //**************************************************************************
+    private static List<String> execute(javaxt.io.File script, ArrayList<String> params)
     throws Exception {
 
         String[] cmdarray = new String[params.size()+2];
@@ -58,7 +112,18 @@ public class Python {
         parseErrors(errors);
 
 
-      //Parse output
+      //Return output
+        return output;
+    }
+
+
+  //**************************************************************************
+  //** parseOutput
+  //**************************************************************************
+  /** Used to parse the standard output stream and return a JSONObject. Throws
+   *  an exception if the output can't be parsed.
+   */
+    private static JSONObject parseOutput(List<String> output) throws Exception {
         try{
             return new JSONObject(output.get(0));
         }
@@ -80,8 +145,8 @@ public class Python {
   //**************************************************************************
   //** parseErrors
   //**************************************************************************
-  /** Throws an exception if there are error messages in the standard error
-   *  output string
+  /** Used to parse the error output stream. Throws an exception if there are
+   *  any errors.
    */
     private static void parseErrors(List<String> errors) throws Exception{
         if (errors.size()>0){

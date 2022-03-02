@@ -270,6 +270,7 @@ public class Config {
         else{
 
             JSONObject json = get(key).toJSONObject();
+            if (json==null) return null;
             bluewave.graph.Neo4J neo4j = new bluewave.graph.Neo4J();
             neo4j.setHost(json.get("host").toString());
             neo4j.setUsername(json.get("username").toString());
@@ -316,6 +317,46 @@ public class Config {
 
 
   //**************************************************************************
+  //** getIndexDir
+  //**************************************************************************
+    public static javaxt.io.Directory getIndexDir() {
+        javaxt.io.Directory indexDir = null;
+        javaxt.io.Directory jobDir = getDirectory("webserver", "jobDir");
+        if (jobDir!=null){
+            indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
+            indexDir.create();
+        }
+        if (indexDir==null || !indexDir.exists()){
+            throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
+        }
+        return indexDir;
+    }
+
+
+  //**************************************************************************
+  //** getDirectory
+  //**************************************************************************
+  /** Simple helper class used to get a directory specified in the config file
+   *  javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
+   */
+    public static javaxt.io.Directory getDirectory(String... keys){
+        try{
+            JSONValue config = null;
+            for (String key : keys){
+                if (config==null) config = Config.get(key);
+                else config = config.get(key);
+            }
+
+            String dir = config.toString().trim();
+            return new javaxt.io.Directory(dir);
+        }
+        catch(Exception e){
+            return null;
+        }
+    }
+
+
+  //**************************************************************************
   //** getFile
   //**************************************************************************
   /** Returns a File for a given path
@@ -338,7 +379,7 @@ public class Config {
    *  both canonical and relative paths (relative to the configFile).
    */
     public static void updateDir(String key, JSONObject config, javaxt.io.File configFile, boolean create){
-        if (config.has(key)){
+        if (config!=null && config.has(key)){
             String path = config.get(key).toString();
             if (path==null){
                 config.remove(key);

@@ -1,9 +1,7 @@
 package bluewave.web.services;
 import bluewave.Config;
 import bluewave.graph.Neo4J;
-import bluewave.utils.Address;
-import bluewave.utils.Routing;
-import bluewave.utils.SpatialIndex;
+import bluewave.utils.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -24,9 +22,9 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.WKTReader;
 
-//scripting includes
-import javax.script.*;
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
+////scripting includes
+//import javax.script.*;
+//import jdk.nashorn.api.scripting.ScriptObjectMirror;
 
 
 //Neo4J includes
@@ -50,7 +48,7 @@ public class MapService extends WebService {
     private SpatialIndex hospitalIndex = new SpatialIndex();
     private ArrayList<String> faFonts = new ArrayList<>();
     private HashMap<String, String> faIcons = new HashMap<>();
-    private ScriptObjectMirror faLookup = null;
+//    private ScriptObjectMirror faLookup = null;
 
 
   //**************************************************************************
@@ -77,19 +75,19 @@ public class MapService extends WebService {
         }
 
 
-      //Evaluate fa.js script
-        try{
-            javaxt.io.File faScript = new javaxt.io.File(fontawesome, "fa.js");
-            ScriptEngineManager factory = new ScriptEngineManager();
-            ScriptEngine engine = factory.getEngineByName("nashorn");
-            Compilable compilable = (Compilable) engine;
-            CompiledScript script = compilable.compile(faScript.getText());
-            Bindings bindings = engine.createBindings();
-            script.eval(bindings);
-            faLookup = (ScriptObjectMirror) bindings.get("fa");
-        }
-        catch(Exception e){
-        }
+//      //Evaluate fa.js script
+//        try{
+//            javaxt.io.File faScript = new javaxt.io.File(fontawesome, "fa.js");
+//            ScriptEngineManager factory = new ScriptEngineManager();
+//            ScriptEngine engine = factory.getEngineByName("nashorn");
+//            Compilable compilable = (Compilable) engine;
+//            CompiledScript script = compilable.compile(faScript.getText());
+//            Bindings bindings = engine.createBindings();
+//            script.eval(bindings);
+//            faLookup = (ScriptObjectMirror) bindings.get("fa");
+//        }
+//        catch(Exception e){
+//        }
 
 
 
@@ -107,7 +105,7 @@ public class MapService extends WebService {
                 Double lat = col.get(1).toDouble();
                 Double lon = col.get(2).toDouble();
                 if (lat!=null && lon!=null){
-                    Point pt = SpatialIndex.createPoint(lat, lon);
+                    Point pt = JTS.createPoint(lat, lon);
                     hospitalIndex.add(pt, hospitalID);
                     hospitalPoints.put(hospitalID, pt);
                     hospitalIDs.put(hospitalID, id);
@@ -520,19 +518,19 @@ public class MapService extends WebService {
     }
 
 
-  //**************************************************************************
-  //** fa
-  //**************************************************************************
-    private String fa(String icon) throws Exception{
-        if (faIcons.containsKey(icon)){
-            return faIcons.get(icon);
-        }
-        else{
-            String i = (String) faLookup.call(null, icon);
-            faIcons.put(icon, i);
-            return i;
-        }
-    }
+//  //**************************************************************************
+//  //** fa
+//  //**************************************************************************
+//    private String fa(String icon) throws Exception{
+//        if (faIcons.containsKey(icon)){
+//            return faIcons.get(icon);
+//        }
+//        else{
+//            String i = (String) faLookup.call(null, icon);
+//            faIcons.put(icon, i);
+//            return i;
+//        }
+//    }
 
 
   //**************************************************************************
@@ -544,29 +542,29 @@ public class MapService extends WebService {
 
     private String getIcon(String icon){
         //<i class="fas fa-star"></i> same as fa-star-solid; and unicode of f005
-        try{
-            icon = icon.toLowerCase();
-            if (icon.startsWith("fa-")){
-                String[] arr = icon.substring(3).split("-");
-                icon = "";
-                for (int i=0; i<arr.length; i++){
-                    String str = arr[i];
-                    if (i==arr.length-1){
-                        if (str.equals("solid")){
-                            break;
-                        }
-                    }
-                    if (i>0) icon += "-";
-                    icon+=str;
-                }
-
-                return fa(icon);
-
-            }
-        }
-        catch(Exception e){
-            //e.printStackTrace();
-        }
+//        try{
+//            icon = icon.toLowerCase();
+//            if (icon.startsWith("fa-")){
+//                String[] arr = icon.substring(3).split("-");
+//                icon = "";
+//                for (int i=0; i<arr.length; i++){
+//                    String str = arr[i];
+//                    if (i==arr.length-1){
+//                        if (str.equals("solid")){
+//                            break;
+//                        }
+//                    }
+//                    if (i>0) icon += "-";
+//                    icon+=str;
+//                }
+//
+//                return fa(icon);
+//
+//            }
+//        }
+//        catch(Exception e){
+//            //e.printStackTrace();
+//        }
         return null;
     }
 

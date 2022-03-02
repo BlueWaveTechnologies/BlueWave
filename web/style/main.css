@@ -192,6 +192,7 @@ body, textarea, input, select, td, th {
     border: 1px solid #e0e0e0;
     display: inline-block;
     float: left;
+    box-sizing: border-box;
 }
 
 
@@ -264,6 +265,42 @@ body, textarea, input, select, td, th {
     font-size: 120px;
 }
 
+.dashboard-homepage .dashboard-item-settings {
+    transition: opacity .4s;
+}
+
+.dashboard-homepage .dashboard-item .fa-cog {
+    font-size: 18px;
+    color: #9a9a9a;
+}
+
+.dashboard-homepage-menu {
+    padding: 3px 2px;
+    min-width: 145px;
+}
+
+.dashboard-homepage-menu-item:hover {
+    background-color: #bee3ff;
+}
+
+.dashboard-homepage-menu-item {
+    line-height: 24px;
+    font-size: 13px;
+    padding: 0 7px 0 0;
+    white-space: nowrap;
+    color: #767676;
+}
+
+.dashboard-homepage-menu-item .fas {
+    color:#3876ad;
+    text-align:center;
+    width: 24px;
+    font-size: 16px;
+    vertical-align: middle;
+    margin-top: -3px;
+}
+
+
 .dashboard-group {
     border: 1px solid #c7c7c7;
     margin: 30px 15px 20px;
@@ -271,9 +308,10 @@ body, textarea, input, select, td, th {
     background-color: #f5f5f5;
     padding: 15px 10px;
     position: relative;
+    min-height: 250px;
 }
 
-.dashboard-group-label {
+.dashboard-group-header {
     display: inline-block;
     top: -21px;
     position: absolute;
@@ -285,9 +323,11 @@ body, textarea, input, select, td, th {
     border: 1px solid #c7c7c7;
     border-radius: 5px 5px 0 0;
     border-bottom: 0 none;
+    min-width: 100px;
+    text-align: left;
 }
 /*
-.dashboard-group-label:after {
+.dashboard-group-header:after {
     content: "";
     position: absolute;
     right: -1;
@@ -296,7 +336,7 @@ body, textarea, input, select, td, th {
     background: #f5f5f5;
     bottom: 0;
 }
-.dashboard-group-label:before {
+.dashboard-group-header:before {
     content: "";
     position: absolute;
     left: -1;
@@ -306,6 +346,18 @@ body, textarea, input, select, td, th {
     bottom: 0;
 }
 */
+
+.dashboard-group-settings{
+    display: inline-block;
+    margin-left: 5px;
+    color: #9a9a9a;
+    font-size: 13px;
+    transition: opacity .4s;
+    cursor: pointer;
+    float: right;
+    margin-top: 3px;
+}
+
 
 /**************************************************************************/
 /** Dashboard Layout
@@ -412,6 +464,10 @@ li.tree-node:hover {
     color: #000000;
 }
 
+.toolbar-button-icon.fas.fa-times {
+    color: #b11818; /*red - same color as search-bar-cancel*/
+    font-size: 21px;
+}
 
 /**************************************************************************/
 /** Map Legend
@@ -512,7 +568,7 @@ li.tree-node:hover {
 .company-profile-title {
     font-size: 20px;
     color: #fff;
-    padding: 0 5px;    
+    padding: 0 5px;
 }
 
 .company-profile li {
@@ -964,6 +1020,70 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
+/** Search Bar
+/**************************************************************************/
+
+.search-bar {
+    height: 37px;
+    padding: 5px 0 0 0;
+}
+
+.search-bar-icon {
+    position: absolute;
+    top: 14px;
+    left: 6px;
+    color: #b9b9b9;
+    font-size: 16px;
+    transition: all 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+}
+
+.search-bar-cancel {
+    top: 12px;
+    right: 6px;
+    position: absolute;
+    font-size: 16px;
+    color: #b11818; /*red - same color as fa-times in the toolbar*/
+    width: 18px;
+    height: 18px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.search-bar-input {
+    border-radius: 4px;
+    color: #363636;
+    display: inline-block;
+    font-size: 14px;
+    height: 32px;
+    line-height: 32px;
+    padding: 2px 4px 2px 26px;
+    vertical-align: middle;
+    transition: border 0.2s linear 0s, box-shadow 0.2s linear 0s;
+    -webkit-transition: all 0.20s ease-in-out;
+    -moz-transition: all 0.20s ease-in-out;
+    -ms-transition: all 0.20s ease-in-out;
+    -o-transition: all 0.20s ease-in-out;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+    box-sizing: border-box;
+}
+
+.search-bar-input:focus {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 0 none;
+    transition: all 0.2s cubic-bezier(0.39, 0.575, 0.565, 1);
+}
+
+
+.search-bar-input::placeholder {
+    color: #b9b9b9;
+    font-size: 14px;
+}
+
+
+/**************************************************************************/
 /** Document Comparison Panel
 /**************************************************************************/
 
@@ -1037,6 +1157,119 @@ li.tree-node:hover {
     padding: 0 0 0 12px;
 }
 
+
+.doc-compare-panel-navbar {
+    position: relative;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-compare-panel-navbar ul {
+    cursor: default;
+    list-style: none;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-compare-panel-navbar li {
+    position: relative;
+    display: block;
+    float: left;
+    margin: 14px 16px 4px;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    background-color: #ff9800;
+    border-radius: 50%;
+    transition: 0.2s;
+}
+
+
+.doc-compare-panel-navbar li.active,
+.doc-compare-panel-navbar li:hover {
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.46);
+}
+
+
+/**************************************************************************/
+/** Document Analysis
+/**************************************************************************/
+
+.document-analysis-selected-row {
+    position: absolute;
+    height: 100%;
+    width: 34px;
+    display:inline-block;
+    float: left;
+    transition: left 0.4s cubic-bezier(0.39, 0.575, 0.565, 1),
+    opacity 0.8s cubic-bezier(0.39, 0.575, 0.565, 1);
+}
+
+.document-analysis-selected-row .fas.fa-check-square {
+    color: #009d00;
+    font-size: 30px;
+    line-height: 34px;
+    float:left;
+    width: 34px;
+}
+
+.document-analysis-comparison-results a {
+    text-decoration: underline;
+    color: #0000ff;
+    cursor: pointer;
+}
+
+.document-analysis-comparison-results a:hover {
+    color: #ff0000;
+}
+
+.document-analysis-comparison-results .far,
+.document-analysis-comparison-results .fas {
+    padding: 0 5px 0 0;
+}
+
+.document-analysis-comparison-results .fa-exclamation-triangle {
+    color: #ff8013;
+}
+
+.document-analysis-comparison-results .fa-check-circle {
+    color: #009d00;
+}
+
+
+.document-analysis-button-bar {
+    position: relative;
+    height: 35px;
+    padding: 7px -0px 0 0;
+    border-top: 1px solid #ccc;
+    margin-right: 10px;
+}
+
+/**************************************************************************/
+/** Document Search
+/**************************************************************************/
+
+.document-search-search-bar {
+    padding: 0 5px;
+    border-bottom: 1px solid #ccc;
+}
+
+.document-search-result {
+    height: 8px;
+    line-height: 19px;
+}
+
+.document-search-fragment {
+    color: #c5b2a3;
+    font-size: 11px;
+    padding-left: 0px;
+}
+
+.document-search-fragment b {
+    color: #ee9549;
+}
 
 /**************************************************************************/
 /** Admin Panel
@@ -1200,6 +1433,18 @@ li.tree-node:hover {
   opacity: 0.6;
 }
 
+
+.carousel-header-link-count {
+    position:absolute;
+    font-size:9px;
+    top: -3px;
+    right: -14px;
+    background-color: #df4444;
+    border-radius: 6px;
+    padding: 0px 4px;
+    color: #fff;
+}
+
 /**************************************************************************/
 /** Color Picker
 /**************************************************************************/
@@ -1262,6 +1507,30 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
+/** Global Supply Chain Dashboard
+/**************************************************************************/
+
+.global-supply-chain .tick {
+    color: #777;
+}
+
+.global-supply-chain .chart-title {
+    font-size: 13px;
+    text-align: left;
+}
+
+.global-supply-chain .dashboard-item {
+    margin: 0;
+    padding: 7px;
+}
+
+.global-supply-chain .sankey-node text {
+    font-size: 11px;
+    fill: #777;
+}
+
+
+/**************************************************************************/
 /** D3 SVG Styles
 /**************************************************************************/
 
@@ -1273,6 +1542,22 @@ svg text {
     -khtml-user-select: none;
     user-select: none;
 }
+
+
+.svg-container {
+  display: inline-block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  vertical-align: top;
+  overflow: hidden;
+}
+.svg-content-responsive {
+  display: inline-block;
+  position: absolute;
+  left: 0;
+}
+
 
 .line {
   fill: none;
@@ -1305,6 +1590,15 @@ svg text {
     font-size: 13px;
 }
 
+.chart-axis-label{
+    fill: #000;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.tick {
+    font-size: 10px;
+}
 
 .countries {
     fill: #f9f9f9;
@@ -1369,4 +1663,13 @@ svg text {
     border-radius: 5px;
     color: #636363;
     box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+
+/**************************************************************************/
+/** iScroll overrides
+/**************************************************************************/
+
+.iScrollVerticalScrollbar{
+    right: 2px;
 }

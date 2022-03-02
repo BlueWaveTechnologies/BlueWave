@@ -27,8 +27,8 @@ public class WebApp extends HttpServlet {
     private Logger logger;
     private String appName;
     private String appStyle;
+    private String auth;
 
-    private boolean ntlm;
 
   //**************************************************************************
   //** Constructor
@@ -75,6 +75,16 @@ public class WebApp extends HttpServlet {
         }
 
 
+      //Get authentication scheme
+        this.auth = "BASIC";
+        String auth = config.get("auth").toString();
+        if (auth!=null){
+            auth = auth.trim().toUpperCase();
+            if (auth.equals("NTLM")) this.auth = auth;
+            if (auth.equals("DISABLED")) this.auth = null;
+        }
+
+
       //Start the notification service
         NotificationService.start();
 
@@ -88,12 +98,27 @@ public class WebApp extends HttpServlet {
 
 
       //Instantiate authenticator
-        String auth = config.get("auth").toString();
-        ntlm = (auth!=null && auth.equalsIgnoreCase("NTLM"));
-        setAuthenticator(new Authenticator());
+        if (this.auth==null){ //create custom authenticator for when auth is disabled
+            String[] credentials = new String[]{"bluewave","bluewave"};
+            bluewave.app.User user = new bluewave.app.User();
+            user.setUsername(credentials[0]);
+            user.setPassword(credentials[1]);
+            user.setAccessLevel(2);
+            setAuthenticator(new javaxt.http.servlet.Authenticator(){
+                public String getAuthType(){ return ""; }
+                public boolean isUserInRole(String role){ return true; }
+                public bluewave.app.User getPrinciple(){ return user; }
+                public void authenticate() throws ServletException {}
+                public String[] getCredentials() { return credentials; };
+                public javaxt.http.servlet.Authenticator newInstance(HttpServletRequest request){ return this; }
+            });
+        }
+        else{ //typically we end up here
+            setAuthenticator(new Authenticator());
+        }
 
 
-      //Get branding
+      //Get branding (optional)
         if (config.has("branding")){
             JSONObject branding = config.get("branding").toJSONObject();
             appName = branding.get("appName").toString();
@@ -110,7 +135,7 @@ public class WebApp extends HttpServlet {
         if (appStyle==null) appStyle = "";
 
 
-      //Get logging info
+      //Get logging info (optional)
         if (config.has("logDir")){
             String logDir = config.get("logDir").toString();
             javaxt.io.Directory dir = new javaxt.io.Directory(logDir);
@@ -155,7 +180,7 @@ public class WebApp extends HttpServlet {
 
 
       //Send NTLM response as needed
-        boolean ntlm = this.ntlm;
+        boolean ntlm = (auth!=null && auth.equals("NTLM"));
         if (ntlm){
             String ua = request.getHeader("user-agent");
             if (ua!=null){
@@ -229,6 +254,11 @@ public class WebApp extends HttpServlet {
                 response.write(username);
             }
         }
+        else if (service.equals("user") && auth==null){
+            bluewave.app.User user = (bluewave.app.User) request.getUserPrincipal();
+            response.setContentType("application/json");
+            response.write(user.toJson().toString());
+        }
         else if (service.equals("appinfo")){
             response.setContentType("application/json");
             response.write("{\"name\":\"" + appName + "\"}");
@@ -265,7 +295,20 @@ public class WebApp extends HttpServlet {
                         return;
                     }
                 }
+
+
+              //Special case: URL shortcuts to bluewave dashboards
+                if (!path.contains("/")){
+                    javaxt.io.File file = new javaxt.io.File(web + "app/dashboards/" + path +".js");
+                    if (!file.exists()) file = new javaxt.io.File(web + "app/analytics/" + path +".js");
+                    if (file.exists()){
+                        file = new javaxt.io.File(web, "index.html");
+                        fileManager.sendFile(file, request, response);
+                        return;
+                    }
+                }
             }
+
 
           //If we're still here, we either have a bad file request or a web
           //service request. In either case, send the request to the

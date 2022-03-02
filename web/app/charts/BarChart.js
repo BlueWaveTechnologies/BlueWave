@@ -13,15 +13,12 @@ bluewave.charts.BarChart = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
-        margin: {
-            top: 15,
-            right: 5,
-            bottom: 65,
-            left: 82
-        }
+        layout: "vertical",
+        animationSteps: 1500, //duration in milliseconds
+        stackValues: false,
+        colors: d3.schemeCategory10
     };
     var svg, chart, plotArea;
-    var axisHeight;
     var x, y;
     var xAxis, yAxis;
 
@@ -31,7 +28,7 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        config = merge(config, defaultConfig);
+        me.setConfig(config);
 
 
         initChart(parent, function(s, g){
@@ -39,6 +36,29 @@ bluewave.charts.BarChart = function(parent, config) {
             chart = g;
         });
 
+    };
+
+
+  //**************************************************************************
+  //** setConfig
+  //**************************************************************************
+    this.setConfig = function(chartConfig){
+        if (!chartConfig) config = defaultConfig;
+        else config = merge(chartConfig, defaultConfig);
+    };
+
+
+  //**************************************************************************
+  //** getBarColor
+  //**************************************************************************
+    this.getBarColor = function(d, i){
+        var colors = config.colors;
+        var barColor = config["barColor" + i];
+        if (!barColor) {
+            barColor = colors[i%colors.length];
+            config["barColor" + i] = barColor;
+        }
+        return barColor;
     };
 
 
@@ -55,10 +75,11 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
+        me.setConfig(chartConfig);
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
-            renderChart(chartConfig, data, parent);
+            renderChart(data, parent);
         });
     };
 
@@ -66,29 +87,29 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
   //** renderChart
   //**************************************************************************
-    var renderChart = function(chartConfig, data, parent){
+    var renderChart = function(data, parent){
+
+        var chartConfig = config;
+
 
         var width = parent.offsetWidth;
         var height = parent.offsetHeight;
-        var margin = config.margin;
-        axisHeight = height - margin.top - margin.bottom;
-        var axisWidth = width - margin.left - margin.right;
-        var plotHeight = height - margin.top - margin.bottom;
-        var plotWidth = width - margin.left - margin.right;
+        var axisHeight = height;
+        var axisWidth = width;
         plotArea = chart.append("g");
         plotArea
-            .attr("width", plotWidth)
-            .attr("height", plotHeight)
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + (margin.top) + ")"
-            );
+            .attr("width", width)
+            .attr("height", height);
 
+
+      //Get chart options
+        var layout = chartConfig.layout;
+        var stackValues = chartConfig.stackValues===true;
 
         var xKey;
         var yKey;
-        let xKey2;
-        let yKey2;
+
+
         var barType = chartConfig.barType;
         if (barType === "histogram"){
             xKey = chartConfig.values;
@@ -101,13 +122,8 @@ bluewave.charts.BarChart = function(parent, config) {
         if ((xKey===null || xKey===undefined) || (yKey===null || yKey===undefined)) return;
 
 
-        if (chartConfig.xAxis2 !==null && chartConfig.yAxis2 !==null){
-            xKey2 = chartConfig.xAxis2;
-            yKey2 = chartConfig.yAxis2;
-        }
-
         var dataSets = data;
-        var colors = bluewave.utils.getColorPalette(true);
+
 
 
         var mergedData = d3.merge(dataSets);
@@ -123,6 +139,13 @@ bluewave.charts.BarChart = function(parent, config) {
         //Get sum of tallest bar
         //TODO: axis being set by first dataset - set with largest data
 
+        //Sort bars if option checked
+        var sort = chartConfig.sort;
+        if (sort) {
+            maxData.sort(function (a, b) {
+                return d3[sort](a.value, b.value)
+            })
+        };
 
 
         //Reformat data if "group by" is selected
@@ -133,13 +156,15 @@ bluewave.charts.BarChart = function(parent, config) {
             .key(function(d){return d[group];})
             .entries(data[0]);
 
-            maxData = d3.nest()
-            .key(function (d) { return d[xKey]; })
-            .rollup(function (d) {
-                return d3.max(d, function (g) {
-                    return parseFloat(g[yKey]);
-                });
-            }).entries(mergedData);
+            if (!stackValues){
+                maxData = d3.nest()
+                .key(function (d) { return d[xKey]; })
+                .rollup(function (d) {
+                    return d3.max(d, function (g) {
+                        return parseFloat(g[yKey]);
+                    });
+                }).entries(mergedData);
+            }
 
             let tempDataSets = [];
             groupData.forEach(function(g){
@@ -148,16 +173,10 @@ bluewave.charts.BarChart = function(parent, config) {
 
             dataSets = tempDataSets;
 
-            var x0 = d3.scaleBand()
-            .rangeRound([0, width])
-            .paddingInner(0.1);
-
-            var subgroups = groupData.map(function(d) { return d["key"]; });
-            x0.domain(subgroups);
         }
 
 
-        //Get x and y values for each data set and format object for rendering
+      //Get x and y values for each data set and format object for rendering
         var arr = [];
         for (let i=0; i<dataSets.length; i++){
 
@@ -173,7 +192,7 @@ bluewave.charts.BarChart = function(parent, config) {
                 yKey = yAxisN;
             }
 
-            // if(!xKey || !yKey) continue;
+
 
             var sumData = d3.nest()
                 .key(function(d){return d[xKey];})
@@ -190,114 +209,92 @@ bluewave.charts.BarChart = function(parent, config) {
         //Flip axes if layout is horizontal
         var leftLabel, bottomLabel;
 
-        //Set intitial value for layout to vertical and barType to barchart
-        if (!chartConfig.barLayout) chartConfig.barLayout = "vertical";
-        var layout = chartConfig.barLayout;
+
 
 
       //Render X/Y axis
-        var axes;
+        var axisKey, axisValue;
         if (barType === "histogram") {
+            axisKey = "key";
+            axisValue = "key";
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
                 leftLabel = "Frequency";
                 bottomLabel = chartConfig.xAxis;
-            } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "key", maxData, null, null, "barChart");
+            }
+            else if (layout === "horizontal") {
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = "Frequency";
             }
         }
         else{
             if (layout === "vertical") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "key", "value", maxData, null, null, "barChart");
+                axisKey = "key";
+                axisValue = "value";
                 leftLabel = chartConfig.yAxis;
                 bottomLabel = chartConfig.xAxis;
-            } else if (layout === "horizontal") {
-                axes = drawAxes(plotArea, axisWidth, axisHeight, "value", "key", maxData, null, null, "barChart");
+            }
+            else if (layout === "horizontal") {
+                axisKey = "value";
+                axisValue = "key";
                 leftLabel = chartConfig.xAxis;
                 bottomLabel = chartConfig.yAxis;
             }
         }
+
+
+      //Render X/Y axis
+        var axes = drawAxes(plotArea, axisWidth, axisHeight, axisKey, axisValue, maxData, null, chartConfig, "barChart");
+
+
+      //Update X/Y axis as needed
+        var margin = axes.margin;
+        if (margin){
+
+            var marginLeft = margin.left;
+            var marginRight = margin.right;
+            var marginTop = margin.top;
+            var marginBottom = margin.bottom;
+
+
+
+            if (marginTop>0 || marginBottom>0 || marginLeft>0 || marginRight>0){
+                axisHeight-=(marginTop+marginBottom);
+                axisWidth-=(marginLeft+marginRight);
+                plotArea.selectAll("*").remove();
+                plotArea
+                    .attr(
+                        "transform",
+                        "translate(" + marginLeft + "," + marginTop + ")"
+                    );
+
+                axes = drawAxes(plotArea, axisWidth, axisHeight, axisKey, axisValue, maxData, null, chartConfig, "barChart");
+            }
+            margin = {
+                top: marginTop,
+                right: marginRight,
+                bottom: marginBottom,
+                left: marginLeft
+            };
+        }
+
+
+
+      //Get x and y functions from the axes
         x = axes.x;
         y = axes.y;
         xAxis = axes.xAxis;
         yAxis = axes.yAxis;
 
 
-        width = plotWidth;
-        height = plotHeight;
-
-        if (chartConfig.stack){
-
-            //Nest merged data object by X-axis value for stack
-            var groupedStackData = d3.nest()
-                .key((d) => d[xKey])
-                .entries(mergedData)
+        height = height-(margin.top+margin.bottom);
+        width = width-(margin.left+margin.right);
 
 
-            let stackGroup = [];
-            let stackLength = groupedStackData[0].values.length;
-            for (let i = 0; i < stackLength; i++) {
-                stackGroup.push(i);
-            }
 
-            var stackedData = d3.stack()
-                // .keys(subgroups)
-                .keys(stackGroup)
-                .value(function (d, key) {
-
-                    let v = d.values[key];
-                    return v[yKey];
-
-                })
-                (groupedStackData)
- 
-
-            let colorIncrementer = 0;
-            plotArea.append("g")
-                .selectAll("g")
-                .data(stackedData)
-                .enter().append("g")
-                .selectAll("rect")
-
-                .data(function (d) { return d; })
-                .enter().append("rect")
-                .attr("x", function (d) {
-
-                    // return x(new Date(d.data.key));
-                    //keep in case we change how we're handling timescale
-                    return layout === "vertical" ? x(d.data.key) : x(d[0]);
-                })
-                .attr("y", function (d) {
-
-                    return layout === "vertical" ? y(d[1]) : y(d.data.key);
-                })
-                .attr("height", function (d) {
-
-                    return layout === "vertical" ? y(d[0]) - y(d[1]) : y.bandwidth();
-                })
-                .attr("width", function(d){
-
-                    return layout==="vertical" ? x.bandwidth() : x(d[1]) - x(d[0]);
-                });
-
-
-                //Mod through color array assigning barId. Rolls over at number of stacks
-                plotArea.selectAll("rect").attr("barID", function(d, i){
-
-                    if (i%stackLength === 0) colorIncrementer++;
-                    return colorIncrementer-1;
-
-                });
-
-        }
-
-
+        //Mapping object to store accumulated values for stacking
+        var keyMap = {};
 
         for (let i=0; i<dataSets.length; i++){
-
-            if (chartConfig.stack) break;
 
 
             var sumData = arr[i];
@@ -305,6 +302,69 @@ bluewave.charts.BarChart = function(parent, config) {
             let fillOpacity = parseFloat(chartConfig["fillOpacity" + i]);
             if (isNaN(fillOpacity) || fillOpacity<0 || fillOpacity>1) fillOpacity = 1;
 
+            //Only supports vertical layout for now
+            if (stackValues){
+
+
+                let keyType = getType(sumData[0].key);
+                if (keyType == "date") keyType = "string";
+
+                let getX = function (d) {
+
+                    if (keyType === "date") {
+                        return x(new Date(d.key));
+                    } else {
+                        return x(d.key);
+                    }
+
+                };
+
+                let getY = function (d) {
+                    var v = parseFloat(d["value"]);
+                    return y(v);
+                };
+
+
+                let getWidth = function (d) {
+                    return x.bandwidth ? x.bandwidth() : getX(d);
+                };
+
+
+                plotArea
+                    .append("g")
+                    .selectAll("mybar")
+                    .data(sumData)
+                    .enter()
+                    .append("rect")
+                    .attr("x", getX)
+                    .attr("y", function (d) {
+                        var key = d.key;
+                        var val = d.value;
+
+                        //Check if key exists in keyMap and accumulate value
+                        if (!keyMap[key]) keyMap[key] = 0;
+                        var v = parseFloat(val);
+                        keyMap[key] += v;
+
+                        return y(keyMap[key]);
+                    })
+                    .attr("height", function (d) {
+
+                        return y.bandwidth
+                            ? y.bandwidth()
+                            : (height - getY(d));
+                    })
+                    .attr("width", function (d) {
+                        return getWidth(d);
+                    })
+                    .attr("opacity", fillOpacity)
+                    .attr("barID", i);
+
+
+            };
+
+            //Jump out of loop after stacking is done
+            if (stackValues) continue;
 
             if (barType === "histogram"){
 
@@ -324,16 +384,16 @@ bluewave.charts.BarChart = function(parent, config) {
                     //TODO: find general solution for time and ordinal scale
                     // .thresholds(x.domain()) //Not sure why this doesn't work for dates/strings
 
-                 var bins = histogram(sumData);
+                var bins = histogram(sumData);
 
-                 var frequencyMax = d3.max(bins, d => d.length)
+                var frequencyMax = d3.max(bins, d => d.length)
 
-                 var frequencyAxis = d3.scaleLinear()
+                var frequencyAxis = d3.scaleLinear()
                     .range(layout === "vertical" ? [height, 0] : [0, width]);
                     frequencyAxis.domain([0, frequencyMax]);
 
-                if (layout === "vertical") displayHistogramAxis(x, frequencyAxis);
-                else if(layout === "horizontal") displayHistogramAxis(frequencyAxis, y);
+                if (layout === "vertical") displayHistogramAxis(x, frequencyAxis, axisHeight);
+                else if(layout === "horizontal") displayHistogramAxis(frequencyAxis, y, axisHeight);
 
 
                 plotArea.selectAll("rect")
@@ -362,205 +422,229 @@ bluewave.charts.BarChart = function(parent, config) {
             else { //regular bar chart
 
 
-            let keyType = getType(sumData[0].key);
-            if(keyType == "date") keyType = "string";
+                let keyType = getType(sumData[0].key);
+                if(keyType == "date") keyType = "string";
 
-            var getX = function (d) {
+                var getX = function (d) {
 
-                if (keyType === "date") {
-                    return x(new Date(d.key));
-                } else {
-                    return x(d.key);
-                }
-
-            };
-
-            var getY = function(d){
-                var v = parseFloat(d["value"]);
-                return y(v);
-            };
-
-
-            if (y.bandwidth || x.bandwidth) {
-                if (chartConfig.barLayout === "vertical"){
-
-                    var getWidth = function(d){
-                        if(group){
-                            return x.bandwidth ? x.bandwidth()/dataSets.length : getX(d);
-                        }else{
-                            return x.bandwidth ? x.bandwidth() : getX(d);
-                        }
-                    };
-
-
-                    plotArea
-                        .selectAll("mybar")
-                        .data(sumData)
-                        .enter()
-                        .append("rect")
-                        .attr("x", function(d) {
-                            var w = getWidth(d);
-                            var left = x.bandwidth ? getX(d) : 0;
-                            return group ? left+(w*i): getX(d);
-                        })
-                        .attr("y", getY)
-                        .attr("height", function (d) {
-
-
-                            return y.bandwidth
-                                ? y.bandwidth()
-                                : height - getY(d);
-                        })
-                        .attr("width", function (d) {
-                            return getWidth(d);
-                        })
-                        .attr("opacity", fillOpacity)
-                        .attr("barID", function(d, n, j){
-                            // i is external loop incrementor for multiple data sets and grouping
-                            // n is for single data set where all bars are rendered on enter()
-                            return group ? i : 0;
-                        })
-
-                }
-                else if(chartConfig.barLayout === "horizontal"){
-                    plotArea
-                        .selectAll("mybar")
-                        .data(sumData)
-                        .enter()
-                        .append("rect")
-                        .attr("x", function (d) {
-                            return 0;
-                        })
-                        .attr("y", function (d) {
-
-                            var w = y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["key"]);
-                            var left = y.bandwidth ? y(d["key"]) : 0;
-                            return group ? left+(w*i): y(d["key"]);
-
-                        })
-                        .attr("height", function (d) {
-
-                            if(group){
-                                return y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["value"]);
-                            }else{
-                                return y.bandwidth ? y.bandwidth() : height - y(d["value"]);
-                            }
-
-                        })
-                        .attr("width", function (d) {
-                            return x.bandwidth ? x.bandwidth() : x(d["value"]);
-                        })
-                        .attr("opacity", fillOpacity)
-                        .attr("barID", function(d, n, j){
-                            // i is external loop incrementor for multiple data sets and grouping
-                            // n is for single data set where all bars are rendered on enter()
-                            return group ? i : 0;
-                        })
-
-                        // .attr("fill", getBarColor(i));
-                }
-            }
-            //No bandwith
-            else {
-                // if(timeAxis === "x")
-                if (chartConfig.barLayout === "vertical") {
-
-                    if(!group){
-                    plotArea
-                        .selectAll("mybar")
-                        .data(sumData)
-                        .enter()
-                        .append("rect")
-                        .attr("x", function (d) {
-                            return getX(d) - width/sumData.length / 2;
-    //                        return x(d[xKey]) - width/data.length / 2;
-                        })
-                        .attr("y", getY)
-                        .attr("height", function (d) {
-                            return height - getY(d);
-    //                        return height - y(d[yKey]);
-                        })
-                        .attr("width", function (d) {
-                            return width/sumData.length-5;
-                        })
-                        .attr("opacity", fillOpacity)
-                        .attr("barID", function(d, n, j){
-                            // i is external loop incrementor for multiple data sets and grouping
-                            // n is for single data set where all bars are rendered on enter()
-                            return group ? i : 0;
-                        })
-
-                        // .attr("fill", getBarColor(i));
+                    if (keyType === "date") {
+                        return x(new Date(d.key));
+                    } else {
+                        return x(d.key);
                     }
 
-                }
-                // else if(timeAxis === "y")
-                else if (chartConfig.barLayout === "horizontal") {
+                };
 
-                    plotArea
-                        .selectAll("mybar")
-                        .data(sumData)
-                        .enter()
-                        .append("rect")
-                        .attr("x", function (d) {
-                            return 0;
-                        })
-                        .attr("y", function (d) {
-                            if (keyType === "date") {
-                                return y(new Date(d.key)) - height/sumData.length / 2;
-                            } else {
-                                return y(d.key) - height/sumData.length / 2;
+                var getY = function(d){
+                    var v = parseFloat(d["value"]);
+                    return y(v);
+                };
+
+
+                if (y.bandwidth || x.bandwidth) {
+                    if (chartConfig.layout === "vertical"){
+
+                        var getWidth = function(d){
+                            if(group){
+                                return x.bandwidth ? x.bandwidth()/dataSets.length : getX(d);
+                            }else{
+                                return x.bandwidth ? x.bandwidth() : getX(d);
                             }
-                            // return y(d["key"]) - height/sumData.length / 2;
-                        })
-                        .attr("height", function (d) {
-                            return height/sumData.length-5;
-                        })
-                        .attr("width", function (d) {
-                            return x(d["value"]);
-                        })
-                        .attr("opacity", fillOpacity)
-                        .attr("barID", function(d, n, j){
-                            // i is external loop incrementor for multiple data sets and grouping
-                            // n is for single data set where all bars are rendered on enter()
-                            return group ? i : 0;
-                        })
-                        // .attr("fill", getBarColor(i));
+                        };
+
+
+                        plotArea
+                            .selectAll("mybar")
+                            .data(sumData)
+                            .enter()
+                            .append("rect")
+                            .attr("x", function(d) {
+                                var w = getWidth(d);
+                                var left = x.bandwidth ? getX(d) : 0;
+                                return group ? left+(w*i): getX(d);
+                            })
+                            .attr("y", getY)
+                            .attr("height", function (d) {
+
+
+                                return y.bandwidth
+                                    ? y.bandwidth()
+                                    : height - getY(d);
+                            })
+                            .attr("width", function (d) {
+                                return getWidth(d);
+                            })
+                            .attr("opacity", fillOpacity)
+                            .attr("barID", function(d, n, j){
+                                // i is external loop incrementor for multiple data sets and grouping
+                                // n is for single data set where all bars are rendered on enter()
+                                return group ? i : 0;
+                            });
+
+                    }
+                    else if(chartConfig.layout === "horizontal"){
+                        plotArea
+                            .selectAll("mybar")
+                            .data(sumData)
+                            .enter()
+                            .append("rect")
+                            .attr("x", function (d) {
+                                return 0;
+                            })
+                            .attr("y", function (d) {
+
+                                var w = y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["key"]);
+                                var left = y.bandwidth ? y(d["key"]) : 0;
+                                return group ? left+(w*i): y(d["key"]);
+
+                            })
+                            .attr("height", function (d) {
+
+                                if(group){
+                                    return y.bandwidth ? y.bandwidth()/dataSets.length : height - y(d["value"]);
+                                }else{
+                                    return y.bandwidth ? y.bandwidth() : height - y(d["value"]);
+                                }
+
+                            })
+                            .attr("width", function (d) {
+                                return x.bandwidth ? x.bandwidth() : x(d["value"]);
+                            })
+                            .attr("opacity", fillOpacity)
+                            .attr("barID", function(d, n, j){
+                                // i is external loop incrementor for multiple data sets and grouping
+                                // n is for single data set where all bars are rendered on enter()
+                                return group ? i : 0;
+                            });
+
+                    }
+                }
+                //No bandwith
+                else {
+
+                    if (chartConfig.layout === "vertical") {
+
+                        if(!group){
+                        plotArea
+                            .selectAll("mybar")
+                            .data(sumData)
+                            .enter()
+                            .append("rect")
+                            .attr("x", function (d) {
+                                return getX(d) - width/sumData.length / 2;
+                            })
+                            .attr("y", getY)
+                            .attr("height", function (d) {
+                                return height - getY(d);
+                            })
+                            .attr("width", function (d) {
+                                return width/sumData.length-5;
+                            })
+                            .attr("opacity", fillOpacity)
+                            .attr("barID", function(d, n, j){
+                                // i is external loop incrementor for multiple data sets and grouping
+                                // n is for single data set where all bars are rendered on enter()
+                                return group ? i : 0;
+                            });
+
+                        }
+
+                    }
+
+                    else if (chartConfig.layout === "horizontal") {
+
+                        plotArea
+                            .selectAll("mybar")
+                            .data(sumData)
+                            .enter()
+                            .append("rect")
+                            .attr("x", function (d) {
+                                return 0;
+                            })
+                            .attr("y", function (d) {
+                                if (keyType === "date") {
+                                    return y(new Date(d.key)) - height/sumData.length / 2;
+                                } else {
+                                    return y(d.key) - height/sumData.length / 2;
+                                }
+
+                            })
+                            .attr("height", function (d) {
+                                return height/sumData.length-5;
+                            })
+                            .attr("width", function (d) {
+                                return x(d["value"]);
+                            })
+                            .attr("opacity", fillOpacity)
+                            .attr("barID", function(d, n, j){
+                                // i is external loop incrementor for multiple data sets and grouping
+                                // n is for single data set where all bars are rendered on enter()
+                                return group ? i : 0;
+                            });
+
+                    }
                 }
             }
         }
-        }
 
-        //Set color defaults
-        var getBarColor = function(i){
-            var barColor = chartConfig["barColor" + i];
-            if (!barColor) {
-                barColor = colors[i%colors.length];
-                chartConfig["barColor" + i] = barColor;
-            }
-            return barColor;
-        };
+
+
 
         //Set bar colors
         var bars = plotArea.selectAll("rect");
-
         bars.each(function (d, i) {
-
-            //i is a d3 internal callback incrementer
             let bar = d3.select(this);
-            let barID = parseInt(d3.select(this).attr("barID"));
-            bar.attr("fill", getBarColor(barID));
+            let barID = parseInt(bar.attr("barID"));
+
+            var orgData = null;
+            var dataSet = dataSets[barID];
+            for (var j=0; j<dataSet.length; j++){
+                if (dataSet[j][xKey]===d.key){
+                    orgData = dataSet[j];
+                }
+            }
+
+            bar.attr("fill", me.getBarColor(orgData, barID));
         });
 
 
-        //Create d3 event listeners for bars
-        bars.on("mouseover", function(){
-            d3.select(this).transition().duration(100).attr("opacity", "0.8")
-        });
 
-        bars.on("mouseout", function(){
-            d3.select(this).transition().duration(100).attr("opacity", "1.0")
-        });
+        //Bar transitions
+        var animationSteps = chartConfig.animationSteps;
+        if (stackValues) animationSteps = 0;
+        if (!isNaN(animationSteps) && animationSteps>50){
+            var max = d3.max(maxData, d => parseFloat(d.value));
+            if (layout === "vertical"){
+
+                var heightRatio = max / height;
+                bars.attr("y", height).attr("height", 0);
+
+                bars.transition().duration(animationSteps)
+                    .attr("y", function (d) { return height - d.value / heightRatio; })
+                    .attr("height", function (d) { return d.value / heightRatio; });
+            }else if(layout === "horizontal"){
+
+                var widthRatio = max/width;
+                bars.attr("x", 0).attr("width", 0);
+
+                bars.transition().duration(animationSteps)
+                    .attr("width", function (d) { return d.value / widthRatio; });
+
+            }
+        }
+        else{
+
+            //Create d3 event listeners for bars
+            bars.on("mouseover", function() {
+                d3.select(this).transition().duration(100).attr("opacity", "0.8")
+            });
+
+            bars.on("mouseout", function() {
+                d3.select(this).transition().duration(100).attr("opacity", "1.0")
+            });
+
+        };
+
 
         var getSiblings = function(bar){
             var arr = [];
@@ -586,11 +670,11 @@ bluewave.charts.BarChart = function(parent, config) {
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
         }
 
-        //Draw labels if checked
-        if(chartConfig.xLabel || chartConfig.yLabel){
-            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-                axisHeight, axisWidth, margin, bottomLabel, leftLabel);
-        }
+//        //Draw labels if checked
+//        if(chartConfig.xLabel || chartConfig.yLabel){
+//            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
+//                axisHeight, axisWidth, margin, bottomLabel, leftLabel);
+//        }
 
 
         //Display legend
@@ -653,7 +737,7 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
   //** displayHistogramAxis
   //**************************************************************************
-    var displayHistogramAxis = function (x, y) {
+    var displayHistogramAxis = function (x, y, axisHeight) {
 
         if (xAxis) xAxis.selectAll("*").remove();
         if (yAxis) yAxis.selectAll("*").remove();

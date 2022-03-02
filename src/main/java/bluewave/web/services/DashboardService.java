@@ -1,6 +1,7 @@
 package bluewave.web.services;
 import bluewave.app.Dashboard;
 import bluewave.app.DashboardUser;
+import bluewave.app.DashboardGroup;
 import bluewave.utils.SQLEditor;
 
 import javaxt.express.*;
@@ -123,34 +124,31 @@ public class DashboardService extends WebService {
 
 
 
-        SQLEditor where = new SQLEditor(sql, c);
+        SQLEditor sqlEditor = new SQLEditor(sql, c);
         if (c.equals(bluewave.app.Dashboard.class)){
 
 
-            String filter = null;
             if (op.equals("get") || op.equals("list")){
-                filter = "id in (" +
+                sqlEditor.addConstraint("id in (" +
                 "select dashboard.id " +
                 "from APPLICATION.DASHBOARD left join APPLICATION.DASHBOARD_USER " +
                 "on APPLICATION.DASHBOARD.ID=APPLICATION.DASHBOARD_USER.dashboard_id " +
                 " where user_id=" + user.getID() + " or user_id is null" +
-                ")";
+                ")");
             }
-            else{
+            else{ //Delete requests (Save is handled by saveDashboard)
                 if (user.getAccessLevel()<5){
-                    filter = "id in (" +
+                    sqlEditor.addConstraint("id in (" +
                     "select dashboard_id from APPLICATION.DASHBOARD_USER " +
                     "where user_id=" + user.getID() + " and read_only=false" +
-                    ")";
+                    ")");
                 }
+                sqlEditor.addConstraint("class_name NOT LIKE 'bluewave.dashboards.%'");
             }
-
-
-            if (filter!=null) where.addConstraint(filter);
         }
 
 
-        sql = where.getSQL();
+        sql = sqlEditor.getSQL();
 
 
 
@@ -168,10 +166,10 @@ public class DashboardService extends WebService {
 
 
   //**************************************************************************
-  //** save
+  //** saveDashboard
   //**************************************************************************
     public ServiceResponse saveDashboard(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws ServletException {
 
       //Get user associated with the request
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -180,7 +178,6 @@ public class DashboardService extends WebService {
         }
 
 
-        Connection conn = null;
         try{
             JSONObject json = new JSONObject(new String(request.getPayload(), "UTF-8"));
             if (json.isEmpty()) throw new Exception("JSON is empty.");
@@ -192,8 +189,6 @@ public class DashboardService extends WebService {
             boolean isNew = false;
             if (id!=null){
                 dashboard = new Dashboard(id);
-
-
                 dashboard.update(json);
             }
             else{
@@ -203,16 +198,18 @@ public class DashboardService extends WebService {
 
 
 
-          //Apply filter
+          //Apply security filters
+            if (dashboard.getClassName().startsWith("bluewave.dashboards.")){
+                return new ServiceResponse(403, "Not Authorized");
+            }
             if (!isNew){
                 if (!isAuthorized(user, dashboard, database, false))
                     return new ServiceResponse(403, "Not Authorized");
             }
 
 
-          //Call the save method
+          //Save dashboard
             dashboard.save();
-
 
 
 
@@ -234,6 +231,60 @@ public class DashboardService extends WebService {
             return new ServiceResponse(dashboard.getID()+"");
         }
         catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** getPermissions
+  //**************************************************************************
+    public ServiceResponse getPermissions(ServiceRequest request, Database database)
+        throws ServletException {
+        String dashboardID = request.getParameter("dashboardID").toString();
+        String sql = "SELECT APPLICATION.DASHBOARD.ID as id, class_name, read_only\n" +
+        "FROM application.dashboard left join APPLICATION.DASHBOARD_USER\n" +
+        "on APPLICATION.DASHBOARD.ID=APPLICATION.DASHBOARD_USER.dashboard_id\n" +
+        "where (user_id=1 or user_id is null)";
+        if (dashboardID!=null){
+            sql+= " AND APPLICATION.DASHBOARD.ID IN (" + dashboardID + ")";
+        }
+
+
+        Connection conn = null;
+        try{
+            conn = database.getConnection();
+            Recordset rs = new Recordset();
+            rs.open(sql, conn);
+            JSONArray arr = new JSONArray();
+            while (rs.hasNext()){
+
+                Long id = rs.getValue("id").toLong();
+                String className = rs.getValue("class_name").toString();
+                Boolean readOnly = rs.getValue("read_only").toBoolean();
+
+                String permissions = "w";
+                if (className.startsWith("bluewave.dashboards.")){
+                    permissions = "r";
+                }
+                else{
+                    if (readOnly!=null){
+                        if (readOnly==true) permissions = "r";
+                    }
+                }
+
+                JSONObject json = new JSONObject();
+                json.set("dashboardID", id);
+                json.set("permissions", permissions);
+                arr.add(json);
+
+                rs.moveNext();
+            }
+            rs.close();
+            conn.close();
+            return new ServiceResponse(arr);
+        }
+        catch(Exception e){
             if (conn!=null) conn.close();
             return new ServiceResponse(e);
         }
@@ -246,7 +297,7 @@ public class DashboardService extends WebService {
   /** Returns a list of user-defined groupings for dashboards
    */
     public ServiceResponse getGroups(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws ServletException {
 
       //Get user associated with the request
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -311,6 +362,88 @@ public class DashboardService extends WebService {
         }
         catch(Exception e){
             if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** saveGroup
+  //**************************************************************************
+  /** Used to create or update a DashboardGroup
+   */
+    public ServiceResponse saveGroup(ServiceRequest request, Database database)
+        throws ServletException {
+
+      //Parse payload
+        JSONObject json = request.getJson();
+        JSONArray dashboardIDs = json.get("dashboards").toJSONArray();
+        json.remove("dashboards");
+
+
+      //Get user associated with the request
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+
+
+
+        Connection conn = null;
+        try{
+
+          //Save DashboardGroup
+            DashboardGroup group = new DashboardGroup(json);
+            group.setUser(user);
+            group.setDashboards(new Dashboard[0]);
+            group.save();
+            Long groupID = group.getID();
+
+
+          //Add Dashboards to the DashboardGroup
+            conn = database.getConnection();
+            conn.execute("delete from application.dashboard_group_dashboard where dashboard_group_id=" + groupID);
+            if (dashboardIDs!=null){
+                Recordset rs = new Recordset();
+                rs.open("select * from application.dashboard_group_dashboard where dashboard_group_id=" + groupID, conn, false);
+                for (int i=0; i<dashboardIDs.length(); i++){
+                    long dashboardID = dashboardIDs.get(i).toLong();
+                    rs.addNew();
+                    rs.setValue("dashboard_group_id", groupID);
+                    rs.setValue("dashboard_id", dashboardID);
+                    rs.update();
+                }
+                rs.close();
+            }
+            conn.close();
+
+
+          //Return response
+            return new ServiceResponse(200, groupID+"");
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** deleteGroup
+  //**************************************************************************
+  /** Used to delete a DashboardGroup
+   */
+    public ServiceResponse deleteGroup(ServiceRequest request, Database database)
+        throws ServletException {
+
+      //Get group ID
+        Long groupID = request.getID();
+        if (groupID==null) return new ServiceResponse(400, "groupID is required");
+
+
+      //Delete group
+        try{
+            new DashboardGroup(groupID).delete();
+            return new ServiceResponse(200);
+        }
+        catch(Exception e){
             return new ServiceResponse(e);
         }
     }

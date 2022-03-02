@@ -4,29 +4,25 @@ import java.sql.SQLException;
 
 
 //******************************************************************************
-//**  UserPreference Class
+//**  Path Class
 //******************************************************************************
 /**
- *   Used to represent a UserPreference
+ *   Used to represent a Path
  *
  ******************************************************************************/
 
-public class UserPreference extends javaxt.sql.Model {
+public class Path extends javaxt.sql.Model {
 
-    private String key;
-    private String value;
-    private User user;
+    private String dir;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public UserPreference(){
-        super("application.user_preference", java.util.Map.ofEntries(
+    public Path(){
+        super("application.path", java.util.Map.ofEntries(
             
-            java.util.Map.entry("key", "key"),
-            java.util.Map.entry("value", "value"),
-            java.util.Map.entry("user", "user_id")
+            java.util.Map.entry("dir", "dir")
 
         ));
         
@@ -38,7 +34,7 @@ public class UserPreference extends javaxt.sql.Model {
   //**************************************************************************
   /** Creates a new instance of this class using a record ID in the database.
    */
-    public UserPreference(long id) throws SQLException {
+    public Path(long id) throws SQLException {
         this();
         init(id);
     }
@@ -48,9 +44,9 @@ public class UserPreference extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
   /** Creates a new instance of this class using a JSON representation of a
-   *  UserPreference.
+   *  Path.
    */
-    public UserPreference(JSONObject json){
+    public Path(JSONObject json){
         this();
         update(json);
     }
@@ -65,14 +61,8 @@ public class UserPreference extends javaxt.sql.Model {
 
         try{
             this.id = getValue(rs, "id").toLong();
-            this.key = getValue(rs, "key").toString();
-            this.value = getValue(rs, "value").toString();
-            Long userID = getValue(rs, "user_id").toLong();
+            this.dir = getValue(rs, "dir").toString();
 
-
-
-          //Set user
-            if (userID!=null) user = new User(userID);
 
         }
         catch(Exception e){
@@ -85,48 +75,22 @@ public class UserPreference extends javaxt.sql.Model {
   //**************************************************************************
   //** update
   //**************************************************************************
-  /** Used to update attributes with attributes from another UserPreference.
+  /** Used to update attributes with attributes from another Path.
    */
     public void update(JSONObject json){
 
         Long id = json.get("id").toLong();
         if (id!=null && id>0) this.id = id;
-        this.key = json.get("key").toString();
-        this.value = json.get("value").toString();
-        if (json.has("user")){
-            user = new User(json.get("user").toJSONObject());
-        }
-        else if (json.has("userID")){
-            try{
-                user = new User(json.get("userID").toLong());
-            }
-            catch(Exception e){}
-        }
+        this.dir = json.get("dir").toString();
     }
 
 
-    public String getKey(){
-        return key;
+    public String getDir(){
+        return dir;
     }
 
-    public void setKey(String key){
-        this.key = key;
-    }
-
-    public String getValue(){
-        return value;
-    }
-
-    public void setValue(String value){
-        this.value = value;
-    }
-
-    public User getUser(){
-        return user;
-    }
-
-    public void setUser(User user){
-        this.user = user;
+    public void setDir(String dir){
+        this.dir = dir;
     }
     
     
@@ -135,25 +99,25 @@ public class UserPreference extends javaxt.sql.Model {
   //**************************************************************************
   //** get
   //**************************************************************************
-  /** Used to find a UserPreference using a given set of constraints. Example:
-   *  UserPreference obj = UserPreference.get("key=", key);
+  /** Used to find a Path using a given set of constraints. Example:
+   *  Path obj = Path.get("dir=", dir);
    */
-    public static UserPreference get(Object...args) throws SQLException {
-        Object obj = _get(UserPreference.class, args);
-        return obj==null ? null : (UserPreference) obj;
+    public static Path get(Object...args) throws SQLException {
+        Object obj = _get(Path.class, args);
+        return obj==null ? null : (Path) obj;
     }
 
 
   //**************************************************************************
   //** find
   //**************************************************************************
-  /** Used to find UserPreferences using a given set of constraints.
+  /** Used to find Paths using a given set of constraints.
    */
-    public static UserPreference[] find(Object...args) throws SQLException {
-        Object[] obj = _find(UserPreference.class, args);
-        UserPreference[] arr = new UserPreference[obj.length];
+    public static Path[] find(Object...args) throws SQLException {
+        Object[] obj = _find(Path.class, args);
+        Path[] arr = new Path[obj.length];
         for (int i=0; i<arr.length; i++){
-            arr[i] = (UserPreference) obj[i];
+            arr[i] = (Path) obj[i];
         }
         return arr;
     }
