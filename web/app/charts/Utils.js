@@ -272,28 +272,41 @@ bluewave.chart.utils = {
         if (!chartConfig.xFormat) updateDefaultTicks(xAxis, xType);
 
 
-      //Rotate x-axis labels as needed
-        var boxes = getBoxes(xAxis);
-        var foundIntersection = false;
-        for (var i=0; i<boxes.length; i++){
-            var box = boxes[i];
-            for (var j=0; j<boxes.length; j++){
-                if (j===i) continue;
-                var b = boxes[j];
-                if (javaxt.dhtml.utils.intersects(box, b)){
-                    foundIntersection = true;
-                    break;
+        var foundIntersection = function(boxes, buffer=0){
+            var foundIntersection = false;
+
+            boxes.forEach(function(box){
+                box.top -= buffer;
+                box.left -= buffer;
+                box.right += buffer;
+                box.bottom += buffer;
+            });
+            
+            for (var i = 0; i < boxes.length; i++) {
+                var box = boxes[i];
+                for (var j = 0; j < boxes.length; j++) {
+                    if (j === i) continue;
+                    var b = boxes[j];
+                    if (javaxt.dhtml.utils.intersects(box, b)) {
+                        foundIntersection = true;
+                        break;
+                    }
                 }
+                if (foundIntersection) break;
             }
-            if (foundIntersection) break;
-        }
-        if (foundIntersection){
+            return foundIntersection;
+        };
+
+      //Rotate x-axis labels as needed
+        var xBoxes = getBoxes(xAxis);
+        var xLabelsIntersect = foundIntersection(xBoxes, 3);
+
+        if (xLabelsIntersect){
             xAxis
             .selectAll("text")
             .attr("transform", "translate(-10,0)rotate(-45)")
             .style("text-anchor", "end");
         }
-
 
 
 
@@ -311,7 +324,25 @@ bluewave.chart.utils = {
 
         if (!chartConfig.yFormat) updateDefaultTicks(yAxis, yType);
 
+      //Hide every other y-tick if they're crowded
+        var yBoxes = getBoxes(yAxis);
+        var yLabelsIntersect = foundIntersection(yBoxes, 3);
 
+        if (yLabelsIntersect) {
+
+            let length = yAxis.selectAll("text").size();
+
+            yAxis
+                .selectAll("text")
+                .attr("visibility", function (text, i) {
+                    //Check cardinality to ensure top tick is always displayed
+                    if (length%2) {
+                        return (i + 1) % 2 === 0 ? "hidden" : "visible";
+                    }
+                    else return i % 2 === 0 ? "hidden" : "visible";
+                })
+
+        }
 
       //Calculate margins required to fit the labels
         var xExtents = javaxt.dhtml.utils.getRect(xAxis.node());
@@ -354,7 +385,7 @@ bluewave.chart.utils = {
         if (xLabel){
 
             var t = xAxis.append("text")
-            .attr("x", (right-left)/2)
+            .attr("x", (xExtents.right-xExtents.left)/2)
             .attr("y", marginBottom+labelOffset)
             .attr("class", "chart-axis-label")
             .style("text-anchor", "middle")
