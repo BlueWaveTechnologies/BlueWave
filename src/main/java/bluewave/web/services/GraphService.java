@@ -17,7 +17,6 @@ import javaxt.json.*;
 import java.util.*;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 import java.awt.Color;
 import java.awt.BasicStroke;
@@ -31,8 +30,6 @@ import java.sql.PreparedStatement;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.types.Node;
 import org.locationtech.jts.geom.*;
 
 //******************************************************************************
@@ -98,13 +95,6 @@ public class GraphService extends WebService {
         }
 
 
-      //Prepopulate cache
-        try{
-            getNodes();
-            getProperties();
-        }
-        catch(Exception e){}
-
 
       //Add listener to the NotificationService to update the cache
         NotificationService.addListener(new NotificationService.Listener(){
@@ -163,215 +153,91 @@ public class GraphService extends WebService {
   //**************************************************************************
     public ServiceResponse getNodes(ServiceRequest request, Database database)
         throws ServletException, IOException {
+
         try{
-            return new ServiceResponse(getNodes());
+            JSONObject nodes = getNodes();
+            JSONArray arr = new JSONArray();
+            Iterator<String> it = nodes.keySet().iterator();
+            while (it.hasNext()){
+                String nodeName = it.next();
+                JSONObject nodeMetadata = nodes.get(nodeName).toJSONObject();
+                Long count = nodeMetadata.get("count").toLong();
+                Long relations = nodeMetadata.get("relations").toLong();
+
+                JSONObject json = new JSONObject();
+                json.set("name", nodeName);
+                json.set("count", count);
+                json.set("relations", relations);
+                json.set("id", nodeName);
+                arr.add(json);
+            }
+
+            return new ServiceResponse(arr);
         }
         catch(Exception e){
+            e.printStackTrace();
             return new ServiceResponse(e);
         }
     }
 
+
   //**************************************************************************
   //** getNodes
   //**************************************************************************
-  private JSONArray getNodes() throws Exception {
-    final int INDEX_LABELS = 0;
-    final int INDEX_COUNT = 1;
-    final int INDEX_RELATIONS = 2;
-    final String KEY_COUNTS = "counts";
+    private JSONObject getNodes() throws Exception {
 
-    JSONArray array = new JSONArray();
-    String query = "MATCH (n:bluewave_metadata) RETURN n";
-    try(Session session = graph.getSession()) {
-        Result rs = session.run(query);
-        if (rs.hasNext()){
-            Record r = rs.next();
-            Node metaNode = r.get("n").asNode();
-            JSONObject metaCountsNode = new JSONObject(metaNode.get(KEY_COUNTS).asString());
-            metaCountsNode.keySet().forEach(key -> {
-                JSONArray nodeJsonValue = metaCountsNode.get(key).toJSONArray();
-                JSONArray labels = nodeJsonValue.get(INDEX_LABELS).toJSONArray();
-                AtomicLong relations = new AtomicLong(metaCountsNode.get(key).get(INDEX_RELATIONS).toLong());
-                AtomicLong count = new AtomicLong(metaCountsNode.get(key).get(INDEX_COUNT).toLong());
-                JSONObject json = new JSONObject();
-                String labelName = "";
-                // if(!labels.isEmpty()) {
-                //     labelName = labels.toString();
-                // }
-                labelName = labels.isEmpty()? "" : labels.get(0).toString();
-                json.set("node", labelName);
-                json.set("count", count);
-                json.set("relations", relations);
-                json.set("id", labelName);
-                array.add(json);
-            });
+      //Execute metadata query
+        String metadata = null;
+        Session session = null;
+        try{
+            session = graph.getSession();
+            Result rs = session.run("match (n:bluewave_metadata) return n.nodes");
+            if (rs.hasNext()) metadata = rs.next().get(0).asString();
+            session.close();
         }
-        session.close();
-    }catch (Exception e) {
+        catch(Exception e){
+            if (session != null) session.close();
+            throw e;
+        }
+
+        JSONObject nodes = new JSONObject(metadata);
+        return nodes;
     }
-    return array;
-  }
-  
- //**************************************************************************
-  //** getNodes
-  //**************************************************************************
-  private JSONArray getNodesFromGraph() throws Exception {
-    synchronized(cache){
-        Object obj = cache.get("nodes");
-        if (obj!=null){
-            return (JSONArray) obj;
-        }
-        else{
-            JSONArray arr = new JSONArray();
 
-            javaxt.io.File f = null;
-            if (cacheDir!=null){
-                f = new javaxt.io.File(cacheDir, "nodes.json");
-            }
-
-            if (f!=null && f.exists()){
-                arr = new JSONArray(f.getText());
-                for (int i=0; i<arr.length(); i++){
-                    JSONObject node = arr.get(i).toJSONObject();
-                    Long c = node.get("count").toLong();
-                    Long r = node.get("relations").toLong();
-                    AtomicLong count = new AtomicLong(c==null ? 0 : c);
-                    AtomicLong relations = new AtomicLong(r==null ? 0 : r);
-                    node.set("count", count);
-                    node.set("relations", relations);
-                }
-            }
-            else{
-
-                Session session = null;
-                try {
-
-                  //Execute query
-                    String query = bluewave.queries.Index.getQuery("Nodes_And_Counts", "cypher");
-                    session = graph.getSession();
-                    Result rs = session.run(query);
-                    while (rs.hasNext()){
-                        Record r = rs.next();
-                        List labels = r.get(0).asList();
-                        String label = labels.isEmpty()? "" : labels.get(0).toString();
-                        AtomicLong count = new AtomicLong(r.get(1).asLong());
-                        AtomicLong relations = new AtomicLong(r.get(2).asLong());
-                        JSONObject json = new JSONObject();
-                        json.set("node", label);
-                        json.set("count", count);
-                        json.set("relations", relations);
-                        json.set("id", label);
-                        arr.add(json);
-                    }
-                    session.close();
-
-
-                  //Write file
-                    if (f!=null){
-                        f.create();
-                        f.write(arr.toString());
-                    }
-                }
-                catch (Exception e) {
-                    if (session != null) session.close();
-                    throw e;
-                }
-            }
-
-
-
-          //Update cache
-            cache.put("nodes", arr);
-            cache.notify();
-
-
-            return arr;
-
-        }
-    }
-}
 
   //**************************************************************************
   //** getProperties
   //**************************************************************************
     public ServiceResponse getProperties(ServiceRequest request, Database database)
         throws ServletException, IOException {
+
+
         try{
-            return new ServiceResponse(getProperties());
+            JSONObject nodes = getNodes();
+            JSONArray arr = new JSONArray();
+            Iterator<String> it = nodes.keySet().iterator();
+            while (it.hasNext()){
+                String nodeName = it.next();
+                JSONObject nodeMetadata = nodes.get(nodeName).toJSONObject();
+                JSONObject properties = nodeMetadata.get("properties").toJSONObject();
+
+                JSONArray propertyNames = new JSONArray();
+                Iterator<String> i2 = properties.keySet().iterator();
+                while (i2.hasNext()){
+                    propertyNames.add(i2.next());
+                }
+
+                JSONObject json = new JSONObject();
+                json.set("name", nodeName);
+                json.set("properties", propertyNames);
+                arr.add(json);
+            }
+
+            return new ServiceResponse(arr);
         }
         catch(Exception e){
+            e.printStackTrace();
             return new ServiceResponse(e);
-        }
-    }
-
-
-  //**************************************************************************
-  //** getProperties
-  //**************************************************************************
-    private JSONArray getProperties() throws Exception {
-        synchronized(cache){
-            Object obj = cache.get("properties");
-            if (obj!=null){
-                return (JSONArray) obj;
-            }
-            else{
-                JSONArray arr = new JSONArray();
-
-                javaxt.io.File f = null;
-                if (cacheDir!=null){
-                    f = new javaxt.io.File(cacheDir, "properties.json");
-                }
-
-                if (f!=null && f.exists()){
-                    arr = new JSONArray(f.getText());
-                }
-                else{
-
-                    Session session = null;
-                    try {
-
-                      //Execute query
-                        String query = bluewave.queries.Index.getQuery("Nodes_And_Properties", "cypher");
-                        session = graph.getSession();
-                        Result rs = session.run(query);
-                        while (rs.hasNext()){
-                            Record r = rs.next();
-                            String label = r.get(0).asString();
-                            List props = r.get(1).asList();
-                            JSONObject json = new JSONObject();
-                            json.set("node", label);
-                            JSONArray properties = new JSONArray();
-                            json.set("properties", properties);
-                            for (Object p : props){
-                                properties.add(p);
-                            }
-                            arr.add(json);
-                        }
-                        session.close();
-
-
-                      //Write file
-                        if (f!=null){
-                            f.create();
-                            f.write(arr.toString());
-                        }
-                    }
-                    catch (Exception e) {
-                        if (session != null) session.close();
-                        throw e;
-                    }
-                }
-
-
-
-              //Update cache
-                cache.put("properties", arr);
-                cache.notify();
-
-
-                return arr;
-
-            }
         }
     }
 
@@ -1023,86 +889,7 @@ public class GraphService extends WebService {
         synchronized(cache){
             try{
 
-              //Update nodes
-                JSONArray nodes = getNodes();
-                boolean updateFile = false;
-                for (int i=0; i<data.length(); i++){
-                    JSONArray entry = data.get(i).toJSONArray();
-                    if (entry.isEmpty()) continue;
 
-
-                    HashSet<String> labels = new HashSet<>();
-                    for (int j=1; j<entry.length(); j++){
-                        String label = entry.get(j).toString();
-                        if (label!=null) label = label.toLowerCase();
-                        labels.add(label);
-                    }
-
-                    boolean foundMatch = false;
-                    for (int j=0; j<nodes.length(); j++){
-                        JSONObject node = nodes.get(j).toJSONObject();
-
-                        String label = node.get("node").toString();
-                        if (label!=null && labels.contains(label.toLowerCase())){
-                            if (type.equals("nodes")){
-                                AtomicLong count = (AtomicLong) node.get("count").toObject();
-                                Long a = count.get();
-                                if (action.equals("create")){
-                                    count.incrementAndGet();
-                                }
-                                else{
-                                    Long n = count.decrementAndGet();
-                                    if (n==0){
-                                        //TODO: Remove node
-                                    }
-                                }
-                                Long b = count.get();
-                                console.log((b>a ? "increased " : "decreased ") + label + " to " + b);
-                                updateFile = true;
-                            }
-                            else if (type.equals("relationships")){
-                                AtomicLong relations = (AtomicLong) node.get("relations").toObject();
-                            }
-
-                            foundMatch = true;
-                            break;
-                        }
-                    }
-
-
-                    if (!foundMatch){
-                        if (action.equals("create") && (type.equals("nodes"))){
-                            console.log("add node!");
-                            String label = entry.get(1).toString();
-                            AtomicLong count = new AtomicLong(1);
-                            AtomicLong relations = new AtomicLong(0);
-                            JSONObject json = new JSONObject();
-                            json.set("node", label);
-                            json.set("count", count);
-                            json.set("relations", relations);
-                            json.set("id", label);
-                            nodes.add(json);
-                            updateFile = true;
-                        }
-                    }
-                }
-
-
-                if (updateFile && cacheDir!=null){
-                    javaxt.io.File f = new javaxt.io.File(cacheDir, "nodes.json");
-                    f.write(nodes.toString());
-                }
-
-
-
-              //TODO: Update properties
-
-
-
-              //TODO: Update network
-
-
-                cache.notifyAll();
 
             }
             catch(Exception e){
@@ -1111,7 +898,7 @@ public class GraphService extends WebService {
         }
     }
 
-    
+
   //**************************************************************************
   //** getIngest
   //**************************************************************************
@@ -1178,7 +965,7 @@ public class GraphService extends WebService {
         }
 
     }
-    
+
 
   //**************************************************************************
   //** initDatabase
