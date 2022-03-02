@@ -352,7 +352,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var el = table;
         var tr, td;
 
-
       //Create title row
         tr = document.createElement("tr");
         tbody.appendChild(tr);
@@ -418,17 +417,68 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
             img.onload = function(){
+                console.log(me.getSimilarities()[page]);
                 img = this;
+
+              // set original width/height for determining scaling for tag & d elements
+                var rect = javaxt.dhtml.utils.getRect(img);
+                img.originalHeight = rect.height;
+                img.originalWidth = rect.width;
+
+
                 setTimeout(function(){
                     getImages(img).forEach((img)=>{
+                        var int = 0;
+                        img.d = [];
+                        img.tag = [];
                         boxes.forEach((box)=>{
                             var type = box.type;
+                            int++;
                             box.boxes.forEach((bbox)=>{
+                                console.log(int);
                                 var x = bbox[0];
                                 var y = bbox[1];
                                 var w = bbox[2]-x;
                                 var h = bbox[3]-y;
                                 var d = document.createElement("div");
+                                img.d.push(d);
+
+                                // set resize listeners
+                                var resizeListener = function(){
+                                    var rect = javaxt.dhtml.utils.getRect(img);
+                                    var scaleByH = rect.height / img.originalHeight;
+                                    var scaleByW = rect.width / img.originalWidth;
+
+                                    var dElements = img.d; // a list of the d elements associated with the image
+                                    dElements.forEach((d)=>{
+                                        d.rescale(scaleByW,scaleByH);
+                                    });
+
+                                    var tagElements = img.tag; // a list of tag elements associated with the image
+                                    tagElements.forEach((tag)=>{
+                                        tag.rescale(scaleByW,scaleByH);
+                                    });
+                                };
+
+                                // addResizeListener(parent.parentNode, resizeListener);
+                                addResizeListener(parent, resizeListener);
+
+
+                                d.rescale = function(scaleW, scaleH){
+                                    console.log("rescale called for d!");
+
+                                    var rect = javaxt.dhtml.utils.getRect(this);
+                                    var newHeight = this.originalHeight * scaleH;
+                                    var newWidth = this.originalWidth * scaleW;
+                                    var newX = this.originalX * scaleW;
+                                    var newY = this.originalY * scaleH;
+
+                                    this.style.height = `${newHeight}px`;
+                                    this.style.width = `${newWidth}px`;
+                                    this.style.left = `${newX}px`;
+                                    this.style.top = `${newY}px`;
+                                };
+
                                 d.style.position = "absolute";
                                 d.style.border = "1px solid red";
                                 d.style.left = (x*img.width)+"px";
@@ -436,7 +486,71 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 d.style.width = (w*img.width)+"px";
                                 d.style.height = (h*img.height)+"px";
                                 d.style.zIndex = 2;
+
+                                // set values used during rescaling
+                                    d.originalHeight = h*img.height;
+                                    d.originalWidth = w*img.width;
+                                    d.originalX = x*img.width;
+                                    d.originalY = y*img.height;
+
                                 img.parentNode.appendChild(d);
+
+                                var tag = document.createElement("div");
+                                tag.style.color = "white";
+                                tag.style.width = "30px";
+                                tag.style.height = "20px";
+                                tag.style.textAlign = "left";
+                                tag.style.zIndex = 3;
+                                tag.style.opacity = "80%";
+                                tag.style.backgroundColor = "black";
+                                var tagInner = document.createElement("div");
+                                tagInner.innerText = int;
+                                tagInner.style.textAlign = "center";
+                                tag.appendChild(tagInner);
+
+                                tag.style.fontSize = "15px";
+                                tag.style.cursor = "pointer";
+                                tag.style.position = "absolute";
+                                tag.style.left = (x*img.width)+"px";
+                                tag.style.top = (y*img.height)+"px";
+
+                                // set values used during rescaling
+                                    tag.originalX = x*img.width;
+                                    tag.originalY = y*img.height;
+
+                                tag.rescale = function(scaleW, scaleH){
+                                    console.log("rescale called for tag!");
+                                    var newX = this.originalX * scaleW;
+                                    var newY = this.originalY * scaleH;
+
+                                    this.style.left = `${newX}px`;
+                                    this.style.top = `${newY}px`;
+                                };
+
+                                img.parentNode.appendChild(tag);
+                                img.tag.push(tag);
+                                tag.d = d;
+                                tag.type = type;
+
+                                addShowHide(d);
+                                addShowHide(tag);
+
+                                tag.onclick = function (){
+                                    console.log("tag clicked");
+                                    console.log(this.d);
+                                    // this.d.style.border = "";
+                                    // this.hide();
+                                    // this.d.hide();
+                                    console.log("the type of this is");
+                                    console.log(this.type);
+                                    this.d.style.backgroundColor = "blue";
+                                    this.d.style.opacity = "35%";
+                                };
+
+                                tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
+                                    console.log("mouse is hovering over tag");
+                                    console.log(this.type);
+                                };
                             });
                         });
                     });
@@ -484,6 +598,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     var similarPages = {};
                     suspiciousPage.suspiciousPairs.forEach((suspiciousPair)=>{
                         var pages = suspiciousPair.pages;
+                        // console.log("logging pages here")
+                        // console.log(pages);
+                        // console.log('logging suspcicaious pair type')
+                        // console.log(suspiciousPair.type)
                         for (var i=0; i<pages.length; i++){
                             var page = pages[i];
                             if (page.file_index!==fileIndex){
@@ -545,7 +663,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
-
                 createPreview(leftFile, leftPage, leftPanel, leftBoxes);
                 createPreview(rightFile, rightPage, rightPanel, rightBoxes);
 
@@ -811,6 +928,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
+    var addResizeListener = javaxt.dhtml.utils.addResizeListener;
 
 
     init();
