@@ -1666,23 +1666,13 @@ bluewave.Explorer = function(parent, config) {
                         success: function(nodes){
                             waitmask.hide();
 
-                          //Parse response
-                            var arr = [];
-                            for (var i=0; i<nodes.length; i++){
-                                var nodeName = nodes[i].node;
-                                if (nodeName){
-                                    arr.push({
-                                        name: nodes[i].node,
-                                        properties: nodes[i].properties
-                                    });
-                                }
-                            }
-                            arr.sort(function(a, b){
+                          //Sort nodes alphabetically
+                            nodes.sort(function(a, b){
                                 return a.name.localeCompare(b.name);
                             });
 
                           //Add nodes to the tree
-                            tree.addNodes(arr);
+                            tree.addNodes(nodes);
                         },
                         failure: function(request){
                             if (waitmask) waitmask.hide();
