@@ -40,8 +40,8 @@ bluewave.charts.PieChart = function(parent, config) {
             pieArea = g;
         });
     };
-    
-    
+
+
   //**************************************************************************
   //** setConfig
   //**************************************************************************
@@ -76,14 +76,14 @@ bluewave.charts.PieChart = function(parent, config) {
     this.update = function(chartConfig, data){
         me.clear();
         me.setConfig(chartConfig);
-        
+
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
             update(data, parent);
         });
     };
-    
+
     var update = function(data, parent){
 
         if (isArray(data) && isArray(data[0])) data = data[0];
@@ -186,36 +186,15 @@ bluewave.charts.PieChart = function(parent, config) {
 
         var tooltip;
         if (config.showTooltip===true){
-            tooltip = bluewave.charts.PieChart.Tooltip;
-            if (!tooltip){
-                tooltip = bluewave.charts.PieChart.Tooltip =
-                d3.select(document.body)
-                .append("div")
-                .style("opacity", 0)
-                .attr("class", "tooltip");
-            }
+            tooltip = createTooltip();
         }
 
 
         var mouseover = function(d) {
             if (tooltip){
-
-              //Get label
                 var label = me.getTooltipLabel(d.data);
-
-              //Get zIndex
-                var highestElements = getHighestElements();
-                var zIndex = highestElements.zIndex;
-                if (!highestElements.contains(tooltip.node())) zIndex++;
-
-              //Update tooltip
-                tooltip
-                .html(label)
-                .style("opacity", 1)
-                .style("display", "block")
-                .style("z-index", zIndex);
+                tooltip.html(label).show();
             }
-
             d3.select(this).transition().duration(100).attr("opacity", "0.8");
         };
 
@@ -227,10 +206,7 @@ bluewave.charts.PieChart = function(parent, config) {
         };
 
         var mouseleave = function() {
-            if (tooltip) tooltip
-            .style("opacity", 0)
-            .style("display", "none");
-
+            if (tooltip) tooltip.hide();
             d3.select(this).transition().duration(100).attr("opacity", "1");
         };
 
@@ -288,7 +264,7 @@ bluewave.charts.PieChart = function(parent, config) {
             var labelOffset = parseFloat(config.labelOffset);
             if (isNaN(labelOffset) || labelOffset<0) labelOffset = 100;
             var labelEnd = 0;
-            if (labelOffset>100){ 
+            if (labelOffset>100){
                 labelEnd = radius * (labelOffset/100);
             }
             else{
@@ -298,7 +274,7 @@ bluewave.charts.PieChart = function(parent, config) {
 
             var extendLines = config.extendLines===true ? true : false;
             if (extendLines && labelOffset<=110) extendLines = false;
-            
+
 
           //Create donut used to define the start of the lines
             var firstArc = d3.arc()
@@ -306,23 +282,23 @@ bluewave.charts.PieChart = function(parent, config) {
             .outerRadius(innerRadius + (radius - innerRadius) * 90/50);
 
 
-          //Create donut used to define the second point on the lines. If 
-          //we're extending lines, this will be used to define the midpoint 
-          //of the lines. Otherwise, this will be used to define the end of 
+          //Create donut used to define the second point on the lines. If
+          //we're extending lines, this will be used to define the midpoint
+          //of the lines. Otherwise, this will be used to define the end of
           //the lines.
             var secondArc = d3.arc()
             .innerRadius(radius)
             .outerRadius(radius+((labelEnd-radius)*2)); //side thickness 2x larger than the labelOffset
 
 
-          //Debugging code used to render labelOffset 
+          //Debugging code used to render labelOffset
             var debug = false;
             if (debug){
                 var testGroup = pieChart.append("g").attr("name", "test");
                 testGroup.selectAll("*")
                 .data([{
                     startAngle: 0,
-                    endAngle: 360*Math.PI/180 
+                    endAngle: 360*Math.PI/180
                 }])
                 .enter()
                 .append("path")
@@ -357,7 +333,7 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
               //Check angle to see if the X position is right or left
-                var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; 
+                var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
                 var isRight = (midangle < Math.PI ? true : false);
 
 
@@ -406,7 +382,7 @@ bluewave.charts.PieChart = function(parent, config) {
 
 
 
-          //Get dimension of all the elements in the chart            
+          //Get dimension of all the elements in the chart
             var box = getMinMax(pieArea);
             box.width = (box.maxX - box.minX)*1.1;
             box.height = (box.maxY - box.minY)*1.1;
@@ -450,31 +426,31 @@ bluewave.charts.PieChart = function(parent, config) {
                 var x = rect.x;
                 var cx = rect.x+(rect.width/2);
                 var cy = rect.y+(rect.height/2);
-                
+
                 var rect = javaxt.dhtml.utils.getRect(pieChart.node());
                 var dy = (height - rect.height)/2;
                 var dx = (width - rect.width)/2;
-                
-                
+
+
                 var x2 = rect.x+(rect.width/2);
                 var y2 = rect.y+(rect.height/2);
-                
+
                 var dx = cx-x2;
                 var dy = cy-y2;
-                
-                
-                
+
+
+
                 //console.log(cx, x2, dx, width/2);
                 //console.log(cy, y2, dy, height/2);
-                
-                if (dy<0){ 
+
+                if (dy<0){
                     dy = 0; //seems to work - not sure why
                 }
-                
+
                 if (dx<0){
                     dx = 0; //not tested
                 }
-                
+
 
                 pieChart
                   .attr("transform",
@@ -494,7 +470,7 @@ bluewave.charts.PieChart = function(parent, config) {
           animationSteps /= 2;
           var arcs = pieGroup.selectAll("path");
 
-          
+
           var zeroaArc = d3.arc()
          .innerRadius(0)
          .outerRadius(0);
@@ -505,10 +481,10 @@ bluewave.charts.PieChart = function(parent, config) {
             .transition().delay(function (d, i) {
               var angleDiff = Math.abs(d.startAngle - d.endAngle) + (d.padAngle);
               var angleRatio = angleDiff / (2 * Math.PI);
- 
+
               var thisDelay = totalDelay;
               var nextDelay = angleRatio * animationSteps;
-    
+
               totalDelay += nextDelay ;
 
               return thisDelay;
@@ -520,7 +496,7 @@ bluewave.charts.PieChart = function(parent, config) {
             })
             .ease(d3.easeLinear)
             .attrTween('d', function (d) {
-              
+
               var interpolater = d3.interpolate(d.startAngle, d.endAngle);
               return function (t) {
                 d.endAngle = interpolater(t);
@@ -579,8 +555,8 @@ bluewave.charts.PieChart = function(parent, config) {
             else return x-y;
         }
     };
-    
-    
+
+
   //**************************************************************************
   //** getMinMax
   //**************************************************************************
@@ -612,7 +588,7 @@ bluewave.charts.PieChart = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var isArray = javaxt.dhtml.utils.isArray;
     var initChart = bluewave.chart.utils.initChart;
-    var getHighestElements = javaxt.dhtml.utils.getHighestElements;
+    var createTooltip = bluewave.chart.utils.createTooltip;
 
     init();
 };
