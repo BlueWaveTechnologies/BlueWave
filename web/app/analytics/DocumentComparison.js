@@ -393,7 +393,150 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** createOutlineBox
+  //**************************************************************************
+    var createSimilarityOutlineBox = function(bbox, img){
 
+        var x = bbox[0];
+        var y = bbox[1];
+        var w = bbox[2]-x;
+        var h = bbox[3]-y;
+
+
+        var d = document.createElement("div");
+        d.style.position = "absolute"; // add a class here
+        d.style.border = "1px solid red";
+        d.style.left = (x*img.width)+"px";
+        d.style.top = (y*img.height)+"px";
+        d.style.width = (w*img.width)+"px";
+        d.style.height = (h*img.height)+"px";
+        d.style.zIndex = 2;
+
+        // set values used during rescaling
+            d.originalHeight = h*img.height;
+            d.originalWidth = w*img.width;
+            d.originalX = x*img.width;
+            d.originalY = y*img.height;
+
+        d.rescale = function(scaleW, scaleH){
+            console.log("rescale called for d!");
+
+            var newHeight = this.originalHeight * scaleH;
+            var newWidth = this.originalWidth * scaleW;
+            var newX = this.originalX * scaleW;
+            var newY = this.originalY * scaleH;
+
+            this.style.height = `${newHeight}px`;
+            this.style.width = `${newWidth}px`;
+            this.style.left = `${newX}px`;
+            this.style.top = `${newY}px`;
+        };
+
+        d.clear = function(){
+            this.innerHTML = "";
+            this.style.backgroundColor = ""; // add a class to replace this, in-active class
+            this.style.opacity = ""; // add a class to replace this, in-active class
+            this.isSelected = false;
+        };
+
+        d.select = function(){
+            console.log("selected this similarity div");
+            // if its already selected then return
+                if (this.isSelected) return;
+
+            this.isSelected = true;
+            this.highlight();
+            // this.scrollTo(); // add this later for scrolling down to the highlighted element
+
+        };
+
+        d.highlight = function(){
+            this.style.backgroundColor = "blue"; // add a class to replace this, active class
+            this.style.opacity = "50%"; // add a class to replace this, active class
+        };
+
+        d.removeSimilarity = function(){
+            this.hide();
+        };
+        return d;
+    };
+
+
+
+  //**************************************************************************
+  //** createSimilarityTag
+  //**************************************************************************
+    var createSimilarityTag = function(bbox, int, img){
+        var x = bbox[0];
+        var y = bbox[1];
+        var w = bbox[2]-x;
+        var h = bbox[3]-y;
+
+
+        var tag = document.createElement("div");
+        tag.style.color = "white"; // add a class here
+        tag.style.width = "30px";
+        tag.style.height = "20px";
+        tag.style.textAlign = "left";
+        tag.style.zIndex = 3;
+        tag.style.opacity = "80%";
+        tag.style.backgroundColor = "black";
+        var tagInner = document.createElement("div");
+        tagInner.innerText = int;
+        tagInner.style.textAlign = "center";
+        tag.appendChild(tagInner);
+
+        tag.style.fontSize = "15px";
+        tag.style.cursor = "pointer";
+        tag.style.position = "absolute";
+        tag.style.left = (x*img.width)+"px";
+        tag.style.top = (y*img.height)+"px";
+
+        // set values used during rescaling
+            tag.originalX = x*img.width;
+            tag.originalY = y*img.height;
+
+        tag.rescale = function(scaleW, scaleH){
+            console.log("rescale called for tag!");
+            var newX = this.originalX * scaleW;
+            var newY = this.originalY * scaleH;
+
+            this.style.left = `${newX}px`;
+            this.style.top = `${newY}px`;
+        };
+
+        tag.onclick = function (){
+            console.log("tag clicked");
+            console.log(this.d.select());
+
+            console.log("the type of this is");
+            console.log(this.type);
+        };
+
+        tag.removeSimilarity = function(){
+            this.hide();
+            this.d.removeSimilarity();
+        };
+
+        tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
+            console.log("mouse is hovering over tag");
+            console.log(this.type);
+            this.showTooltip();
+            this.d.highlight();
+        };
+
+        tag.onmouseleave = function(){
+            this.d.clear();
+        }
+
+        tag.showTooltip = function(){
+            console.log("calling show tooltip");
+            console.log("not yet implemented!")
+
+        };
+        return tag;
+    };
 
   //**************************************************************************
   //** createComparisonPanel
@@ -487,16 +630,21 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         img.tag = [];
                         boxes.forEach((box)=>{
                             var type = box.type;
-                            int++;
                             box.boxes.forEach((bbox)=>{
                                 console.log(int);
-                                var x = bbox[0];
-                                var y = bbox[1];
-                                var w = bbox[2]-x;
-                                var h = bbox[3]-y;
-                                var d = document.createElement("div");
+                                int++;
+
+                                var d = createSimilarityOutlineBox(bbox, img);
+                                var tag = createSimilarityTag(bbox, int, img);
+                                tag.d = d;
+                                tag.type = type;
 
                                 img.d.push(d);
+                                img.tag.push(tag);
+                                img.parentNode.appendChild(d);
+                                img.parentNode.appendChild(tag);
+                                addShowHide(d);
+                                addShowHide(tag);
 
                                 // set resize listeners
                                 var resizeListener = function(){
@@ -516,135 +664,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 };
 
                                 addResizeListener(parent, resizeListener);
-
-
-                                d.rescale = function(scaleW, scaleH){
-                                    console.log("rescale called for d!");
-
-                                    var newHeight = this.originalHeight * scaleH;
-                                    var newWidth = this.originalWidth * scaleW;
-                                    var newX = this.originalX * scaleW;
-                                    var newY = this.originalY * scaleH;
-
-                                    this.style.height = `${newHeight}px`;
-                                    this.style.width = `${newWidth}px`;
-                                    this.style.left = `${newX}px`;
-                                    this.style.top = `${newY}px`;
-                                };
-
-                                d.clear = function(){
-                                    this.innerHTML = "";
-                                    this.style.backgroundColor = ""; // add a class to replace this, in-active class
-                                    this.style.opacity = ""; // add a class to replace this, in-active class
-                                    this.isSelected = false;
-                                };
-
-                                d.select = function(){
-                                    console.log("selected this similarity div");
-                                    // if its already selected then return
-                                        if (this.isSelected) return;
-
-                                    this.isSelected = true;
-                                    this.highlight();
-                                    // this.scrollTo(); // add this later for scrolling down to the highlighted element
-
-                                };
-
-                                d.highlight = function(){
-                                    this.style.backgroundColor = "blue"; // add a class to replace this, active class
-                                    this.style.opacity = "50%"; // add a class to replace this, active class
-                                };
-
-                                d.removeSimilarity = function(){
-                                    this.hide();
-                                };
-
-
-                                d.style.position = "absolute"; // add a class here
-                                d.style.border = "1px solid red";
-                                d.style.left = (x*img.width)+"px";
-                                d.style.top = (y*img.height)+"px";
-                                d.style.width = (w*img.width)+"px";
-                                d.style.height = (h*img.height)+"px";
-                                d.style.zIndex = 2;
-
-                                // set values used during rescaling
-                                    d.originalHeight = h*img.height;
-                                    d.originalWidth = w*img.width;
-                                    d.originalX = x*img.width;
-                                    d.originalY = y*img.height;
-
-                                img.parentNode.appendChild(d);
-
-                                var tag = document.createElement("div");
-                                tag.style.color = "white"; // add a class here
-                                tag.style.width = "30px";
-                                tag.style.height = "20px";
-                                tag.style.textAlign = "left";
-                                tag.style.zIndex = 3;
-                                tag.style.opacity = "80%";
-                                tag.style.backgroundColor = "black";
-                                var tagInner = document.createElement("div");
-                                tagInner.innerText = int;
-                                tagInner.style.textAlign = "center";
-                                tag.appendChild(tagInner);
-
-                                tag.style.fontSize = "15px";
-                                tag.style.cursor = "pointer";
-                                tag.style.position = "absolute";
-                                tag.style.left = (x*img.width)+"px";
-                                tag.style.top = (y*img.height)+"px";
-
-                                // set values used during rescaling
-                                    tag.originalX = x*img.width;
-                                    tag.originalY = y*img.height;
-
-                                tag.rescale = function(scaleW, scaleH){
-                                    console.log("rescale called for tag!");
-                                    var newX = this.originalX * scaleW;
-                                    var newY = this.originalY * scaleH;
-
-                                    this.style.left = `${newX}px`;
-                                    this.style.top = `${newY}px`;
-                                };
-
-                                img.parentNode.appendChild(tag);
-                                img.tag.push(tag);
-                                tag.d = d;
-                                tag.type = type;
-
-                                addShowHide(d);
-                                addShowHide(tag);
-
-                                tag.onclick = function (){
-                                    console.log("tag clicked");
-                                    console.log(this.d.select());
-
-                                    console.log("the type of this is");
-                                    console.log(this.type);
-                                };
-
-                                tag.removeSimilarity = function(){
-                                    this.hide();
-                                    this.d.removeSimilarity();
-                                };
-
-                                tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
-                                    console.log("mouse is hovering over tag");
-                                    console.log(this.type);
-                                    this.showTooltip();
-                                    this.d.highlight();
-                                };
-
-                                tag.onmouseleave = function(){
-                                    this.d.clear();
-                                }
-
-                                tag.showTooltip = function(){
-                                    console.log("calling show tooltip");
-                                    console.log("not yet implemented!")
-
-                                };
 
                             });
                         });
