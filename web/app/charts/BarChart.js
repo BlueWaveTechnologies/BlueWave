@@ -51,7 +51,7 @@ bluewave.charts.BarChart = function(parent, config) {
   //**************************************************************************
   //** getBarColor
   //**************************************************************************
-    this.getBarColor = function(d, i){
+    this.getBarColor = function(d, i, arr){
         var colors = config.colors;
         var barColor = config["barColor" + i];
         if (!barColor) {
@@ -59,6 +59,14 @@ bluewave.charts.BarChart = function(parent, config) {
             config["barColor" + i] = barColor;
         }
         return barColor;
+    };
+
+
+  //**************************************************************************
+  //** getTooltipLabel
+  //**************************************************************************
+    this.getTooltipLabel = function(d, i, arr){
+        return d.key + "<br/>" + d.value;
     };
 
 
@@ -144,7 +152,7 @@ bluewave.charts.BarChart = function(parent, config) {
         if (sort) {
             maxData.sort(function (a, b) {
                 return d3[sort](a.value, b.value)
-            })
+            });
         };
 
 
@@ -174,6 +182,10 @@ bluewave.charts.BarChart = function(parent, config) {
             dataSets = tempDataSets;
 
         }
+        else{
+            stackValues = false;
+        }
+
 
 
       //Get x and y values for each data set and format object for rendering
@@ -588,28 +600,31 @@ bluewave.charts.BarChart = function(parent, config) {
         }
 
 
+        var getBarData = function(barID, d){
+            var arr = [];
+            var dataSet = dataSets[barID];
+            for (var j=0; j<dataSet.length; j++){
+                if (dataSet[j][xKey]===d.key){
+                    arr.push(dataSet[j]);
+                }
+            }
+            return arr;
+        };
 
 
-        //Set bar colors
+
+      //Set bar colors
         var bars = plotArea.selectAll("rect");
         bars.each(function (d, i) {
             let bar = d3.select(this);
             let barID = parseInt(bar.attr("barID"));
-
-            var orgData = null;
-            var dataSet = dataSets[barID];
-            for (var j=0; j<dataSet.length; j++){
-                if (dataSet[j][xKey]===d.key){
-                    orgData = dataSet[j];
-                }
-            }
-
-            bar.attr("fill", me.getBarColor(orgData, barID));
+            var arr = getBarData(barID, d);
+            bar.attr("fill", me.getBarColor(d, barID, arr));
         });
 
 
 
-        //Bar transitions
+      //Set bar transitions
         var animationSteps = chartConfig.animationSteps;
         if (stackValues) animationSteps = 0;
         if (!isNaN(animationSteps) && animationSteps>50){
@@ -632,18 +647,43 @@ bluewave.charts.BarChart = function(parent, config) {
 
             }
         }
-        else{
 
-            //Create d3 event listeners for bars
-            bars.on("mouseover", function() {
-                d3.select(this).transition().duration(100).attr("opacity", "0.8")
-            });
 
-            bars.on("mouseout", function() {
-                d3.select(this).transition().duration(100).attr("opacity", "1.0")
-            });
+        var tooltip;
+        if (config.showTooltip===true){
+            tooltip = createTooltip();
+        }
 
+        var mouseover = function(d) {
+            if (tooltip){
+                let bar = d3.select(this);
+                let barID = parseInt(bar.attr("barID"));
+                var arr = getBarData(barID, d);
+                var label = me.getTooltipLabel(d, barID, arr);
+                tooltip.html(label).show();
+            }
+            d3.select(this).transition().duration(100).attr("opacity", "0.8");
         };
+
+        var mousemove = function() {
+            var e = d3.event;
+            if (tooltip) tooltip
+            .style('top', (e.clientY) + "px")
+            .style('left', (e.clientX + 20) + "px");
+        };
+
+        var mouseleave = function() {
+            if (tooltip) tooltip.hide();
+            d3.select(this).transition().duration(100).attr("opacity", "1");
+        };
+
+
+        //Create d3 event listeners for bars
+        bars.on("mouseover", mouseover);
+        bars.on("mousemove", mousemove);
+        bars.on("mouseleave", mouseleave);
+
+
 
 
         var getSiblings = function(bar){
@@ -666,63 +706,9 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
         //Draw grid lines
-        if(chartConfig.xGrid || chartConfig.yGrid){
+        if (chartConfig.xGrid || chartConfig.yGrid){
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
         }
-
-//        //Draw labels if checked
-//        if(chartConfig.xLabel || chartConfig.yLabel){
-//            drawLabels(plotArea, chartConfig.xLabel, chartConfig.yLabel,
-//                axisHeight, axisWidth, margin, bottomLabel, leftLabel);
-//        }
-
-
-        //Display legend
-        // var legendContainer = document.querySelector(".bar-legend");
-        // if(chartConfig.barLegend && !document.querySelector(".bar-legend")){
-
-        //     var div = d3.select(parent).append("div");
-
-        //     div
-        //      .attr("class", "bar-legend")
-        //      .html("<div>Data Set</div>")
-        //      .style("background-color", "white")
-        //      .style("border-radius", "2px")
-        //      .style("padding", "10px")
-        //      .style("display", "flex")
-        //      .style("justify-content", "center")
-        //      .style("align-items", "center")
-        //      .style("position", "absolute")
-        //      .attr("draggable", "true")
-        //      .style("left", plotWidth/2 + "px")
-        //      .style("top", 0 + "px")
-        //      .style("cursor", "move")
-        //      .style("text-align", "center")
-
-
-        //     //Temporary drag function - will make a better one
-        //      .call(d3.drag()
-        //         .on('start.interrupt', function () {
-        //         div.interrupt();
-        //     })
-        //     .on('start drag', function () {
-        //         div.style('top', d3.event.y  + 'px')
-        //         div.style('left', d3.event.x  + 'px')
-        //     }))
-
-        //     //Add legend color
-        //      div.insert("div", ":first-child")
-        //      .style("background-color", getBarColor)
-        //      .style("height", "1.618em")
-        //      .style("width", "1.618em")
-        //      .style("margin", "auto 10px auto 0px")
-        //      .style("border-radius", "2px")
-
-
-        // }else if(!chartConfig.barLegend){
-        //     let legendContainer = document.querySelector(".bar-legend");
-        //     if(legendContainer) legendContainer.remove();
-        // }
     };
 
 
@@ -766,7 +752,7 @@ bluewave.charts.BarChart = function(parent, config) {
 
     var initChart = bluewave.chart.utils.initChart;
     var drawAxes = bluewave.chart.utils.drawAxes;
-    var drawLabels = bluewave.chart.utils.drawLabels;
+    var createTooltip = bluewave.chart.utils.createTooltip;
     var drawGridlines = bluewave.chart.utils.drawGridlines;
     var getType = bluewave.chart.utils.getType;
 
