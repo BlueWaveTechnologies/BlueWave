@@ -281,7 +281,7 @@ bluewave.chart.utils = {
                 box.right += buffer;
                 box.bottom += buffer;
             });
-            
+
             for (var i = 0; i < boxes.length; i++) {
                 var box = boxes[i];
                 for (var j = 0; j < boxes.length; j++) {
@@ -455,7 +455,7 @@ bluewave.chart.utils = {
             case "date":
 
                 var timeRange = [ new Date(d3.min(chartData, d=>d[key])), new Date(d3.max(chartData, d=>d[key])) ];
-                
+
                 chartData.map((val) => {
                     val[key] = new Date(val[key]);
                     return val;
@@ -940,6 +940,44 @@ bluewave.chart.utils = {
             });
         }
         return bluewave.charts.styleEditor;
+    },
+
+
+  //**************************************************************************
+  //** createTooltip
+  //**************************************************************************
+    createTooltip: function(){
+        var tooltip = bluewave.chart.utils.Tooltip;
+        var getHighestElements = javaxt.dhtml.utils.getHighestElements;
+        if (!tooltip){
+            tooltip = bluewave.chart.utils.Tooltip =
+            d3.select(document.body)
+            .append("div")
+            .style("opacity", 0)
+            .attr("class", "tooltip");
+
+
+            tooltip.show = function(){
+
+              //Get zIndex
+                var highestElements = getHighestElements();
+                var zIndex = highestElements.zIndex;
+                if (!highestElements.contains(tooltip.node())) zIndex++;
+
+              //Update tooltip
+                tooltip
+                .style("opacity", 1)
+                .style("display", "block")
+                .style("z-index", zIndex);
+            };
+
+            tooltip.hide = function(){
+                tooltip
+                .style("opacity", 0)
+                .style("display", "none");
+            };
+        }
+        return tooltip;
     }
 
 
