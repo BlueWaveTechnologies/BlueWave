@@ -26,10 +26,12 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
   //Variables for the map panel
     var mapData = {};
+    var countryNames = {};
     var worldMapIsReady = false;
 
-    var usMap;
-    var importSummary; //popup
+    var productCodes = {};
+    var popup, importSummary, usMap; //popup windows
+    var tooltip;
     var waitmask;
 
 
@@ -40,6 +42,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         if (!config) config = {};
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
+        tooltip = createTooltip();
 
         var mainDiv = document.createElement("div");
         mainDiv.className = "global-supply-chain center";
@@ -76,6 +79,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
         dashboardPanel.clear();
         if (importSummary) importSummary.hide();
+        if (popup) popup.hide();
     };
 
 
@@ -150,7 +154,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         td.style.verticalAlign = "top";
         td.style.padding = "10px 0 0";
         tr.appendChild(td);
-        var sankey = createSankey(td);
+        var sankeyPanel = createSankeyPanel(td);
 
 
 
@@ -175,31 +179,15 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         };
 
 
-        var productPanel = createDashboardItem(createCell(), {
-            title: "Top ProCodes",
-            width: "100%",
-            height: "100%"
-        });
-        var countryPanel = createDashboardItem(createCell(), {
-            title: "Top Countries by ProCode",
-            width: "100%",
-            height: "100%"
-        });
-        var manufacturerPanel = createDashboardItem(createCell(), {
-            title: "Top Manufacturers by ProCode",
-            width: "100%",
-            height: "100%"
-        });
-        var consigneePanel = createDashboardItem(createCell(), {
-            title: "Top Consignees by ProCode",
-            width: "100%",
-            height: "100%"
-        });
 
-
+        var productPanel = createDashboardItem("Top ProCodes", createCell());
+        var countryPanel = createDashboardItem("Top Countries by ProCode", createCell());
+        var manufacturerPanel = createDashboardItem("Top Manufacturers by ProCode", createCell());
+        var consigneePanel = createDashboardItem("Top Consignees by ProCode", createCell());
 
 
         panel.clear = function(){
+            if (popup) popup.hide();
             productPanel.innerDiv.innerHTML = "";
             countryPanel.innerDiv.innerHTML = "";
             manufacturerPanel.innerDiv.innerHTML = "";
@@ -238,7 +226,11 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
           //Update sankey
             get("import/network2", {
                 success: function(text) {
-                    updateSankey(text, sankey);
+                    updateSankey(text, sankeyPanel.sankey);
+                    sankeyPanel.onPopup = function(){
+                        var sankey = new bluewave.charts.SankeyChart(popup.getBody(), {});
+                        updateSankey(text, sankey);
+                    };
                 }
             });
 
@@ -281,48 +273,202 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                         colorMap[arr[i].productCode] = colors[i];
                     }
 
-                    createBarChart(productPanel.innerDiv, data, "product_code", yAxis, null, 10, colorMap);
-                    createBarChart(countryPanel.innerDiv, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
+
+                  //Look-up product codes
+                    get("SupplyChain/ProductCodes?code="+Object.keys(productValues), {
+                        success: function(arr) {
+                            arr.forEach((d)=>{
+                                productCodes[d.product_code] = d;
+                            });
+                        }
+                    });
 
 
-                    var maxLen = 10;
-                    var getLabel = function(str){
-                        if (isNumeric(str)){
-                            return str+"_";
-                        }
-                        else{
-                            if (str.length<=maxLen) return str;
-                            str = str.substring(0, maxLen-3) + "...";
-                            return str;
-                        }
+                  //Render top products
+                    renderTopProducts(productPanel.innerDiv, data, colorMap);
+                    productPanel.onPopup = function(){
+                        renderTopProducts(popup.getBody(), data, colorMap);
                     };
 
+
+                  //Render top countries
+                    renderTopCountries(countryPanel.innerDiv, data, colorMap);
+                    countryPanel.onPopup = function(){
+                        renderTopCountries(popup.getBody(), data, colorMap);
+                    };
+
+
+                  //Render top manufacturers
                     get("import/ProductCode?include=manufacturer", {
                         success: function(text) {
                             var data = d3.csvParse(text);
-                            data.forEach((d)=>{
-                                d.manufacturer = getLabel(d.manufacturer);
-                            });
-                            createBarChart(manufacturerPanel.innerDiv, data, "manufacturer", yAxis, "product_code", 10, colorMap);
+                            renderTopManufacturers(manufacturerPanel.innerDiv, data, colorMap);
+                            manufacturerPanel.onPopup = function(){
+                                renderTopManufacturers(popup.getBody(), data, colorMap);
+                            };
                         }
                     });
 
+
+                  //Render top consignee
                     get("import/ProductCode?include=consignee", {
                         success: function(text) {
                             var data = d3.csvParse(text);
-                            data.forEach((d)=>{
-                                d.consignee = getLabel(d.consignee);
-                            });
-                            createBarChart(consigneePanel.innerDiv, data, "consignee", yAxis, "product_code", 10, colorMap);
+                            renderTopConsignees(consigneePanel.innerDiv, data, colorMap);
+                            consigneePanel.onPopup = function(){
+                                renderTopConsignees(popup.getBody(), data, colorMap);
+                            };
                         }
                     });
-
 
                 }
             });
         };
 
         return panel;
+    };
+
+
+  //**************************************************************************
+  //** renderTopProducts
+  //**************************************************************************
+    var renderTopProducts = function(parent, data, colorMap){
+
+        var barChart = createBarChart(parent, data, "product_code", yAxis, null, 10, colorMap);
+
+        var mouseover = function(label) {
+            var product = productCodes[label];
+            if (product) label += ": " + product.device_name;
+            tooltip.html(label).show();
+        };
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+        labels.on("click",function(label){
+
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderTopCountries
+  //**************************************************************************
+    var renderTopCountries = function(parent, data, colorMap){
+
+        var barChart = createBarChart(parent, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
+
+        var mouseover = function(label) {
+            var countryName = countryNames[label];
+            if (countryName) label = countryName;
+            tooltip.html(label).show();
+        };
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+
+        var countries;
+        labels.on("click",function(label){
+            if (!countries){
+                countries = {};
+                data.forEach((d)=>{
+                    countries[d.country_of_origin] = d.country_of_origin;
+                });
+            }
+            showImportSummary(Object.keys(countries), label);
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderTopManufacturers
+  //**************************************************************************
+    var renderTopManufacturers = function(parent, data, colorMap){
+
+        var manufacturerNames = {};
+
+        data.forEach((d)=>{
+            var label = getLabel(d.manufacturer);
+            manufacturerNames[label] = d.manufacturer;
+            d.manufacturer = label;
+        });
+        var barChart = createBarChart(parent, data, "manufacturer", yAxis, "product_code", 10, colorMap);
+
+
+
+        var mouseover = function(label) {
+            var manufacturerName = manufacturerNames[label];
+            if (manufacturerName) label = manufacturerName;
+            tooltip.html(label).show();
+        };
+
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+        labels.on("click",function(label){
+            //console.log(label);
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderTopConsignees
+  //**************************************************************************
+    var renderTopConsignees = function(parent, data, colorMap){
+
+
+        var consigneeNames = {};
+        data.forEach((d)=>{
+            var label = getLabel(d.consignee);
+            consigneeNames[label] = d.consignee;
+            d.consignee = label;
+        });
+        var barChart = createBarChart(parent, data, "consignee", yAxis, "product_code", 10, colorMap);
+
+
+        var mouseover = function(label) {
+            var consigneeName = consigneeNames[label];
+            if (consigneeName) label = consigneeName;
+            tooltip.html(label).show();
+        };
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+        labels.on("click",function(label){
+            //console.log(label);
+        });
+    };
+
+
+    var mousemove = function() {
+        var e = d3.event;
+        if (tooltip) tooltip
+        .style('top', (e.clientY) + "px")
+        .style('left', (e.clientX + 20) + "px");
+    };
+
+    var mouseleave = function() {
+        if (tooltip) tooltip.hide();
+    };
+
+
+    var maxLen = 10;
+    var getLabel = function(str){
+        if (isNumeric(str)){
+            return str+"_";
+        }
+        else{
+            if (str.length<=maxLen) return str;
+            str = str.substring(0, maxLen-3) + "...";
+            return str;
+        }
     };
 
 
@@ -356,6 +502,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             yAxis: yAxis,
             group: groupBy,
             stackValues: true,
+            showTooltip: true,
             sort: "descending"
         };
 
@@ -365,20 +512,25 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             return topKeys.includes(d[xAxis]);
         });
         var barChart = new bluewave.charts.BarChart(parent, {});
-        barChart.getBarColor = function(d, i){
-            var productCode = d.product_code;
+        barChart.getBarColor = function(d, i, arr){
+            var productCode = arr[0].product_code;
             var color = colorMap[productCode];
             if (!color) color = "#bebcc1";
             return color;
         };
+        barChart.getTooltipLabel = function(d, i, arr){
+            var productCode = arr[0].product_code;
+            return productCode + ": " + formatNumber(d.value);
+        };
         barChart.update(config, [filteredData]);
+        return barChart;
     };
 
 
   //**************************************************************************
-  //** createSankey
+  //** createSankeyPanel
   //**************************************************************************
-    var createSankey = function(parent){
+    var createSankeyPanel = function(parent){
 
         var div = document.createElement("div");
         div.style.width = "990px";
@@ -388,12 +540,11 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         div.style.overflow = "hidden";
         parent.appendChild(div);
 
-        var panel = createDashboardItem(div, {
-            title: "Supply Chain from Source to Consignee",
-            subtitle: "Top manufacturers to top consignees",
-            width: "100%",
-            height: "100%"
-        });
+        var panel = createDashboardItem(
+            "Supply Chain from Source to Consignee",
+            "Top manufacturers to top consignees",
+            div
+        );
 
 
         var outerDiv = document.createElement("div");
@@ -420,7 +571,10 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             if (idx>-1) name = name.substring(0,idx);
             return name;
         };
-        return sankey;
+
+        panel.sankey = sankey;
+
+        return panel;
     };
 
 
@@ -624,6 +778,14 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                 }
             });
 
+
+            countries.features.forEach((feature)=>{
+                var p = feature.properties;
+                countryNames[p.code] = p.name;
+            });
+
+
+
             map.setExtent([60, 70], [59, -68]); //US in the middle
             map.update(function(){
                 worldMapIsReady = true;
@@ -638,6 +800,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
   //**************************************************************************
     var updateWorldMap = function(csv, map){
         var data = d3.csvParse(csv);
+        if (data.length===0) return;
 
         var links = {};
         var manufacturers = {};
@@ -794,7 +957,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                         showUSMap(data);
                     }
                     else{
-                        showImportSummary([], Object.keys(countries), countryCode);
+                        showImportSummary(Object.keys(countries), countryCode);
                     }
                 //}
             },
@@ -945,6 +1108,9 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** showUSMap
+  //**************************************************************************
     var showUSMap = function(data){
         if (!usMap){
             var win = new javaxt.dhtml.Window(document.body, {
@@ -1011,7 +1177,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
   //**************************************************************************
   //** showImportSummary
   //**************************************************************************
-    var showImportSummary = function(productCodes, countryCodes, countryCode){
+    var showImportSummary = function(countryCodes, countryCode){
         if (!importSummary){
             var win = new javaxt.dhtml.Window(document.body, {
                 title: "Import Summary",
@@ -1033,7 +1199,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
         importSummary.clear();
         importSummary.show();
-        importSummary.update(productCodes, countryCodes, countryCode);
+        importSummary.update(Object.keys(productCodes), countryCodes, countryCode);
     };
 
 
@@ -1052,12 +1218,50 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
   //**************************************************************************
+  //** createDashboardItem
+  //**************************************************************************
+    var createDashboardItem = function(title, subtitle, parent){
+        if (arguments.length==2){
+            parent = subtitle;
+            subtitle = null;
+        }
+
+        var dashboardItem = bluewave.utils.createDashboardItem(parent, {
+            title: title,
+            subtitle: subtitle,
+            width: "100%",
+            height: "100%",
+            settings: true
+        });
+        var icon = dashboardItem.settings.getElementsByTagName("i")[0];
+        if (icon) icon.className = "fas fa-expand";
+        dashboardItem.settings.onclick = function(){
+            if (!popup){
+                popup = new javaxt.dhtml.Window(document.body, {
+                    width: 1060,
+                    height: 600,
+                    modal: true,
+                    style: config.style.window,
+                    resizable: true
+                });
+            }
+            popup.getBody().innerHTML = "";
+            popup.setTitle(title);
+            popup.show();
+            if (dashboardItem.onPopup) dashboardItem.onPopup();
+        };
+        return dashboardItem;
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var isNumeric = javaxt.dhtml.utils.isNumber;
     var get = bluewave.utils.get;
-    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var createTooltip = bluewave.chart.utils.createTooltip;
+    var formatNumber = bluewave.utils.formatNumber;
 
     init();
 };
