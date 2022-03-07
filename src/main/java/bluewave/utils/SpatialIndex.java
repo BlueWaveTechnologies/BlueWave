@@ -21,8 +21,6 @@ public class SpatialIndex {
 
 
     private STRtree strTree;
-    private static PrecisionModel precisionModel = new PrecisionModel();
-    private static GeometryFactory geometryFactory = new GeometryFactory(precisionModel, 4326);
     private Envelope extents;
     private HashMap<Long, Object> map;
 
@@ -105,7 +103,24 @@ public class SpatialIndex {
    */
     public Long[] getIDs(Geometry geom){
         if (geom==null) return new Long[0];
-        return getIDs(geom.getEnvelopeInternal());
+
+
+        Envelope env = geom.getEnvelopeInternal();
+        ArrayList<Long> ids = new ArrayList<>();
+        if (env!=null){
+            for (Object o : strTree.query(env)) {
+                IndexedRegion region = (IndexedRegion) o;
+                try{
+                    if (region.poly.intersects(geom)){
+                        ids.add(region.getID());
+                    }
+                }
+                catch(Exception e){
+                }
+            }
+        }
+
+        return ids.toArray(new Long[ids.size()]);
     }
 
 
@@ -121,11 +136,6 @@ public class SpatialIndex {
             }
         }
         return ids.toArray(new Long[ids.size()]);
-    }
-
-
-    public static Point createPoint(double lat, double lon){
-        return geometryFactory.createPoint(new Coordinate(lon, lat));
     }
 
 

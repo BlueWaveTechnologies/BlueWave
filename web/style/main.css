@@ -1543,6 +1543,34 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
+/** Global Supply Chain Dashboard
+/**************************************************************************/
+
+.global-supply-chain .tick {
+    color: #777;
+}
+
+.global-supply-chain .chart-title {
+    font-size: 13px;
+    text-align: left;
+}
+
+.global-supply-chain .dashboard-item {
+    margin: 0;
+    padding: 7px;
+}
+
+.global-supply-chain .dashboard-item-settings {
+    font-size: 13px;
+}
+
+.global-supply-chain .sankey-node text {
+    font-size: 11px;
+    fill: #777;
+}
+
+
+/**************************************************************************/
 /** D3 SVG Styles
 /**************************************************************************/
 
