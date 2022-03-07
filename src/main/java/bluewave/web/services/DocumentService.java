@@ -183,6 +183,8 @@ public class DocumentService extends WebService {
         String orderBy = request.getParameter("orderby").toString();
         if (orderBy==null) orderBy = "name";
         String[] q = request.getRequest().getParameterValues("q");
+        Boolean remote = request.getParameter("remote").toBoolean();
+        if (remote==null) remote = false;
 
 
       //Start compiling response
@@ -190,85 +192,95 @@ public class DocumentService extends WebService {
         str.append("id,name,type,date,size");
 
 
-      //Compile sql statement
-        StringBuilder sql = new StringBuilder();
-        sql.append("select document.id, file.name, file.type, file.date, file.size ");
-        sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
-        sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
-        HashMap<Long, JSONObject> searchMetadata = new HashMap<>();
-        if (q!=null){
-            try{
-
-                List<String> searchTerms = new ArrayList<>();
-                for (String s : q) searchTerms.add(s);
+        if (remote){
 
 
-                TreeMap<Float, ArrayList<bluewave.app.Document>> results =
-                    index.findDocuments(searchTerms, Math.toIntExact(limit));
 
-                if (results.isEmpty()){
-                    return new ServiceResponse(str.toString());
-                }
-                else{
-                    String documentIDs = "";
-                    Iterator<Float> it = results.descendingKeySet().iterator();
-                    while (it.hasNext()){
-                        float score = it.next();
-                        ArrayList<bluewave.app.Document> documents = results.get(score);
-                        for (bluewave.app.Document document : documents){
-                            if (documentIDs.length()>0) documentIDs += ",";
-                            documentIDs += document.getID() + "";
 
-                            JSONObject info = document.getInfo();
-                            if (info!=null){
-                                JSONObject md = info.get("searchMetadata").toJSONObject();
-                                if (md!=null) searchMetadata.put(document.getID(), md);
+
+        }
+        else{
+
+          //Compile sql statement
+            StringBuilder sql = new StringBuilder();
+            sql.append("select document.id, file.name, file.type, file.date, file.size ");
+            sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
+            sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
+            HashMap<Long, JSONObject> searchMetadata = new HashMap<>();
+            if (q!=null){
+                try{
+
+                    List<String> searchTerms = new ArrayList<>();
+                    for (String s : q) searchTerms.add(s);
+
+
+                    TreeMap<Float, ArrayList<bluewave.app.Document>> results =
+                        index.findDocuments(searchTerms, Math.toIntExact(limit));
+
+                    if (results.isEmpty()){
+                        return new ServiceResponse(str.toString());
+                    }
+                    else{
+                        String documentIDs = "";
+                        Iterator<Float> it = results.descendingKeySet().iterator();
+                        while (it.hasNext()){
+                            float score = it.next();
+                            ArrayList<bluewave.app.Document> documents = results.get(score);
+                            for (bluewave.app.Document document : documents){
+                                if (documentIDs.length()>0) documentIDs += ",";
+                                documentIDs += document.getID() + "";
+
+                                JSONObject info = document.getInfo();
+                                if (info!=null){
+                                    JSONObject md = info.get("searchMetadata").toJSONObject();
+                                    if (md!=null) searchMetadata.put(document.getID(), md);
+                                }
                             }
                         }
+                        sql.append("WHERE document.id in (");
+                        sql.append(documentIDs);
+                        sql.append(")");
                     }
-                    sql.append("WHERE document.id in (");
-                    sql.append(documentIDs);
-                    sql.append(")");
                 }
+                catch(Exception e){
+                    e.printStackTrace();
+                    return new ServiceResponse(e);
+                }
+            }
+
+            if (orderBy!=null) sql.append(" ORDER BY " + orderBy);
+            if (offset!=null) sql.append(" OFFSET " + offset);
+            sql.append(" LIMIT " + limit);
+
+
+            if (!searchMetadata.isEmpty()) str.append(",info");
+
+
+          //Execute query and update response
+            Connection conn = null;
+            try{
+                conn = database.getConnection();
+                Recordset rs = new Recordset();
+                rs.open(sql.toString(), conn);
+                while (rs.hasNext()){
+                    str.append("\n");
+                    str.append(getString(rs));
+                    if (!searchMetadata.isEmpty()) str.append(",");
+                    JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
+                    if (md!=null){
+                      //Create csv-safe string of the json and append to str
+                        String s = md.toString();
+                        str.append(java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
+                    }
+                    rs.moveNext();
+                }
+                rs.close();
+                conn.close();
             }
             catch(Exception e){
-                e.printStackTrace();
+                if (conn!=null) conn.close();
                 return new ServiceResponse(e);
             }
-        }
-
-        if (orderBy!=null) sql.append(" ORDER BY " + orderBy);
-        if (offset!=null) sql.append(" OFFSET " + offset);
-        sql.append(" LIMIT " + limit);
-
-
-        if (!searchMetadata.isEmpty()) str.append(",info");
-
-
-      //Execute query and update response
-        Connection conn = null;
-        try{
-            conn = database.getConnection();
-            Recordset rs = new Recordset();
-            rs.open(sql.toString(), conn);
-            while (rs.hasNext()){
-                str.append("\n");
-                str.append(getString(rs));
-                if (!searchMetadata.isEmpty()) str.append(",");
-                JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
-                if (md!=null){
-                  //Create csv-safe string of the json and append to str
-                    String s = md.toString();
-                    str.append(java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
-                }
-                rs.moveNext();
-            }
-            rs.close();
-            conn.close();
-        }
-        catch(Exception e){
-            if (conn!=null) conn.close();
-            return new ServiceResponse(e);
         }
 
         return new ServiceResponse(str.toString());
@@ -408,7 +420,7 @@ public class DocumentService extends WebService {
 
                             //Set response
                             json.set("result", "uploaded");
-                            
+
                         }
                     }
                     catch(Exception e){
@@ -428,7 +440,7 @@ public class DocumentService extends WebService {
     }
 
   //**************************************************************************
-  //** addFile 
+  //** addFile
   //  Adds file to DB and Index
   //**************************************************************************
     private void addFile(javaxt.io.File file) throws SQLException {
@@ -469,7 +481,7 @@ public class DocumentService extends WebService {
         //Execute script
         try{
             JSONObject result = executeScript(scripts[0], params);
-            
+
 
         return new ServiceResponse(result);
         }

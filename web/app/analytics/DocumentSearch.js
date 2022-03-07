@@ -17,7 +17,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         showCheckboxes: false
     };
     var waitmask;
-    this.searchBar;
+    var searchBar;
     var grid;
 
 
@@ -87,6 +87,30 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
   //**************************************************************************
+  //** getSearchBar
+  //**************************************************************************
+    this.getSearchBar = function(){
+        return searchBar;
+    };
+
+
+  //**************************************************************************
+  //** onLoad
+  //**************************************************************************
+  /** Called whenever the search grid is updated
+   */
+    this.onLoad = function(){};
+
+
+  //**************************************************************************
+  //** onBeforeLoad
+  //**************************************************************************
+  /** Called before the search grid is updated
+   */
+    this.onBeforeLoad = function(){};
+
+
+  //**************************************************************************
   //** createHeader
   //**************************************************************************
     var createHeader = function(parent){
@@ -100,12 +124,12 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //** createSearchBar
   //**************************************************************************
     var createSearchBar = function(parent){
-        me.searchBar = bluewave.utils.createSearchBar(parent);
-        me.searchBar.onChange = function(q){
+        searchBar = bluewave.utils.createSearchBar(parent);
+        searchBar.onChange = function(q){
             // console.log(q);
         };
 
-        me.searchBar.onSearch = function(q){
+        searchBar.onSearch = function(q){
 
             if (typeof q === 'string'){
 
@@ -121,7 +145,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
             grid.update(q);
         };
-        me.searchBar.onClear = function(){
+        searchBar.onClear = function(){
             grid.update();
         };
     };
@@ -156,153 +180,16 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
     var createFacetPanel = function(parent){
 
-
-
     };
 
-  //**************************************************************************
-  //** expandSearch
-  //**************************************************************************
-  //* left empty for rewrite by instantiator (documentAnalysis)
-    this.expandSearch = function(){
-    };
-
-  //**************************************************************************
-  //** getSelectedDocuments
-  //**************************************************************************
-  //* left empty for rewrite by instantiator (documentAnalysis)
-    this.getSelectedDocuments = function(){
-
-    };
-
-  //**************************************************************************
-  //** createNoResultsPanel
-  //**************************************************************************
-    this.createNoResultsPanel = function(parent){
-
-        var createButton = function(parent, label){
-            var input = document.createElement('input');
-            input.className = "form-button";
-            input.type = "button";
-            input.name = label;
-            input.value = label;
-            input.disabled = true;
-            parent.appendChild(input);
-            return input;
-        };
-
-        var createBody = function(parent){
-            // create main container
-            var div = document.createElement("div");
-            div.className = "doc-no-results-panel";
-
-            // add background
-            var iconContainer = document.createElement("div");
-            iconContainer.className = "doc-no-results-background";
-            iconContainer.textAlign = "center";
-            div.appendChild(iconContainer);
-            iconContainer.innerHTML ='<i class="fas fa-search-minus"></i>';
-
-            // add text
-            var text = document.createElement("div");
-            text.className = "doc-no-results-text";
-            div.appendChild(text);
-            text.innerText =  "No Local Search Results found";
-
-            // add button container
-            var buttonContainer = document.createElement("div");
-            buttonContainer.className = "doc-no-results-button";
-            div.appendChild(buttonContainer);
-
-            // add external-search button
-            var button = createButton(buttonContainer,"Expand Search");
-            button.style.display = "inline-block";
-            button.style.width = "110px";
-            button.enable = function(){
-            this.disabled = false;
-            };
-
-            button.disable = function(){
-            this.disabled = false;
-            };
-
-            button.enable();
-
-            button.onclick = function(){
-                me.expandSearch();
-            };
-
-            parent.appendChild(div);
-        };
-            var table = createTable();
-            var tbody = table.firstChild;
-
-            parent.appendChild(table);
-            var el = table;
-
-            var tr, td;
-
-            // add a place to insert search bar when this page is active
-                tr = document.createElement("tr");
-                tbody.appendChild(tr);
-                td = document.createElement("td");
-                td.className = "document-search-search-bar";
-
-
-                tr.appendChild(td);
-
-                td.style.height = "30px"; // temporary styling
-                td.style.paddingTop ="2px"; // temporary styling
-                td.style.paddingBottom ="2px"; // temporary styling
-                td.style.paddingLeft ="4px"; // temporary styling
-                td.style.paddingRight ="4px"; // temporary styling
-
-            // add noResults page body below search bar
-                tr = document.createElement("tr");
-                tbody.appendChild(tr);
-                td = document.createElement("td");
-                tr.appendChild(td);
-                table = createTable();
-                tbody = table.firstChild;
-                td.appendChild(table);
-
-                tr = document.createElement("tr");
-                tbody.appendChild(tr);
-                td = document.createElement("td");
-                td.style.height = "100%";
-                tr.appendChild(td);
-                createBody(td);
-
-
-            return {
-                el: el,
-                refresh: function(){
-                    //* left empty for rewrite by instantiator (documentAnalysis)
-                }
-            };
-    };
 
   //**************************************************************************
   //** createDocumentPanel
   //**************************************************************************
     var createDocumentPanel = function(parent){
-
         createGrid(parent);
     };
 
-  //**************************************************************************
-  //** onEmptyResults
-  //**************************************************************************
-  //* left empty for rewrite by instantiator (documentAnalysis)
-    this.onEmptyResults = function(){
-    };
-
-  //**************************************************************************
-  //** onPopulatedResults
-  //**************************************************************************
-  //* left empty for rewrite by instantiator (documentAnalysis)
-    this.onPopulatedResults = function(){
-    };
 
   //**************************************************************************
   //** createGrid
@@ -400,12 +287,12 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
         grid.onBeforeLoad = function(){
             waitmask.show();
+            me.onBeforeLoad();
         };
 
         grid.onLoad = function(){
-            if (grid.el.getElementsByClassName("table-row").length < 1) me.onEmptyResults();
-            else me.onPopulatedResults();
             waitmask.hide();
+            me.onLoad();
         };
 
 
@@ -418,102 +305,12 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
         };
 
-        grid.selectRow = function(row, mouseEvent, makeSelected){
-            selectRow(row, mouseEvent, makeSelected);
-        };
     };
 
-
-
-  //**************************************************************************
-  //** selectRow
-  //**************************************************************************
-  /** Selects or deselects the row from Document Search panel and adds it to the Selected Documents panel
-   *  if function is called with mouseEvent true -> unselect row if selected and select the row if unselected
-   *  if function is called with makeSelected true -> select row
-   *  if function is called with makeSelected false -> unselect row
-   */
-   var selectRow = function(row, mouseEvent, makeSelected){
-
-    var selectedDocuments = me.getSelectedDocuments();
-
-    var o = row.get("Name");
-
-    if (!o.select){ // runs only once for each row - initialize row with selection capability if not already initialized
-        var div = document.createElement("div");
-        div.className = "document-analysis-selected-row";
-        div.select = function(){
-            div.style.left = "0px";
-        };
-        div.deselect = function(){
-            div.style.left = "-34px";
-        };
-        div.deselect();
-
-        var check = document.createElement("div");
-        check.className = "fas fa-check-square";
-        div.appendChild(check);
-
-        var span = document.createElement("span");
-        if ( //is element?
-            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
-            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
-        ) span.appendChild(o);
-        else span.innerText = o;
-        div.appendChild(span);
-
-        row.set("Name", div);
-        o = div;
-    }
-
-
-    //Add or remove document from the selectedDocuments store
-    var addDocument = true;
-    var r = row.record;
-    selectedDocuments.forEach((d, i)=>{
-        if (d.id===r.id){
-            addDocument = false;
-
-            if (mouseEvent) {
-                selectedDocuments.removeAt(i);
-            }
-            else {
-                if (!makeSelected){
-                    selectedDocuments.removeAt(i);
-                };
-            };
-            return true;
-        }
-    });
-    // mouse click events
-        if (addDocument && mouseEvent){
-            selectedDocuments.add(r);
-            o.select();
-        }
-        else if (!addDocument && mouseEvent){
-            o.deselect();
-        }
-    // selectAll events
-        else if (!addDocument && !mouseEvent && makeSelected){
-            o.select();
-        }
-        else if (!addDocument && !mouseEvent && !makeSelected){
-            o.deselect();
-        }
-        else if (addDocument && !mouseEvent && !makeSelected){
-            o.deselect();
-        }
-        else if (addDocument && !mouseEvent && makeSelected){
-            selectedDocuments.add(r);
-            o.select();
-        }
-
-    };
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
-
     var get = bluewave.utils.get;
     var parseCSV = bluewave.utils.parseCSV;
     var formatNumber = bluewave.utils.formatNumber;

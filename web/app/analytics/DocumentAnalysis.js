@@ -1,12 +1,11 @@
 if(!bluewave) var bluewave={};
 if(!bluewave.analytics) bluewave.analytics={};
 
-
 //******************************************************************************
-//**  CarouselTest
+//**  DocumentAnalysis
 //******************************************************************************
 /**
- *   Panel used to test a looping carousel with 3 panels
+ *   Panel used to search and compare documents
  *
  ******************************************************************************/
 
@@ -16,10 +15,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
-    var selectedExternalDocuments; //datastore - downloading files from external resource
     var searchPanel;
     var similarityResults, documentSimilarities;
-    var externalSearchPanel;
     var noResultsPanel;
     var windows = [];
     var waitmask;
@@ -139,8 +136,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-  /** Used to update the panel and render a timeline
-   */
     this.update = function(){
 
       //Clear the panel
@@ -383,6 +378,15 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
       //Create toolbar and grid panel
         var grid, button = {};
+
+        var createButton = function(parent, btn){
+            var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
+            if (btn.style) btn.style = merge(btn.style, defaultStyle);
+            else btn.style = defaultStyle;
+
+            return bluewave.utils.createButton(parent, btn);
+        };
+
         var createPanel = function(parent){
 
           //Create main table
@@ -544,71 +548,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
     };
 
-  //**************************************************************************
-  //** createExternalSearchPanel
-  //**************************************************************************
-    var createExternalSearchPanel = function(parent){
-        var grid;
-        externalSearchPanel = new bluewave.analytics.DocumentExternalSearch(parent,{
-            dateFormat: config.dateFormat,
-            showCheckboxes: false
-        });
-        if (!selectedExternalDocuments) selectedExternalDocuments = new javaxt.dhtml.DataStore();
-
-        addShowHide(externalSearchPanel);
-
-        externalSearchPanel.getSelectedDocuments = function(){
-            return selectedExternalDocuments;
-        };
-
-        // add download button functionality
-            externalSearchPanel.download = function (){
-                var downloadingFiles = [];
-                if (selectedExternalDocuments.length > 0){
-                    selectedExternalDocuments.forEach((d, i)=>{
-                        // console.log(d.name);
-                        // console.log(d.link); // to be populated via Java callback
-                        downloadingFiles.push({"filename":d.name, "fileLink":d.link});
-                    });
-
-                    console.log(`queued to download - not yet implemented!`);
-                    console.log(downloadingFiles);
-                };
-            };
-
-
-
-
-        externalSearchPanel.refresh = function(){
-            // clear dataStore and externalSearch grid to refresh page
-                selectedExternalDocuments.clear();
-                var grid = externalSearchPanel.getDataGrid();
-                grid.update();
-
-            // populate the datastore with all of the rows (functionality test using dataGrid from searchPanel)
-                grid.update("pdf"); // base random
-
-
-
-            // pop the search bar into the externalResultsPanel (from noResultsPanel)
-                searchBarDiv = externalSearchPanel.el.getElementsByClassName("document-search-search-bar")[0];
-                searchBarDiv.appendChild(searchPanel.searchBar.el);
-                searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
-
-            externalSearchPanel.show();
-            noResultsPanel.hide();
-            searchPanel.hide();
-            externalSearchPanel.selectAllStatus = false; // reset status of select button
-            updateButtons();
-        };
-
-        externalSearchPanel.getDownloadButton = function(){
-            return mainButton["Download"];
-        };
-
-        externalSearchPanel.selectAllStatus = false; // default status of the coordinated selectAll button
-
-    };
 
   //**************************************************************************
   //** createSearchPanel
@@ -622,73 +561,54 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 dateFormat: config.dateFormat,
                 showCheckboxes: false
             });
-
-
-            addShowHide(searchPanel);
-
-
-            searchPanel.getSelectedDocuments = function (){
-                return selectedDocuments;
-            };
-
-            var searchBarInput, searchBarDiv;
-            searchPanel.onEmptyResults = function(){
-                if (typeof(noResultsPanel) === "undefined"){ // lazy load noResultsPanel
-                    //create noResultsPanel
-                        noResultsPanel = this.createNoResultsPanel(parent);
-                        addShowHide(noResultsPanel);
-
-                        noResultsPanel.refresh = function(){
-                            // pop the search bar back into the noResultsPanel (from documentSearchPanel)
-                                searchBarDiv = this.el.getElementsByClassName("document-search-search-bar")[0];
-                                searchBarDiv.appendChild(searchPanel.searchBar.el);
-                                searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
-
-                            searchPanel.hide();
-                            this.show();
-                            searchBarInput.focus();
-
-                            searchPanel.expandSearch = function (){
-                                this.hide();
-                                searchPanel.hide();
-
-                                if (!externalSearchPanel){ // lazy load externalSearchPanel
-                                    createExternalSearchPanel(parent);
-                                };
-                                externalSearchPanel.refresh();
-                            };
-                        };
-                };
-
-                noResultsPanel.refresh();
-            };
-
-            searchPanel.onPopulatedResults = function(){
-                searchPanel.refresh();
-            };
-
-            searchPanel.refresh = function(){
+            searchPanel.onLoad = function(){
+                var numRecords = 0;
                 var grid = searchPanel.getDataGrid();
-                searchPanel.clear();
-                grid.forEachRow((row)=>{
-                    selectedDocuments.forEach((document)=>{
-                        if (row.record.id == document.id) grid.selectRow(row, false, true);
-                    });
+                grid.forEachRow(function (row) {
+                    numRecords++;
+
+                  //Add custom select/deselect methods to the name column
+                    var o = row.get("Name");
+                    if (!o.select){
+                        var div = document.createElement("div");
+                        div.className = "document-analysis-selected-row";
+                        div.select = function(){
+                            div.style.left = "0px";
+                        };
+                        div.deselect = function(){
+                            div.style.left = "-34px";
+                        };
+                        div.deselect();
+
+                        var check = document.createElement("div");
+                        check.className = "fas fa-check-square";
+                        div.appendChild(check);
+
+                        var span = document.createElement("span");
+                        if ( //is element?
+                            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+                            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
+                        ) span.appendChild(o);
+                        else span.innerText = o;
+                        div.appendChild(span);
+
+                        row.set("Name", div);
+                        o = div;
+                    }
+
                 });
 
-                if (typeof(noResultsPanel) !== "undefined"){
-                    noResultsPanel.hide();
-                    searchPanel.show();
+                if (numRecords===0){
+                    if (!grid.hide) addShowHide(grid);
+                    grid.hide();
 
-                    // pop the search bar back into the searchPanel (from noResultsPanel)
-                        searchBarDiv = searchPanel.el.getElementsByClassName("document-search-search-bar")[0];
-                        searchBarDiv.appendChild(this.searchBar.el);
-                        searchBarInput = searchBarDiv.getElementsByTagName("input")[0];
-                        searchBarInput.focus();
-                };
-                if (externalSearchPanel) externalSearchPanel.hide();
-                if (noResultsPanel) noResultsPanel.hide();
-
+                    if (!noResultsPanel) createNoResultsPanel(grid.el.parentNode);
+                    noResultsPanel.show();
+                }
+                else{
+                    if (noResultsPanel) noResultsPanel.hide();
+                    if (grid.show) grid.show();
+                }
                 updateButtons();
             };
 
@@ -697,12 +617,33 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             searchPanel.el.addEventListener('drop', onDrop, false);
 
             var grid = searchPanel.getDataGrid();
-            searchPanel.selectAllStatus = false;
+
 
           //Watch for row click events
             grid.onRowClick = function(row, e){
                 if (e.detail === 2) { //double click
-                    grid.selectRow(row, true, false);
+
+
+                  //Add or remove document from the selectedDocuments store
+                    var addDocument = true;
+                    var r = row.record;
+                    selectedDocuments.forEach((d, i)=>{
+                        if (d.id===r.id){
+                            selectedDocuments.removeAt(i);
+                            addDocument = false;
+                            return true;
+                        }
+                    });
+
+                    var o = row.get("Name");
+                    if (addDocument){
+                        selectedDocuments.add(r);
+                        o.select();
+                    }
+                    else{
+                        o.deselect();
+                    }
+
                 }
             };
 
@@ -749,8 +690,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy
     };
-
-
 
 
   //**************************************************************************
@@ -1108,14 +1047,61 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
 
   //**************************************************************************
+  //** createNoResultsPanel
+  //**************************************************************************
+    var createNoResultsPanel = function(parent){
+        var div = document.createElement("div");
+        div.className = "document-analysis-no-search-results";
+        div.innerHTML ='<i class="fas fa-search-minus"></i>';
+        var text = document.createElement("div");
+        text.innerText = "No Local Search Results Found";
+        div.appendChild(text);
+        var button = createButton("Expand Search", div);
+        button.enable();
+        button.onclick = function(){
+            waitmask.show();
+            var q = searchPanel.getSearchBar().getValue();
+            get("documents?q=" + encodeURIComponent(q) + "&remote=true", {
+                success: function(text){
+                    console.log(text);
+                    waitmask.hide();
+                },
+                failure: function(request){
+                    waitmask.hide();
+                }
+            });
+        };
+        addShowHide(div);
+        parent.appendChild(div);
+        noResultsPanel = div;
+    };
+
+
+  //**************************************************************************
   //** createButton
   //**************************************************************************
-    var createButton = function(parent, btn){
-        var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
-        if (btn.style) btn.style = merge(btn.style, defaultStyle);
-        else btn.style = defaultStyle;
-
-        return bluewave.utils.createButton(parent, btn);
+    var createButton = function(label, parent){
+        var input = document.createElement('input');
+        input.className = "form-button";
+        input.type = "button";
+        input.name = label;
+        input.value = label;
+        input.disabled = true;
+        input.disable = function(){
+            this.disabled = true;
+        };
+        input.enable = function(){
+            this.disabled = false;
+        };
+        input.setText = function(label){
+            this.name = label;
+            this.value = label;
+        };
+        input.getText = function(){
+            return this.value;
+        };
+        parent.appendChild(input);
+        return input;
     };
 
 
@@ -1152,30 +1138,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         buttonsDiv.appendChild(leftSideButtons);
 
 
-        var createButton = function(label, parent){
-            var input = document.createElement('input');
-            input.className = "form-button";
-            input.type = "button";
-            input.name = label;
-            input.value = label;
-            input.disabled = true;
-            input.disable = function(){
-                this.disabled = true;
-            };
-            input.enable = function(){
-                this.disabled = false;
-            };
-            input.setText = function(label){
-                this.name = label;
-                this.value = label;
-            };
-            input.getText = function(){
-                return this.value;
-            };
-            parent.appendChild(input);
-            return input;
-        };
-
 
       //Add back button
         mainButton["back"] = createButton("Back", rightSideButtons);
@@ -1198,38 +1160,33 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         mainButton["selectAll"] = createButton("Select All", leftSideButtons);
         mainButton["selectAll"].style.width = "100px";
         mainButton["selectAll"].onclick = function(){
-            var grid, selectedPanel;
+            var currLabel = this.getText();
+            if (currLabel==="Select All") this.setText("Deselect All");
+            else this.setText("Select All");
 
-            if (searchPanel.isVisible()){
-                grid = searchPanel.getDataGrid();
-                selectedPanel = searchPanel;
+            var grid = searchPanel.getDataGrid();
+            grid.forEachRow((row)=>{
 
-            }
-            else if (externalSearchPanel){
-                if (externalSearchPanel.isVisible()){
-                    grid = externalSearchPanel.getDataGrid();
-                    selectedPanel = externalSearchPanel;
-
-                };
-            };
-
-            if (selectedPanel.selectAllStatus === false){
-                grid.forEachRow((row)=>{
-                    grid.selectRow(row, false, true);
+                var idx = null;
+                var r = row.record;
+                selectedDocuments.forEach((d, i)=>{
+                    if (d.id===r.id){
+                        idx = i;
+                        return true;
+                    }
                 });
-                selectedPanel.selectAllStatus = true;
-                this.setText("Deselect All");
-                return;
-            }
-            else {
-                grid.forEachRow((row)=>{
-                    grid.selectRow(row, false, false);
-                });
-                selectedPanel.selectAllStatus = false;
-                this.setText("Select All");
-                return;
-            };
+
+                if (currLabel==="Select All"){
+                    row.get("Name").select();
+                    if (idx==null) selectedDocuments.add(r);
+                }
+                else{
+                    row.get("Name").deselect();
+                    if (idx!=null) selectedDocuments.removeAt(idx);
+                }
+            });
         };
+
 
         // add download button (for use on externalResultsPanel)
         mainButton["Download"] = createButton("Download", leftSideButtons);
@@ -1239,13 +1196,14 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         mainButton["Download"].style.color = "#e4e4e4";
 
         mainButton["Download"].onclick = function(){
-            if (externalSearchPanel) externalSearchPanel.download();
+
         };
 
         addShowHide(mainButton["Download"]);
 
         updateButtons();
     };
+
 
   //**************************************************************************
   //** updateButtons
@@ -1255,11 +1213,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         for (var panel in panels){
             if (panels[panel].isSelected()) selectedPanelName = panels[panel].name;
-            else if (externalSearchPanel){
-                if (externalSearchPanel.isVisible()){
-                    selectedPanelName = "externalSearchPanel";
-                };
-            };
+
         };
 
         if (mainButton){ // if Button panel Buttons have been initialized
@@ -1277,14 +1231,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 mainButton["selectAll"].disable();
                 mainButton["Download"].hide();
             }
-            else if(selectedPanelName == "externalSearchPanel"){
-                mainButton["selectAll"].enable();
-                mainButton["back"].disable();
-                mainButton["next"].enable();
-                mainButton["Download"].disable();
-                mainButton["Download"].show();
-                selectedSelectAllPanel = externalSearchPanel;
-            };
+
             // update SelectAll button text
             if (selectedSelectAllPanel){
                 if (!selectedSelectAllPanel.selectAllStatus) mainButton["selectAll"].setText("Select All");
