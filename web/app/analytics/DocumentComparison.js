@@ -22,6 +22,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var totalPages = 0;
     var currPair = -1;
     var navbar;
+    var ratings; // to be appended to the currently selected tag
 
 
 
@@ -343,54 +344,89 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
   //** createRatings
   //**************************************************************************
-  var createRatings = function(parent){ // lazy loaded when a similarity is selected
-    var thumbsDown, thumbsUp;
+    var createRatings = function(){ // lazy loaded when a new img is pulled up
+        var thumbsDown, thumbsUp, tag;
+            var div = document.createElement("div");
+            div.style.position = "absolute";
+            div.style.width = "100%";
+            div.style.bottom = "86%";
+            div.style.left = "-20%";
 
-        var createButton = function(buttonClassName){
 
-            var icon = document.createElement("div");
-            icon.className = "doc-compare-panel-ratings-icon";
-            // icon.innerHTML = buttonClassName;
-            icon.innerHTML =`<i class="${buttonClassName}"></i>`;
-            return icon;
+            ratings = document.createElement("div");
+            ratings.className = "doc-compare-panel-ratings";
+            addShowHide(ratings);
+            ratings.hide();
+            ratings.show();
+
+            div.appendChild(ratings);
+            var div = document.createElement("div");
+            div.className = "doc-compare-panel-ratings-container";
+            ratings.appendChild(div);
+
+            // create thumbs up
+                var thumbsUp = document.createElement("i");
+                thumbsUp.className = "fas fa-thumbs-up";
+
+            // create thumbs down
+                var thumbsDown = document.createElement("i");
+                thumbsDown.className = "fas fa-thumbs-down";
+
+
+            ratings.clear = function(){
+                console.log("ratings clear called");
+                // clear any selection
+
+            };
+
+            ratings.detach = function(){
+                // if ratings container div is attached somewhere within the dom, detach it
+                    if (this.parentNode.parentNode ) this.parentNode.parentNode.removeChild(this.parentNode);
+            };
+
+            ratings.attach = function(parent){
+                // append the ratings container div to the first child of the parent element
+                    parent.insertBefore(this.parentNode, parent.firstChild);
+            };
+
+            ratings.update = function(t){
+                console.log("updating with this object", t);
+                this.detach();
+                ratings.attach(t.parentNode);
+                ratings.clear();
+                this.tag = t;
+                this.thumbsDown.tag = t;
+                this.thumbsUp.tag = t;
+                ratings.show();
+            };
+
+            ratings.appendChild(thumbsUp);
+            ratings.appendChild(thumbsDown);
+            ratings.thumbsUp = thumbsUp;
+            ratings.thumbsDown = thumbsDown;
+
+            thumbsUp.onclick = function(){
+                console.log("clicked the thumbsup button");
+                this.tag.approveSimilarity();
+                ratings.hide();
+            };
+
+            thumbsDown.onclick = function(){
+                console.log("clicked the thumbsDown button");
+                this.tag.removeSimilarity();
+                ratings.hide();
+            };
+
+            return ratings;
+            // return {
+            //     el:el,
+            //     clear: function(){
+            //     },
+            //     update: function(){
+            //         el.clear();
+            //     }
+            // };
         };
-
-        el = document.createElement("div");
-        el.className = "doc-compare-panel-ratings";
-        addShowHide(el);
-        el.hide();
-        // el.show();
-
-        parent.appendChild(el);
-        var div = document.createElement("div");
-        div.className = "doc-compare-panel-ratings-container";
-        el.appendChild(div);
-
-        var thumbsUp = createButton("fas fa-thumbs-up");
-        var thumbsDown = createButton("fas fa-thumbs-down");
-
-        div.appendChild(thumbsUp);
-        div.appendChild(thumbsDown);
-
-        thumbsUp.onclick = function(){
-            console.log("clicked the thumbsup button");
-
-        };
-
-        thumbsDown.onclick = function(){
-            console.log("clicked the thumbsDown button");
-        };
-
-
-        return {
-            el:el,
-            clear: function(){
-            },
-            update: function(){
-                el.clear();
-            }
-        };
-    };
 
 
   //**************************************************************************
@@ -444,10 +480,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             console.log("selected this similarity div");
             // if its already selected then return
                 if (this.isSelected) return;
-
             this.isSelected = true;
             this.highlight();
-            // this.scrollTo(); // add this later for scrolling down to the highlighted element
+            this.scrollIntoView(true); // add this later for scrolling to the highlighted element in the right-hand view
+
 
         };
 
@@ -463,35 +499,29 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
-
   //**************************************************************************
   //** createSimilarityTag
   //**************************************************************************
     var createSimilarityTag = function(bbox, int, img){
+
         var x = bbox[0];
         var y = bbox[1];
-        var w = bbox[2]-x;
-        var h = bbox[3]-y;
-
 
         var tag = document.createElement("div");
-        tag.style.color = "white"; // add a class here
-        tag.style.width = "30px";
-        tag.style.height = "20px";
-        tag.style.textAlign = "left";
-        tag.style.zIndex = 3;
-        tag.style.opacity = "80%";
-        tag.style.backgroundColor = "black";
+        tag.className = "doc-compare-panel-similarity-tag";
         var tagInner = document.createElement("div");
         tagInner.innerText = int;
         tagInner.style.textAlign = "center";
         tag.appendChild(tagInner);
 
-        tag.style.fontSize = "15px";
-        tag.style.cursor = "pointer";
-        tag.style.position = "absolute";
-        tag.style.left = (x*img.width)+"px";
-        tag.style.top = (y*img.height)+"px";
+
+
+        // dynamically set styles
+            tag.style.left = (x*img.width)+"px";
+            tag.style.top = (y*img.height)+"px";
+
+        // other functional styles
+            tag.style.zIndex = 3;
 
         // set values used during rescaling
             tag.originalX = x*img.width;
@@ -506,10 +536,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             this.style.top = `${newY}px`;
         };
 
-        tag.onclick = function (){
-            console.log("tag clicked");
-            console.log(this.d.select());
 
+
+        tag.onclick = function (){
+            if (!ratings) {
+                ratings = createRatings();
+                ratings.attach(this.parentNode);
+            }
+            ratings.update(this);
             console.log("the type of this is");
             console.log(this.type);
         };
@@ -588,6 +622,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Right column
         td = td.cloneNode();
         tr.appendChild(td);
+        var div = document.createElement("div");
         var rightPanel = document.createElement("div");
         rightPanel.className = "doc-compare-panel";
         td.appendChild(rightPanel);
@@ -614,7 +649,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
             img.onload = function(){
-                console.log(me.getSimilarities()[page]);
                 img = this;
 
               // set original width/height for determining scaling for tag & d elements
@@ -631,7 +665,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         boxes.forEach((box)=>{
                             var type = box.type;
                             box.boxes.forEach((bbox)=>{
-                                console.log(int);
                                 int++;
 
                                 var d = createSimilarityOutlineBox(bbox, img);
@@ -696,7 +729,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         return {
             el: el,
             update: function(pageIndex){
-
                 var files = results.files;
                 var leftFile = files[fileIndex];
                 var rightFile;
@@ -712,10 +744,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     var similarPages = {};
                     suspiciousPage.suspiciousPairs.forEach((suspiciousPair)=>{
                         var pages = suspiciousPair.pages;
-                        // console.log("logging pages here")
-                        // console.log(pages);
-                        // console.log('logging suspcicaious pair type')
-                        // console.log(suspiciousPair.type)
                         for (var i=0; i<pages.length; i++){
                             var page = pages[i];
                             if (page.file_index!==fileIndex){
@@ -737,9 +765,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             suspiciousPairs = suspiciousPage.suspiciousPairs;
 
                             return false;
-                        }
+                        };
                         idx++;
-                    }
+                    };
                     return true;
                 });
 
@@ -869,8 +897,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
-
-
   //**************************************************************************
   //** createNavBar
   //**************************************************************************
@@ -927,14 +953,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 }
                 else{
                     fileIndexList.push(i * increment);
-                    li.indexedPage = (i * increment-1);
+                    li.indexedPage = (i * increment);
                 }
 
                 li.onclick = function(){
                   // find li index #
                     var liIndex = this.name; // determine which button this is
                     var pageIndex = this.indexedPage; // determine page number associated with this button
-
                     var currSelection = -1;
                     for (var i=0; i<ul.childNodes.length; i++){
                         if (ul.childNodes[i].className==="active"){
@@ -944,7 +969,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     }
                     if (currSelection===liIndex) return;
                     var diff = liIndex-currSelection;
-
                     if (diff>0){
                         currPair = pageIndex-1; // counteract button increment
                         nextButton.click();
@@ -990,7 +1014,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** raisePanel
   //**************************************************************************
     var raisePanel = function(slideBack){
-
 
       //Find panels in the carousel
         var currPage, nextPage;

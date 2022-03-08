@@ -1206,24 +1206,37 @@ li.tree-node:hover {
 
 
 
+.doc-compare-panel-similarity-tag {
+    color: white;
+    width: 30px;
+    height: 20px;
+    text-align: left;
+    opacity: 80%;
+    background-color: black;
+    font-size: 15px;
+    cursor: pointer;
+    position: absolute;
 
+}
 
 
 
 .doc-compare-panel-ratings {
     position: relative;
+    /* position: absolute; */
     display: inline-block;
-    /* text-align: center; */
-    left: 30%;
+    text-align: center;
+    left: 20%;
     margin: 0;
     padding: 0;
+    z-index: 5;
 }
 
 .doc-compare-panel-ratings-container {
     cursor: default;
     list-style: none;
     display: inline-block;
-    margin: 0;
+    margin: 10px;
     padding: 0;
 }
 
@@ -1236,7 +1249,7 @@ li.tree-node:hover {
     height: 45px;
     cursor: pointer;
     background-color: #ff9800;
-    /* border-radius: 50%; */
+    border-radius: 50%;
     transition: 0.2s;
 }
 
@@ -1257,6 +1270,36 @@ li.tree-node:hover {
     transition: 0.2s;
 }
 
+.doc-compare-panel-ratings  .fas.fa-thumbs-up {
+    position: relative;
+    display: block;
+    float: left;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #008809;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
+.doc-compare-panel-ratings  .fas.fa-thumbs-down {
+    position: relative;
+    display: block;
+    float: right;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #ff0000;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
 .doc-compare-panel-ratings-icon .fas.fa-thumbs-down {
     position: relative;
     display: block;
