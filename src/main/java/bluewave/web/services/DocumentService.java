@@ -212,8 +212,13 @@ public class DocumentService extends WebService {
                 for (int i=0; i<docs.length(); i++){
                     JSONObject doc = docs.get(i).toJSONObject();
                     String id = doc.get("id").toString();
+                    String contentType = doc.get("a_content_type").toString();
+                    String folderID = doc.get("folder_id").toString();
+                    String folderSubType = doc.get("folder_sub_type").toString();
+                    String name = folderID + "/" + folderSubType + "/" + id + "." + contentType;
+
                     Long size = doc.get("contentSize").toLong();
-                    String dt = doc.get("document_date").toString();
+                    String dt = doc.get("r_creation_date").toString();
                     JSONArray pages = doc.get("pages").toJSONArray();
                     JSONObject searchMetadata = new JSONObject();
 
@@ -225,7 +230,9 @@ public class DocumentService extends WebService {
                     str.append("\n");
                     str.append(id);
                     str.append(",");
-                    str.append(id);
+                    str.append(name);
+                    str.append(",");
+                    str.append(contentType);
                     str.append(",");
                     str.append(dt);
                     str.append(",");
