@@ -15,12 +15,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
-    var searchPanel;
+    var searchPanel, previewPanel;
     var similarityResults, documentSimilarities;
     var noResultsPanel;
     var windows = [];
     var waitmask;
     var comparisonsEnabled = true;
+    var remoteSearch = false;
 
     var defaultConfig = {
         dateFormat: "M/D/YYYY h:mm A",
@@ -129,7 +130,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+        remoteSearch = false;
         panels.forEach((panel)=>panel.clear());
+        if (previewPanel) previewPanel.hide();
     };
 
 
@@ -556,12 +559,31 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         var createPanel = function(parent){
 
+
+            var table = createTable();
+            var tbody = table.firstChild;
+            var tr, td;
+
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            td.style.width = "100%";
+            tr.appendChild(td);
+            var leftCol = td;
+            td = document.createElement("td");
+            tr.appendChild(td);
+            createPreviewPanel(td);
+            parent.appendChild(table);
+
+
           //Create document search panel
-            searchPanel = new bluewave.analytics.DocumentSearch(parent,{
+            searchPanel = new bluewave.analytics.DocumentSearch(leftCol,{
                 dateFormat: config.dateFormat,
                 showCheckboxes: false
             });
             searchPanel.onLoad = function(){
+                if (remoteSearch) remoteSearch = false;
+                if (previewPanel) previewPanel.hide();
                 var numRecords = 0;
                 var grid = searchPanel.getDataGrid();
                 grid.forEachRow(function (row) {
@@ -621,12 +643,12 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
           //Watch for row click events
             grid.onRowClick = function(row, e){
+                var r = row.record;
                 if (e.detail === 2) { //double click
 
 
                   //Add or remove document from the selectedDocuments store
                     var addDocument = true;
-                    var r = row.record;
                     selectedDocuments.forEach((d, i)=>{
                         if (d.id===r.id){
                             selectedDocuments.removeAt(i);
@@ -644,6 +666,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         o.deselect();
                     }
 
+                }
+                else{
+                    previewPanel.update(r.id);
+                    previewPanel.show();
                 }
             };
 
@@ -669,6 +695,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         return {
             clear: function(){
                 if (searchPanel) searchPanel.clear();
+                if (previewPanel) previewPanel.hide();
             },
             update: function(panel){
                 if (!searchPanel){
@@ -677,6 +704,74 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 }
             }
         };
+    };
+
+
+  //**************************************************************************
+  //** createPreviewPanel
+  //**************************************************************************
+    var createPreviewPanel = function(parent){
+
+        var downloadButton;
+
+
+        previewPanel = document.createElement("div");
+        previewPanel.style.position = "relative";
+        previewPanel.style.width = "";
+        previewPanel.style.height = "100%";
+        parent.appendChild(previewPanel);
+        var iframe = document.createElement("iframe");
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        iframe.style.border = "0 none";
+        previewPanel.appendChild(iframe);
+        previewPanel.show = function(){
+            if (this.offsetWidth<400){
+                this.style.width = "400px";
+                if (remoteSearch) downloadButton.show();
+            }
+        };
+        previewPanel.hide = function(){
+            this.style.width = "0px";
+            downloadButton.hide();
+        };
+        previewPanel.update = function(id){
+            if (remoteSearch){
+                iframe.src = "document?fileName=" + id + "&urlOnly=true";
+            }
+            else{
+                iframe.src = "document?id=" + id;
+            }
+        };
+
+
+        downloadButton = document.createElement('div');
+        downloadButton.className = "document-analysis-big-download-button";
+        downloadButton.style.position = "absolute";
+        downloadButton.style.right = "25px";
+        downloadButton.style.bottom = "25px";
+        downloadButton.style.opacity = 0;
+        downloadButton.innerHTML = '<i class="fas fa-file-upload"></i>';
+        downloadButton.show = function(){
+            if (this.style.opacity===1) return;
+            var className = this.className;
+            var el = this;
+            setTimeout(function(){
+                el.style.opacity = 1;
+                el.className += " bounceInDown";
+                setTimeout(function(){
+                    el.className = className;
+                }, 1500);
+            }, 850);
+        };
+        downloadButton.hide = function(){
+            this.style.opacity = 0;
+        };
+        downloadButton.onclick = function(){
+
+        };
+        downloadButton.hide();
+        previewPanel.appendChild(downloadButton);
     };
 
 
@@ -1059,6 +1154,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         var button = createButton("Expand Search", div);
         button.enable();
         button.onclick = function(){
+            if (remoteSearch) return;
+            remoteSearch = true;
             waitmask.show();
             var q = searchPanel.getSearchBar().getValue();
             get("documents?q=" + encodeURIComponent(q) + "&remote=true", {
