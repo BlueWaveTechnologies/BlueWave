@@ -5,12 +5,10 @@ import static bluewave.utils.Python.*;
 
 import java.util.*;
 import java.io.BufferedInputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
@@ -178,6 +176,7 @@ public class DocumentService extends WebService {
 
       //Parse request
         Long offset = request.getOffset();
+        if (offset==null || offset<0) offset = 0L;
         Long limit = request.getLimit();
         if (limit==null || limit<1) limit = 50L;
         String orderBy = request.getParameter("orderby").toString();
@@ -194,10 +193,49 @@ public class DocumentService extends WebService {
 
         if (remote){
 
+            str.append(",info");
 
+            String url = "https://i2ksearch-mig.fda.gov/query/i2k/?version=2.2&wt=json&json.nl=arrarr";
+            for (String s : q) url += "&q=" + s;
+            url += "&fq=folder_type:" + encode("(PMN)");
+            //url += "&fq=!folder_type:" + encode("(DocMan)");
+            url+=
+            "&start=" + offset +
+            "&rows=" + limit +
+            "&hl=true&hl.fl=pages&hl.fragsize=85&hl.snippets=4&"; //text highlighting
 
+            javaxt.http.Response response = getResponse(url);
+            if (response.getStatus()==200){
+                JSONObject json = new JSONObject(response.getText());
+                JSONArray docs = json.get("response").get("docs").toJSONArray();
+                for (int i=0; i<docs.length(); i++){
+                    JSONObject doc = docs.get(i).toJSONObject();
+                    String id = doc.get("id").toString();
+                    Long size = doc.get("contentSize").toLong();
+                    String dt = doc.get("document_date").toString();
+                    JSONArray pages = doc.get("pages").toJSONArray();
+                    JSONObject searchMetadata = new JSONObject();
 
+                    //searchMetadata.set("score", score);
+                    //searchMetadata.set("frequency", frequency);
+                    searchMetadata.set("highlightFragment", pages.length()==0 ? null : pages.get(0));
+                    //searchMetadata.set("explainDetails", explainDetails);
 
+                    str.append("\n");
+                    str.append(id);
+                    str.append(",");
+                    str.append(id);
+                    str.append(",");
+                    str.append(dt);
+                    str.append(",");
+                    str.append(size);
+                    str.append(",");
+                    str.append(encode(searchMetadata));
+                }
+            }
+            else{
+                return new ServiceResponse(500, response.getText());
+            }
         }
         else{
 
@@ -267,11 +305,7 @@ public class DocumentService extends WebService {
                     str.append(getString(rs));
                     if (!searchMetadata.isEmpty()) str.append(",");
                     JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
-                    if (md!=null){
-                      //Create csv-safe string of the json and append to str
-                        String s = md.toString();
-                        str.append(java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
-                    }
+                    str.append(encode(md));
                     rs.moveNext();
                 }
                 rs.close();
@@ -298,20 +332,62 @@ public class DocumentService extends WebService {
     }
 
 
-
   //**************************************************************************
   //** getFile
   //**************************************************************************
     private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
-            throws ServletException {
+        throws ServletException {
 
         String fileName = request.getParameter("fileName").toString();
-        javaxt.io.File file = getFile(fileName, user);
-        if (file.exists()){
-            return new ServiceResponse(file);
+        Boolean remote = request.getParameter("remote").toBoolean();
+        if (remote==null) remote = false;
+
+        if (remote){
+            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + fileName;
+            Boolean urlOnly = request.getParameter("urlOnly").toBoolean();
+            if (urlOnly==null) urlOnly = false;
+            if (urlOnly){
+                return new ServiceResponse(url);
+            }
+            else{
+
+                try{
+
+                  //Find file in the database
+                    for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
+                        javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
+                        if (file.getName().equalsIgnoreCase(fileName) && file.exists()){
+                            return new ServiceResponse(file);
+                        }
+                    }
+
+                  //If we're still here, the file does not exist - so let's download it
+                    javaxt.http.Response response = getResponse(url);
+                    if (response.getStatus()==200){
+                        java.io.InputStream is = response.getInputStream();
+                        javaxt.io.File file = uploadFile(fileName, is, user);
+                        return new ServiceResponse(file);
+                    }
+                    else{
+                        return new ServiceResponse(500, response.getText());
+                    }
+                }
+                catch(Exception e){
+                    return new ServiceResponse(e);
+                }
+            }
         }
         else{
-            return new ServiceResponse(404);
+            try{
+                Long documentID = Long.parseLong(fileName);
+                bluewave.app.Document document = new bluewave.app.Document(documentID);
+                javaxt.io.File file = getFile(document);
+                if (!file.exists()) return new ServiceResponse(404);
+                else return new ServiceResponse(file);
+            }
+            catch(Exception e){
+                return new ServiceResponse(e);
+            }
         }
     }
 
@@ -320,7 +396,7 @@ public class DocumentService extends WebService {
   //** uploadFile
   //**************************************************************************
     private ServiceResponse uploadFile(ServiceRequest request, bluewave.app.User user)
-            throws ServletException {
+        throws ServletException {
 
         if (user==null || (user.getAccessLevel()<3 && user.getID()!=null)){
             return new ServiceResponse(403, "Not Authorized");
@@ -332,102 +408,19 @@ public class DocumentService extends WebService {
             while (it.hasNext()){
                 FormInput input = it.next();
                 String name = input.getName();
-                console.log("New filename: "+ name);
                 FormValue value = input.getValue();
                 if (input.isFile()){
+
                     JSONObject json = new JSONObject();
                     json.set("name", name);
 
-
-                  //Create temp file
-                    javaxt.utils.Date d = new javaxt.utils.Date();
-                    d.setTimeZone("UTC");
-                    javaxt.io.File tempFile = new javaxt.io.File(
-                        getUploadDir().toString() + user.getID() + "/" +
-                        d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
-                    );
-                    if (!tempFile.exists()) tempFile.create();
-
                     try{
-
-                      //Save temp file
-                        int bufferSize = 2048;
-                        FileOutputStream output = new FileOutputStream(tempFile.toFile());
-                        final ReadableByteChannel inputChannel = Channels.newChannel(value.getInputStream());
-                        final WritableByteChannel outputChannel = Channels.newChannel(output);
-                        final java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocateDirect(bufferSize);
-                        int ttl = 0;
-
-                        while (inputChannel.read(buffer) != -1) {
-                            buffer.flip();
-                            ttl+=outputChannel.write(buffer);
-                            buffer.compact();
-                        }
-                        buffer.flip();
-                        while (buffer.hasRemaining()) {
-                            ttl+=outputChannel.write(buffer);
-                        }
-
-                        //console.log(ttl);
-
-                        inputChannel.close();
-                        outputChannel.close();
-
-
-
-                      //Check whether the file exists
-                        boolean fileExists = false;
-                        String hash = tempFile.getMD5(); //faster than getSHA1()
-                        for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
-                            javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
-                            if (file.getName().equalsIgnoreCase(name) && file.exists()){
-                                BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
-                                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream());
-                                byte[] fileBytes1 = new byte[bufferSize];
-                                byte[] fileBytes2 = new byte[bufferSize];
-                                boolean fileContentDifferenceFound = false;
-                                int readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
-                                int readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
-                                while(
-                                    readFile1 != -1 && file1Reader.available() != 0 &&
-                                    readFile2 != -1 && file2Reader.available() != 0 )
-                                {
-                                    if(!Arrays.equals(fileBytes1, fileBytes2)) {
-                                        fileContentDifferenceFound = true;
-                                        break;
-                                    }
-                                    readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
-                                    readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
-                                }
-
-                                fileExists = !fileContentDifferenceFound;
-                            }
-                        }
-
-
-                      //Rename or delete the temp file
-                        if (fileExists){
-                            tempFile.delete();
-                            json.set("result", "exists");
-                        }
-                        else{
-
-                          //Rename the temp file
-                            javaxt.io.File file = tempFile.rename(name);
-
-                          //Save and Index the file
-                            addFile(file);
-
-                            //Set response
-                            json.set("result", "uploaded");
-
-                        }
+                        uploadFile(name, value.getInputStream(), user);
+                        json.set("results", "uploaded");
                     }
                     catch(Exception e){
-                        //e.printStackTrace();
-                        json.set("result", "error");
+                        json.set("results", "error");
                     }
-
 
                     results.add(json);
                 }
@@ -439,98 +432,109 @@ public class DocumentService extends WebService {
         }
     }
 
+
   //**************************************************************************
-  //** addFile
-  //  Adds file to DB and Index
+  //** uploadFile
   //**************************************************************************
-    private void addFile(javaxt.io.File file) throws SQLException {
-            //Save the file in the database
+    private javaxt.io.File uploadFile(String name, java.io.InputStream is, bluewave.app.User user) throws Exception {
+
+
+      //Create temp file
+        javaxt.utils.Date d = new javaxt.utils.Date();
+        d.setTimeZone("UTC");
+        javaxt.io.File tempFile = new javaxt.io.File(
+            getUploadDir().toString() + user.getID() + "/" +
+            d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
+        );
+        if (!tempFile.exists()) tempFile.create();
+
+
+
+      //Save temp file
+        int bufferSize = 2048;
+        FileOutputStream output = new FileOutputStream(tempFile.toFile());
+        final ReadableByteChannel inputChannel = Channels.newChannel(is);
+        final WritableByteChannel outputChannel = Channels.newChannel(output);
+        final java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocateDirect(bufferSize);
+        int ttl = 0;
+
+        while (inputChannel.read(buffer) != -1) {
+            buffer.flip();
+            ttl+=outputChannel.write(buffer);
+            buffer.compact();
+        }
+        buffer.flip();
+        while (buffer.hasRemaining()) {
+            ttl+=outputChannel.write(buffer);
+        }
+
+        //console.log(ttl);
+
+        inputChannel.close();
+        outputChannel.close();
+
+
+
+      //Check whether the file exists
+        boolean fileExists = false;
+        javaxt.io.File ret = null;
+        String hash = tempFile.getMD5(); //faster than getSHA1()
+        for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
+            javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
+            if (file.getName().equalsIgnoreCase(name) && file.exists()){
+                BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
+                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream());
+                byte[] fileBytes1 = new byte[bufferSize];
+                byte[] fileBytes2 = new byte[bufferSize];
+                boolean fileContentDifferenceFound = false;
+                int readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                int readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
+                while(
+                    readFile1 != -1 && file1Reader.available() != 0 &&
+                    readFile2 != -1 && file2Reader.available() != 0 )
+                {
+                    if(!Arrays.equals(fileBytes1, fileBytes2)) {
+                        fileContentDifferenceFound = true;
+                        break;
+                    }
+                    readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                    readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
+                }
+
+                fileExists = !fileContentDifferenceFound;
+
+                if (fileExists) ret = file;
+            }
+        }
+
+
+      //Rename or delete the temp file
+        if (fileExists){
+            tempFile.delete();
+            return ret;
+        }
+        else{
+
+          //Rename the temp file
+            javaxt.io.File file = tempFile.rename(name);
+
+
+          //Save the file in the database
             bluewave.app.Path path = getOrCreatePath(file.getDirectory());
             bluewave.app.File f = getOrCreateFile(file, path);
             bluewave.app.Document doc = getOrCreateDocument(f);
             doc.save();
 
-            //Index the file
-            pool.add(new Object[]{file, path});
-    }
+
+          //Index the file
+            synchronized(pool){
+                pool.add(new Object[]{file, path});
+                pool.notify();
+            }
 
 
-  //**************************************************************************
-  //** searchImage2000
-  //**************************************************************************
-    public ServiceResponse searchImage2000(ServiceRequest request, Database database)
-        throws ServletException {
-
-        //Get user
-        bluewave.app.User user = (bluewave.app.User) request.getUser();
-        String kNumber = request.getParameter("k").toString().trim();
-
-        //Get script
-        // TODO: confirm this script has the search-only feature in place
-        javaxt.io.File[] scripts = getScriptDir().getFiles("api_download.py", true);
-        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
-
-        //Compile command line options
-        // TODO: Confirm the params for the search feature
-        ArrayList<String> params = new ArrayList<>();
-        params.add("-k");
-        params.add(kNumber);
-        params.add("-u");
-        params.add(user.getUsername());
-
-        //Execute script
-        try{
-            JSONObject result = executeScript(scripts[0], params);
-
-
-        return new ServiceResponse(result);
-        }
-            catch(Exception e){
-            return new ServiceResponse(e);
-        }
-}
-
-
-  //**************************************************************************
-  //** downloadImage2000Document
-  // Precondition - confirm that the requested file does not exist in index
-  //**************************************************************************
-    public ServiceResponse downloadImage2000Document(ServiceRequest request, Database database)
-            throws ServletException {
-
-      //Get user
-        bluewave.app.User user = (bluewave.app.User) request.getUser();
-        String kNumber = request.getParameter("k").toString().trim();
-
-      //Get script
-        javaxt.io.File[] scripts = getScriptDir().getFiles("api_download.py", true);
-        if (scripts.length==0) return new ServiceResponse(500, "Script not found");
-
-
-      //Compile command line options
-        ArrayList<String> params = new ArrayList<>();
-        params.add("-k");
-        params.add(kNumber);
-        params.add("-u");
-        params.add(user.getUsername());
-        params.add("-o");
-        params.add(getUploadDir().toString());
-
-      //Execute script
-        try{
-            JSONObject result = executeScript(scripts[0], params);
-            if(!kNumber.contains(".pdf"))
-                kNumber+= ".pdf";
-
-            javaxt.io.File kNumberFile = new javaxt.io.File(
-                    getUploadDir().toString() + kNumber);
-
-            addFile(kNumberFile);
-
-            return new ServiceResponse(result);
-        }
-        catch(Exception e){
-            return new ServiceResponse(e);
+          //Return file
+            return file;
         }
     }
 
@@ -557,10 +561,7 @@ public class DocumentService extends WebService {
         javaxt.io.File file;
         try{
             bluewave.app.Document document = new bluewave.app.Document(documentID);
-            bluewave.app.File f = document.getFile();
-            bluewave.app.Path path = f.getPath();
-            javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
-            file = new javaxt.io.File(dir, f.getName());
+            file = getFile(document);
             if (!file.exists()) return new ServiceResponse(404);
         }
         catch(Exception e){
@@ -572,12 +573,12 @@ public class DocumentService extends WebService {
         javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
         if (!outputDir.exists()) outputDir.create();
 
-        //Get script
+      //Get script
         javaxt.io.File[] scripts = getScriptDir().getFiles("pdf_to_img.py", true);
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
 
 
-        //Compile command line options
+      //Compile command line options
         ArrayList<String> params = new ArrayList<>();
         params.add("-f");
         params.add(file.toString());
@@ -587,7 +588,7 @@ public class DocumentService extends WebService {
         params.add(outputDir.toString());
 
 
-        //Execute script
+      //Execute script
         try{
             executeScript(scripts[0], params);
             String[] arr = pages.split(",");
@@ -794,8 +795,11 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getFile
   //**************************************************************************
-    private static javaxt.io.File getFile(String name, bluewave.app.User user){
-        return new javaxt.io.File(getUploadDir(), name);
+    private static javaxt.io.File getFile(bluewave.app.Document document){
+        bluewave.app.File f = document.getFile();
+        bluewave.app.Path path = f.getPath();
+        javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
+        return new javaxt.io.File(dir, f.getName());
     }
 
 
@@ -821,8 +825,6 @@ public class DocumentService extends WebService {
         }
         return uploadDir;
     }
-
-
 
 
   //**************************************************************************
@@ -905,5 +907,64 @@ public class DocumentService extends WebService {
         }
 
         return null;
+    }
+
+
+  //**************************************************************************
+  //** encode
+  //**************************************************************************
+  /** Returns a csv-safe version of a JSON object
+   */
+    private String encode(JSONObject md) {
+        try{
+            if (md!=null){
+                return encode(md.toString());
+            }
+        }
+        catch(Exception e){}
+        return null;
+    }
+
+    private String encode(String s){
+        try{
+            return (java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
+        }
+        catch(Exception e){}
+        return null;
+    }
+
+
+  //**************************************************************************
+  //** getResponse
+  //**************************************************************************
+  /** Returns a HTTP response from a remote document server (Image2000)
+   */
+    private javaxt.http.Response getResponse(String url){
+        String edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36 Edg/99.0.1150.30";
+        javaxt.http.Request r = new javaxt.http.Request(url);
+        r.setConnectTimeout(5000);
+        r.setReadTimeout(5000);
+        r.validateSSLCertificates(false);
+        r.setHeader("User-Agent", edge);
+        r.setNumRedirects(0);
+        javaxt.http.Response response = r.getResponse();
+        if (response.getStatus()==200) return response;
+        else{
+            String cookie = response.getHeader("Set-Cookie");
+            if (cookie!=null){
+                r = new javaxt.http.Request(url);
+                r.setConnectTimeout(5000);
+                r.setReadTimeout(5000);
+                r.validateSSLCertificates(false);
+                r.setHeader("User-Agent", edge);
+                r.setNumRedirects(0);
+                r.setHeader("Cookie", cookie);
+                console.log(r);
+                response = r.getResponse();
+                if (response.getStatus()==200) return response;
+                //else console.log(r);
+            }
+            return response;
+        }
     }
 }
