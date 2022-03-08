@@ -146,7 +146,8 @@ public class DocumentService extends WebService {
 
             if (method.equals("GET")){
                 String fileName = request.getParameter("fileName").toString();
-                if (fileName!=null){
+                Long id = request.getID();
+                if (id!=null || fileName!=null){
                     return getFile(request, user);
                 }
                 else{
@@ -338,11 +339,11 @@ public class DocumentService extends WebService {
     private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
         throws ServletException {
 
-        String fileName = request.getParameter("fileName").toString();
         Boolean remote = request.getParameter("remote").toBoolean();
         if (remote==null) remote = false;
 
         if (remote){
+            String fileName = request.getParameter("fileName").toString();
             String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + fileName;
             Boolean urlOnly = request.getParameter("urlOnly").toBoolean();
             if (urlOnly==null) urlOnly = false;
@@ -379,7 +380,7 @@ public class DocumentService extends WebService {
         }
         else{
             try{
-                Long documentID = Long.parseLong(fileName);
+                Long documentID = request.getID();
                 bluewave.app.Document document = new bluewave.app.Document(documentID);
                 javaxt.io.File file = getFile(document);
                 if (!file.exists()) return new ServiceResponse(404);
