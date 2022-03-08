@@ -5,11 +5,17 @@ import static bluewave.utils.Python.*;
 
 import java.util.*;
 import java.io.BufferedInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.pdfbox.io.MemoryUsageSetting;
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
+
 import javaxt.http.servlet.ServletException;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
@@ -975,4 +981,13 @@ public class DocumentService extends WebService {
             return response;
         }
     }
+
+    public static void  mergeDocuments(List<String>documents, String destinationFileName) throws FileNotFoundException, IOException {
+        PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
+        for(String document: documents) {
+            pdfMergerUtility.addSource(document);
+        }
+        pdfMergerUtility.setDestinationFileName(destinationFileName);
+        pdfMergerUtility.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
+    }    
 }
