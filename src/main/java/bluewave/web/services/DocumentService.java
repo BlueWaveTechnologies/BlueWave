@@ -5,9 +5,7 @@ import static bluewave.utils.Python.*;
 
 import java.util.*;
 import java.io.BufferedInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -17,7 +15,6 @@ import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 
 import javaxt.http.servlet.ServletException;
-import javaxt.io.File;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
 import javaxt.utils.ThreadPool;
@@ -348,114 +345,22 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getFile
   //**************************************************************************
+  /** Returns a file from the database. Optionally, can be used to return a
+   *  url to a remote file
+   */
     private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
         throws ServletException {
 
+        Long documentID = request.getID();
         Boolean remote = request.getParameter("remote").toBoolean();
         if (remote==null) remote = false;
 
         if (remote){
-            String[] ids = request.getParameter("id").toString().split(",");
-            if (ids.length==1){
-                String fileName = ids[0];
-                String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + fileName;
-                Boolean urlOnly = request.getParameter("urlOnly").toBoolean();
-                if (urlOnly==null) urlOnly = false;
-                if (urlOnly){
-                    return new ServiceResponse(url);
-                }
-                else{
-
-                    try{
-
-                      //Find file in the database
-                        for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
-                            javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
-                            if (file.getName().equalsIgnoreCase(fileName) && file.exists()){
-                                return new ServiceResponse(file);
-                            }
-                        }
-
-                      //If we're still here, the file does not exist - so let's download it
-                        javaxt.http.Response response = getResponse(url);
-                        if (response.getStatus()==200){
-                            java.io.InputStream is = response.getInputStream();
-                            javaxt.io.File file = uploadFile(fileName, is, user);
-                            return new ServiceResponse(file);
-                        }
-                        else{
-                            return new ServiceResponse(500, response.getText());
-                        }
-                    }
-                    catch(Exception e){
-                        return new ServiceResponse(e);
-                    }
-                }
-            }
-            else{
-                String fileName = request.getParameter("fileName").toString();
-                if (fileName==null) return new ServiceResponse(400, "fileName is required");
-                try{
-
-                  //Find file in the database
-                    for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
-                        javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
-                        if (file.getName().equalsIgnoreCase(fileName) && file.exists()){
-                            return new ServiceResponse(file);
-                        }
-                    }
-
-
-                  //Download files from image2000
-                    ArrayList<javaxt.io.File> files = new ArrayList<>();
-                    for (String id : ids){
-                        String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
-
-                        javaxt.http.Response response = getResponse(url);
-                        if (response.getStatus()==200){
-                            java.io.InputStream is = response.getInputStream();
-                            javaxt.io.File file = uploadFile(is, user);
-                            files.add(file);
-                        }
-                    }
-
-
-                  //Merge files into 1 PDF
-                    javaxt.io.File file = mergePDFs(files, fileName);
-
-
-                  //Delete temp files
-                    for (javaxt.io.File f : files){
-                        f.delete();
-                    }
-
-
-                  //Save the file in the database
-                    bluewave.app.Path path = getOrCreatePath(file.getDirectory());
-                    bluewave.app.File f = getOrCreateFile(file, path);
-                    bluewave.app.Document doc = getOrCreateDocument(f);
-                    doc.save();
-
-
-                  //Index the file
-                    synchronized(pool){
-                        pool.add(new Object[]{file, path});
-                        pool.notify();
-                    }
-
-
-                  //Return file
-                    return new ServiceResponse(file);
-
-                }
-                catch(Exception e){
-                    return new ServiceResponse(e);
-                }
-            }
+            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + documentID;
+            return new ServiceResponse(url);
         }
         else{
             try{
-                Long documentID = request.getID();
                 bluewave.app.Document document = new bluewave.app.Document(documentID);
                 javaxt.io.File file = getFile(document);
                 if (!file.exists()) return new ServiceResponse(404);
@@ -464,6 +369,121 @@ public class DocumentService extends WebService {
             catch(Exception e){
                 return new ServiceResponse(e);
             }
+        }
+    }
+
+
+  //**************************************************************************
+  //** getFolder
+  //**************************************************************************
+  /** Returns a PDF file containing all files in a document "folder"
+   */
+    public ServiceResponse getFolder(ServiceRequest request, Database database)
+        throws ServletException {
+
+        try{
+
+          //Parse params
+            String folderName = request.getParameter("folder").toString();
+            if (folderName==null) return new ServiceResponse(400, "folder is required");
+            int idx = folderName.indexOf(".");
+            if (idx>0) folderName = folderName.substring(0, idx);
+            String fileName = folderName + ".pdf";
+
+
+
+          //Find file in the database and return early if possible
+            for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
+                javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
+                if (file.getName().equalsIgnoreCase(folderName) && file.exists()){
+                    return new ServiceResponse(file);
+                }
+            }
+
+
+            javaxt.io.Directory dir = new javaxt.io.Directory(
+                getUploadDir().toString() + folderName
+            );
+
+            javaxt.io.File file = new javaxt.io.File(dir, fileName);
+            if (file.exists()) return new ServiceResponse(file);
+
+
+
+          //Get document IDs associated with the folder
+            TreeMap<Long, String> documentIDs = new TreeMap<>();
+            String url = "https://i2ksearch-mig.fda.gov/query/i2k/?version=2.2&wt=json&json.nl=arrarr" +
+            "&q=folder_id:" + folderName +
+            "&fl=id,folder_id,r_creation_date,a_content_type" +
+            "&start=0" +
+            "&rows=500";
+
+            javaxt.http.Response response = getResponse(url);
+            if (response.getStatus()==200){
+                JSONObject json = new JSONObject(response.getText());
+                JSONArray docs = json.get("response").get("docs").toJSONArray();
+                for (int i=0; i<docs.length(); i++){
+                    JSONObject doc = docs.get(i).toJSONObject();
+                    String id = doc.get("id").toString();
+                    String folderID = doc.get("folder_id").toString();
+                    String dt = doc.get("r_creation_date").toString();
+                    String contentType = doc.get("a_content_type").toString();
+                    if (contentType.equalsIgnoreCase("pdf")){
+                        documentIDs.put(new javaxt.utils.Date(dt).getTime(), id);
+                    }
+                }
+            }
+
+
+          //Get component files
+            PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
+            Iterator<Long> it = documentIDs.keySet().iterator();
+            while (it.hasNext()){
+                String id = documentIDs.get(it.next());
+
+                javaxt.io.File tempFile = new javaxt.io.File(dir, id + ".pdf");
+                if (!tempFile.exists()){
+
+                  //Download files from image2000
+                    url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
+                    response = getResponse(url);
+                    if (response.getStatus()==200){
+                        java.io.InputStream is = response.getInputStream();
+                        saveFile(is, tempFile);
+                        is.close();
+                    }
+                }
+
+                if (tempFile.exists()) pdfMergerUtility.addSource(tempFile.toFile());
+            }
+
+
+          //Merge files into a single PDF
+            pdfMergerUtility.setDestinationFileName(file.toString());
+            pdfMergerUtility.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
+
+
+
+          //Save combined file in the database
+            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+            bluewave.app.File f = getOrCreateFile(file, path);
+            bluewave.app.Document doc = getOrCreateDocument(f);
+            doc.save();
+
+
+          //Index the file
+            synchronized(pool){
+                pool.add(new Object[]{file, path});
+                pool.notify();
+            }
+
+
+          //Return file
+            return new ServiceResponse(file);
+
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
         }
     }
 
@@ -508,24 +528,12 @@ public class DocumentService extends WebService {
         }
     }
 
+
   //**************************************************************************
-  //** uploadFile
+  //** saveFile
   //**************************************************************************
-    private javaxt.io.File uploadFile(java.io.InputStream is, bluewave.app.User user) throws Exception {
+    private void saveFile(java.io.InputStream is, javaxt.io.File tempFile) throws Exception {
 
-
-      //Create temp file
-        javaxt.utils.Date d = new javaxt.utils.Date();
-        d.setTimeZone("UTC");
-        javaxt.io.File tempFile = new javaxt.io.File(
-            getUploadDir().toString() + user.getID() + "/" +
-            d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
-        );
-        if (!tempFile.exists()) tempFile.create();
-
-
-
-      //Save temp file
         int bufferSize = 2048;
         FileOutputStream output = new FileOutputStream(tempFile.toFile());
         final ReadableByteChannel inputChannel = Channels.newChannel(is);
@@ -547,9 +555,8 @@ public class DocumentService extends WebService {
 
         inputChannel.close();
         outputChannel.close();
-
-        return tempFile;
     }
+
 
   //**************************************************************************
   //** uploadFile
@@ -560,7 +567,17 @@ public class DocumentService extends WebService {
       //Create temp file
         javaxt.utils.Date d = new javaxt.utils.Date();
         d.setTimeZone("UTC");
-        javaxt.io.File tempFile = uploadFile(is, user);
+        javaxt.io.File tempFile = new javaxt.io.File(
+            getUploadDir().toString() + user.getID() + "/" +
+            d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
+        );
+        if (!tempFile.exists()) tempFile.create();
+
+
+
+      //Save temp file
+        saveFile(is, tempFile);
+
 
 
 
@@ -996,26 +1013,6 @@ public class DocumentService extends WebService {
         catch(Exception e){
         }
 
-        return null;
-    }
-
-
-  //**************************************************************************
-  //** mergePDFs
-  //**************************************************************************
-    private javaxt.io.File mergePDFs(ArrayList<javaxt.io.File> files, String fileName) throws Exception {
-        try {
-            PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
-            for(File file: files) {
-                pdfMergerUtility.addSource(file.toString());
-            }
-            pdfMergerUtility.setDestinationFileName(fileName);
-            pdfMergerUtility.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
-            File newFile = new File(fileName);
-            if(newFile.exists()) return newFile;
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
         return null;
     }
 
