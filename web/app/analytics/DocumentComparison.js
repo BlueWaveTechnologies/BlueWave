@@ -348,9 +348,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var thumbsDown, thumbsUp, tag;
             var div = document.createElement("div");
             div.style.position = "absolute";
-            div.style.width = "100%";
-            div.style.bottom = "86%";
-            div.style.left = "-20%";
+            div.style.width = "100%"; // temporary styling - strange
+            div.style.bottom = "86%"; // temporary styling - strange
+            div.style.left = "-20%"; // temporary styling - strange
 
 
             ratings = document.createElement("div");
@@ -433,6 +433,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** createOutlineBox
   //**************************************************************************
     var createSimilarityOutlineBox = function(bbox, img){
+
+
 
         var x = bbox[0];
         var y = bbox[1];
@@ -664,41 +666,40 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         img.tag = [];
                         boxes.forEach((box)=>{
                             var type = box.type;
-                            box.boxes.forEach((bbox)=>{
-                                int++;
+                            int++;
 
-                                var d = createSimilarityOutlineBox(bbox, img);
-                                var tag = createSimilarityTag(bbox, int, img);
-                                tag.d = d;
-                                tag.type = type;
+                            var d = createSimilarityOutlineBox(box.boxes, img);
+                            var tag = createSimilarityTag(box.boxes, int, img);
+                            tag.d = d;
+                            tag.type = type;
 
-                                img.d.push(d);
-                                img.tag.push(tag);
-                                img.parentNode.appendChild(d);
-                                img.parentNode.appendChild(tag);
-                                addShowHide(d);
-                                addShowHide(tag);
+                            img.d.push(d);
+                            img.tag.push(tag);
+                            img.parentNode.appendChild(d);
+                            img.parentNode.appendChild(tag);
+                            addShowHide(d);
+                            addShowHide(tag);
 
-                                // set resize listeners
-                                var resizeListener = function(){
-                                    var rect = javaxt.dhtml.utils.getRect(img);
-                                    var scaleByH = rect.height / img.originalHeight;
-                                    var scaleByW = rect.width / img.originalWidth;
+                            // set resize listeners
+                            var resizeListener = function(){
+                                var rect = javaxt.dhtml.utils.getRect(img);
+                                var scaleByH = rect.height / img.originalHeight;
+                                var scaleByW = rect.width / img.originalWidth;
 
-                                    var dElements = img.d; // a list of the d elements associated with the image
-                                    dElements.forEach((d)=>{
-                                        d.rescale(scaleByW,scaleByH);
-                                    });
+                                var dElements = img.d; // a list of the d elements associated with the image
+                                dElements.forEach((d)=>{
+                                    d.rescale(scaleByW,scaleByH);
+                                });
 
-                                    var tagElements = img.tag; // a list of tag elements associated with the image
-                                    tagElements.forEach((tag)=>{
-                                        tag.rescale(scaleByW,scaleByH);
-                                    });
-                                };
+                                var tagElements = img.tag; // a list of tag elements associated with the image
+                                tagElements.forEach((tag)=>{
+                                    tag.rescale(scaleByW,scaleByH);
+                                });
+                            };
 
-                                addResizeListener(parent, resizeListener);
+                            addResizeListener(parent, resizeListener);
 
-                            });
+
                         });
                     });
                 }, 1200); //add slight delay for the carousel to finish sliding
