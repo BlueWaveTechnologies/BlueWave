@@ -17,6 +17,7 @@ import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 
 import javaxt.http.servlet.ServletException;
+import javaxt.io.File;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
 import javaxt.utils.ThreadPool;
@@ -1003,6 +1004,18 @@ public class DocumentService extends WebService {
   //** mergePDFs
   //**************************************************************************
     private javaxt.io.File mergePDFs(ArrayList<javaxt.io.File> files, String fileName) throws Exception {
+        try {
+            PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
+            for(File file: files) {
+                pdfMergerUtility.addSource(file.toString());
+            }
+            pdfMergerUtility.setDestinationFileName(fileName);
+            pdfMergerUtility.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
+            File newFile = new File(fileName);
+            if(newFile.exists()) return newFile;
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
@@ -1064,13 +1077,4 @@ public class DocumentService extends WebService {
             return response;
         }
     }
-
-    public static void  mergeDocuments(List<String>documents, String destinationFileName) throws FileNotFoundException, IOException {
-        PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
-        for(String document: documents) {
-            pdfMergerUtility.addSource(document);
-        }
-        pdfMergerUtility.setDestinationFileName(destinationFileName);
-        pdfMergerUtility.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
-    }    
 }

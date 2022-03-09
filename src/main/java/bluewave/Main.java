@@ -512,19 +512,6 @@ public class Main {
 
             console.log("done! hits: " + totalHits);
         }
-        else if (test.equals("merge")){
-
-            String[]files = args.get("-files").split(",");
-            String destinationFile = args.get("-dest");
-            console.log("file count: " + files.length);
-            console.log("merging files:\n ");
-            List<String> fileList = new ArrayList<>();
-            for(String file : files) {
-                console.log(file);
-                fileList.add(file);
-            }
-            DocumentService.mergeDocuments(fileList, destinationFile);
-        }
         else{
             console.log("Unsupported test: " + test);
         }
