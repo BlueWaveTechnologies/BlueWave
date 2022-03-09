@@ -151,9 +151,7 @@ public class DocumentService extends WebService {
             bluewave.app.User user = (bluewave.app.User) request.getUser();
 
             if (method.equals("GET")){
-                String fileName = request.getParameter("fileName").toString();
-                Long id = request.getID();
-                if (id!=null || fileName!=null){
+                if (request.hasParameter("id")){
                     return getFile(request, user);
                 }
                 else{
@@ -356,15 +354,46 @@ public class DocumentService extends WebService {
         if (remote==null) remote = false;
 
         if (remote){
-            String fileName = request.getParameter("fileName").toString();
-            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + fileName;
-            Boolean urlOnly = request.getParameter("urlOnly").toBoolean();
-            if (urlOnly==null) urlOnly = false;
-            if (urlOnly){
-                return new ServiceResponse(url);
+            String[] ids = request.getParameter("id").toString().split(",");
+            if (ids.length==1){
+                String fileName = ids[0];
+                String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + fileName;
+                Boolean urlOnly = request.getParameter("urlOnly").toBoolean();
+                if (urlOnly==null) urlOnly = false;
+                if (urlOnly){
+                    return new ServiceResponse(url);
+                }
+                else{
+
+                    try{
+
+                      //Find file in the database
+                        for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
+                            javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
+                            if (file.getName().equalsIgnoreCase(fileName) && file.exists()){
+                                return new ServiceResponse(file);
+                            }
+                        }
+
+                      //If we're still here, the file does not exist - so let's download it
+                        javaxt.http.Response response = getResponse(url);
+                        if (response.getStatus()==200){
+                            java.io.InputStream is = response.getInputStream();
+                            javaxt.io.File file = uploadFile(fileName, is, user);
+                            return new ServiceResponse(file);
+                        }
+                        else{
+                            return new ServiceResponse(500, response.getText());
+                        }
+                    }
+                    catch(Exception e){
+                        return new ServiceResponse(e);
+                    }
+                }
             }
             else{
-
+                String fileName = request.getParameter("fileName").toString();
+                if (fileName==null) return new ServiceResponse(400, "fileName is required");
                 try{
 
                   //Find file in the database
@@ -375,16 +404,48 @@ public class DocumentService extends WebService {
                         }
                     }
 
-                  //If we're still here, the file does not exist - so let's download it
-                    javaxt.http.Response response = getResponse(url);
-                    if (response.getStatus()==200){
-                        java.io.InputStream is = response.getInputStream();
-                        javaxt.io.File file = uploadFile(fileName, is, user);
-                        return new ServiceResponse(file);
+
+                  //Download files from image2000
+                    ArrayList<javaxt.io.File> files = new ArrayList<>();
+                    for (String id : ids){
+                        String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
+
+                        javaxt.http.Response response = getResponse(url);
+                        if (response.getStatus()==200){
+                            java.io.InputStream is = response.getInputStream();
+                            javaxt.io.File file = uploadFile(is, user);
+                            files.add(file);
+                        }
                     }
-                    else{
-                        return new ServiceResponse(500, response.getText());
+
+
+                  //Merge files into 1 PDF
+                    javaxt.io.File file = mergePDFs(files, fileName);
+
+
+                  //Delete temp files
+                    for (javaxt.io.File f : files){
+                        f.delete();
                     }
+
+
+                  //Save the file in the database
+                    bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+                    bluewave.app.File f = getOrCreateFile(file, path);
+                    bluewave.app.Document doc = getOrCreateDocument(f);
+                    doc.save();
+
+
+                  //Index the file
+                    synchronized(pool){
+                        pool.add(new Object[]{file, path});
+                        pool.notify();
+                    }
+
+
+                  //Return file
+                    return new ServiceResponse(file);
+
                 }
                 catch(Exception e){
                     return new ServiceResponse(e);
@@ -446,11 +507,10 @@ public class DocumentService extends WebService {
         }
     }
 
-
   //**************************************************************************
   //** uploadFile
   //**************************************************************************
-    private javaxt.io.File uploadFile(String name, java.io.InputStream is, bluewave.app.User user) throws Exception {
+    private javaxt.io.File uploadFile(java.io.InputStream is, bluewave.app.User user) throws Exception {
 
 
       //Create temp file
@@ -487,11 +547,26 @@ public class DocumentService extends WebService {
         inputChannel.close();
         outputChannel.close();
 
+        return tempFile;
+    }
+
+  //**************************************************************************
+  //** uploadFile
+  //**************************************************************************
+    private javaxt.io.File uploadFile(String name, java.io.InputStream is, bluewave.app.User user) throws Exception {
+
+
+      //Create temp file
+        javaxt.utils.Date d = new javaxt.utils.Date();
+        d.setTimeZone("UTC");
+        javaxt.io.File tempFile = uploadFile(is, user);
+
 
 
       //Check whether the file exists
         boolean fileExists = false;
         javaxt.io.File ret = null;
+        int bufferSize = 2048;
         String hash = tempFile.getMD5(); //faster than getSHA1()
         for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
             javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
@@ -557,7 +632,7 @@ public class DocumentService extends WebService {
   //** getThumbnail
   //**************************************************************************
     public ServiceResponse getThumbnail(ServiceRequest request, Database database)
-            throws ServletException {
+        throws ServletException {
 
       //Get user
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -920,6 +995,14 @@ public class DocumentService extends WebService {
         catch(Exception e){
         }
 
+        return null;
+    }
+
+
+  //**************************************************************************
+  //** mergePDFs
+  //**************************************************************************
+    private javaxt.io.File mergePDFs(ArrayList<javaxt.io.File> files, String fileName) throws Exception {
         return null;
     }
 
