@@ -265,6 +265,13 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 else{
                     row.set("Name", record.name);
                 }
+                
+                var addSpan = function(label){
+                    var span = document.createElement("span");
+                    span.className = "document-search-info";
+                    span.innerText = label;
+                    return span;
+                };
 
                 var d = Date.parse(record.date);
                 if (!isNaN(d)){
@@ -273,7 +280,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                     if (label.indexOf("0")===0) label = label.substring(1);
                     label = label.replaceAll("/0", "/");
                     label = label.replaceAll(" 0", " ");
-                    row.set("Date", label);
+                    row.set("Date", addSpan(label));
                 }
 
                 var size = parseInt(record.size);
@@ -281,7 +288,9 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 else{
                     size = formatNumber(Math.round(size/1024)) + " KB";
                 }
-                row.set("Size", size);
+                row.set("Size", addSpan(size));
+                
+                if (record.type) row.set("Type", addSpan(record.type));
             }
         });
 

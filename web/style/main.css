@@ -1280,6 +1280,10 @@ li.tree-node:hover {
     color: #ee9549;
 }
 
+.document-search-info {
+    color: #777;
+}
+
 
 /**************************************************************************/
 /** Admin Panel
