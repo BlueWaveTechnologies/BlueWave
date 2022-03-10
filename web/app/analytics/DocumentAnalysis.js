@@ -422,6 +422,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             button["run"].disable();
             button["run"].onClick = function(){
                 button["run"].disable();
+                button["clear"].disable();
                 
                 
               //Udate grid, clear out any messages from previous run
@@ -440,10 +441,12 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         selectedDocuments.forEach((d)=>{
                             if (d.id!=document.id) arr.push(d.id);
                         });
-                        jobs.push({
-                            doc: document.id,
-                            otherDocs: arr
-                        });
+                        if (document.id){
+                            jobs.push({
+                                doc: document.id,
+                                otherDocs: arr
+                            });
+                        }
                     });
 
 
@@ -459,6 +462,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
 
                     button["stop"].enable();
+                    button["clear"].enable();
                     compareDocuments(jobs, function(){
                         button["run"].enable();
                         button["stop"].disable();
@@ -492,7 +496,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                                 var step = parseInt(arr[2]);
                                 var totalSteps = parseInt(arr[3]);
                                 var row = getRow(folderName);
-                                if (row) row.set("Comparison Results", "Downloading " + step + "/" + totalSteps);                                                                
+                                if (row){ 
+                                    if (step===totalSteps) msg = "Download Complete";
+                                    else msg = "Downloading " + step + "/" + totalSteps;
+                                    row.set("Comparison Results", msg);
+                                }
                             }
                         }
                     });    
@@ -518,6 +526,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     
                     var downloadFolder = function(folderName){
                         if (!folderName){
+                            var row = getRow(folderName);
+                            if (row) row.set("Comparison Results", "");                             
                             runComparison();
                             return;
                         }
@@ -525,12 +535,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         get("document/folder?name="+folderName+"&returnID=true",{
                             success: function(id){
                                 var row = getRow(folderName);
-                                if (row) row.record.id = id; 
-                                
+                                if (row) row.record.id = id;                                 
                                 downloadFolder(downloads.shift());
                             },
                             failure: function(request){
-                                alert(request);
+                                var row = getRow(folderName);
+                                if (row) row.set("Comparison Results", "Download Failed!");  
+                                downloadFolder(downloads.shift());
                             }
                         });
                     };
@@ -712,8 +723,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 });
 
 
-                var q = searchPanel.getSearchBar().getValue();
-                if (!remoteSearch && q){
+                var q = searchPanel.getSearchBar().getSearchTerms();
+                if (!remoteSearch && q && q.length>0){
                     if (timer) clearTimeout(timer);
                     
                     timer = setTimeout(()=>{
@@ -728,7 +739,14 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                                     remoteSearch = true;
                                     waitmask.show(500);
 
-                                    get("documents?q=" + encodeURIComponent(q) + "&remote=true", {
+                                    
+                                    
+                                    var url = "documents?remote=true";
+                                    q.forEach((s)=>{
+                                        url+= "&q=" + encodeURIComponent(s);
+                                    });
+
+                                    get(url, {
                                         success: function(text){
                                             waitmask.hide();
                                             
@@ -751,9 +769,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                                             
                                           //Append search results to the grid
                                             grid.load(data, 2);
+                                            remoteSearch = false;
                                         },
                                         failure: function(request){
                                             waitmask.hide();
+                                            remoteSearch = false;
                                         }
                                     });
                                 }
@@ -773,20 +793,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
             var grid = searchPanel.getDataGrid();
             
-            var isMatch = function(r, d){
-                var foundMatch = false;
-                if (isNaN(r.id)){
-                    if (d.name===r.name && isNaN(r.name)){
-                        foundMatch = true;
-                    }
-                }
-                else{
-                    if (d.id===r.id){
-                        foundMatch = true;
-                    }
-                }
-                return foundMatch;
-            };
 
 
           //Watch for row click events
@@ -816,8 +822,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                 }
                 else{
-                    //previewPanel.update(r);
-                    //previewPanel.show();
+                    previewPanel.update(r);
+                    previewPanel.show();
                 }
             };
 
@@ -1367,7 +1373,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 var idx = null;
                 var r = row.record;
                 selectedDocuments.forEach((d, i)=>{
-                    if (d.id===r.id){
+                    if (isMatch(r, d)){
                         idx = i;
                         return true;
                     }
@@ -1386,6 +1392,26 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         updateButtons();
     };
+
+
+  //**************************************************************************
+  //** isMatch
+  //**************************************************************************
+    var isMatch = function(r, d){
+        var foundMatch = false;
+        if (isNaN(r.id)){
+            if (d.name===r.name && isNaN(r.name)){
+                foundMatch = true;
+            }
+        }
+        else{
+            if (d.id===r.id){
+                foundMatch = true;
+            }
+        }
+        return foundMatch;
+    };
+
 
 
   //**************************************************************************
