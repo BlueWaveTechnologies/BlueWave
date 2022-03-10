@@ -25,6 +25,7 @@ import javaxt.json.*;
 
 
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 
@@ -267,16 +268,50 @@ public class DocumentService extends WebService {
                     String contentType = doc.get("a_content_type").toString();
                     String folderID = doc.get("folder_id").toString();
                     String folderSubType = doc.get("folder_sub_type").toString();
+                    if (folderSubType==null) folderSubType = "UNKNOWN";
                     String name = folderID + "/" + folderSubType + "/" + id + "." + contentType;
 
                     Long size = doc.get("contentSize").toLong();
                     String dt = doc.get("r_creation_date").toString();
                     JSONArray pages = doc.get("pages").toJSONArray();
-                    JSONObject searchMetadata = new JSONObject();
+                    String highlightFragment = pages.length()==0 ? null : pages.get(0).toString();
+                    for (int j=0; j<pages.length(); j++){
+                        String page = pages.get(j).toString();
+                        if (page==null) continue;
+                        boolean foundMatch = false;
+                        String p = page.toLowerCase();
+                        for (String s : q){
+                            int idx = p.indexOf(s.toLowerCase());
+                            if (idx>-1){
 
+                                String a = page.substring(0, idx);
+                                String b = page.substring(idx, idx+s.length());
+                                String c = page.substring(idx+1+s.length());
+
+
+                                idx = a.lastIndexOf(" ");
+                                if (idx>-1){
+                                    a = a.substring(idx);
+                                    if (a.length()>10) a = a.substring(a.length()-10);
+                                }
+
+                                highlightFragment = a + "<b>" + b + "</b>" + c;
+                                if (highlightFragment.length()>400) highlightFragment = highlightFragment.substring(0, 400);
+
+
+                                foundMatch = true;
+                                break;
+                            }
+                        }
+                        if (foundMatch){
+                            break;
+                        }
+                    }
+
+                    JSONObject searchMetadata = new JSONObject();
                     //searchMetadata.set("score", score);
                     //searchMetadata.set("frequency", frequency);
-                    searchMetadata.set("highlightFragment", pages.length()==0 ? null : pages.get(0));
+                    searchMetadata.set("highlightFragment", highlightFragment);
                     //searchMetadata.set("explainDetails", explainDetails);
 
                     str.append("\n");
@@ -284,7 +319,7 @@ public class DocumentService extends WebService {
                     str.append(",");
                     str.append(name);
                     str.append(",");
-                    str.append(contentType);
+                    str.append("Remote");
                     str.append(",");
                     str.append(dt);
                     str.append(",");
@@ -383,7 +418,8 @@ public class DocumentService extends WebService {
     private String getString(Recordset rs){
         Long id = rs.getValue("id").toLong();
         String name=rs.getValue("name").toString();
-        String type=rs.getValue("type").toString();
+        //String type=rs.getValue("type").toString();
+        String type = "Local";
         javaxt.utils.Date date = rs.getValue("date").toDate();
         String dt = date==null ? "" : date.toISOString();
         Long size = rs.getValue("size").toLong();
@@ -447,7 +483,7 @@ public class DocumentService extends WebService {
             for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
                 javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
                 if (file.getName().equalsIgnoreCase(folderName) && file.exists()){
-                    return new ServiceResponse(file);
+                    if (isValidPDF(file)) return new ServiceResponse(file);
                 }
             }
 
@@ -457,7 +493,7 @@ public class DocumentService extends WebService {
             );
 
             javaxt.io.File file = new javaxt.io.File(dir, fileName);
-            if (file.exists()) return new ServiceResponse(file);
+            if (file.exists() && isValidPDF(file)) return new ServiceResponse(file);
 
 
 
@@ -485,29 +521,32 @@ public class DocumentService extends WebService {
                 }
             }
 
-            
+
             int totalSteps = documentIDs.size()+1;
             int step = 0;
 
 
           //Get component files
-            PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
+            ArrayList<PDDocument> documents = new ArrayList<>();
+            ArrayList<javaxt.io.File> files = new ArrayList<>();
             Iterator<Long> it = documentIDs.keySet().iterator();
             while (it.hasNext()){
                 String id = documentIDs.get(it.next());
 
                 javaxt.io.File tempFile = new javaxt.io.File(dir, id);
                 try{
-                    downloadFile(id, tempFile);
-                    pdfMergerUtility.addSource(tempFile.toFile());
+                    PDDocument document = downloadPDF(id, tempFile);
+                    documents.add(document);
+                    files.add(tempFile);
                 }
                 catch(Exception e){
 
                   //Try downloading the file again
                     try{
                         tempFile.delete();
-                        downloadFile(id, tempFile);
-                        pdfMergerUtility.addSource(tempFile.toFile());
+                        PDDocument document = downloadPDF(id, tempFile);
+                        documents.add(document);
+                        files.add(tempFile);
                     }
                     catch(Exception ex){
                         console.log("Invalid PDF", tempFile);
@@ -515,37 +554,84 @@ public class DocumentService extends WebService {
                     }
                 }
                 step++;
-                notify("folder," + folderName + "," + step + "," + totalSteps);
+                notify("createFolder," + folderName + "," + step + "," + totalSteps);
+            }
+
+            if (documents.isEmpty()){
+                return new ServiceResponse(500, "No files were downloaded");
             }
 
 
           //Merge files into a single PDF
-            java.io.OutputStream out = file.getOutputStream();
-            pdfMergerUtility.setDestinationStream(out);
-            pdfMergerUtility.mergeDocuments(null);
-            out.close();
-            step++;
-            notify("folder," + folderName + "," + step + "," + totalSteps);
+            if (documents.size()==1){
+                file = files.get(0);
+            }
+            else{
 
+                PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
+                for (PDDocument document : documents){
 
+                    try{
 
-          //Save combined file in the database
-            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
-            bluewave.app.File f = getOrCreateFile(file, path);
-            bluewave.app.Document doc = getOrCreateDocument(f);
-            doc.save();
+                        PDAcroForm form = document.getDocumentCatalog().getAcroForm();
+                        if (form != null) {
+                            document.setAllSecurityToBeRemoved(true);
+                            try{
+                                form.flatten();
+                            }
+                            catch(Exception e){
+                                //e.printStackTrace();
+                            }
 
+                            if (form.hasXFA()) {
+                                form.setXFA(null);
+                            }
+                        }
 
-          //Index the file
-            synchronized(pool){
-                pool.add(new Object[]{file, path});
-                pool.notify();
+                        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                        document.save(out);
+                        java.io.InputStream is = new java.io.ByteArrayInputStream(out.toByteArray());
+                        pdfMergerUtility.addSource(is);
+
+                    }
+                    catch(Exception e){
+                        e.printStackTrace();
+                    }
+                }
+
+                java.io.OutputStream out = file.getOutputStream();
+                pdfMergerUtility.setDestinationStream(out);
+                pdfMergerUtility.mergeDocuments(null);
+                out.close();
             }
 
+            step++;
+            notify("createFolder," + folderName + "," + step + "," + totalSteps);
 
-          //Return file
-            return new ServiceResponse(file);
 
+            if (file.exists() && isValidPDF(file)){
+
+
+              //Save combined file in the database
+                bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+                bluewave.app.File f = getOrCreateFile(file, path);
+                bluewave.app.Document doc = getOrCreateDocument(f);
+                doc.save();
+
+
+              //Index the file
+                synchronized(pool){
+                    pool.add(new Object[]{file, path});
+                    pool.notify();
+                }
+
+
+              //Return file
+                return new ServiceResponse(file);
+            }
+            else{
+                return new ServiceResponse(500, "Failed to merge PDF");
+            }
         }
         catch(Exception e){
             return new ServiceResponse(e);
@@ -556,23 +642,47 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** downloadFile
   //**************************************************************************
-    private void downloadFile(String id, javaxt.io.File tempFile) throws Exception {
-        if (!tempFile.exists()){
-            tempFile.create();
+  /** Used to download and return a PDF document from a remote server
+   */
+    private PDDocument downloadPDF(String id, javaxt.io.File file) throws Exception {
+
+
+        if (!file.exists()){
+            file.create();
 
             String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
             javaxt.http.Response response = getResponse(url);
             if (response.getStatus()==200){
                 java.io.InputStream is = response.getInputStream();
-                saveFile(is, tempFile);
+                saveFile(is, file);
                 is.close();
             }
         }
+
         try{
-            PDDocument.load(tempFile.toFile()).getVersion();
+            PDDocument document = PDDocument.load(file.toFile());
+            float v = document.getVersion();
+            return document;
         }
         catch(Exception e){
-            throw e;
+            throw new Exception("Invalid PDF " + file);
+        }
+    }
+
+
+  //**************************************************************************
+  //** isValidPDF
+  //**************************************************************************
+  /** Returns true if the given file is a valid PDF document
+   */
+    private boolean isValidPDF(javaxt.io.File file){
+        try{
+            PDDocument document = PDDocument.load(file.toFile());
+            float v = document.getVersion();
+            return true;
+        }
+        catch(Exception e){
+            return false;
         }
     }
 
@@ -1155,7 +1265,6 @@ public class DocumentService extends WebService {
                 r.setHeader("User-Agent", edge);
                 r.setNumRedirects(0);
                 r.setHeader("Cookie", cookie);
-                console.log(r);
                 response = r.getResponse();
                 if (response.getStatus()==200) return response;
                 //else console.log(r);
