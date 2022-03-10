@@ -128,9 +128,8 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         searchBar.onChange = function(q){
             // console.log(q);
         };
-
-        searchBar.onSearch = function(q){
-
+        searchBar.getSearchTerms = function(q){
+            if (!q) q = searchBar.getValue();
             if (typeof q === 'string'){
 
                 var q = q.split(/"|'/);
@@ -142,7 +141,10 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 for (let value in q) q[value] = q[value].trim();
 
             }
-
+            return q;
+        };
+        searchBar.onSearch = function(q){
+            q = searchBar.getSearchTerms(q);
             grid.update(q);
         };
         searchBar.onClear = function(){
