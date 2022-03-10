@@ -4,23 +4,30 @@ import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
 
 import java.util.*;
-import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.FileOutputStream;
+import java.io.BufferedInputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.pdfbox.io.MemoryUsageSetting;
-import org.apache.pdfbox.multipdf.PDFMergerUtility;
 
-import javaxt.http.servlet.ServletException;
+import javaxt.http.servlet.*;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
+import javaxt.http.websocket.WebSocketListener;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
 import javaxt.sql.*;
 import javaxt.json.*;
+
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.io.MemoryUsageSetting;
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
+
 
 
 //******************************************************************************
@@ -36,12 +43,19 @@ public class DocumentService extends WebService {
     private ThreadPool pool;
     private FileIndex index;
     private ConcurrentHashMap<String, JSONObject> scripts;
+    private ConcurrentHashMap<Long, WebSocketListener> listeners;
+    private static AtomicLong webSocketID;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     public DocumentService(){
+
+      //Websocket stuff
+        webSocketID = new AtomicLong(0);
+        listeners = new ConcurrentHashMap<>();
+
 
       //Start thread pool used to index files
         int numThreads = 20;
@@ -136,6 +150,42 @@ public class DocumentService extends WebService {
         scripts = new ConcurrentHashMap<>();
     }
 
+  //**************************************************************************
+  //** createWebSocket
+  //**************************************************************************
+    public void createWebSocket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        new WebSocketListener(request, response){
+            private Long id;
+            public void onConnect(){
+                id = webSocketID.incrementAndGet();
+                synchronized(listeners){
+                    listeners.put(id, this);
+                }
+            }
+            public void onDisconnect(int statusCode, String reason){
+                synchronized(listeners){
+                    listeners.remove(id);
+                }
+            }
+        };
+    }
+
+
+  //**************************************************************************
+  //** notify
+  //**************************************************************************
+    private void notify(String msg){
+        synchronized(listeners){
+            Iterator<Long> it = listeners.keySet().iterator();
+            while(it.hasNext()){
+                Long id = it.next();
+                WebSocketListener ws = listeners.get(id);
+                ws.send(msg);
+            }
+        }
+    }
+
 
   //**************************************************************************
   //** getServiceResponse
@@ -199,7 +249,7 @@ public class DocumentService extends WebService {
             str.append(",info");
 
             String url = "https://i2ksearch-mig.fda.gov/query/i2k/?version=2.2&wt=json&json.nl=arrarr";
-            for (String s : q) url += "&q=" + s;
+            for (String s : q) url += "&q=" + encode(s);
             url += "&fq=folder_type:" + encode("(PMN)");
             //url += "&fq=!folder_type:" + encode("(DocMan)");
             url+=
@@ -351,16 +401,17 @@ public class DocumentService extends WebService {
     private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
         throws ServletException {
 
-        Long documentID = request.getID();
         Boolean remote = request.getParameter("remote").toBoolean();
         if (remote==null) remote = false;
 
         if (remote){
-            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + documentID;
+            String id = request.getParameter("id").toString();
+            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
             return new ServiceResponse(url);
         }
         else{
             try{
+                Long documentID = request.getID();
                 bluewave.app.Document document = new bluewave.app.Document(documentID);
                 javaxt.io.File file = getFile(document);
                 if (!file.exists()) return new ServiceResponse(404);
@@ -384,7 +435,7 @@ public class DocumentService extends WebService {
         try{
 
           //Parse params
-            String folderName = request.getParameter("folder").toString();
+            String folderName = request.getParameter("name").toString();
             if (folderName==null) return new ServiceResponse(400, "folder is required");
             int idx = folderName.indexOf(".");
             if (idx>0) folderName = folderName.substring(0, idx);
@@ -434,6 +485,10 @@ public class DocumentService extends WebService {
                 }
             }
 
+            
+            int totalSteps = documentIDs.size()+1;
+            int step = 0;
+
 
           //Get component files
             PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
@@ -441,26 +496,36 @@ public class DocumentService extends WebService {
             while (it.hasNext()){
                 String id = documentIDs.get(it.next());
 
-                javaxt.io.File tempFile = new javaxt.io.File(dir, id + ".pdf");
-                if (!tempFile.exists()){
+                javaxt.io.File tempFile = new javaxt.io.File(dir, id);
+                try{
+                    downloadFile(id, tempFile);
+                    pdfMergerUtility.addSource(tempFile.toFile());
+                }
+                catch(Exception e){
 
-                  //Download files from image2000
-                    url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
-                    response = getResponse(url);
-                    if (response.getStatus()==200){
-                        java.io.InputStream is = response.getInputStream();
-                        saveFile(is, tempFile);
-                        is.close();
+                  //Try downloading the file again
+                    try{
+                        tempFile.delete();
+                        downloadFile(id, tempFile);
+                        pdfMergerUtility.addSource(tempFile.toFile());
+                    }
+                    catch(Exception ex){
+                        console.log("Invalid PDF", tempFile);
+                        tempFile.rename(tempFile.getName() + ".err");
                     }
                 }
-
-                if (tempFile.exists()) pdfMergerUtility.addSource(tempFile.toFile());
+                step++;
+                notify("folder," + folderName + "," + step + "," + totalSteps);
             }
 
 
           //Merge files into a single PDF
-            pdfMergerUtility.setDestinationFileName(file.toString());
-            pdfMergerUtility.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
+            java.io.OutputStream out = file.getOutputStream();
+            pdfMergerUtility.setDestinationStream(out);
+            pdfMergerUtility.mergeDocuments(null);
+            out.close();
+            step++;
+            notify("folder," + folderName + "," + step + "," + totalSteps);
 
 
 
@@ -484,6 +549,30 @@ public class DocumentService extends WebService {
         }
         catch(Exception e){
             return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** downloadFile
+  //**************************************************************************
+    private void downloadFile(String id, javaxt.io.File tempFile) throws Exception {
+        if (!tempFile.exists()){
+            tempFile.create();
+
+            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
+            javaxt.http.Response response = getResponse(url);
+            if (response.getStatus()==200){
+                java.io.InputStream is = response.getInputStream();
+                saveFile(is, tempFile);
+                is.close();
+            }
+        }
+        try{
+            PDDocument.load(tempFile.toFile()).getVersion();
+        }
+        catch(Exception e){
+            throw e;
         }
     }
 
