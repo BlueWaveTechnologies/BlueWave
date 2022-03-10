@@ -485,6 +485,7 @@ public class DocumentService extends WebService {
                 javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
                 if (file.getName().equalsIgnoreCase(fileName) && file.exists()){
                     if (isValidPDF(file)){
+                        notify("createFolder," + folderName + "," + 1 + "," + 1);
                         if (returnID){
                             bluewave.app.Document[] arr = bluewave.app.Document.find("FILE_ID=",f.getID());
                             return new ServiceResponse(arr[0].getID()+"");
@@ -503,6 +504,7 @@ public class DocumentService extends WebService {
 
             javaxt.io.File file = new javaxt.io.File(dir, fileName);
             if (file.exists() && isValidPDF(file)){
+                notify("createFolder," + folderName + "," + 1 + "," + 1);
                 if (returnID){
                     //Find file?
                 }
