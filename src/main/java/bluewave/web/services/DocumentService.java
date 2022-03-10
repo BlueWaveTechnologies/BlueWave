@@ -4,20 +4,31 @@ import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
 
 import java.util.*;
-import java.io.BufferedInputStream;
-import java.io.File;
+import java.io.IOException;
 import java.io.FileOutputStream;
+import java.io.BufferedInputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.ConcurrentHashMap;
-import javaxt.http.servlet.ServletException;
+import java.util.concurrent.atomic.AtomicLong;
+
+
+import javaxt.http.servlet.*;
 import javaxt.http.servlet.FormInput;
 import javaxt.http.servlet.FormValue;
+import javaxt.http.websocket.WebSocketListener;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
 import javaxt.sql.*;
 import javaxt.json.*;
+
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
+import org.apache.pdfbox.io.MemoryUsageSetting;
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
+
 
 
 //******************************************************************************
@@ -33,12 +44,19 @@ public class DocumentService extends WebService {
     private ThreadPool pool;
     private FileIndex index;
     private ConcurrentHashMap<String, JSONObject> scripts;
+    private ConcurrentHashMap<Long, WebSocketListener> listeners;
+    private static AtomicLong webSocketID;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
     public DocumentService(){
+
+      //Websocket stuff
+        webSocketID = new AtomicLong(0);
+        listeners = new ConcurrentHashMap<>();
+
 
       //Start thread pool used to index files
         int numThreads = 20;
@@ -133,6 +151,42 @@ public class DocumentService extends WebService {
         scripts = new ConcurrentHashMap<>();
     }
 
+  //**************************************************************************
+  //** createWebSocket
+  //**************************************************************************
+    public void createWebSocket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        new WebSocketListener(request, response){
+            private Long id;
+            public void onConnect(){
+                id = webSocketID.incrementAndGet();
+                synchronized(listeners){
+                    listeners.put(id, this);
+                }
+            }
+            public void onDisconnect(int statusCode, String reason){
+                synchronized(listeners){
+                    listeners.remove(id);
+                }
+            }
+        };
+    }
+
+
+  //**************************************************************************
+  //** notify
+  //**************************************************************************
+    private void notify(String msg){
+        synchronized(listeners){
+            Iterator<Long> it = listeners.keySet().iterator();
+            while(it.hasNext()){
+                Long id = it.next();
+                WebSocketListener ws = listeners.get(id);
+                ws.send(msg);
+            }
+        }
+    }
+
 
   //**************************************************************************
   //** getServiceResponse
@@ -146,8 +200,7 @@ public class DocumentService extends WebService {
             bluewave.app.User user = (bluewave.app.User) request.getUser();
 
             if (method.equals("GET")){
-                String fileName = request.getParameter("fileName").toString();
-                if (fileName!=null){
+                if (request.hasParameter("id")){
                     return getFile(request, user);
                 }
                 else{
@@ -177,11 +230,14 @@ public class DocumentService extends WebService {
 
       //Parse request
         Long offset = request.getOffset();
+        if (offset==null || offset<0) offset = 0L;
         Long limit = request.getLimit();
         if (limit==null || limit<1) limit = 50L;
         String orderBy = request.getParameter("orderby").toString();
         if (orderBy==null) orderBy = "name";
         String[] q = request.getRequest().getParameterValues("q");
+        Boolean remote = request.getParameter("remote").toBoolean();
+        if (remote==null) remote = false;
 
 
       //Start compiling response
@@ -189,85 +245,171 @@ public class DocumentService extends WebService {
         str.append("id,name,type,date,size");
 
 
-      //Compile sql statement
-        StringBuilder sql = new StringBuilder();
-        sql.append("select document.id, file.name, file.type, file.date, file.size ");
-        sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
-        sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
-        HashMap<Long, JSONObject> searchMetadata = new HashMap<>();
-        if (q!=null){
-            try{
+        if (remote){
 
-                List<String> searchTerms = new ArrayList<>();
-                for (String s : q) searchTerms.add(s);
+            str.append(",info");
+
+            String url = "https://i2ksearch-mig.fda.gov/query/i2k/?version=2.2&wt=json&json.nl=arrarr";
+            for (String s : q) url += "&q=" + encode(s);
+            url += "&fq=folder_type:" + encode("(PMN)");
+            //url += "&fq=!folder_type:" + encode("(DocMan)");
+            url+=
+            "&start=" + offset +
+            "&rows=" + limit +
+            "&hl=true&hl.fl=pages&hl.fragsize=85&hl.snippets=4&"; //text highlighting
+
+            javaxt.http.Response response = getResponse(url);
+            if (response.getStatus()==200){
+                JSONObject json = new JSONObject(response.getText());
+                JSONArray docs = json.get("response").get("docs").toJSONArray();
+                for (int i=0; i<docs.length(); i++){
+                    JSONObject doc = docs.get(i).toJSONObject();
+                    String id = doc.get("id").toString();
+                    String contentType = doc.get("a_content_type").toString();
+                    String folderID = doc.get("folder_id").toString();
+                    String folderSubType = doc.get("folder_sub_type").toString();
+                    if (folderSubType==null) folderSubType = "UNKNOWN";
+                    String name = folderID + "/" + folderSubType + "/" + id + "." + contentType;
+
+                    Long size = doc.get("contentSize").toLong();
+                    String dt = doc.get("r_creation_date").toString();
+                    JSONArray pages = doc.get("pages").toJSONArray();
+                    String highlightFragment = pages.length()==0 ? null : pages.get(0).toString();
+                    for (int j=0; j<pages.length(); j++){
+                        String page = pages.get(j).toString();
+                        if (page==null) continue;
+                        boolean foundMatch = false;
+                        String p = page.toLowerCase();
+                        for (String s : q){
+                            int idx = p.indexOf(s.toLowerCase());
+                            if (idx>-1){
+
+                                String a = page.substring(0, idx);
+                                String b = page.substring(idx, idx+s.length());
+                                String c = page.substring(idx+1+s.length());
 
 
-                TreeMap<Float, ArrayList<bluewave.app.Document>> results =
-                    index.findDocuments(searchTerms, Math.toIntExact(limit));
+                                idx = a.lastIndexOf(" ");
+                                if (idx>-1){
+                                    a = a.substring(idx);
+                                    if (a.length()>10) a = a.substring(a.length()-10);
+                                }
 
-                if (results.isEmpty()){
-                    return new ServiceResponse(str.toString());
-                }
-                else{
-                    String documentIDs = "";
-                    Iterator<Float> it = results.descendingKeySet().iterator();
-                    while (it.hasNext()){
-                        float score = it.next();
-                        ArrayList<bluewave.app.Document> documents = results.get(score);
-                        for (bluewave.app.Document document : documents){
-                            if (documentIDs.length()>0) documentIDs += ",";
-                            documentIDs += document.getID() + "";
+                                highlightFragment = a + "<b>" + b + "</b>" + c;
+                                if (highlightFragment.length()>400) highlightFragment = highlightFragment.substring(0, 400);
 
-                            JSONObject info = document.getInfo();
-                            if (info!=null){
-                                JSONObject md = info.get("searchMetadata").toJSONObject();
-                                if (md!=null) searchMetadata.put(document.getID(), md);
+
+                                foundMatch = true;
+                                break;
                             }
                         }
+                        if (foundMatch){
+                            break;
+                        }
                     }
-                    sql.append("WHERE document.id in (");
-                    sql.append(documentIDs);
-                    sql.append(")");
+
+                    JSONObject searchMetadata = new JSONObject();
+                    //searchMetadata.set("score", score);
+                    //searchMetadata.set("frequency", frequency);
+                    searchMetadata.set("highlightFragment", highlightFragment);
+                    //searchMetadata.set("explainDetails", explainDetails);
+
+                    str.append("\n");
+                    str.append(id);
+                    str.append(",");
+                    str.append(name);
+                    str.append(",");
+                    str.append("Remote");
+                    str.append(",");
+                    str.append(dt);
+                    str.append(",");
+                    str.append(size);
+                    str.append(",");
+                    str.append(encode(searchMetadata));
                 }
+            }
+            else{
+                return new ServiceResponse(500, response.getText());
+            }
+        }
+        else{
+
+          //Compile sql statement
+            StringBuilder sql = new StringBuilder();
+            sql.append("select document.id, file.name, file.type, file.date, file.size ");
+            sql.append("from APPLICATION.FILE JOIN APPLICATION.DOCUMENT ");
+            sql.append("ON APPLICATION.FILE.ID=APPLICATION.DOCUMENT.FILE_ID ");
+            HashMap<Long, JSONObject> searchMetadata = new HashMap<>();
+            if (q!=null){
+                try{
+
+                    List<String> searchTerms = new ArrayList<>();
+                    for (String s : q) searchTerms.add(s);
+
+
+                    TreeMap<Float, ArrayList<bluewave.app.Document>> results =
+                        index.findDocuments(searchTerms, Math.toIntExact(limit));
+
+                    if (results.isEmpty()){
+                        return new ServiceResponse(str.toString());
+                    }
+                    else{
+                        String documentIDs = "";
+                        Iterator<Float> it = results.descendingKeySet().iterator();
+                        while (it.hasNext()){
+                            float score = it.next();
+                            ArrayList<bluewave.app.Document> documents = results.get(score);
+                            for (bluewave.app.Document document : documents){
+                                if (documentIDs.length()>0) documentIDs += ",";
+                                documentIDs += document.getID() + "";
+
+                                JSONObject info = document.getInfo();
+                                if (info!=null){
+                                    JSONObject md = info.get("searchMetadata").toJSONObject();
+                                    if (md!=null) searchMetadata.put(document.getID(), md);
+                                }
+                            }
+                        }
+                        sql.append("WHERE document.id in (");
+                        sql.append(documentIDs);
+                        sql.append(")");
+                    }
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                    return new ServiceResponse(e);
+                }
+            }
+
+            if (orderBy!=null) sql.append(" ORDER BY " + orderBy);
+            if (offset!=null) sql.append(" OFFSET " + offset);
+            sql.append(" LIMIT " + limit);
+
+
+            if (!searchMetadata.isEmpty()) str.append(",info");
+
+
+          //Execute query and update response
+            Connection conn = null;
+            try{
+                conn = database.getConnection();
+                Recordset rs = new Recordset();
+                rs.open(sql.toString(), conn);
+                while (rs.hasNext()){
+                    str.append("\n");
+                    str.append(getString(rs));
+                    if (!searchMetadata.isEmpty()) str.append(",");
+                    JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
+                    str.append(encode(md));
+                    rs.moveNext();
+                }
+                rs.close();
+                conn.close();
             }
             catch(Exception e){
-                e.printStackTrace();
+                if (conn!=null) conn.close();
                 return new ServiceResponse(e);
             }
-        }
-
-        if (orderBy!=null) sql.append(" ORDER BY " + orderBy);
-        if (offset!=null) sql.append(" OFFSET " + offset);
-        sql.append(" LIMIT " + limit);
-
-
-        if (!searchMetadata.isEmpty()) str.append(",info");
-
-
-      //Execute query and update response
-        Connection conn = null;
-        try{
-            conn = database.getConnection();
-            Recordset rs = new Recordset();
-            rs.open(sql.toString(), conn);
-            while (rs.hasNext()){
-                str.append("\n");
-                str.append(getString(rs));
-                if (!searchMetadata.isEmpty()) str.append(",");
-                JSONObject md = searchMetadata.get(rs.getValue("id").toLong());
-                if (md!=null){
-                  //Create csv-safe string of the json and append to str
-                    String s = md.toString();
-                    str.append(java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
-                }
-                rs.moveNext();
-            }
-            rs.close();
-            conn.close();
-        }
-        catch(Exception e){
-            if (conn!=null) conn.close();
-            return new ServiceResponse(e);
         }
 
         return new ServiceResponse(str.toString());
@@ -276,7 +418,8 @@ public class DocumentService extends WebService {
     private String getString(Recordset rs){
         Long id = rs.getValue("id").toLong();
         String name=rs.getValue("name").toString();
-        String type=rs.getValue("type").toString();
+        //String type=rs.getValue("type").toString();
+        String type = "Local";
         javaxt.utils.Date date = rs.getValue("date").toDate();
         String dt = date==null ? "" : date.toISOString();
         Long size = rs.getValue("size").toLong();
@@ -285,20 +428,283 @@ public class DocumentService extends WebService {
     }
 
 
-
   //**************************************************************************
   //** getFile
   //**************************************************************************
+  /** Returns a file from the database. Optionally, can be used to return a
+   *  url to a remote file
+   */
     private ServiceResponse getFile(ServiceRequest request, bluewave.app.User user)
-            throws ServletException {
+        throws ServletException {
 
-        String fileName = request.getParameter("fileName").toString();
-        javaxt.io.File file = getFile(fileName, user);
-        if (file.exists()){
-            return new ServiceResponse(file);
+        Boolean remote = request.getParameter("remote").toBoolean();
+        if (remote==null) remote = false;
+
+        if (remote){
+            String id = request.getParameter("id").toString();
+            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
+            return new ServiceResponse(url);
         }
         else{
-            return new ServiceResponse(404);
+            try{
+                Long documentID = request.getID();
+                bluewave.app.Document document = new bluewave.app.Document(documentID);
+                javaxt.io.File file = getFile(document);
+                if (!file.exists()) return new ServiceResponse(404);
+                else return new ServiceResponse(file);
+            }
+            catch(Exception e){
+                return new ServiceResponse(e);
+            }
+        }
+    }
+
+
+  //**************************************************************************
+  //** getFolder
+  //**************************************************************************
+  /** Returns a PDF file containing all files in a document "folder"
+   */
+    public ServiceResponse getFolder(ServiceRequest request, Database database)
+        throws ServletException {
+
+        try{
+
+          //Parse params
+            String folderName = request.getParameter("name").toString();
+            if (folderName==null) return new ServiceResponse(400, "folder is required");
+            int idx = folderName.indexOf(".");
+            if (idx>0) folderName = folderName.substring(0, idx);
+            String fileName = folderName + ".pdf";
+            Boolean returnID = request.getParameter("returnID").toBoolean();
+            if (returnID==null) returnID = false;
+
+
+          //Find file in the database and return early if possible
+            for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
+                javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
+                if (file.getName().equalsIgnoreCase(fileName) && file.exists()){
+                    if (isValidPDF(file)){
+                        if (returnID){
+                            bluewave.app.Document[] arr = bluewave.app.Document.find("FILE_ID=",f.getID());
+                            return new ServiceResponse(arr[0].getID()+"");
+                        }
+                        else{
+                            return new ServiceResponse(file);
+                        }
+                    }
+                }
+            }
+
+
+            javaxt.io.Directory dir = new javaxt.io.Directory(
+                getUploadDir().toString() + folderName
+            );
+
+            javaxt.io.File file = new javaxt.io.File(dir, fileName);
+            if (file.exists() && isValidPDF(file)){
+                if (returnID){
+                    //Find file?
+                }
+                else{
+                    return new ServiceResponse(file);
+                }
+            }
+
+
+
+          //Get document IDs associated with the folder
+            TreeMap<Long, String> documentIDs = new TreeMap<>();
+            String url = "https://i2ksearch-mig.fda.gov/query/i2k/?version=2.2&wt=json&json.nl=arrarr" +
+            "&q=folder_id:" + folderName +
+            "&fl=id,folder_id,r_creation_date,a_content_type" +
+            "&start=0" +
+            "&rows=500";
+
+            javaxt.http.Response response = getResponse(url);
+            if (response.getStatus()==200){
+                JSONObject json = new JSONObject(response.getText());
+                JSONArray docs = json.get("response").get("docs").toJSONArray();
+                for (int i=0; i<docs.length(); i++){
+                    JSONObject doc = docs.get(i).toJSONObject();
+                    String id = doc.get("id").toString();
+                    String folderID = doc.get("folder_id").toString();
+                    String dt = doc.get("r_creation_date").toString();
+                    String contentType = doc.get("a_content_type").toString();
+                    if (contentType.equalsIgnoreCase("pdf")){
+                        documentIDs.put(new javaxt.utils.Date(dt).getTime(), id);
+                    }
+                }
+            }
+
+
+            int totalSteps = documentIDs.size()+1;
+            int step = 0;
+
+
+          //Get component files
+            ArrayList<PDDocument> documents = new ArrayList<>();
+            ArrayList<javaxt.io.File> files = new ArrayList<>();
+            Iterator<Long> it = documentIDs.keySet().iterator();
+            while (it.hasNext()){
+                String id = documentIDs.get(it.next());
+
+                javaxt.io.File tempFile = new javaxt.io.File(dir, id);
+                try{
+                    PDDocument document = downloadPDF(id, tempFile);
+                    documents.add(document);
+                    files.add(tempFile);
+                }
+                catch(Exception e){
+
+                  //Try downloading the file again
+                    try{
+                        tempFile.delete();
+                        PDDocument document = downloadPDF(id, tempFile);
+                        documents.add(document);
+                        files.add(tempFile);
+                    }
+                    catch(Exception ex){
+                        console.log("Invalid PDF", tempFile);
+                        tempFile.rename(tempFile.getName() + ".err");
+                    }
+                }
+                step++;
+                notify("createFolder," + folderName + "," + step + "," + totalSteps);
+            }
+
+            if (documents.isEmpty()){
+                return new ServiceResponse(500, "No files were downloaded");
+            }
+
+
+          //Merge files into a single PDF
+            if (documents.size()==1){
+                file = files.get(0);
+            }
+            else{
+
+                PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
+                for (PDDocument document : documents){
+
+                    try{
+
+                        PDAcroForm form = document.getDocumentCatalog().getAcroForm();
+                        if (form != null) {
+                            document.setAllSecurityToBeRemoved(true);
+                            try{
+                                form.flatten();
+                            }
+                            catch(Exception e){
+                                //e.printStackTrace();
+                            }
+
+                            if (form.hasXFA()) {
+                                form.setXFA(null);
+                            }
+                        }
+
+                        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                        document.save(out);
+                        java.io.InputStream is = new java.io.ByteArrayInputStream(out.toByteArray());
+                        pdfMergerUtility.addSource(is);
+
+                    }
+                    catch(Exception e){
+                        e.printStackTrace();
+                    }
+                }
+
+                java.io.OutputStream out = file.getOutputStream();
+                pdfMergerUtility.setDestinationStream(out);
+                pdfMergerUtility.mergeDocuments(null);
+                out.close();
+            }
+
+            step++;
+            notify("createFolder," + folderName + "," + step + "," + totalSteps);
+
+
+            if (file.exists() && isValidPDF(file)){
+
+
+              //Save combined file in the database
+                bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+                bluewave.app.File f = getOrCreateFile(file, path);
+                bluewave.app.Document doc = getOrCreateDocument(f);
+                doc.save();
+
+
+              //Index the file
+                synchronized(pool){
+                    pool.add(new Object[]{file, path});
+                    pool.notify();
+                }
+
+
+              //Return response
+                if (returnID){
+                    return new ServiceResponse(doc.getID()+"");
+                }
+                else{
+                    return new ServiceResponse(file);
+                }
+
+            }
+            else{
+                return new ServiceResponse(500, "Failed to merge PDF");
+            }
+        }
+        catch(Exception e){
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** downloadFile
+  //**************************************************************************
+  /** Used to download and return a PDF document from a remote server
+   */
+    private PDDocument downloadPDF(String id, javaxt.io.File file) throws Exception {
+
+
+        if (!file.exists()){
+            file.create();
+
+            String url = "https://i2kplus.fda.gov/documentumservice/rest/view/" + id;
+            javaxt.http.Response response = getResponse(url);
+            if (response.getStatus()==200){
+                java.io.InputStream is = response.getInputStream();
+                saveFile(is, file);
+                is.close();
+            }
+        }
+
+        try{
+            PDDocument document = PDDocument.load(file.toFile());
+            float v = document.getVersion();
+            return document;
+        }
+        catch(Exception e){
+            throw new Exception("Invalid PDF " + file);
+        }
+    }
+
+
+  //**************************************************************************
+  //** isValidPDF
+  //**************************************************************************
+  /** Returns true if the given file is a valid PDF document
+   */
+    private boolean isValidPDF(javaxt.io.File file){
+        try{
+            PDDocument document = PDDocument.load(file.toFile());
+            float v = document.getVersion();
+            return true;
+        }
+        catch(Exception e){
+            return false;
         }
     }
 
@@ -307,7 +713,7 @@ public class DocumentService extends WebService {
   //** uploadFile
   //**************************************************************************
     private ServiceResponse uploadFile(ServiceRequest request, bluewave.app.User user)
-            throws ServletException {
+        throws ServletException {
 
         if (user==null || (user.getAccessLevel()<3 && user.getID()!=null)){
             return new ServiceResponse(403, "Not Authorized");
@@ -321,104 +727,17 @@ public class DocumentService extends WebService {
                 String name = input.getName();
                 FormValue value = input.getValue();
                 if (input.isFile()){
+
                     JSONObject json = new JSONObject();
                     json.set("name", name);
 
-
-                  //Create temp file
-                    javaxt.utils.Date d = new javaxt.utils.Date();
-                    d.setTimeZone("UTC");
-                    javaxt.io.File tempFile = new javaxt.io.File(
-                        getUploadDir().toString() + user.getID() + "/" +
-                        d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
-                    );
-                    if (!tempFile.exists()) tempFile.create();
-
                     try{
-
-                      //Save temp file
-                        int bufferSize = 2048;
-                        FileOutputStream output = new FileOutputStream(tempFile.toFile());
-                        final ReadableByteChannel inputChannel = Channels.newChannel(value.getInputStream());
-                        final WritableByteChannel outputChannel = Channels.newChannel(output);
-                        final java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocateDirect(bufferSize);
-                        int ttl = 0;
-
-                        while (inputChannel.read(buffer) != -1) {
-                            buffer.flip();
-                            ttl+=outputChannel.write(buffer);
-                            buffer.compact();
-                        }
-                        buffer.flip();
-                        while (buffer.hasRemaining()) {
-                            ttl+=outputChannel.write(buffer);
-                        }
-
-                        //console.log(ttl);
-
-                        inputChannel.close();
-                        outputChannel.close();
-
-
-
-                      //Check whether the file exists
-                        boolean fileExists = false;
-                        String hash = tempFile.getMD5(); //faster than getSHA1()
-                        for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
-                            javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
-                            if (file.getName().equalsIgnoreCase(name) && file.exists()){
-                                BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
-                                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream());
-                                byte[] fileBytes1 = new byte[bufferSize];
-                                byte[] fileBytes2 = new byte[bufferSize];
-                                boolean fileContentDifferenceFound = false;
-                                int readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
-                                int readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
-                                while(
-                                    readFile1 != -1 && file1Reader.available() != 0 &&
-                                    readFile2 != -1 && file2Reader.available() != 0 )
-                                {
-                                    if(!Arrays.equals(fileBytes1, fileBytes2)) {
-                                        fileContentDifferenceFound = true;
-                                        break;
-                                    }
-                                    readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
-                                    readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
-                                }
-
-                                fileExists = !fileContentDifferenceFound;
-                            }
-                        }
-
-
-                      //Rename or delete the temp file
-                        if (fileExists){
-                            tempFile.delete();
-                            json.set("result", "exists");
-                        }
-                        else{
-
-                          //Rename the temp file
-                            javaxt.io.File file = tempFile.rename(name);
-
-                          //Save the file in the database
-                            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
-                            bluewave.app.File f = getOrCreateFile(file, path);
-                            bluewave.app.Document doc = getOrCreateDocument(f);
-                            doc.save();
-
-                          //Index the file
-                            pool.add(new Object[]{file, path});
-
-                          //Set response
-                            json.set("result", "uploaded");
-                        }
+                        uploadFile(name, value.getInputStream(), user);
+                        json.set("results", "uploaded");
                     }
                     catch(Exception e){
-                        //e.printStackTrace();
-                        json.set("result", "error");
+                        json.set("results", "error");
                     }
-
 
                     results.add(json);
                 }
@@ -432,10 +751,127 @@ public class DocumentService extends WebService {
 
 
   //**************************************************************************
+  //** saveFile
+  //**************************************************************************
+    private void saveFile(java.io.InputStream is, javaxt.io.File tempFile) throws Exception {
+
+        int bufferSize = 2048;
+        FileOutputStream output = new FileOutputStream(tempFile.toFile());
+        final ReadableByteChannel inputChannel = Channels.newChannel(is);
+        final WritableByteChannel outputChannel = Channels.newChannel(output);
+        final java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocateDirect(bufferSize);
+        int ttl = 0;
+
+        while (inputChannel.read(buffer) != -1) {
+            buffer.flip();
+            ttl+=outputChannel.write(buffer);
+            buffer.compact();
+        }
+        buffer.flip();
+        while (buffer.hasRemaining()) {
+            ttl+=outputChannel.write(buffer);
+        }
+
+        //console.log(ttl);
+
+        inputChannel.close();
+        outputChannel.close();
+    }
+
+
+  //**************************************************************************
+  //** uploadFile
+  //**************************************************************************
+    private javaxt.io.File uploadFile(String name, java.io.InputStream is, bluewave.app.User user) throws Exception {
+
+
+      //Create temp file
+        javaxt.utils.Date d = new javaxt.utils.Date();
+        d.setTimeZone("UTC");
+        javaxt.io.File tempFile = new javaxt.io.File(
+            getUploadDir().toString() + user.getID() + "/" +
+            d.toString("yyyy/MM/dd") + "/" + d.getTime() + ".tmp"
+        );
+        if (!tempFile.exists()) tempFile.create();
+
+
+
+      //Save temp file
+        saveFile(is, tempFile);
+
+
+
+
+      //Check whether the file exists
+        boolean fileExists = false;
+        javaxt.io.File ret = null;
+        int bufferSize = 2048;
+        String hash = tempFile.getMD5(); //faster than getSHA1()
+        for (bluewave.app.File f : bluewave.app.File.find("hash=",hash)){
+            javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
+            if (file.getName().equalsIgnoreCase(name) && file.exists()){
+                BufferedInputStream file1Reader = new BufferedInputStream(file.getInputStream());
+                BufferedInputStream file2Reader = new BufferedInputStream(tempFile.getInputStream());
+                byte[] fileBytes1 = new byte[bufferSize];
+                byte[] fileBytes2 = new byte[bufferSize];
+                boolean fileContentDifferenceFound = false;
+                int readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                int readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
+                while(
+                    readFile1 != -1 && file1Reader.available() != 0 &&
+                    readFile2 != -1 && file2Reader.available() != 0 )
+                {
+                    if(!Arrays.equals(fileBytes1, fileBytes2)) {
+                        fileContentDifferenceFound = true;
+                        break;
+                    }
+                    readFile1 = file1Reader.read(fileBytes1, 0, bufferSize);
+                    readFile2 = file2Reader.read(fileBytes2, 0, bufferSize);
+                }
+
+                fileExists = !fileContentDifferenceFound;
+
+                if (fileExists) ret = file;
+            }
+        }
+
+
+      //Rename or delete the temp file
+        if (fileExists){
+            tempFile.delete();
+            return ret;
+        }
+        else{
+
+          //Rename the temp file
+            javaxt.io.File file = tempFile.rename(name);
+
+
+          //Save the file in the database
+            bluewave.app.Path path = getOrCreatePath(file.getDirectory());
+            bluewave.app.File f = getOrCreateFile(file, path);
+            bluewave.app.Document doc = getOrCreateDocument(f);
+            doc.save();
+
+
+          //Index the file
+            synchronized(pool){
+                pool.add(new Object[]{file, path});
+                pool.notify();
+            }
+
+
+          //Return file
+            return file;
+        }
+    }
+
+
+  //**************************************************************************
   //** getThumbnail
   //**************************************************************************
     public ServiceResponse getThumbnail(ServiceRequest request, Database database)
-            throws ServletException {
+        throws ServletException {
 
       //Get user
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -453,10 +889,7 @@ public class DocumentService extends WebService {
         javaxt.io.File file;
         try{
             bluewave.app.Document document = new bluewave.app.Document(documentID);
-            bluewave.app.File f = document.getFile();
-            bluewave.app.Path path = f.getPath();
-            javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
-            file = new javaxt.io.File(dir, f.getName());
+            file = getFile(document);
             if (!file.exists()) return new ServiceResponse(404);
         }
         catch(Exception e){
@@ -468,12 +901,12 @@ public class DocumentService extends WebService {
         javaxt.io.Directory outputDir = new javaxt.io.Directory(file.getDirectory()+file.getName(false));
         if (!outputDir.exists()) outputDir.create();
 
-        //Get script
+      //Get script
         javaxt.io.File[] scripts = getScriptDir().getFiles("pdf_to_img.py", true);
         if (scripts.length==0) return new ServiceResponse(500, "Script not found");
 
 
-        //Compile command line options
+      //Compile command line options
         ArrayList<String> params = new ArrayList<>();
         params.add("-f");
         params.add(file.toString());
@@ -483,7 +916,7 @@ public class DocumentService extends WebService {
         params.add(outputDir.toString());
 
 
-        //Execute script
+      //Execute script
         try{
             executeScript(scripts[0], params);
             String[] arr = pages.split(",");
@@ -690,8 +1123,11 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** getFile
   //**************************************************************************
-    private static javaxt.io.File getFile(String name, bluewave.app.User user){
-        return new javaxt.io.File(getUploadDir(), name);
+    private static javaxt.io.File getFile(bluewave.app.Document document){
+        bluewave.app.File f = document.getFile();
+        bluewave.app.Path path = f.getPath();
+        javaxt.io.Directory dir = new javaxt.io.Directory(path.getDir());
+        return new javaxt.io.File(dir, f.getName());
     }
 
 
@@ -717,8 +1153,6 @@ public class DocumentService extends WebService {
         }
         return uploadDir;
     }
-
-
 
 
   //**************************************************************************
@@ -801,5 +1235,63 @@ public class DocumentService extends WebService {
         }
 
         return null;
+    }
+
+
+  //**************************************************************************
+  //** encode
+  //**************************************************************************
+  /** Returns a csv-safe version of a JSON object
+   */
+    private String encode(JSONObject md) {
+        try{
+            if (md!=null){
+                return encode(md.toString());
+            }
+        }
+        catch(Exception e){}
+        return null;
+    }
+
+    private String encode(String s){
+        try{
+            return (java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"));
+        }
+        catch(Exception e){}
+        return null;
+    }
+
+
+  //**************************************************************************
+  //** getResponse
+  //**************************************************************************
+  /** Returns a HTTP response from a remote document server (Image2000)
+   */
+    private javaxt.http.Response getResponse(String url){
+        String edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36 Edg/99.0.1150.30";
+        javaxt.http.Request r = new javaxt.http.Request(url);
+        r.setConnectTimeout(5000);
+        r.setReadTimeout(5000);
+        r.validateSSLCertificates(false);
+        r.setHeader("User-Agent", edge);
+        r.setNumRedirects(0);
+        javaxt.http.Response response = r.getResponse();
+        if (response.getStatus()==200) return response;
+        else{
+            String cookie = response.getHeader("Set-Cookie");
+            if (cookie!=null){
+                r = new javaxt.http.Request(url);
+                r.setConnectTimeout(5000);
+                r.setReadTimeout(5000);
+                r.validateSSLCertificates(false);
+                r.setHeader("User-Agent", edge);
+                r.setNumRedirects(0);
+                r.setHeader("Cookie", cookie);
+                response = r.getResponse();
+                if (response.getStatus()==200) return response;
+                //else console.log(r);
+            }
+            return response;
+        }
     }
 }

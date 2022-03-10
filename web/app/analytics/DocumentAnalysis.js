@@ -1,12 +1,11 @@
 if(!bluewave) var bluewave={};
 if(!bluewave.analytics) bluewave.analytics={};
 
-
 //******************************************************************************
-//**  CarouselTest
+//**  DocumentAnalysis
 //******************************************************************************
 /**
- *   Panel used to test a looping carousel with 3 panels
+ *   Panel used to search and compare documents
  *
  ******************************************************************************/
 
@@ -16,11 +15,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var panels = [];
     var nav, carousel, sliding;
     var selectedDocuments; //datastore
-    var searchPanel;
+    var searchPanel, previewPanel;
     var similarityResults, documentSimilarities;
     var windows = [];
     var waitmask;
     var comparisonsEnabled = true;
+    var remoteSearch = false;
+    var ws;
 
     var defaultConfig = {
         dateFormat: "M/D/YYYY h:mm A",
@@ -129,15 +130,21 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+        remoteSearch = false;
         panels.forEach((panel)=>panel.clear());
+        if (previewPanel) previewPanel.hide();
+        
+        if (ws){
+            ws.stop();
+            ws = null;
+        }        
+        
     };
 
 
   //**************************************************************************
   //** update
   //**************************************************************************
-  /** Used to update the panel and render a timeline
-   */
     this.update = function(){
 
       //Clear the panel
@@ -380,6 +387,15 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
       //Create toolbar and grid panel
         var grid, button = {};
+
+        var createButton = function(parent, btn){
+            var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
+            if (btn.style) btn.style = merge(btn.style, defaultStyle);
+            else btn.style = defaultStyle;
+
+            return bluewave.utils.createButton(parent, btn);
+        };
+
         var createPanel = function(parent){
 
           //Create main table
@@ -405,43 +421,124 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             });
             button["run"].disable();
             button["run"].onClick = function(){
-
+                button["run"].disable();
+                
+                
+              //Udate grid, clear out any messages from previous run
                 grid.forEachRow((row)=>{
                     row.record.similarities = null;
                     row.set("Comparison Results", "");
                 });
+                
+                
+              //Script to run comparisons
+                var runComparison = function(){
+
+                    var jobs = [];
+                    selectedDocuments.forEach((document)=>{
+                        var arr = [];
+                        selectedDocuments.forEach((d)=>{
+                            if (d.id!=document.id) arr.push(d.id);
+                        });
+                        jobs.push({
+                            doc: document.id,
+                            otherDocs: arr
+                        });
+                    });
 
 
-                var jobs = [];
-                selectedDocuments.forEach((document)=>{
-                    var arr = [];
-                    selectedDocuments.forEach((d)=>{
-                        if (d.id!=document.id) arr.push(d.id);
+                    jobs.forEach((job)=>{
+                        grid.forEachRow((row)=>{
+                            var document = row.record;
+                            if (document.id==job.doc){
+                                job.row = row;
+                                return true;
+                            }
+                        });
                     });
-                    jobs.push({
-                        doc: document.id,
-                        otherDocs: arr
+
+
+                    button["stop"].enable();
+                    compareDocuments(jobs, function(){
+                        button["run"].enable();
+                        button["stop"].disable();
+                        if (waitmask) waitmask.hide();
+                        comparisonsEnabled = true;
                     });
+                };
+                
+                
+                
+              //Check if there are any remote files/folders that we need to download
+                var downloads = [];
+                selectedDocuments.forEach((d)=>{
+                    if (isNaN(d.id)) downloads.push(d.name);
                 });
+                
+                if (downloads.length===0){ 
+                    runComparison();
+                }
+                else{ //download...
+                    
 
-
-                jobs.forEach((job)=>{
-                    grid.forEachRow((row)=>{
-                        var document = row.record;
-                        if (document.id==job.doc){
-                            job.row = row;
-                            return true;
+                  //Create web socket listener and watch for status updates
+                    if (!ws) ws = new javaxt.dhtml.WebSocket({
+                        url: "document",
+                        onMessage: function(msg){
+                            var arr = msg.split(",");
+                            var op = arr[0];
+                            if (op==="createFolder"){
+                                var folderName = arr[1];
+                                var step = parseInt(arr[2]);
+                                var totalSteps = parseInt(arr[3]);
+                                var row = getRow(folderName);
+                                if (row) row.set("Comparison Results", "Downloading " + step + "/" + totalSteps);                                                                
+                            }
                         }
-                    });
-                });
-
-
-                button["stop"].enable();
-                compareDocuments(jobs, function(){
-                    button["stop"].disable();
-                    if (waitmask) waitmask.hide();
-                    comparisonsEnabled = true;
-                });
+                    });    
+                    
+                    
+                    var getRow = function(folderName){
+                        var ret = null;
+                        grid.forEachRow((row)=>{
+                            var r = row.record;
+                            if (isNaN(r.id)){
+                                var fileName = r.name;                                    
+                                var idx = fileName.lastIndexOf(".");
+                                if (idx>0) fileName = fileName.substring(0, idx);                                    
+                                if (fileName===folderName || r.name===folderName){
+                                    ret = row;
+                                    return;
+                                }
+                            }
+                        }); 
+                        return ret;
+                    };
+                    
+                    
+                    var downloadFolder = function(folderName){
+                        if (!folderName){
+                            runComparison();
+                            return;
+                        }
+                        
+                        get("document/folder?name="+folderName+"&returnID=true",{
+                            success: function(id){
+                                var row = getRow(folderName);
+                                if (row) row.record.id = id; 
+                                
+                                downloadFolder(downloads.shift());
+                            },
+                            failure: function(request){
+                                alert(request);
+                            }
+                        });
+                    };
+                    var folderName = downloads.shift();
+                    var row = getRow(folderName);
+                    if (row) row.set("Comparison Results", "Downloading...");  
+                    downloadFolder(folderName);
+                }                
             };
 
 
@@ -501,7 +598,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
       //Watch for changes to the selectedDocuments data store
         selectedDocuments.addEventListener("add", function(document){
             if (grid){
-                grid.load([document], 2); //second arg is a page number (hack for DataGrid)
+                
+              //Append document to the grid
+                grid.load([document], 2);
+                
+              //Update buttons
                 if (selectedDocuments.length>1) button["run"].enable();
                 if (selectedDocuments.length>0) button["clear"].enable();
             }
@@ -536,7 +637,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     if (selectedDocuments.length>1) button["run"].enable();
                     if (selectedDocuments.length>0) button["clear"].enable();
                 }
-
             }
         };
 
@@ -550,21 +650,174 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         var createPanel = function(parent){
 
+
+            var table = createTable();
+            var tbody = table.firstChild;
+            var tr, td;
+
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            td.style.width = "100%";
+            tr.appendChild(td);
+            var leftCol = td;
+            td = document.createElement("td");
+            tr.appendChild(td);
+            createPreviewPanel(td);
+            parent.appendChild(table);
+
+
           //Create document search panel
-            searchPanel = new bluewave.analytics.DocumentSearch(parent,{
+            searchPanel = new bluewave.analytics.DocumentSearch(leftCol,{
                 dateFormat: config.dateFormat,
                 showCheckboxes: false
             });
+            var timer = null;
+            searchPanel.onLoad = function(){
+                if (previewPanel) previewPanel.hide();
+                var numRecords = 0;
+                var grid = searchPanel.getDataGrid();
+                grid.forEachRow(function (row) {
+                    numRecords++;
+
+                  //Add custom select/deselect methods to the name column
+                    var o = row.get("Name");
+                    if (!o.select){
+                        var div = document.createElement("div");
+                        div.className = "document-analysis-selected-row";
+                        div.select = function(){
+                            div.style.left = "0px";
+                        };
+                        div.deselect = function(){
+                            div.style.left = "-34px";
+                        };
+                        div.deselect();
+
+                        var check = document.createElement("div");
+                        check.className = "fas fa-check-square";
+                        div.appendChild(check);
+
+                        var span = document.createElement("span");
+                        if ( //is element?
+                            typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+                            o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
+                        ) span.appendChild(o);
+                        else span.innerText = o;
+                        div.appendChild(span);
+
+                        row.set("Name", div);
+                        o = div;
+                    }
+
+                });
+
+
+                var q = searchPanel.getSearchBar().getValue();
+                if (!remoteSearch && q){
+                    if (timer) clearTimeout(timer);
+                    
+                    timer = setTimeout(()=>{
+                        
+                        confirm("Found " + numRecords + " local documents. Would you like to check the server for more records?",{
+                            title: "Search Results",
+                            leftButton: {label: "Yes", value: true},
+                            rightButton: {label: "No", value: false},
+                            callback: function(yes){
+                                if (yes){
+
+                                    remoteSearch = true;
+                                    waitmask.show(500);
+
+                                    get("documents?q=" + encodeURIComponent(q) + "&remote=true", {
+                                        success: function(text){
+                                            waitmask.hide();
+                                            
+                                          //Parse response
+                                            var data = parseSearchResults(text);
+                                            
+                                          //Prune documents that we already have in the grid
+                                            var grid = searchPanel.getDataGrid();
+                                            grid.forEachRow((row)=>{
+                                                var r = row.record;
+                                                data.every((d, i)=>{
+                                                    if (r.name===d.name){
+                                                        data.splice(i, 1); 
+                                                        return false;
+                                                    }
+                                                    return true;
+                                                });
+                                            });
+                                            
+                                            
+                                          //Append search results to the grid
+                                            grid.load(data, 2);
+                                        },
+                                        failure: function(request){
+                                            waitmask.hide();
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                        
+                    },1000);
+
+                }
+
+                updateButtons();
+            };
+
 
             searchPanel.el.addEventListener('dragover', onDragOver, false);
             searchPanel.el.addEventListener('drop', onDrop, false);
 
             var grid = searchPanel.getDataGrid();
+            
+            var isMatch = function(r, d){
+                var foundMatch = false;
+                if (isNaN(r.id)){
+                    if (d.name===r.name && isNaN(r.name)){
+                        foundMatch = true;
+                    }
+                }
+                else{
+                    if (d.id===r.id){
+                        foundMatch = true;
+                    }
+                }
+                return foundMatch;
+            };
+
 
           //Watch for row click events
             grid.onRowClick = function(row, e){
+                var r = row.record;
                 if (e.detail === 2) { //double click
-                    selectRow(row, true, false);
+
+
+                  //Add or remove document from the selectedDocuments store
+                    var addDocument = true;
+                    selectedDocuments.forEach((d, i)=>{                                               
+                        if (isMatch(r, d)){
+                            selectedDocuments.removeAt(i);
+                            addDocument = false;
+                            return true;
+                        }                        
+                    });
+                    
+                    var o = row.get("Name");                    
+                    if (addDocument){
+                        selectedDocuments.add(r);
+                        o.select();
+                    }
+                    else{
+                        o.deselect();
+                    }
+
+                }
+                else{
+                    //previewPanel.update(r);
+                    //previewPanel.show();
                 }
             };
 
@@ -572,10 +825,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             selectedDocuments.addEventListener("remove", function(){
                 var documents = arguments;
                 grid.forEachRow((row)=>{
-                    var d = row.record;
+                    var r = row.record;
                     for (var i=0; i<documents.length; i++){
-                        var document = documents[i];
-                        if (d.id===document.id){
+                        var d = documents[i];                        
+                        if (isMatch(r, d)){
                             try{ row.get("Name").deselect(); }
                             catch(e) {}
                         }
@@ -590,12 +843,66 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         return {
             clear: function(){
                 if (searchPanel) searchPanel.clear();
+                if (previewPanel) previewPanel.hide();
             },
             update: function(panel){
                 if (!searchPanel){
                     createPanel(panel.childNodes[0]);
                     searchPanel.update();
                 }
+            }
+        };
+    };
+
+
+  //**************************************************************************
+  //** createPreviewPanel
+  //**************************************************************************
+    var createPreviewPanel = function(parent){
+
+        previewPanel = document.createElement("div");
+        previewPanel.style.position = "relative";
+        previewPanel.style.width = "";
+        previewPanel.style.height = "100%";
+        parent.appendChild(previewPanel);
+        var iframe = document.createElement("iframe");
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        iframe.style.border = "0 none";
+        previewPanel.appendChild(iframe);
+        previewPanel.show = function(){
+            if (this.offsetWidth<400){
+                this.style.width = "400px";
+            }
+        };
+        previewPanel.hide = function(){
+            this.style.width = "0px";
+        };
+        previewPanel.update = function(record){
+            if (record.id){
+                var url = "document?id=" + record.id;
+                if (iframe.src!=url) iframe.src = url;
+            }
+            else{
+                //iframe.src = "";
+                
+                var maxSize = 0;
+                var maxFile;
+                if (record.documents){
+                    record.documents.forEach((doc)=>{
+                        if (doc.size>maxSize){
+                            maxSize = doc.size;
+                            maxFile = doc;
+                        }
+                    });
+                    var id = maxFile.id;
+                    get("document?id=" + id + "&remote=true",{
+                        success: function(url){
+                            if (iframe.src!=url) iframe.src = url;
+                        }
+                    });
+                    
+                }                                
             }
         };
     };
@@ -612,88 +919,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy
     };
 
-
-  //**************************************************************************
-  //** selectRow
-  //**************************************************************************
-  /** Selects or deselects the row from Document Search panel and adds it to the Selected Documents panel
-   *  if function is called with mouseEvent true -> unselect row if selected and select the row if unselected
-   *  if function is called with makeSelected true -> select row
-   *  if function is called with makeSelected false -> unselect row
-   */
-    var selectRow = function(row, mouseEvent, makeSelected){
-        var o = row.get("Name");
-
-        if (!o.select){ // runs only once for each row - initialize row with selection capability if not already initialized
-            var div = document.createElement("div");
-            div.className = "document-analysis-selected-row";
-            div.select = function(){
-                div.style.left = "0px";
-            };
-            div.deselect = function(){
-                div.style.left = "-34px";
-            };
-            div.deselect();
-
-            var check = document.createElement("div");
-            check.className = "fas fa-check-square";
-            div.appendChild(check);
-
-            var span = document.createElement("span");
-            if ( //is element?
-                typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
-                o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName==="string"
-            ) span.appendChild(o);
-            else span.innerText = o;
-            div.appendChild(span);
-
-            row.set("Name", div);
-            o = div;
-        }
-
-
-        //Add or remove document from the selectedDocuments store
-        var addDocument = true;
-        var r = row.record;
-        selectedDocuments.forEach((d, i)=>{
-            if (d.id===r.id){
-                addDocument = false;
-
-                if (mouseEvent) {
-                    selectedDocuments.removeAt(i);
-                }
-                else {
-                    if (!makeSelected){
-                        selectedDocuments.removeAt(i);
-                    };
-                };
-                return true;
-            }
-        });
-        // mouse click events
-            if (addDocument && mouseEvent){
-                selectedDocuments.add(r);
-                o.select();
-            }
-            else if (!addDocument && mouseEvent){
-                o.deselect();
-            }
-        // selectAll events
-            else if (!addDocument && !mouseEvent && makeSelected){
-                o.select();
-            }
-            else if (!addDocument && !mouseEvent && !makeSelected){
-                o.deselect();
-            }
-            else if (addDocument && !mouseEvent && !makeSelected){
-                o.deselect();
-            }
-            else if (addDocument && !mouseEvent && makeSelected){
-                selectedDocuments.add(r);
-                o.select();
-            }
-
-    }
 
   //**************************************************************************
   //** onDrop
@@ -1052,12 +1277,28 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** createButton
   //**************************************************************************
-    var createButton = function(parent, btn){
-        var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));
-        if (btn.style) btn.style = merge(btn.style, defaultStyle);
-        else btn.style = defaultStyle;
-
-        return bluewave.utils.createButton(parent, btn);
+    var createButton = function(label, parent){
+        var input = document.createElement('input');
+        input.className = "form-button";
+        input.type = "button";
+        input.name = label;
+        input.value = label;
+        input.disabled = true;
+        input.disable = function(){
+            this.disabled = true;
+        };
+        input.enable = function(){
+            this.disabled = false;
+        };
+        input.setText = function(label){
+            this.name = label;
+            this.value = label;
+        };
+        input.getText = function(){
+            return this.value;
+        };
+        parent.appendChild(input);
+        return input;
     };
 
 
@@ -1094,30 +1335,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         buttonsDiv.appendChild(leftSideButtons);
 
 
-        var createButton = function(label, parent){
-            var input = document.createElement('input');
-            input.className = "form-button";
-            input.type = "button";
-            input.name = label;
-            input.value = label;
-            input.disabled = true;
-            input.disable = function(){
-                this.disabled = true;
-            };
-            input.enable = function(){
-                this.disabled = false;
-            };
-            input.setText = function(label){
-                this.name = label;
-                this.value = label;
-            };
-            input.getText = function(){
-                return this.value;
-            };
-            parent.appendChild(input);
-            return input;
-        };
-
 
       //Add back button
         mainButton["back"] = createButton("Back", rightSideButtons);
@@ -1126,8 +1343,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 if (panels[i].name == "Document Search") panels[i].select();
             }
         };
-
-
 
       //Add next button
         mainButton["next"] = createButton("Next", rightSideButtons);
@@ -1138,70 +1353,146 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         };
 
 
-
-
       //Add selectAll button
         mainButton["selectAll"] = createButton("Select All", leftSideButtons);
         mainButton["selectAll"].style.width = "100px";
         mainButton["selectAll"].onclick = function(){
+            var currLabel = this.getText();
+            if (currLabel==="Select All") this.setText("Deselect All");
+            else this.setText("Select All");
 
-            function isElement(element) {
-                return element instanceof Element || element instanceof HTMLDocument;
-            };
+            var grid = searchPanel.getDataGrid();
+            grid.forEachRow((row)=>{
 
-            var rows = document.getElementsByClassName("table-row");
-            var actualRows = [];
+                var idx = null;
+                var r = row.record;
+                selectedDocuments.forEach((d, i)=>{
+                    if (d.id===r.id){
+                        idx = i;
+                        return true;
+                    }
+                });
 
-            for (var row in rows){
-                if (isElement(rows[row])){
-                    actualRows.push(rows[row]);
-                };
-            };
-            rows = actualRows;
-
-            if (this.getText() === "Select All"){
-                for (var row in rows){
-                    selectRow(rows[row], false, true);
-                };
-                this.setText("Deselect All");
-                return;
-            }
-            else {
-                for (var row in rows){
-                    selectRow(rows[row], false, false);
-                };
-                this.setText("Select All");
-                return;
-            };
+                if (currLabel==="Select All"){
+                    row.get("Name").select();
+                    if (idx==null) selectedDocuments.add(r);
+                }
+                else{
+                    row.get("Name").deselect();
+                    if (idx!=null) selectedDocuments.removeAt(idx);
+                }
+            });
         };
 
         updateButtons();
     };
 
 
-
   //**************************************************************************
   //** updateButtons
   //**************************************************************************
     var updateButtons = function(){
-        var selectedPanel;
+        var selectedPanelName, selectedSelectAllPanel;
 
         for (var panel in panels){
-            if (panels[panel].isSelected()) selectedPanel = panels[panel].name;
-        }
+            if (panels[panel].isSelected()) selectedPanelName = panels[panel].name;
+        };
 
-        if (mainButton){ // if Button panel Buttons have been initialized
-            if (selectedPanel == "Document Search") {
+        if (mainButton){ 
+            if (selectedPanelName == "Document Search") {
                 mainButton["back"].disable();
                 mainButton["next"].enable();
                 mainButton["selectAll"].enable();
+                selectedSelectAllPanel = searchPanel;
+
             }
-            else if (selectedPanel == "Selected Documents") {
+            else if (selectedPanelName == "Selected Documents") {
                 mainButton["back"].enable();
                 mainButton["next"].disable();
                 mainButton["selectAll"].disable();
+            }
+
+            // update SelectAll button text
+            if (selectedSelectAllPanel){
+                if (!selectedSelectAllPanel.selectAllStatus) mainButton["selectAll"].setText("Select All");
+                else mainButton["selectAll"].setText("Deselect All");
             };
         };
+    };
+    
+    
+  //**************************************************************************
+  //** parseSearchResults
+  //**************************************************************************
+    var parseSearchResults = function(csv){
+
+        var rows = parseCSV(csv, ",");
+        var header = rows.shift();
+        var createRecord = function(row){
+            var r = {};
+            header.forEach((field, i)=>{
+                var v = row[i];
+                if (field=="size"){
+                    v = parseFloat(v);
+                }
+                else if (field=="info"){
+                    if (v) v = JSON.parse(decodeURIComponent(v));
+                }
+                r[field] = v;
+            });
+            return r;
+        };
+
+
+        var folders = {};
+        rows.forEach((row)=>{
+            var doc = createRecord(row);
+            var name = doc.name;
+            var idx = name.indexOf("/");
+            var folderName = name.substring(0, idx);
+            var arr = folders[folderName];
+            if (arr==null){
+                arr = [];
+                folders[folderName] = arr;
+            }
+            arr.push(doc);
+        });
+        
+  
+        
+        var data = [];
+        for (var folderName in folders) {
+            if (folders.hasOwnProperty(folderName)){
+                var arr = folders[folderName];
+                var size = 0;
+                var date = 0;
+                var highlightFragment = null;
+                arr.forEach((doc)=>{
+                    size+=doc.size;                    
+                    date = Math.max(Date.parse(doc.date), date);
+                    if (!highlightFragment){
+                        if (doc.info){
+                            if (doc.info.highlightFragment){
+                                highlightFragment = doc.info.highlightFragment;
+                            }
+                        }
+                    }
+                });
+                
+                data.push({
+                    name: folderName + ".pdf",
+                    size: size,
+                    type: "Remote",
+                    date: new Date(date),
+                    documents: arr,
+                    info: {
+                        highlightFragment: highlightFragment
+                    }
+                });
+            }
+        }
+
+        return data;
     };
 
 
@@ -1215,6 +1506,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createSpacer = bluewave.utils.createSpacer;
+    var parseCSV = bluewave.utils.parseCSV;
 
     init();
 };

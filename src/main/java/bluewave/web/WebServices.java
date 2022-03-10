@@ -354,6 +354,9 @@ public class WebServices extends WebService {
         else if (service.equals("query")){
             queryService.createWebSocket(request, response);
         }
+        else if (service.equals("document")){
+            documentService.createWebSocket(request, response);
+        }
         else{
             new WebSocketListener(request, response){
                 private Long id;

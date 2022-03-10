@@ -74,7 +74,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         me.clear();
-
         grid.update();
     };
 
@@ -85,6 +84,30 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
     this.getDataGrid = function(){
         return grid;
     };
+
+
+  //**************************************************************************
+  //** getSearchBar
+  //**************************************************************************
+    this.getSearchBar = function(){
+        return searchBar;
+    };
+
+
+  //**************************************************************************
+  //** onLoad
+  //**************************************************************************
+  /** Called whenever the search grid is updated
+   */
+    this.onLoad = function(){};
+
+
+  //**************************************************************************
+  //** onBeforeLoad
+  //**************************************************************************
+  /** Called before the search grid is updated
+   */
+    this.onBeforeLoad = function(){};
 
 
   //**************************************************************************
@@ -101,7 +124,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //** createSearchBar
   //**************************************************************************
     var createSearchBar = function(parent){
-
         searchBar = bluewave.utils.createSearchBar(parent);
         searchBar.onChange = function(q){
             // console.log(q);
@@ -158,8 +180,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //**************************************************************************
     var createFacetPanel = function(parent){
 
-
-
     };
 
 
@@ -167,9 +187,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
   //** createDocumentPanel
   //**************************************************************************
     var createDocumentPanel = function(parent){
-
         createGrid(parent);
-
     };
 
 
@@ -247,6 +265,13 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 else{
                     row.set("Name", record.name);
                 }
+                
+                var addSpan = function(label){
+                    var span = document.createElement("span");
+                    span.className = "document-search-info";
+                    span.innerText = label;
+                    return span;
+                };
 
                 var d = Date.parse(record.date);
                 if (!isNaN(d)){
@@ -255,7 +280,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                     if (label.indexOf("0")===0) label = label.substring(1);
                     label = label.replaceAll("/0", "/");
                     label = label.replaceAll(" 0", " ");
-                    row.set("Date", label);
+                    row.set("Date", addSpan(label));
                 }
 
                 var size = parseInt(record.size);
@@ -263,16 +288,20 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 else{
                     size = formatNumber(Math.round(size/1024)) + " KB";
                 }
-                row.set("Size", size);
+                row.set("Size", addSpan(size));
+                
+                if (record.type) row.set("Type", addSpan(record.type));
             }
         });
 
         grid.onBeforeLoad = function(){
             waitmask.show();
+            me.onBeforeLoad();
         };
 
         grid.onLoad = function(){
             waitmask.hide();
+            me.onLoad();
         };
 
 
@@ -284,13 +313,13 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
             grid.setSortIndicator(0, "DESC");
 
         };
+
     };
 
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
-
     var get = bluewave.utils.get;
     var parseCSV = bluewave.utils.parseCSV;
     var formatNumber = bluewave.utils.formatNumber;

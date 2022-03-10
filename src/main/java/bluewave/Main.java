@@ -3,6 +3,8 @@ import bluewave.app.User;
 import bluewave.data.*;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
+import bluewave.web.services.DocumentService;
+
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
@@ -514,7 +516,6 @@ public class Main {
             console.log("Unsupported test: " + test);
         }
     }
-
 
   //**************************************************************************
   //** download
