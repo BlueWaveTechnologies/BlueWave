@@ -1255,53 +1255,6 @@ li.tree-node:hover {
     margin-right: 10px;
 }
 
-.document-analysis-no-search-results {
-    text-align: center;
-}
-
-.document-analysis-no-search-results input {
-    width: 125px;
-    height: 30px
-}
-
-.document-analysis-no-search-results i {
-    position: relative;
-    opacity: 0.9;
-    font-size: 150px;
-    color: #999;
-    padding-bottom: 10px;
-}
-.document-analysis-no-search-results div {
-    color: #363636;
-    font-size: 15px;
-    padding-bottom: 25px;
-}
-
-
-.document-analysis-big-download-button {
-    height: 60px;
-    width: 60px;
-    background-color: #335177; /* Dark blue */
-    border-radius: 50%;
-    display: inline-block;
-    cursor: pointer;
-    border: 1px solid #4180cf;
-    box-shadow: 3px 4px 6px rgba(0, 0, 0, 0.6);
-}
-
-.document-analysis-big-download-button:hover{
-    background-color: #2e588d;
-    border-color: #6f9dd7;
-}
-
-.document-analysis-big-download-button .fas {
-    color:#fff;
-    width:60px;
-    font-size: 40px;
-    text-align: center;
-    line-height: 60px;
-}
-
 
 /**************************************************************************/
 /** Document Search
