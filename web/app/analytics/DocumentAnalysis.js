@@ -17,11 +17,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var selectedDocuments; //datastore
     var searchPanel, previewPanel;
     var similarityResults, documentSimilarities;
-    var noResultsPanel;
     var windows = [];
     var waitmask;
     var comparisonsEnabled = true;
     var remoteSearch = false;
+    var ws;
 
     var defaultConfig = {
         dateFormat: "M/D/YYYY h:mm A",
@@ -133,6 +133,12 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         remoteSearch = false;
         panels.forEach((panel)=>panel.clear());
         if (previewPanel) previewPanel.hide();
+        
+        if (ws){
+            ws.stop();
+            ws = null;
+        }        
+        
     };
 
 
@@ -415,43 +421,121 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             });
             button["run"].disable();
             button["run"].onClick = function(){
-
+                button["run"].disable();
+                
+                
+              //Udate grid, clear out any messages from previous run
                 grid.forEachRow((row)=>{
                     row.record.similarities = null;
                     row.set("Comparison Results", "");
                 });
+                
+                
+              //Script to run comparisons
+                var runComparison = function(){
+
+                    var jobs = [];
+                    selectedDocuments.forEach((document)=>{
+                        var arr = [];
+                        selectedDocuments.forEach((d)=>{
+                            if (d.id!=document.id) arr.push(d.id);
+                        });
+                        jobs.push({
+                            doc: document.id,
+                            otherDocs: arr
+                        });
+                    });
 
 
-                var jobs = [];
-                selectedDocuments.forEach((document)=>{
-                    var arr = [];
-                    selectedDocuments.forEach((d)=>{
-                        if (d.id!=document.id) arr.push(d.id);
+                    jobs.forEach((job)=>{
+                        grid.forEachRow((row)=>{
+                            var document = row.record;
+                            if (document.id==job.doc){
+                                job.row = row;
+                                return true;
+                            }
+                        });
                     });
-                    jobs.push({
-                        doc: document.id,
-                        otherDocs: arr
+
+
+                    button["stop"].enable();
+                    compareDocuments(jobs, function(){
+                        button["run"].enable();
+                        button["stop"].disable();
+                        if (waitmask) waitmask.hide();
+                        comparisonsEnabled = true;
                     });
+                };
+                
+                
+                
+              //Check if there are any remote files/folders that we need to download
+                var downloads = [];
+                selectedDocuments.forEach((d)=>{
+                    if (isNaN(d.id)) downloads.push(d.name);
                 });
+                
+                if (downloads.length===0){ 
+                    runComparison();
+                }
+                else{ //download...
+                    
 
-
-                jobs.forEach((job)=>{
-                    grid.forEachRow((row)=>{
-                        var document = row.record;
-                        if (document.id==job.doc){
-                            job.row = row;
-                            return true;
+                  //Create web socket listener and watch for status updates
+                    if (!ws) ws = new javaxt.dhtml.WebSocket({
+                        url: "document",
+                        onMessage: function(msg){
+                            var arr = msg.split(",");
+                            var op = arr[0];
+                            if (op==="createFolder"){
+                                var folderName = arr[1];
+                                var step = parseInt(arr[2]);
+                                var totalSteps = parseInt(arr[3]);
+                                var row = getRow(folderName);
+                                if (row) row.set("Comparison Results", "Downloading " + step + "/" + totalSteps);                                                                
+                            }
                         }
-                    });
-                });
-
-
-                button["stop"].enable();
-                compareDocuments(jobs, function(){
-                    button["stop"].disable();
-                    if (waitmask) waitmask.hide();
-                    comparisonsEnabled = true;
-                });
+                    });    
+                    
+                    
+                    var getRow = function(folderName){
+                        var ret = null;
+                        grid.forEachRow((row)=>{
+                            var r = row.record;
+                            if (isNaN(r.id)){
+                                var fileName = r.name;
+                                var idx = fileName.lastIndexOf(".");
+                                if (idx>0) fileName = fileName.substring(0, idx);                                    
+                                if (fileName===folderName){
+                                    ret = row;
+                                    return;
+                                }
+                            }
+                        }); 
+                        return ret;
+                    };
+                    
+                    
+                    var downloadFolder = function(folderName){
+                        if (!folderName){
+                            runComparison();
+                            return;
+                        }
+                        
+                        get("document/folder?name="+folderName,{
+                            success: function(){
+                                downloadFolder(downloads.shift());
+                            },
+                            failure: function(request){
+                                alert(request);
+                            }
+                        });
+                    };
+                    var folderName = downloads.shift();
+                    var row = getRow(folderName);
+                    if (row) row.set("Comparison Results", "Downloading...");  
+                    downloadFolder(folderName);
+                }                
             };
 
 
@@ -511,7 +595,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
       //Watch for changes to the selectedDocuments data store
         selectedDocuments.addEventListener("add", function(document){
             if (grid){
-                grid.load([document], 2); //second arg is a page number (hack for DataGrid)
+                
+              //Append document to the grid
+                grid.load([document], 2);
+                
+              //Update buttons
                 if (selectedDocuments.length>1) button["run"].enable();
                 if (selectedDocuments.length>0) button["clear"].enable();
             }
@@ -581,8 +669,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 dateFormat: config.dateFormat,
                 showCheckboxes: false
             });
+            var timer = null;
             searchPanel.onLoad = function(){
-                if (remoteSearch) remoteSearch = false;
                 if (previewPanel) previewPanel.hide();
                 var numRecords = 0;
                 var grid = searchPanel.getDataGrid();
@@ -620,17 +708,58 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                 });
 
-                if (numRecords===0){
-                    if (!grid.hide) addShowHide(grid);
-                    grid.hide();
 
-                    if (!noResultsPanel) createNoResultsPanel(grid.el.parentNode);
-                    noResultsPanel.show();
+                var q = searchPanel.getSearchBar().getValue();
+                if (!remoteSearch && q){
+                    if (timer) clearTimeout(timer);
+                    
+                    timer = setTimeout(()=>{
+                        
+                        confirm("Found " + numRecords + " local documents. Would you like to check the server for more records?",{
+                            leftButton: {label: "Yes", value: true},
+                            rightButton: {label: "No", value: false},
+                            callback: function(yes){
+                                if (yes){
+
+                                    remoteSearch = true;
+                                    waitmask.show(500);
+
+                                    get("documents?q=" + encodeURIComponent(q) + "&remote=true", {
+                                        success: function(text){
+                                            waitmask.hide();
+                                            
+                                          //Parse response
+                                            var data = parseSearchResults(text);
+                                            
+                                          //Prune documents that we already have in the grid
+                                            var grid = searchPanel.getDataGrid();
+                                            grid.forEachRow((row)=>{
+                                                var r = row.record;
+                                                data.every((d, i)=>{
+                                                    if (r.name===d.name){
+                                                        data.splice(i, 1); 
+                                                        return false;
+                                                    }
+                                                    return true;
+                                                });
+                                            });
+                                            
+                                            
+                                          //Append search results to the grid
+                                            grid.load(data, 2);
+                                        },
+                                        failure: function(request){
+                                            waitmask.hide();
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                        
+                    },1000);
+
                 }
-                else{
-                    if (noResultsPanel) noResultsPanel.hide();
-                    if (grid.show) grid.show();
-                }
+
                 updateButtons();
             };
 
@@ -639,6 +768,21 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             searchPanel.el.addEventListener('drop', onDrop, false);
 
             var grid = searchPanel.getDataGrid();
+            
+            var isMatch = function(r, d){
+                var foundMatch = false;
+                if (isNaN(r.id)){
+                    if (d.name===r.name && isNaN(r.name)){
+                        foundMatch = true;
+                    }
+                }
+                else{
+                    if (d.id===r.id){
+                        foundMatch = true;
+                    }
+                }
+                return foundMatch;
+            };
 
 
           //Watch for row click events
@@ -649,15 +793,15 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                   //Add or remove document from the selectedDocuments store
                     var addDocument = true;
-                    selectedDocuments.forEach((d, i)=>{
-                        if (d.id===r.id){
+                    selectedDocuments.forEach((d, i)=>{                                               
+                        if (isMatch(r, d)){
                             selectedDocuments.removeAt(i);
                             addDocument = false;
                             return true;
-                        }
+                        }                        
                     });
-
-                    var o = row.get("Name");
+                    
+                    var o = row.get("Name");                    
                     if (addDocument){
                         selectedDocuments.add(r);
                         o.select();
@@ -668,8 +812,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                 }
                 else{
-                    previewPanel.update(r.id);
-                    previewPanel.show();
+                    //previewPanel.update(r);
+                    //previewPanel.show();
                 }
             };
 
@@ -677,10 +821,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             selectedDocuments.addEventListener("remove", function(){
                 var documents = arguments;
                 grid.forEachRow((row)=>{
-                    var d = row.record;
+                    var r = row.record;
                     for (var i=0; i<documents.length; i++){
-                        var document = documents[i];
-                        if (d.id===document.id){
+                        var d = documents[i];                        
+                        if (isMatch(r, d)){
                             try{ row.get("Name").deselect(); }
                             catch(e) {}
                         }
@@ -712,9 +856,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
     var createPreviewPanel = function(parent){
 
-        var downloadButton;
-
-
         previewPanel = document.createElement("div");
         previewPanel.style.position = "relative";
         previewPanel.style.width = "";
@@ -728,50 +869,38 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         previewPanel.show = function(){
             if (this.offsetWidth<400){
                 this.style.width = "400px";
-                if (remoteSearch) downloadButton.show();
             }
         };
         previewPanel.hide = function(){
             this.style.width = "0px";
-            downloadButton.hide();
         };
-        previewPanel.update = function(id){
-            if (remoteSearch){
-                iframe.src = "document?fileName=" + id + "&urlOnly=true";
+        previewPanel.update = function(record){
+            if (record.id){
+                var url = "document?id=" + record.id;
+                if (iframe.src!=url) iframe.src = url;
             }
             else{
-                iframe.src = "document?id=" + id;
+                //iframe.src = "";
+                
+                var maxSize = 0;
+                var maxFile;
+                if (record.documents){
+                    record.documents.forEach((doc)=>{
+                        if (doc.size>maxSize){
+                            maxSize = doc.size;
+                            maxFile = doc;
+                        }
+                    });
+                    var id = maxFile.id;
+                    get("document?id=" + id + "&remote=true",{
+                        success: function(url){
+                            if (iframe.src!=url) iframe.src = url;
+                        }
+                    });
+                    
+                }                                
             }
         };
-
-
-        downloadButton = document.createElement('div');
-        downloadButton.className = "document-analysis-big-download-button";
-        downloadButton.style.position = "absolute";
-        downloadButton.style.right = "25px";
-        downloadButton.style.bottom = "25px";
-        downloadButton.style.opacity = 0;
-        downloadButton.innerHTML = '<i class="fas fa-file-upload"></i>';
-        downloadButton.show = function(){
-            if (this.style.opacity===1) return;
-            var className = this.className;
-            var el = this;
-            setTimeout(function(){
-                el.style.opacity = 1;
-                el.className += " bounceInDown";
-                setTimeout(function(){
-                    el.className = className;
-                }, 1500);
-            }, 850);
-        };
-        downloadButton.hide = function(){
-            this.style.opacity = 0;
-        };
-        downloadButton.onclick = function(){
-
-        };
-        downloadButton.hide();
-        previewPanel.appendChild(downloadButton);
     };
 
 
@@ -1142,39 +1271,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
 
   //**************************************************************************
-  //** createNoResultsPanel
-  //**************************************************************************
-    var createNoResultsPanel = function(parent){
-        var div = document.createElement("div");
-        div.className = "document-analysis-no-search-results";
-        div.innerHTML ='<i class="fas fa-search-minus"></i>';
-        var text = document.createElement("div");
-        text.innerText = "No Local Search Results Found";
-        div.appendChild(text);
-        var button = createButton("Expand Search", div);
-        button.enable();
-        button.onclick = function(){
-            if (remoteSearch) return;
-            remoteSearch = true;
-            waitmask.show();
-            var q = searchPanel.getSearchBar().getValue();
-            get("documents?q=" + encodeURIComponent(q) + "&remote=true", {
-                success: function(text){
-                    console.log(text);
-                    waitmask.hide();
-                },
-                failure: function(request){
-                    waitmask.hide();
-                }
-            });
-        };
-        addShowHide(div);
-        parent.appendChild(div);
-        noResultsPanel = div;
-    };
-
-
-  //**************************************************************************
   //** createButton
   //**************************************************************************
     var createButton = function(label, parent){
@@ -1284,20 +1380,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             });
         };
 
-
-        // add download button (for use on externalResultsPanel)
-        mainButton["Download"] = createButton("Download", leftSideButtons);
-        mainButton["Download"].style.width = "100px";
-        mainButton["Download"].style.backgroundColor = "#007cba";
-        mainButton["Download"].style.textShadow = "1px 1px 0px #363636";
-        mainButton["Download"].style.color = "#e4e4e4";
-
-        mainButton["Download"].onclick = function(){
-
-        };
-
-        addShowHide(mainButton["Download"]);
-
         updateButtons();
     };
 
@@ -1310,15 +1392,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
         for (var panel in panels){
             if (panels[panel].isSelected()) selectedPanelName = panels[panel].name;
-
         };
 
-        if (mainButton){ // if Button panel Buttons have been initialized
+        if (mainButton){ 
             if (selectedPanelName == "Document Search") {
                 mainButton["back"].disable();
                 mainButton["next"].enable();
                 mainButton["selectAll"].enable();
-                mainButton["Download"].hide();
                 selectedSelectAllPanel = searchPanel;
 
             }
@@ -1326,7 +1406,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 mainButton["back"].enable();
                 mainButton["next"].disable();
                 mainButton["selectAll"].disable();
-                mainButton["Download"].hide();
             }
 
             // update SelectAll button text
@@ -1335,6 +1414,73 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 else mainButton["selectAll"].setText("Deselect All");
             };
         };
+    };
+    
+    
+  //**************************************************************************
+  //** parseSearchResults
+  //**************************************************************************
+    var parseSearchResults = function(csv){
+
+        var rows = parseCSV(csv, ",");
+        var header = rows.shift();
+        var createRecord = function(row){
+            var r = {};
+            header.forEach((field, i)=>{
+                var v = row[i];
+                if (field=="size"){
+                    v = parseFloat(v);
+                }
+                else if (field=="info"){
+                    if (v) v = JSON.parse(decodeURIComponent(v));
+                }
+                r[field] = v;
+            });
+            return r;
+        };
+
+
+        var folders = {};
+        rows.forEach((row)=>{
+            var doc = createRecord(row);
+            var name = doc.name;
+            var idx = name.indexOf("/");
+            var folderName = name.substring(0, idx);
+            var arr = folders[folderName];
+            if (arr==null){
+                arr = [];
+                folders[folderName] = arr;
+            }
+            arr.push(doc);
+        });
+        
+  
+        
+        var data = [];
+        for (var folderName in folders) {
+            if (folders.hasOwnProperty(folderName)){
+                var arr = folders[folderName];
+                var size = 0;
+                var date = 0;
+                arr.forEach((doc)=>{
+                    size+=doc.size;                    
+                    date = Math.max(Date.parse(doc.date), date);
+                });
+                
+                data.push({
+                    name: folderName + ".pdf",
+                    size: size,
+                    //type: "Remote Folder",
+                    date: new Date(date),
+                    documents: arr,
+                    info: {
+                        highlightFragment: arr[0].highlightFragment
+                    }
+                });
+            }
+        }
+
+        return data;
     };
 
 
@@ -1348,6 +1494,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createSpacer = bluewave.utils.createSpacer;
+    var parseCSV = bluewave.utils.parseCSV;
 
     init();
 };
