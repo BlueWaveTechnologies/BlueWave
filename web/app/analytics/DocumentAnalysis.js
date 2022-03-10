@@ -503,10 +503,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         grid.forEachRow((row)=>{
                             var r = row.record;
                             if (isNaN(r.id)){
-                                var fileName = r.name;
+                                var fileName = r.name;                                    
                                 var idx = fileName.lastIndexOf(".");
                                 if (idx>0) fileName = fileName.substring(0, idx);                                    
-                                if (fileName===folderName){
+                                if (fileName===folderName || r.name===folderName){
                                     ret = row;
                                     return;
                                 }
@@ -522,8 +522,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                             return;
                         }
                         
-                        get("document/folder?name="+folderName,{
-                            success: function(){
+                        get("document/folder?name="+folderName+"&returnID=true",{
+                            success: function(id){
+                                var row = getRow(folderName);
+                                if (row) row.record.id = id; 
+                                
                                 downloadFolder(downloads.shift());
                             },
                             failure: function(request){
@@ -716,6 +719,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     timer = setTimeout(()=>{
                         
                         confirm("Found " + numRecords + " local documents. Would you like to check the server for more records?",{
+                            title: "Search Results",
                             leftButton: {label: "Yes", value: true},
                             rightButton: {label: "No", value: false},
                             callback: function(yes){
