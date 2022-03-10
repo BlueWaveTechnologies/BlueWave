@@ -1215,14 +1215,6 @@ li.tree-node:hover {
     width: 34px;
 }
 
-.document-analysis-selected-row .fas.fa-download {
-    color: #007cba;
-    font-size: 30px;
-    line-height: 34px;
-    float:left;
-    width: 34px;
-}
-
 .document-analysis-comparison-results a {
     text-decoration: underline;
     color: #0000ff;
