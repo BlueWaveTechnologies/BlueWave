@@ -476,14 +476,23 @@ public class DocumentService extends WebService {
             int idx = folderName.indexOf(".");
             if (idx>0) folderName = folderName.substring(0, idx);
             String fileName = folderName + ".pdf";
-
+            Boolean returnID = request.getParameter("returnID").toBoolean();
+            if (returnID==null) returnID = false;
 
 
           //Find file in the database and return early if possible
             for (bluewave.app.File f : bluewave.app.File.find("name=",fileName)){
                 javaxt.io.File file = new javaxt.io.File(f.getPath().getDir() + f.getName());
-                if (file.getName().equalsIgnoreCase(folderName) && file.exists()){
-                    if (isValidPDF(file)) return new ServiceResponse(file);
+                if (file.getName().equalsIgnoreCase(fileName) && file.exists()){
+                    if (isValidPDF(file)){
+                        if (returnID){
+                            bluewave.app.Document[] arr = bluewave.app.Document.find("FILE_ID=",f.getID());
+                            return new ServiceResponse(arr[0].getID()+"");
+                        }
+                        else{
+                            return new ServiceResponse(file);
+                        }
+                    }
                 }
             }
 
@@ -493,7 +502,14 @@ public class DocumentService extends WebService {
             );
 
             javaxt.io.File file = new javaxt.io.File(dir, fileName);
-            if (file.exists() && isValidPDF(file)) return new ServiceResponse(file);
+            if (file.exists() && isValidPDF(file)){
+                if (returnID){
+                    //Find file?
+                }
+                else{
+                    return new ServiceResponse(file);
+                }
+            }
 
 
 
@@ -626,8 +642,14 @@ public class DocumentService extends WebService {
                 }
 
 
-              //Return file
-                return new ServiceResponse(file);
+              //Return response
+                if (returnID){
+                    return new ServiceResponse(doc.getID()+"");
+                }
+                else{
+                    return new ServiceResponse(file);
+                }
+
             }
             else{
                 return new ServiceResponse(500, "Failed to merge PDF");
