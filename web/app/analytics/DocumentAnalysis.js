@@ -1462,19 +1462,27 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 var arr = folders[folderName];
                 var size = 0;
                 var date = 0;
+                var highlightFragment = null;
                 arr.forEach((doc)=>{
                     size+=doc.size;                    
                     date = Math.max(Date.parse(doc.date), date);
+                    if (!highlightFragment){
+                        if (doc.info){
+                            if (doc.info.highlightFragment){
+                                highlightFragment = doc.info.highlightFragment;
+                            }
+                        }
+                    }
                 });
                 
                 data.push({
                     name: folderName + ".pdf",
                     size: size,
-                    //type: "Remote Folder",
+                    type: "Remote",
                     date: new Date(date),
                     documents: arr,
                     info: {
-                        highlightFragment: arr[0].highlightFragment
+                        highlightFragment: highlightFragment
                     }
                 });
             }
