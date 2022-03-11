@@ -540,6 +540,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             };
             ratings.update(this);
             this.matchingD.select();
+            this.matchingTag.hide();
         };
 
         tag.removeSimilarity = function(){
@@ -550,11 +551,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
             this.showTooltip();
             this.matchingD.highlight();
+            this.matchingTag.hide();
         };
 
         tag.onmouseleave = function(){
             // this.d.clear();
-            if (!this.matchingD.isSelected) this.matchingD.clear();
+            if (!this.matchingD.isSelected){
+                this.matchingD.clear();
+                this.matchingTag.show();
+            }
         };
 
         tag.showTooltip = function(){
@@ -565,6 +570,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         tag.clear = function(){ // called by ratings when a new tag is selected
             this.matchingD.clear();
+            this.matchingTag.show();
         };
 
         return tag;
