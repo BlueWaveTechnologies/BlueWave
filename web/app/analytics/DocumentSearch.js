@@ -128,23 +128,9 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         searchBar.onChange = function(q){
             // console.log(q);
         };
-        searchBar.getSearchTerms = function(q){
-            if (!q) q = searchBar.getValue();
-            // if (typeof q === 'string'){
 
-            //     var q = q.split(/"|'/);
-
-            //     var ignoredSearches = new Set(["", " "]);
-            //     q = q.filter((queryParam) => {
-            //         return !ignoredSearches.has(queryParam);
-            //     });
-            //     for (let value in q) q[value] = q[value].trim();
-
-            // }
-            return q;
-        };
         searchBar.onSearch = function(q){
-            q = searchBar.getSearchTerms(q);
+            if (!q) q = searchBar.getValue();
             grid.update(q);
         };
         searchBar.onClear = function(){
@@ -308,8 +294,6 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
         grid.update = function(q){
-            console.log("logging query as it's passed to java")
-            console.log(q);
             if (q) params.q = q;
             else delete params.q;
             grid.clear();
