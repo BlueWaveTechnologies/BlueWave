@@ -345,7 +345,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** createRatings
   //**************************************************************************
     var createRatings = function(){ // lazy loaded when a new img is pulled up
-        var thumbsDown, thumbsUp, tag;
+        var thumbsDown, thumbsUp;
             var div = document.createElement("div");
             div.style.position = "absolute";
             div.style.width = "100%"; // temporary styling - strange
@@ -356,8 +356,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             ratings = document.createElement("div");
             ratings.className = "doc-compare-panel-ratings";
             addShowHide(ratings);
-            ratings.hide();
-            ratings.show();
 
             div.appendChild(ratings);
             var div = document.createElement("div");
@@ -372,13 +370,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var thumbsDown = document.createElement("i");
                 thumbsDown.className = "fas fa-thumbs-down";
 
-
-            ratings.clear = function(){
-                console.log("ratings clear called");
-                // clear any selection
-
-            };
-
             ratings.detach = function(){
                 // if ratings container div is attached somewhere within the dom, detach it
                     if (this.parentNode.parentNode ) this.parentNode.parentNode.removeChild(this.parentNode);
@@ -390,14 +381,29 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             };
 
             ratings.update = function(t){
-                console.log("updating with this object", t);
+                if (this.tag){
+                    this.tag.clear(); // deSelect tag
+                };
                 this.detach();
+                console.log("updating with this object", t);
                 ratings.attach(t.parentNode);
                 ratings.clear();
                 this.tag = t;
                 this.thumbsDown.tag = t;
                 this.thumbsUp.tag = t;
                 ratings.show();
+            };
+
+
+            ratings.disApproveSimilarity = function(){ // TODO: add server event handler - passing information via URL
+                this.tag.removeSimilarity();
+                this.tag.remove();
+                this.tag.matchingTag.remove();
+
+            };
+
+            ratings.approveSimilarity = function(){ // TODO: add server event handler - passing information via URL
+
             };
 
             ratings.appendChild(thumbsUp);
@@ -407,25 +413,19 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             thumbsUp.onclick = function(){
                 console.log("clicked the thumbsup button");
-                this.tag.approveSimilarity();
+                ratings.approveSimilarity();
                 ratings.hide();
             };
 
             thumbsDown.onclick = function(){
                 console.log("clicked the thumbsDown button");
-                this.tag.removeSimilarity();
+                ratings.disApproveSimilarity();
                 ratings.hide();
             };
 
+
+
             return ratings;
-            // return {
-            //     el:el,
-            //     clear: function(){
-            //     },
-            //     update: function(){
-            //         el.clear();
-            //     }
-            // };
         };
 
 
@@ -457,7 +457,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             d.originalY = y*img.height;
 
         d.rescale = function(scaleW, scaleH){
-            console.log("rescale called for d!");
 
             var newHeight = this.originalHeight * scaleH;
             var newWidth = this.originalWidth * scaleW;
@@ -478,9 +477,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         d.select = function(){
-            console.log("selected this similarity div");
-            // if its already selected then return
-                if (this.isSelected) return;
             this.isSelected = true;
             this.highlight();
             this.scrollIntoView(true); // add this later for scrolling to the highlighted element in the right-hand view
@@ -489,8 +485,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         d.highlight = function(){
-            this.style.backgroundColor = "blue"; // add a class to replace this, active class
-            this.style.opacity = "50%"; // add a class to replace this, active class
+            this.style.backgroundColor = "red"; // add a class to replace this, active class
+            this.style.opacity = "35%"; // add a class to replace this, active class
         };
 
         d.removeSimilarity = function(){
@@ -529,7 +525,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             tag.originalY = y*img.height;
 
         tag.rescale = function(scaleW, scaleH){
-            console.log("rescale called for tag!");
             var newX = this.originalX * scaleW;
             var newY = this.originalY * scaleH;
 
@@ -543,40 +538,36 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             if (!ratings) {
                 ratings = createRatings();
                 ratings.attach(this.parentNode);
-            }
+            };
             ratings.update(this);
-            console.log("the type of this is");
-            console.log(this.type);
+            this.matchingD.select();
         };
 
         tag.removeSimilarity = function(){
-            this.hide();
-            this.d.removeSimilarity();
-            this.matchingTag.removeSimilarity();
             this.matchingD.removeSimilarity();
+            this.d.removeSimilarity();
         };
 
         tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
-            console.log("mouse is hovering over tag");
-            console.log(this.type);
-            console.log("logging tag matching pairs");
-            console.log(this.matchingTag);
-            console.log(this.matchingD);
             this.showTooltip();
             this.matchingD.highlight();
         };
 
         tag.onmouseleave = function(){
             // this.d.clear();
-            this.matchingD.clear();
-
-        }
+            if (!this.matchingD.isSelected) this.matchingD.clear();
+        };
 
         tag.showTooltip = function(){
+            console.log(this.type);
             console.log("calling show tooltip");
             console.log("not yet implemented!")
-
         };
+
+        tag.clear = function(){ // called by ratings when a new tag is selected
+            this.matchingD.clear();
+        };
+
         return tag;
     };
 
