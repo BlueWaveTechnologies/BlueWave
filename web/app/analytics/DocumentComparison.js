@@ -402,7 +402,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             };
 
             ratings.approveSimilarity = function(){ // TODO: add server event handler - passing information via URL
-
+                this.tag.clear();
             };
 
             ratings.appendChild(thumbsUp);
@@ -580,6 +580,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** createComparisonPanel
   //**************************************************************************
     var createComparisonPanel = function(){
+        console.log("create comparison panel called!");
 
       //Create table
         var table = createTable();
