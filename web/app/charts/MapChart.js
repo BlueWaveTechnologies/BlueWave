@@ -797,7 +797,23 @@ bluewave.charts.MapChart = function(parent, config) {
             var midPointArr = [];
 
             //Skip midpoint calculation if the path is short
-            if (distance(path[0], path[path.length-1]) < 10) continue;
+            var p = projection(path[0]);
+            var q = projection(path[path.length-1]);
+            var w = parent.offsetWidth;
+            
+            var dist = distance(p, q);
+            //Actually incorrect but looks the best lol
+            if (distance(path[0], path[path.length-1]) < 10 ) continue;
+            // if (dist > w/2) continue;
+            // if (dist < 100 || dist > w/2) continue;
+
+            // if (dist < 100){
+
+            //   newFeatures.push(path);
+            //   continue;
+            // } 
+
+            
 
             for (var j=0; j<path.length-1; j++){
 
@@ -851,15 +867,14 @@ bluewave.charts.MapChart = function(parent, config) {
             var pCoord = projection(coord);
             node.x = pCoord[0];
             node.y = pCoord[1];
-// if (i<10) console.log(pCoord)
-            // var nodesLength = layer.features.length * layer.features[0].length;
+
 
             //Make source and target fixed position
             if (j===0 || j===nodes.length-1){
               node.fx = node.x;
               node.fy = node.y;
             }
-// if (i<10) console.log(node)
+
             bundle.nodes.push(node);
             bundle.paths[i].push(node)
           })
@@ -897,6 +912,17 @@ bluewave.charts.MapChart = function(parent, config) {
 console.log("features", features)
 console.log(bundle)
 
+        //Display nodes for testing
+        // var nodeData = bundle.nodes.slice()
+        // var circles = g.selectAll("circles")
+        // .data(nodeData)
+        // .enter()
+        // .append("circle")
+        // .attr("cx", d=>d.x)
+        // .attr("cy", d=>d.y)
+        // .attr("r", 1)
+        // .attr("fill", "red")
+        // .style("stroke", "red");
 
 
         var lines = g.selectAll("*")
@@ -929,43 +955,44 @@ console.log(bundle)
           if(lineStyle==="dotted") return "round";
         });
 
+
+      if (bundleLines === true) {
         //Force simulation
         var layout = d3.forceSimulation()
-        // settle at a layout faster
-        .alphaDecay(0.1)
-        // nearby nodes attract each other
-        .force("charge", d3.forceManyBody()
-          .strength(1)
-          .distanceMax(36)
-        )
-        // edges want to be as short as possible
-        // prevents too much stretching
-        .force("link", d3.forceLink()
-          .strength(0.7)
-          .distance(0)
-        )
-        .on("tick", function (d) {
-          lines.attr("d", line);
-        })
-        .on("end", function (d) {
-          console.log("layout complete");
-        })
+          // settle at a layout faster
+          .alphaDecay(0.1)
+          // nearby nodes attract each other
+          .force("charge", d3.forceManyBody()
+            .strength(1)
+            .distanceMax(36)
+          )
+          // edges want to be as short as possible
+          // prevents too much stretching
+          .force("link", d3.forceLink()
+            .strength(0.7)
+            .distance(0)
+          )
+          .on("tick", function (d) {
+            lines.attr("d", line);
+            // circles.attr("cx", d=>d.x).attr("cy", d=>d.y)
 
-        if (!bundleLines){
-          layout.stop()
-        }else if (bundleLines === true){
-          layout.nodes(bundle.nodes).force("link").links(bundle.links);
-        }
+          })
+          .on("end", function (d) {
+            console.log("layout complete");
+          })
         // .stop()
+
+        layout.nodes(bundle.nodes).force("link").links(bundle.links);
+
+        // for (var i = 0; i < 100; ++i) layout.tick();
+        //  layout.tick()
+        //  circles.attr("cx", d=>d.x).attr("cy", d=>d.y)
+        // lines.attr("d", line)
+      }
 console.log(layer.features)
 console.log(bundle)
 
               
-              // for (var i = 0; i < 100; ++i) layout.tick();
-         
-              // lines.attr("d", line)
-
-
         layer.elements = lines;
     };
 
