@@ -130,17 +130,17 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         };
         searchBar.getSearchTerms = function(q){
             if (!q) q = searchBar.getValue();
-            if (typeof q === 'string'){
+            // if (typeof q === 'string'){
 
-                var q = q.split(/"|'/);
+            //     var q = q.split(/"|'/);
 
-                var ignoredSearches = new Set(["", " "]);
-                q = q.filter((queryParam) => {
-                    return !ignoredSearches.has(queryParam);
-                });
-                for (let value in q) q[value] = q[value].trim();
+            //     var ignoredSearches = new Set(["", " "]);
+            //     q = q.filter((queryParam) => {
+            //         return !ignoredSearches.has(queryParam);
+            //     });
+            //     for (let value in q) q[value] = q[value].trim();
 
-            }
+            // }
             return q;
         };
         searchBar.onSearch = function(q){
@@ -267,7 +267,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 else{
                     row.set("Name", record.name);
                 }
-                
+
                 var addSpan = function(label){
                     var span = document.createElement("span");
                     span.className = "document-search-info";
@@ -291,7 +291,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                     size = formatNumber(Math.round(size/1024)) + " KB";
                 }
                 row.set("Size", addSpan(size));
-                
+
                 if (record.type) row.set("Type", addSpan(record.type));
             }
         });
@@ -308,6 +308,8 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
 
 
         grid.update = function(q){
+            console.log("logging query as it's passed to java")
+            console.log(q);
             if (q) params.q = q;
             else delete params.q;
             grid.clear();
