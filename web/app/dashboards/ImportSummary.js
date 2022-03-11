@@ -838,10 +838,33 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             height: "360px"
         });
         dashboardItem.el.style.margin = "0px";
-        //dashboardItem.el.style.display = "table";
-        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{
 
-        });
+        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv);
+        var chartConfig = {
+            xAxis: "Exams",
+            yAxis: "yAxis",
+            xGrid: true,
+            yGrid: true,
+            xLabel: true,
+            yLabel: false,
+            pointLabels: true,
+            showTooltip: true
+        };
+        
+        scatterChart.getPointLabel = function(d){
+            return d.label;
+        };
+        
+        scatterChart.getPointColor = function(d){
+            if (d.failedExams>0) return "#e66869";
+            return "#6699cc";
+        };
+        
+        scatterChart.getTooltipLabel = function(d){
+            return d.label + "<br/>" + d.Exams + " Exam" + (d.Exams===1 ? "" : "s");
+        };        
+        
+        
         scatterChart._update = scatterChart.update;
         scatterChart.update = function(){
 
@@ -868,28 +891,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 }
             });
 
-            scatterChart._update({
-                xAxis: "Exams",
-                yAxis: "yAxis",
-                xGrid: true,
-                yGrid: true,
-                xLabel: true,
-                yLabel: false,
-                margin: {
-                    top: 15,
-                    right: 65,
-                    bottom: 32,
-                    left: 82
-                },
-                pointLabels: true,
-                getPointLabel: function(d){
-                    return d.label;
-                },
-                getPointColor: function(d){
-                    if (d.failedExams>0) return "#e66869";
-                    return "#6699cc";
-                }
-            },[chartData]);
+            scatterChart._update(chartConfig,[chartData]);
         };
     };
 
