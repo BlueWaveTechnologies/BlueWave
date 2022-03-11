@@ -435,7 +435,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var createSimilarityOutlineBox = function(bbox, img){
 
 
-
         var x = bbox[0];
         var y = bbox[1];
         var w = bbox[2]-x;
@@ -553,17 +552,24 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tag.removeSimilarity = function(){
             this.hide();
             this.d.removeSimilarity();
+            this.matchingTag.removeSimilarity();
+            this.matchingD.removeSimilarity();
         };
 
         tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
             console.log("mouse is hovering over tag");
             console.log(this.type);
+            console.log("logging tag matching pairs");
+            console.log(this.matchingTag);
+            console.log(this.matchingD);
             this.showTooltip();
-            this.d.highlight();
+            this.matchingD.highlight();
         };
 
         tag.onmouseleave = function(){
-            this.d.clear();
+            // this.d.clear();
+            this.matchingD.clear();
+
         }
 
         tag.showTooltip = function(){
@@ -643,68 +649,117 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
       //Function used to create an image
-        var createPreview = function(file, page, parent, boxes){
+        var createPreview = function(file, page, parent, boxes, matchingImg){
             parent.innerHTML = "";
             var i = document.createElement("i");
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
-            img.onload = function(){
-                img = this;
 
+            if (matchingImg){
+                img.matchingImg = matchingImg;
+                img.isFirstDocument = false;
+            }
+            else{
+                img.matchingImg = null;
+                img.isFirstDocument = true;
+            };
+
+
+            if (!img.isFirstDocument){ // render left image first and then load this (right) image
+                img.onload = function(){
+                    img = this;
+                    setTimeout(function(){
+                        getImages(img).forEach((rightImage)=>{
+                            getImages(rightImage.matchingImg).forEach((leftImage)=>{
+                                leftImage.matchingImg = rightImage; // add match reference
+                                leftImage.LoadOverlay();  // render left image
+                                rightImage.matchingImg = leftImage; // update matched reference
+                                rightImage.LoadOverlay(); // render right image
+                            });
+                        });
+                    }, 1200); //add slight delay for the carousel to finish sliding
+                };
+            };
+
+
+
+            img.LoadOverlay = function (){
+                img = this;
               // set original width/height for determining scaling for tag & d elements
                 var rect = javaxt.dhtml.utils.getRect(img);
                 img.originalHeight = rect.height;
                 img.originalWidth = rect.width;
 
+                    var int = 0;
+                    img.d = [];
+                    img.tag = [];
+                    for ( var i=0; i<boxes.length; i++){
+                        var box = boxes[i];
 
-                setTimeout(function(){
-                    getImages(img).forEach((img)=>{
-                        var int = 0;
-                        img.d = [];
-                        img.tag = [];
-                        boxes.forEach((box)=>{
-                            var type = box.type;
-                            int++;
+                        var type = box.type;
+                        int++;
 
-                            var d = createSimilarityOutlineBox(box.boxes, img);
-                            var tag = createSimilarityTag(box.boxes, int, img);
-                            tag.d = d;
-                            tag.type = type;
+                        var updateMatchingImg = function(){
 
-                            img.d.push(d);
-                            img.tag.push(tag);
-                            img.parentNode.appendChild(d);
-                            img.parentNode.appendChild(tag);
-                            addShowHide(d);
-                            addShowHide(tag);
+                            // update matching img object references to link to this created tag
+                                img.matchingImg.matchingImg = img; // set the matching imgs' pair to reflect this img
+                                tag.matchingTag = img.matchingImg.tag[i];
+                                tag.matchingD = img.matchingImg.d[i];
+                                if (!img.matchingImg.matchingD){
+                                        img.matchingImg.matchingD = [];
+                                };
+                                if (!img.matchingImg.matchingTag){
+                                    img.matchingImg.matchingTag = [];
+                                };
 
-                            // set resize listeners
-                            var resizeListener = function(){
-                                var rect = javaxt.dhtml.utils.getRect(img);
-                                var scaleByH = rect.height / img.originalHeight;
-                                var scaleByW = rect.width / img.originalWidth;
+                                img.matchingImg.matchingD[i] = d;
+                                img.matchingImg.matchingTag[i] = tag;
 
-                                var dElements = img.d; // a list of the d elements associated with the image
-                                dElements.forEach((d)=>{
-                                    d.rescale(scaleByW,scaleByH);
-                                });
+                                img.matchingImg.tag[i].matchingTag = tag;
+                                img.matchingImg.tag[i].matchingD = d;
+                        };
 
-                                var tagElements = img.tag; // a list of tag elements associated with the image
-                                tagElements.forEach((tag)=>{
-                                    tag.rescale(scaleByW,scaleByH);
-                                });
-                            };
+                        var d = createSimilarityOutlineBox(box.boxes, img);
+                        var tag = createSimilarityTag(box.boxes, int, img);
 
-                            addResizeListener(parent, resizeListener);
+                        if (!img.isFirstDocument){
+                            updateMatchingImg();
+                        };
 
+                        tag.d = d;
+                        tag.type = type;
 
-                        });
-                    });
-                }, 1200); //add slight delay for the carousel to finish sliding
+                        img.d.push(d);
+                        img.tag.push(tag);
+                        img.parentNode.appendChild(d);
+                        img.parentNode.appendChild(tag);
+                        addShowHide(d);
+                        addShowHide(tag);
+
+                        // set resize listeners
+                        var resizeListener = function(){
+                            var rect = javaxt.dhtml.utils.getRect(img);
+                            var scaleByH = rect.height / img.originalHeight;
+                            var scaleByW = rect.width / img.originalWidth;
+
+                            var dElements = img.d; // a list of the d elements associated with the image
+                            dElements.forEach((d)=>{
+                                d.rescale(scaleByW,scaleByH);
+                            });
+
+                            var tagElements = img.tag; // a list of tag elements associated with the image
+                            tagElements.forEach((tag)=>{
+                                tag.rescale(scaleByW,scaleByH);
+                            });
+                        };
+                        addResizeListener(parent, resizeListener);
+                    };
             };
+
             parent.appendChild(img);
+            return img;
         };
 
 
@@ -718,6 +773,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     var images = panels[i].getElementsByTagName("img");
                     for (var j=0; j<images.length; j++){
                         if (images[j].src===img.src){
+                            images[j].matchingImg = img.matchingImg;
+                            images[j].isFirstDocument = img.isFirstDocument;
+                            images[j].LoadOverlay = img.LoadOverlay;
                             arr.push(images[j]);
                         }
                     }
@@ -776,8 +834,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
               //Get boxes
                 var leftBoxes = [];
                 var rightBoxes = [];
-                suspiciousPairs.forEach((suspiciousPair)=>{
 
+                suspiciousPairs.forEach((suspiciousPair)=>{
                     var leftBox = null;
                     var rightBox = null;
 
@@ -806,8 +864,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
-                createPreview(leftFile, leftPage, leftPanel, leftBoxes);
-                createPreview(rightFile, rightPage, rightPanel, rightBoxes);
+                var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes);
+                createPreview(rightFile, rightPage, rightPanel, rightBoxes, leftSideImg);
 
                 leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
                 rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
