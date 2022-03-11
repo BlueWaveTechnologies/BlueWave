@@ -387,7 +387,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 this.detach();
                 console.log("updating with this object", t);
                 ratings.attach(t.parentNode);
-                ratings.clear();
                 this.tag = t;
                 this.thumbsDown.tag = t;
                 this.thumbsUp.tag = t;
