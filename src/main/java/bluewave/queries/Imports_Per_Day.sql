@@ -1,5 +1,6 @@
 MATCH (n:import_line)
 WHERE n.country_of_origin IN[{country}]
+AND n.product_code IN[{product_code}]
 AND toFloat(n.predict_risk)>={threshold}
 RETURN
 n.date as date,
