@@ -2,6 +2,7 @@ package bluewave;
 import bluewave.app.User;
 import bluewave.data.*;
 import bluewave.graph.Neo4J;
+import bluewave.utils.RegexExtractor;
 import bluewave.web.WebApp;
 import bluewave.web.services.DocumentService;
 
@@ -511,6 +512,45 @@ public class Main {
             }
 
             console.log("done! hits: " + totalHits);
+        }
+        else if (test.equalsIgnoreCase("extract")){
+            // java -jar target/bluewave-1.0.0.jar -config config.json -test extract -type phone -text "Call me sometime at 555 896 8980 I'll be home at noon"
+            String type = args.get("-type");
+            JSONArray results = null;
+            switch(type) {
+                case "email":
+                    // "bla bla <alex@stackhowto.com> && mail:emily@gmail.com"
+                   results = new RegexExtractor().email(args.get("-text"));
+                   break;
+                case "phone":
+                    /*
+                    "Call me sometime at 555 896 8980 I'll be home at noon"
+                    "Call 1(156)5554343 me sometime at 555 896 8980 I'll be home at noon"
+                    "Call +1(156)5554343 me sometime at 555 896 8980 I'll be home at noon"
+                    */
+                   results = new RegexExtractor().phone(args.get("-text"));
+                   break;
+                case "ip":
+                    /*
+                    "Goto this site www.google.com or google.com and then go to 192.168.0.1 and be done"
+                    */
+                   results = new RegexExtractor().ipAddress(args.get("-text"));
+                   break;    
+                case "url":
+                    /*
+                    "Goto this site www.google.com or google.com and then go to 192.168.0.1 and be done"
+                    */                
+                   results = new RegexExtractor().url(args.get("-text"));
+                   break;                                    
+                default: console.log("Bad arg."); return;
+            }
+            if(results == null || results.isEmpty()){    
+                console.log("Found no matches."); 
+                return;
+            }
+            
+            console.log(results.toString());
+
         }
         else{
             console.log("Unsupported test: " + test);
