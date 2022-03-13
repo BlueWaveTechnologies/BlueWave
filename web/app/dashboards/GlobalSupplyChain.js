@@ -29,6 +29,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
     var countryNames = {};
     var worldMapIsReady = false;
 
+    var importsByCountry = [];
     var productCodes = {};
     var popup, importSummary, usMap; //popup windows
     var tooltip;
@@ -80,6 +81,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         dashboardPanel.clear();
         if (importSummary) importSummary.hide();
         if (popup) popup.hide();
+        importsByCountry = [];
     };
 
 
@@ -240,6 +242,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             //get("test/imports/country_of_origin.csv", {
                 success: function(text) {
                     var data = d3.csvParse(text);
+                    importsByCountry = data;
 
                   //Get product codes and values
                     var productValues = {};
@@ -378,7 +381,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                     countries[d.country_of_origin] = d.country_of_origin;
                 });
             }
-            showImportSummary(Object.keys(countries), label);
+            showImportSummary(label);
         });
     };
 
@@ -957,7 +960,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                         showUSMap(data);
                     }
                     else{
-                        showImportSummary(Object.keys(countries), countryCode);
+                        showImportSummary(countryCode);
                     }
                 //}
             },
@@ -1177,7 +1180,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
   //**************************************************************************
   //** showImportSummary
   //**************************************************************************
-    var showImportSummary = function(countryCodes, countryCode){
+    var showImportSummary = function(countryCode){
         if (!importSummary){
             var win = new javaxt.dhtml.Window(document.body, {
                 title: "Import Summary",
@@ -1199,7 +1202,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
         importSummary.clear();
         importSummary.show();
-        importSummary.update(Object.keys(productCodes), countryCodes, countryCode);
+        importSummary.update(importsByCountry, countryCode);
     };
 
 
