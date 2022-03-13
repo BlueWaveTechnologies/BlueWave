@@ -1513,26 +1513,76 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
-/** Global Supply Chain Dashboard
+/** Import Dashboards
 /**************************************************************************/
 
+.import-summary-header {
+    height: 75px;
+}
+
+.import-summary-header td {
+    padding:10px 0 10px 10px;
+}
+
+.import-summary-header-logo {
+    width: 50px;
+    height: 50px;
+    display: inline-block;
+    background-color: #0f6391;
+    color: #fff;
+    border-radius: 50%;
+    line-height: 50px;
+    text-align: center;
+    font-size: 20px;
+    border: 2px solid #3cbaff;
+}
+
+.import-summary-header-title {
+    display: inline-block;
+    font-size: 30px;
+    padding: 0 0 0 7px;
+    color: #004164;
+}
+
+.import-summary-header-stats {
+    width: 200px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    text-align: center;
+    height: 100%;
+}
+
+.import-summary-header-stats div:first-child {
+  font-size: 30px;
+}
+
+.import-summary-header-stats div:last-child {
+  color: #686868;
+}
+
+
+.import-summary .tick,
 .global-supply-chain .tick {
     color: #777;
 }
 
+.import-summary .chart-title,
 .global-supply-chain .chart-title {
     font-size: 13px;
     text-align: left;
 }
 
+.import-summary .dashboard-item,
 .global-supply-chain .dashboard-item {
     margin: 0;
     padding: 7px;
 }
 
+.import-summary .dashboard-item-settings,
 .global-supply-chain .dashboard-item-settings {
     font-size: 13px;
 }
+
 
 .global-supply-chain .sankey-node text {
     font-size: 11px;
