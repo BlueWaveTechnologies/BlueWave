@@ -13,9 +13,11 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
     var me = this;
     var title = "Import Summary";
+    var header;
     var grid;
     var data = [];
     var lineData = [];
+    var countryNames = {};
     var countryOptions, productOptions, establishmentOptions; //dropdowns
     var slider, thresholdInput;
     var lineChart, barChart, scatterChart;
@@ -34,11 +36,60 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         waitmask = config.waitmask;
 
 
+        var mainDiv = document.createElement("div");
+        mainDiv.className = "import-summary center";
+        mainDiv.style.position = "relative";
+        mainDiv.style.height = "100%";
+        parent.appendChild(mainDiv);
+        me.el = mainDiv;
+        
+        
+
       //Create main table
         var table = createTable();
-        var tbody = table.firstChild;
+        var tbody = table.firstChild;        
         var tr, td;
+        mainDiv.appendChild(table);
 
+
+      //Create header
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.className = "import-summary-header";
+        tr.appendChild(td);
+        createHeader(td);
+        
+        
+      //Create body
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.verticalAlign = "top";
+        tr.appendChild(td);
+        
+        var outerDiv = document.createElement("div");
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflowX = "hidden";
+        outerDiv.style.overflowY = "auto";
+        outerDiv.style.height = "100%";
+        td.appendChild(outerDiv);
+        
+        
+        var innerDiv = document.createElement("div");
+        innerDiv.style.position = "absolute";
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        outerDiv.appendChild(innerDiv);
+        
+        
+        
+        table = createTable();
+        table.style.height = "";
+        innerDiv.appendChild(table);
+        tbody = table.firstChild;
+        
 
       //Create toolbar
         tr = document.createElement("tr");
@@ -53,7 +104,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         tbody.appendChild(tr);
         td = document.createElement("td");
         td.style.width = "100%";
-        td.style.height = "100%";
+        td.style.height = "450px";
         tr.appendChild(td);
         createGrid(td);
 
@@ -66,9 +117,6 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         tr.appendChild(td);
         createCharts(td);
 
-
-        parent.appendChild(table);
-        me.el = table;
     };
 
 
@@ -101,83 +149,84 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(productCodes, countryCodes, defaultCountry){
+    this.update = function(importsByCountry, defaultCountry){
         me.clear();
+        
 
-        var onReady = function(){
-            productOptions.setValue("All", true);
-            if (!defaultCountry) defaultCountry = "TH"; //Select Thailand by default for demo purposes
-            countryOptions.setValue(defaultCountry, true);
-            update();
-        };
+        var onReady = function(data){
 
+          //Get product codes and values
+            var productValues = {};
+            var countryValues = {};
+            data.forEach((d)=>{
+                var val = parseFloat(d.lines);
+                var productCode = d.product_code;
+                var countryCode = d.country_of_origin;
 
-        if (arguments.length===0){
-
-          //Get data and populate the dropdowns
-            waitmask.show(500);
-            getData("Imports_Products", function(csv){
-
-                var productCodes = [];
-                var uniqueCountries = {};
-
-              //Parse csv
-                var rows = parseCSV(csv, ",");
-                for (var i=1; i<rows.length; i++){ //skip header
-                    var col = rows[i];
-                    var productCode = col[0];
-                    var productCount = parseFloat(col[1]);
-                    var countries = getArray(col[2]);
-
-                    productCodes.push(productCode);
-                    for (var j=0; j<countries.length; j++){
-                        uniqueCountries[countries[j]] = true;
-                    }
-                }
-
-
-              //Update productOptions
-                productCodes.sort();
-                for (var i=0; i<productCodes.length; i++){
-                    var productCode = productCodes[i];
-                    productOptions.add(productCode, productCode);
-                }
-
-
-              //Update countryOptions
-                var arr = [];
-                for (var country in uniqueCountries) {
-                    if (uniqueCountries.hasOwnProperty(country)){
-                        arr.push(country);
-                    }
-                }
-                arr.sort();
-                for (var i=0; i<arr.length; i++){
-                    var country = arr[i];
-                    countryOptions.add(country, country);
-                }
-
-
-                onReady();
-
-                waitmask.hide();
+                var currVal = productValues[productCode];
+                if (isNaN(currVal)) currVal = 0;
+                productValues[productCode] = currVal + val;
                 
-                
+                currVal = countryValues[countryCode];
+                if (isNaN(currVal)) currVal = 0;
+                countryValues[countryCode] = currVal + val;
             });
-        }
-        else{
 
+
+          //Update productOptions
+            var productCodes = Object.keys(productValues);    
+            productCodes.sort();
             productCodes.forEach((productCode)=>{
                 productOptions.add(productCode, productCode);
             });
 
-            countryCodes.forEach((countryCode)=>{
+
+          //Update country pulldowns
+            var uniqueCountries = Object.keys(countryValues);
+            uniqueCountries.sort();
+            uniqueCountries.forEach((countryCode)=>{
+                //var label = countryCode + " - " + countryNames[countryCode];
                 countryOptions.add(countryCode, countryCode);
             });
             
-            onReady();
+            
 
-        }
+          //Update pulldowns
+            productOptions.setValue("All", true);
+            if (!defaultCountry) defaultCountry = "TH"; //Select Thailand by default for demo purposes
+            countryOptions.setValue(defaultCountry, true);
+            header.update(countryValues, defaultCountry);
+            update();
+        };
+
+
+
+
+
+        waitmask.show(500);
+        bluewave.utils.getMapData(function(mapData){
+            mapData.countries.features.forEach((feature)=>{
+                var p = feature.properties;
+                countryNames[p.code] = p.name;
+            });
+            
+            if (!importsByCountry){
+                get("import/ProductCode?include=country_of_origin", {
+                    success: function(csv){ 
+                        onReady(d3.csvParse(csv));
+                        waitmask.hide();
+                    },
+                    failure: function(request){
+                        alert(request);
+                        waitmask.hide();
+                    }
+                });
+            }
+            else{
+                onReady(importsByCountry);
+                waitmask.hide();
+            }
+        });
     };
 
 
@@ -485,6 +534,109 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
   //**************************************************************************
+  //** createHeader
+  //**************************************************************************
+    var createHeader = function(parent){
+
+        var table = createTable();        
+        var tbody = table.firstChild;
+        var tr, td;
+        
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        
+        td = document.createElement("td");
+        td.style.width = "100%";
+        tr.appendChild(td);
+        
+        var iconDiv = document.createElement("div");
+        iconDiv.className = "import-summary-header-logo";
+        td.appendChild(iconDiv);
+        
+        var titleDiv = document.createElement("div");
+        titleDiv.className = "import-summary-header-title";
+        td.appendChild(titleDiv);        
+        
+        
+        var addStats = function(){
+            td = document.createElement("td");
+            tr.appendChild(td);
+            
+            var div = document.createElement("div");
+            div.className = "import-summary-header-stats";
+            td.appendChild(div);
+            
+            var stat = document.createElement("div");
+            div.appendChild(stat);
+            
+            var text = document.createElement("div");
+            div.appendChild(text);            
+            
+            return {
+                update: function(a, b){
+                    stat.innerText = a;
+                    text.innerText = b;
+                }
+            };
+        };
+        
+        var rank = addStats();
+        var percentRank = addStats();
+        var totalLines = addStats();
+        
+        parent.appendChild(table);
+        
+        
+        
+        
+        header = {
+            update: function(countryValues, countryCode){
+                
+                iconDiv.innerText = countryCode;
+                titleDiv.innerText = countryNames[countryCode];
+                
+                
+                var total = 0;
+                var target = 0;
+                var arr = [];
+                for (var key in countryValues){
+                    if (countryValues.hasOwnProperty(key)){
+                        var val = countryValues[key];
+                        total+=val;
+                        if (key===countryCode){
+                            target = val;
+                            totalLines.update(formatNumber(target), "Total lines");
+                        }
+                        arr.push({
+                            countryCode: key,
+                            value: val
+                        });
+                    }
+                }
+                
+                arr.sort((a, b)=>{
+                    return b.value - a.value;
+                });
+                arr.every((d, i)=>{
+                    if (d.countryCode===countryCode){
+                        var pos = i+1;
+                        if (pos===1) pos+="st";
+                        else if (pos===2) pos+="nd";
+                        else if (pos===3) pos+="rd";
+                        else if (pos===4) pos+="th";
+                        rank.update(pos, "Largest manufacturer");
+                        return false;
+                    }
+                    return true;
+                });
+                percentRank.update(Math.round((target/total)*100)+"%", "Imports into the US");
+            }
+        };
+        
+    };
+
+
+  //**************************************************************************
   //** createToolbar
   //**************************************************************************
     var createToolbar = function(parent){
@@ -621,25 +773,58 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             update: function(row, d){
                 var name = d.name;
                 if (d.fei.length>1) name += " (" + formatNumber(d.fei.length) + ")";
-                row.set('Name', name);
+                //row.set('Name', name);
+                
+                var link = document.createElement("a");
+                link.innerText = name;
+                link.record = d;
+                link.onclick = function(){
+                    showCompanyProfile(this.record);
+                };
+                var div = document.createElement("div");
+                div.className = "document-analysis-comparison-results";
+                div.appendChild(link);
+                row.set('Name', div);
+                
+                
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
                 row.set('Total Lines', formatNumber(d.totalLines));
+                
+                
+                var addIcon = function(label){
+                    var summary = document.createElement("div");
+                    summary.className = "document-analysis-comparison-results";
+                    var icon = document.createElement("div");
+                    icon.className = "fas fa-exclamation-triangle";
+                    summary.appendChild(icon);
+                    var span = document.createElement("span");
+                    span.innerText = label;
+                    summary.appendChild(span);
+                    return summary;
+                };
+                
                 if (d.fieldExams>0){
                     var str = formatNumber(d.fieldExams);
-                    if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
+                    if (d.failedFieldExams>0){ 
+                        str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
+                        str = addIcon(str);
+                    }
                     row.set('Field Exams', str);
                 }
                 if (d.labelExams>0){
                     var str = formatNumber(d.labelExams);
-                    if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";
+                    if (d.failedLabelExams>0){ 
+                        str += " (" + formatNumber(d.failedLabelExams) + " Failed)";
+                        str = addIcon(str);
+                    }
                     row.set('Label Exams', str);
                 }
                 if (d.totalSamples>0){
                     var str = formatNumber(d.totalSamples);
                     if (d.badSamples>0){
                         str += " (" + formatNumber(d.badSamples) + " Bad)";
-
+                        str = addIcon(str);
                     }
                     row.set('Samples', str);
                 }
