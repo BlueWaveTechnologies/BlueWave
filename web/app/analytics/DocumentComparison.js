@@ -441,8 +441,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
         var d = document.createElement("div");
-        d.style.position = "absolute"; // add a class here
-        d.style.border = "1px solid red";
+        d.className = "doc-compare-panel-similarity-d";
+        // d.style.position = "absolute"; // added to main.css
+        // d.style.border = "1px solid red";
         d.style.left = (x*img.width)+"px";
         d.style.top = (y*img.height)+"px";
         d.style.width = (w*img.width)+"px";
@@ -668,6 +669,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 img.onload = function(){
                     img = this;
                     setTimeout(function(){
+                        clearOverlays();
                         getImages(img).forEach((rightImage)=>{
                             getImages(rightImage.matchingImg).forEach((leftImage)=>{
                                 leftImage.matchingImg = rightImage; // add match reference
@@ -679,8 +681,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     }, 1200); //add slight delay for the carousel to finish sliding
                 };
             };
-
-
 
             img.LoadOverlay = function (){
                 img = this;
@@ -758,6 +758,19 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             parent.appendChild(img);
             return img;
         };
+
+        // remove all current overlay elements assigned to DOM
+        var clearOverlays = function(){
+            var overlayTags = document.getElementsByClassName("doc-compare-panel-similarity-tag");
+            var overlayDs = document.getElementsByClassName("doc-compare-panel-similarity-d");
+            for (var i = 0; i < overlayTags.length; i++) {
+                setTimeout(node => node.remove(),0 , overlayTags[i]);
+            };
+            for (var i = 0; i < overlayDs.length; i++) {
+                setTimeout(node => node.remove(),0 , overlayDs[i]);
+            };
+        };
+
 
 
       //Function used to find images in the carousel. Note that there may be

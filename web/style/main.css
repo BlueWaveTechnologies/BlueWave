@@ -1218,6 +1218,10 @@ li.tree-node:hover {
     position: absolute;
 
 }
+.doc-compare-panel-similarity-d {
+    position: absolute;
+    border: 1px solid red;
+}
 
 
 
