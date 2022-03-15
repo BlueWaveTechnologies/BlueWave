@@ -749,7 +749,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 tag.rescale(scaleByW,scaleByH);
                             });
                         };
-                        addResizeListener(parent, resizeListener);
+                        addResizeListener(img.parentNode, resizeListener);
                     };
             };
 
