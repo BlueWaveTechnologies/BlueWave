@@ -349,7 +349,27 @@ public class Main {
   //**************************************************************************
     private static void delete(HashMap<String, String> args) throws Exception {
         String str = args.get("-delete").toLowerCase();
-        if (str.equals("nodes")){
+        if (str.equals("user")){
+
+            Config.initDatabase();
+            User user = null;
+            try{
+                user = new User(Long.parseLong(args.get("-id")));
+            }
+            catch(Exception e){
+                e.printStackTrace();
+                try{
+                    user = User.get("username=", args.get("-username"));
+                }
+                catch(Exception ex){
+                    ex.printStackTrace();
+                }
+            }
+
+            user.delete();
+
+        }
+        else if (str.equals("nodes")){
             Neo4J graph = Config.getGraph(null);
             bluewave.graph.Maintenance.deleteNodes(args.get("-label"), graph);
             graph.close();
