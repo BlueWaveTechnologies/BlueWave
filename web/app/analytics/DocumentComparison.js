@@ -511,6 +511,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tagInner.style.textAlign = "center";
         tag.appendChild(tagInner);
 
+        var tooltip = document.createElement("span");
+        tooltip.className = "tooltip";
+        tooltip.innerText = ""; // assigned on mouseOver
+        tag.appendChild(tooltip);
+        tag.tooltip = tooltip;
 
 
         // dynamically set styles
@@ -549,10 +554,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             this.d.removeSimilarity();
         };
 
-        tag.onmouseover = function(){ // TODO: add tooltip and mouseleave event
-            this.showTooltip();
+        tag.onmouseover = function(){
             this.matchingD.highlight();
             this.matchingTag.hide();
+            this.tooltip.innerText = this.type;
         };
 
         tag.onmouseleave = function(){
@@ -561,12 +566,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 this.matchingD.clear();
                 this.matchingTag.show();
             }
-        };
-
-        tag.showTooltip = function(){
-            console.log(this.type);
-            console.log("calling show tooltip");
-            console.log("not yet implemented!")
         };
 
         tag.clear = function(){ // called by ratings when a new tag is selected
@@ -581,7 +580,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** createComparisonPanel
   //**************************************************************************
     var createComparisonPanel = function(){
-        console.log("create comparison panel called!");
 
       //Create table
         var table = createTable();
