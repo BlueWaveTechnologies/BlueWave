@@ -52,7 +52,8 @@ public class ImportService extends WebService {
         firmNames = new ConcurrentHashMap<>();
         firmLocations = new ConcurrentHashMap<>();
         firmCountries = new ConcurrentHashMap<>();
-        updateFirmNames();
+        Neo4J graph = bluewave.Config.getGraph(null);
+        if (graph!=null) updateFirmNames(graph);
     }
 
 
@@ -61,7 +62,7 @@ public class ImportService extends WebService {
   //**************************************************************************
   /** Used to generate a list of firm names using fuzzy matching by country
    */
-    private void updateFirmNames() throws Exception {
+    private void updateFirmNames(Neo4J graph) throws Exception {
 
         HashMap<Long, String> facilities = new HashMap<>();
         HashMap<Long, Point> coordinates = new HashMap<>();
@@ -70,7 +71,6 @@ public class ImportService extends WebService {
       //Get establishment names and coordinates
         Session session = null;
         try{
-        Neo4J graph = bluewave.Config.getGraph(null);
             session = graph.getSession();
 
             StringBuilder str = new StringBuilder();
