@@ -140,47 +140,10 @@ jobs:
 
       ### add template config.json file to release directory
 
-      # create string to echo to config.json file
-      name: create string to echo to config.json file
-      run: |
-          CONFIG_CONTENTS=$(cat << EOF
-          {
-              "database": {
-                  "driver": "H2",
-                  "maxConnections": 25,
-                  "path": "data/database",
-                  "schema": "models/Database.sql"
-              },
-              "graph": {
-                  "host": "localhost:7687",
-                  "username": "neo4j",
-                  "password": "password",
-                  "localCache": "temp/graph",
-                  "localLog": "temp/graph/logs"
-              },
-              "webserver": {
-                  "webDir": "web/",
-                  "jobDir": "temp/",
-                  "port": 8080,
-                  "auth" : "DISABLED"
-              }
-          }
-          EOF
-          )
-          CONFIG_CONTENTS="${CONFIG_CONTENTS//'%'/'%25'}"
-          CONFIG_CONTENTS="${CONFIG_CONTENTS//$'\n'/'%0A'}"
-          CONFIG_CONTENTS="${CONFIG_CONTENTS//$'\r'/'%0D'}"
-          echo "::set-output name=content::$CONFIG_CONTENTS"
-        id: config_contents
-
-      # log config contents
-      name: log config contents
-      run:|
-        echo "The contents are: ${{ steps.config_contents.outputs.content }}"
-
-      # add config contents to config file
-      name: add config contents to new config.json file
-      run: echo " ${{ steps.config_contents.outputs.content }}" >> compiledProjectDirectory/config.json
+      - name: execute createConfig script & copy config.py to release directory
+        run: |
+          python scripts/githubWorkflowActions/createConfig.py
+          cp config.py compiledProjectDirectory
 
       # zipping method
       - name: zip configured project directory into .zip

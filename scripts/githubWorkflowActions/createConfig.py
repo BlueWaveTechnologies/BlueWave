@@ -1,5 +1,4 @@
 # used to create a template config for releases
-from os.path import dirname
 import os
 
 config_contents = '''
