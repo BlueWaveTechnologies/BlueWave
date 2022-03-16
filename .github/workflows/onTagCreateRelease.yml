@@ -128,7 +128,6 @@ jobs:
       - name: Create & copy config.py to release directory
         run: |
           python scripts/githubWorkflowActions/createConfig.py
-          cp config.py compiledProjectDirectory
 
       ### copy project-dependent python scripts to release directory
 
