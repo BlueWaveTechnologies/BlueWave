@@ -1,3 +1,19 @@
+# delete all remote tags
+# git ls-remote --tags origin | awk '/^(.*)(s+)(.*[a-zA-Z0-9])$/ {print ":" $2}' | xargs git push origin
+
+# delete one remote tag
+# git push --delete origin tagname
+
+# note:
+# the git command line doesn't have permissions to delete releases, only tags (it's part of Github only)
+
+
+# execute github workflow
+# git tag <release_name> (must include v in release name) & git push origin <release_name>
+# example: git tag v1.0 & git push origin v1.0
+
+
+
 on:
   push:
     tags:
@@ -13,7 +29,7 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
-      
+
       - name: get tag reference id
             # parse the github reference tag from the direct input (github.ref)
         run: |
@@ -27,11 +43,11 @@ jobs:
           echo $tagName
 
 
-     # create project directory 
+     # create project directory
       - name: create Project Directory
         run: mkdir compiledProjectDirectory
 
-    ### Minify JS and consolidate into one file 
+    ### Minify JS and consolidate into one file
 
      # Minify web/app file directory into individually minified files
       - name: minify web/app directory
@@ -41,7 +57,7 @@ jobs:
           overwrite: true
 
      # Append all minified files of web/app into a single file (bluewave.js)
-      - name: Stack minified files into one 
+      - name: Stack minified files into one
         run: find ./web/app -name '*.js' -exec cat {} \; > ./web/bluewave.js
 
      # delete web/app directory so it's not included in release
@@ -51,8 +67,8 @@ jobs:
           path: web/app
 
     ### Prepare machine to generate jar file
-      
-     # add/instantiate JDK 11 on runner 
+
+     # add/instantiate JDK 11 on runner
       - name: Set up JDK 11
         uses: actions/setup-java@v2
         with:
@@ -64,16 +80,16 @@ jobs:
       - name: install maven
         run: sudo apt install maven
 
-     # show current maven version in Github Actions output (should be 3.6.3) 
+     # show current maven version in Github Actions output (should be 3.6.3)
      # Note: errors may occur when using other versions
-      - name: check Maven Version 
+      - name: check Maven Version
         run: mvn -version
 
 
     ### build jar file
 
-     # build jar file 
-      - name: build jar 
+     # build jar file
+      - name: build jar
         run: mvn --batch-mode install verify -U -X
 
      # copy jar file to main directory
@@ -87,7 +103,7 @@ jobs:
 
 
 
-          
+
     ### Add all compiled project files to new directory
 
      # copy all Release assets to compiled project Directory
@@ -107,23 +123,23 @@ jobs:
       #   with:
       #     path: "scripts/githubWorkflowActions/requirements.txt"
 
-
-      - name: execute editHTML script 
+      - name: execute editHTML script
         run: |
           python scripts/githubWorkflowActions/editMainHtmlFile.py
 
+      ### copy project-dependent python scripts to release directory
 
+      # delete python directories that should not be included in release version
+      - name: delete github workflows directory (do not include in release)
+        run: rm -f -r scripts/githubWorkflowActions
 
+      # copy remaining files from scripts directory -> release directory
+      - name: copy project-dependent python scripts to release directory
+        run: cp -r scripts compiledProjectDirectory
 
-     # Package new directory into zip file       
-      - name: add minified project to a zip
-        uses: papeloto/action-zip@v1
-        with:
-          files: ./compiledProjectDirectory
-          
-          recursive: true
-          dest: bluewave-${{ env.tagName }}.zip
-
+      # zipping method
+      - name: zip configured project directory into .zip
+        run: cd compiledProjectDirectory; zip -r ../bluewave-${{ env.tagName }}.zip *
 
 
      # create the release to serve as a place to export to
@@ -148,7 +164,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: bluewave-${{ env.tagName }}.zip
           asset_name: bluewave-${{ env.tagName }}.zip
           asset_content_type: application/zip
