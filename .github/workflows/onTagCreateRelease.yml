@@ -2,7 +2,7 @@
 # git ls-remote --tags origin | awk '/^(.*)(s+)(.*[a-zA-Z0-9])$/ {print ":" $2}' | xargs git push origin
 
 # delete one remote tag
-# git push --delete origin tagname
+# git push --delete origin <tag_name>
 
 # note:
 # the git command line doesn't have permissions to delete releases, only tags (it's part of Github only)
@@ -36,11 +36,12 @@ jobs:
              githubRef=${{ github.ref }}
              githubRef="${githubRef/'refs/tags'/''}"
              githubRef="${githubRef/'/'/''}"
-             echo "tagName=$githubRef" >> $GITHUB_ENV
+             githubRef="${githubRef/'v'/''}"
+             echo "releaseLabel=$githubRef" >> $GITHUB_ENV
 
-      - name: Read exported variable - (test to verify the dynamic tagName Variable is global)
+      - name: Read exported variable - (test to verify the dynamic releaseLabel Variable is global)
         run: |
-          echo $tagName
+          echo $releaseLabel
 
 
      # create project directory
@@ -95,10 +96,10 @@ jobs:
      # copy jar file to main directory
       - name: copy jar
       #env:
-    #tagName: $tagName
+    #releaseLabel: $releaseLabel
 
         run: |
-          cp target/bluewave-1.0.0.jar bluewave-${{ env.tagName }}.jar
+          cp target/bluewave-1.0.0.jar bluewave-${{ env.releaseLabel }}.jar
           cp -r target/lib lib
 
 
@@ -108,7 +109,7 @@ jobs:
 
      # copy all Release assets to compiled project Directory
       - name: copy all files/folders to compiled project Directory
-        run: cp -r web models lib bluewave-${{ env.tagName }}.jar compiledProjectDirectory
+        run: cp -r web models lib bluewave-${{ env.releaseLabel }}.jar compiledProjectDirectory
 
 
      # replace main.html file with new reference to minified bluewave file
@@ -183,7 +184,7 @@ jobs:
 
       # zipping method
       - name: zip configured project directory into .zip
-        run: cd compiledProjectDirectory; zip -r ../bluewave-${{ env.tagName }}.zip *
+        run: cd compiledProjectDirectory; zip -r ../bluewave-${{ env.releaseLabel }}.zip *
 
 
      # create the release to serve as a place to export to
@@ -193,10 +194,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions
         with:
-          tag_name: ${{ env.tagName }}
-          release_name: Release ${{ env.tagName }}
+          tag_name: ${{ env.releaseLabel }}
+          release_name: Release ${{ env.releaseLabel }}
           body: |
-            BlueWave Release ${{ env.tagName }}
+            BlueWave Release ${{ env.releaseLabel }}
           draft: false
           prerelease: false
 
@@ -209,6 +210,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: bluewave-${{ env.tagName }}.zip
-          asset_name: bluewave-${{ env.tagName }}.zip
+          asset_path: bluewave-${{ env.releaseLabel }}.zip
+          asset_name: bluewave-${{ env.releaseLabel }}.zip
           asset_content_type: application/zip
