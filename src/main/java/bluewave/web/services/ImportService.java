@@ -52,8 +52,12 @@ public class ImportService extends WebService {
         firmNames = new ConcurrentHashMap<>();
         firmLocations = new ConcurrentHashMap<>();
         firmCountries = new ConcurrentHashMap<>();
-        Neo4J graph = bluewave.Config.getGraph(null);
-        if (graph!=null) updateFirmNames(graph);
+        try{
+            Neo4J graph = bluewave.Config.getGraph(null);
+            if (graph!=null) updateFirmNames(graph);
+        }
+        catch(Exception e){
+        }
     }
 
 
