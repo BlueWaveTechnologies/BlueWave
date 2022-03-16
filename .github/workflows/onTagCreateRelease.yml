@@ -128,6 +128,13 @@ jobs:
         run: |
           python scripts/githubWorkflowActions/editMainHtmlFile.py
 
+      ### add template config.json file to release directory
+
+      - name: execute createConfig script & copy config.py to release directory
+        run: |
+          python scripts/githubWorkflowActions/createConfig.py
+          cp config.py compiledProjectDirectory
+
       ### copy project-dependent python scripts to release directory
 
       # delete python directories that should not be included in release version
@@ -137,13 +144,6 @@ jobs:
       # copy remaining files from scripts directory -> release directory
       - name: copy project-dependent python scripts to release directory
         run: cp -r scripts compiledProjectDirectory
-
-      ### add template config.json file to release directory
-
-      - name: execute createConfig script & copy config.py to release directory
-        run: |
-          python scripts/githubWorkflowActions/createConfig.py
-          cp config.py compiledProjectDirectory
 
       # zipping method
       - name: zip configured project directory into .zip
