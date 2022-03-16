@@ -1021,7 +1021,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 else{
                     fileIndexList.push(i * increment);
                     li.indexedPage = (i * increment);
-                }
+                };
 
                 li.onclick = function(){
                   // find li index #
