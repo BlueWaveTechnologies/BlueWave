@@ -1,5 +1,8 @@
 # used to create a template config for releases
+from os.path import dirname
 import os
+
+outputLocation = os.path.dirname(os.getcwd())+"/BlueWave/compiledProjectDirectory/config.json"
 
 config_contents = '''
 {
@@ -23,6 +26,6 @@ config_contents = '''
         "auth" : "DISABLED"
     }
 }'''
-with open('config.json', 'w') as f:
+with open(outputLocation, 'w') as f:
     f.write(config_contents)
 

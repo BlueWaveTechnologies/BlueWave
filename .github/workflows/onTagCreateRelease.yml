@@ -30,7 +30,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: get tag reference id
+      - name: Get tag reference id
             # parse the github reference tag from the direct input (github.ref)
         run: |
              githubRef=${{ github.ref }}
@@ -45,20 +45,20 @@ jobs:
 
 
      # create project directory
-      - name: create Project Directory
+      - name: Create compiled project directory
         run: mkdir compiledProjectDirectory
 
     ### Minify JS and consolidate into one file
 
      # Minify web/app file directory into individually minified files
-      - name: minify web/app directory
+      - name: Minify all files within web/app directory
         uses: nizarmah/auto-minify@v2.1
         with:
           directory: ./web/app
           overwrite: true
 
      # Append all minified files of web/app into a single file (bluewave.js)
-      - name: Stack minified files into one
+      - name: Combine minified web files into bluewave.js file
         run: find ./web/app -name '*.js' -exec cat {} \; > ./web/bluewave.js
 
      # delete web/app directory so it's not included in release
@@ -76,61 +76,56 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-
      # install maven 3.6.3 (current default latest version Ubuntu)
-      - name: install maven
+      - name: Install Maven
         run: sudo apt install maven
 
      # show current maven version in Github Actions output (should be 3.6.3)
      # Note: errors may occur when using other versions
-      - name: check Maven Version
+      - name: Check Maven Version
         run: mvn -version
 
 
     ### build jar file
 
      # build jar file
-      - name: build jar
+      - name: Build jar using Maven
         run: mvn --batch-mode install verify -U -X
 
      # copy jar file to main directory
-      - name: copy jar
-      #env:
-    #releaseLabel: $releaseLabel
-
+      - name: Copy jar file to main directory
         run: |
           cp target/bluewave-1.0.0.jar bluewave-${{ env.releaseLabel }}.jar
           cp -r target/lib lib
 
 
-
-
     ### Add all compiled project files to new directory
 
-     # copy all Release assets to compiled project Directory
-      - name: copy all files/folders to compiled project Directory
+     # Copy release assets to compiled project Directory
+      - name: Copy release assets to compiled project Directory
         run: cp -r web models lib bluewave-${{ env.releaseLabel }}.jar compiledProjectDirectory
 
+    ### execute python files
 
-     # replace main.html file with new reference to minified bluewave file
-      - name: setup python
+      # Set up environment
+      - name: Set up Python environment for script execution
         uses: actions/setup-python@v2
         with:
           python-version: 3.8 #install the python needed
 
-
+      # Install python dependencies
       # - name: Install Python dependencies
       #   uses: py-actions/py-dependency-install@v2
       #   with:
       #     path: "scripts/githubWorkflowActions/requirements.txt"
 
-      - name: execute editHTML script
+     # replace main.html file with new reference to minified bluewave file
+      - name: Replace main.html file with new main.html - references minified bluewave file
         run: |
           python scripts/githubWorkflowActions/editMainHtmlFile.py
 
       ### add template config.json file to release directory
-
-      - name: execute createConfig script & copy config.py to release directory
+      - name: Create & copy config.py to release directory
         run: |
           python scripts/githubWorkflowActions/createConfig.py
           cp config.py compiledProjectDirectory
@@ -138,19 +133,19 @@ jobs:
       ### copy project-dependent python scripts to release directory
 
       # delete python directories that should not be included in release version
-      - name: delete github workflows directory (do not include in release)
+      - name: Delete github workflows directory (do not include in release)
         run: rm -f -r scripts/githubWorkflowActions
 
-      # copy remaining files from scripts directory -> release directory
-      - name: copy project-dependent python scripts to release directory
+      # Copy remaining files from scripts directory -> release directory
+      - name: Copy project-dependent python scripts to release directory
         run: cp -r scripts compiledProjectDirectory
 
-      # zipping method
-      - name: zip configured project directory into .zip
+      # Zip project
+      - name: Zip configured project directory into downloadable release.zip file
         run: cd compiledProjectDirectory; zip -r ../bluewave-${{ env.releaseLabel }}.zip *
 
 
-     # create the release to serve as a place to export to
+     # Create the release to serve as a place to export to
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -165,8 +160,8 @@ jobs:
           prerelease: false
 
 
-     # add project to Release
-      - name: Upload Packaged project to Release
+     # add packaged project to Github Release page
+      - name: Upload packaged project to Github Release page
         id: upload-release-asset-minified
         uses: actions/upload-release-asset@v1
         env:
