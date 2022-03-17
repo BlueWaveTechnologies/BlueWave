@@ -264,7 +264,8 @@ public class Main {
         }
         else if (str.equalsIgnoreCase("Establishments")){
             Neo4J database = Config.getGraph(null);
-            Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            ImportsV2.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             database.close();
         }
         else{
