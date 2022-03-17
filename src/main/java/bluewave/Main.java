@@ -3,6 +3,8 @@ import bluewave.app.User;
 import bluewave.data.*;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
+import bluewave.web.services.DocumentService;
+
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
@@ -347,7 +349,27 @@ public class Main {
   //**************************************************************************
     private static void delete(HashMap<String, String> args) throws Exception {
         String str = args.get("-delete").toLowerCase();
-        if (str.equals("nodes")){
+        if (str.equals("user")){
+
+            Config.initDatabase();
+            User user = null;
+            try{
+                user = new User(Long.parseLong(args.get("-id")));
+            }
+            catch(Exception e){
+                e.printStackTrace();
+                try{
+                    user = User.get("username=", args.get("-username"));
+                }
+                catch(Exception ex){
+                    ex.printStackTrace();
+                }
+            }
+
+            user.delete();
+
+        }
+        else if (str.equals("nodes")){
             Neo4J graph = Config.getGraph(null);
             bluewave.graph.Maintenance.deleteNodes(args.get("-label"), graph);
             graph.close();
@@ -514,7 +536,6 @@ public class Main {
             console.log("Unsupported test: " + test);
         }
     }
-
 
   //**************************************************************************
   //** download

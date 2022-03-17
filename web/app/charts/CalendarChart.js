@@ -162,37 +162,15 @@ bluewave.charts.CalendarChart = function(parent, config) {
       //Create tooltip
         var tooltip;
         if (config.showTooltip===true){
-            tooltip = bluewave.charts.PieChart.Tooltip;
-            if (!tooltip){
-                tooltip = bluewave.charts.PieChart.Tooltip =
-                d3.select(document.body)
-                .append("div")
-                .style("opacity", 0)
-                .attr("class", "tooltip");
-            }
+            tooltip = createTooltip();
         }
 
 
         var mouseover = function(d, i) {
             if (tooltip){
-
-
-              //Get label
                 var label = me.getTooltipLabel({date: d, value: values[i]});
-
-              //Get zIndex
-                var highestElements = getHighestElements();
-                var zIndex = highestElements.zIndex;
-                if (!highestElements.contains(tooltip.node())) zIndex++;
-
-              //Update tooltip
-                tooltip
-                .html(label)
-                .style("opacity", 1)
-                .style("display", "block")
-                .style("z-index", zIndex);
+                tooltip.html(label).show();
             }
-
             d3.select(this).transition().duration(100).attr("opacity", "0.8");
         };
 
@@ -204,13 +182,9 @@ bluewave.charts.CalendarChart = function(parent, config) {
         };
 
         var mouseleave = function() {
-            if (tooltip) tooltip
-            .style("opacity", 0)
-            .style("display", "none");
-
+            if (tooltip) tooltip.hide();
             d3.select(this).transition().duration(100).attr("opacity", "1");
         };
-
 
 
       //Create groups for every year
@@ -381,9 +355,9 @@ bluewave.charts.CalendarChart = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
+    var createTooltip = bluewave.chart.utils.createTooltip;
     var getColorRange = bluewave.chart.utils.getColorRange;
     var getNaturalBreaks = bluewave.chart.utils.getNaturalBreaks;
-    var getHighestElements = javaxt.dhtml.utils.getHighestElements;
 
 
     init();

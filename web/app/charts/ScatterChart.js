@@ -28,8 +28,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
-        config = merge(config, defaultConfig);
-
+        me.setConfig(config);
 
         initChart(parent, function(s, g){
             svg = s;
@@ -61,8 +60,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
   //**************************************************************************
     this.update = function(chartConfig, data){
         me.clear();
-
-        config = merge(chartConfig, config);
+        me.setConfig(chartConfig);
 
         var parent = svg.node().parentNode;
         onRender(parent, function(){
@@ -72,7 +70,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
     this.getPointLabel = function(d){
-        return "labeltest";
+        return "";
     };
 
     this.getPointRadius = function(d){
@@ -88,6 +86,14 @@ bluewave.charts.ScatterChart = function(parent, config) {
         return config.pointOpacity;
     };
 
+
+  //**************************************************************************
+  //** getTooltipLabel
+  //**************************************************************************
+    this.getTooltipLabel = function(d){
+        return config.xAxis + ": " + d[config.xAxis] + "<br/>" + config.yAxis + ": " + d[config.yAxis];
+    };
+    
 
     this.onClick = function(el, datasetID, d){};
 
@@ -152,28 +158,27 @@ bluewave.charts.ScatterChart = function(parent, config) {
 
 
           //Update right margin as needed.
+            var maxLabelWidth = 0;
             if (config.pointLabels){
-
+                                
               //Check boxes of all the labels and see if the right side of any of
               //the boxes exceeds the right margin. Adjust accordingly
-              var maxLabelWidth = 0;
-              var label = me.getPointLabel();
-
-              //Will eventually check last label
-              var temp = plotArea.append("text")
-                .attr("dy", ".35em")
-                .attr("text-anchor", "start")
-                .text(label);
-              var box = temp.node().getBBox();
-              temp.remove();
-
-              var w = box.width;
-              labelHeight = box.height;
-              maxLabelWidth = Math.max(w, maxLabelWidth);
-
-              // marginRight+=maxLabelWidth;
-
-            };
+                var temp = plotArea.append("g");
+                temp.selectAll("text")
+                .data(data)
+                .enter()
+                .append("text")
+                    .attr("x", 0)
+                    .attr("y", 0)    
+                    .attr("text-anchor", "start")    
+                    .attr("font-size", 10)
+                    .text(function(d){
+                        return me.getPointLabel(d);
+                    });
+                var box = temp.node().getBBox();
+                temp.remove();
+                maxLabelWidth = Math.max(box.width, maxLabelWidth);
+            }
 
 
           //Rerender axis
@@ -232,6 +237,34 @@ bluewave.charts.ScatterChart = function(parent, config) {
         var getY = function (d) {
             return y(d[yKey]);
         };
+        
+        
+        var tooltip;
+        if (config.showTooltip===true){
+            tooltip = createTooltip();
+        }
+
+
+        var mouseover = function(d) {
+            if (tooltip){
+                var label = me.getTooltipLabel(d);
+                tooltip.html(label).show();
+            }
+            d3.select(this).transition().duration(100).attr("opacity", "0.8");
+        };
+
+        var mousemove = function() {
+            var e = d3.event;
+            if (tooltip) tooltip
+            .style('top', (e.clientY) + "px")
+            .style('left', (e.clientX + 20) + "px");
+        };
+
+        var mouseleave = function() {
+            if (tooltip) tooltip.hide();
+            d3.select(this).transition().duration(100).attr("opacity", "1");
+        };        
+        
 
 
       //Draw points
@@ -244,14 +277,25 @@ bluewave.charts.ScatterChart = function(parent, config) {
               .attr("dataset", 0)
               .attr("cx", getX)
               .attr("cy", getY)
-              .attr("r", me.getPointRadius())
-              .style("fill", me.getPointColor())
-              .style("opacity", me.getPointOpacity())
+              .attr("r", function(d){
+                  return me.getPointRadius(d);
+              })
+              .style("fill", function(d){
+                  return me.getPointColor(d);
+              })
+              .style("opacity", function(d){
+                  return me.getPointOpacity(d);
+              })
               .style("stroke", "white")
+              .on("mouseover", mouseover)
+              .on("mousemove", mousemove)
+              .on("mouseleave", mouseleave)     
               .on("click", function(d){
                 var datasetID = parseInt(d3.select(this).attr("dataset"));
                 me.onClick(this, datasetID, d);
-            });
+              });
+              
+              
 
 
 
@@ -271,7 +315,12 @@ bluewave.charts.ScatterChart = function(parent, config) {
                 })
                 .attr("y", getY)
                 .attr("font-size", 10)
-                .text(me.getPointLabel())
+                .text(function(d){
+                    return me.getPointLabel(d);
+                })
+                .on("mouseover", mouseover)
+                .on("mousemove", mousemove)
+                .on("mouseleave", mouseleave)                 
                 .on("click", function(node){
                     //selectNode(node, this);
                 });
@@ -392,6 +441,7 @@ bluewave.charts.ScatterChart = function(parent, config) {
     var drawGridlines = bluewave.chart.utils.drawGridlines;
     var extendScale = bluewave.chart.utils.extendScale;
     var reDrawAxes = bluewave.chart.utils.reDrawAxes;
+    var createTooltip = bluewave.chart.utils.createTooltip;
 
 
     init();

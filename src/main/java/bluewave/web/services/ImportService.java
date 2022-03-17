@@ -1,12 +1,17 @@
 package bluewave.web.services;
+
 import bluewave.graph.Neo4J;
+import static bluewave.graph.Utils.*;
+
 import bluewave.utils.Routing;
 import bluewave.utils.Address;
-import static bluewave.graph.Utils.*;
+import bluewave.utils.JTS;
 import static bluewave.utils.StringUtils.*;
+import bluewave.data.Countries;
 
 import java.util.*;
 import java.math.BigDecimal;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javaxt.express.ServiceRequest;
 import javaxt.express.ServiceResponse;
@@ -16,19 +21,197 @@ import javaxt.http.servlet.ServletException;
 import javaxt.sql.Database;
 import javaxt.sql.Value;
 import javaxt.json.*;
+import javaxt.utils.ThreadPool;
 
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 
+import org.locationtech.jts.geom.*;
+
+
+//******************************************************************************
+//**  ImportSummary
+//******************************************************************************
+/**
+ *   Used generate reports using imports data
+ *
+ ******************************************************************************/
 
 public class ImportService extends WebService {
+
+
+    private ConcurrentHashMap<Long, String> firmNames;
+    private ConcurrentHashMap<Long, Point> firmLocations;
+    private ConcurrentHashMap<Long, String> firmCountries;
+
+  //**************************************************************************
+  //** Constructor
+  //**************************************************************************
+    public ImportService() throws Exception {
+        firmNames = new ConcurrentHashMap<>();
+        firmLocations = new ConcurrentHashMap<>();
+        firmCountries = new ConcurrentHashMap<>();
+        try{
+            Neo4J graph = bluewave.Config.getGraph(null);
+            if (graph!=null) updateFirmNames(graph);
+        }
+        catch(Exception e){
+        }
+    }
+
+
+  //**************************************************************************
+  //** updateFirmNames
+  //**************************************************************************
+  /** Used to generate a list of firm names using fuzzy matching by country
+   */
+    private void updateFirmNames(Neo4J graph) throws Exception {
+
+        HashMap<Long, String> facilities = new HashMap<>();
+        HashMap<Long, Point> coordinates = new HashMap<>();
+
+
+      //Get establishment names and coordinates
+        Session session = null;
+        try{
+            session = graph.getSession();
+
+            StringBuilder str = new StringBuilder();
+            str.append("MATCH (n:import_establishment)\n");
+            str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
+            str.append("RETURN n.fei as fei, n.name as name, a.lat as lat, a.lon as lon");
+            Result rs = session.run(str.toString());
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long fei = new Value(r.get("fei").asObject()).toLong();
+                String name = new Value(r.get("name").asObject()).toString();
+                Double lat = new Value(r.get("lat").asObject()).toDouble();
+                Double lon = new Value(r.get("lon").asObject()).toDouble();
+                facilities.put(fei, name);
+                try{
+                    if (lat.equals(0D) && lon.equals(0D)) throw new Exception();
+                    coordinates.put(fei, JTS.createPoint(lat, lon));
+                }
+                catch(Exception e){
+                    //console.log("No coordinate for " + fei);
+                }
+            }
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+            throw e;
+        }
+
+
+      //Update firmLocations
+        synchronized (firmLocations){
+            Iterator<Long> it = coordinates.keySet().iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                Point point = coordinates.get(fei);
+                if (point==null) continue;
+                firmLocations.put(fei, point);
+            }
+            firmLocations.notify();
+        }
+
+
+
+      //Group facilities by country code
+        HashMap<String, HashSet<Long>> facilitiesByCountry = new HashMap<>();
+        try {
+            Iterator<Long> it = facilities.keySet().iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                Point point = coordinates.get(fei);
+
+              //Get country code
+                String countryCode = null;
+                if (point!=null){
+                    JSONObject country = Countries.getCountry(point);
+                    if (country!=null){
+                        countryCode = country.get("code").toString();
+                    }
+                }
+                if (countryCode==null) countryCode = "Unknown";
+
+
+              //Update facilitiesByCountry
+                HashSet<Long> feis = facilitiesByCountry.get(countryCode);
+                if (feis==null){
+                    feis = new HashSet<>();
+                    facilitiesByCountry.put(countryCode, feis);
+                }
+                feis.add(fei);
+            }
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+
+
+      //Update firmCountries
+        synchronized (firmCountries){
+            Iterator<String> it = facilitiesByCountry.keySet().iterator();
+            while (it.hasNext()){
+                String countryCode = it.next();
+                for (Long fei : facilitiesByCountry.get(countryCode)){
+                    firmCountries.put(fei, countryCode);
+                }
+            }
+            firmCountries.notify();
+        }
+
+
+      //Fuzzy match facility names by country
+        ThreadPool pool = new ThreadPool(6){
+            public void process(Object obj){
+                String countryCode = (String) obj;
+
+                HashSet<Long> feis = facilitiesByCountry.get(countryCode);
+                HashMap<Long, String> f = new HashMap<>();
+                Iterator<Long> i2 = feis.iterator();
+                while (i2.hasNext()){
+                    Long fei = i2.next();
+                    f.put(fei, facilities.get(fei));
+                }
+
+
+                HashMap<String, ArrayList<Long>> uf = mergeCompanies(f);
+                int reduction = f.size()-uf.size();
+                if (reduction>0)
+                console.log("Combined " + reduction + " firms in " + countryCode);
+
+                synchronized(firmNames){
+                    Iterator<String> it = uf.keySet().iterator();
+                    while (it.hasNext()){
+                        String name = it.next();
+                        for (Long fei : uf.get(name)){
+                            firmNames.put(fei, name);
+                        }
+                    }
+                    firmNames.notify();
+                }
+            }
+        }.start();
+        Iterator<String> it = facilitiesByCountry.keySet().iterator();
+        while (it.hasNext()){
+            String countryCode = it.next();
+            pool.add(countryCode);
+        }
+        pool.done();
+        pool.join();
+    }
+
 
   //**************************************************************************
   //** getSummary
   //**************************************************************************
   /** Used to generate an import summary for a given country, product, and
-   *  date range
+   *  date range. Applies a fuzzy match to group establishments.
    */
     public ServiceResponse getSummary(ServiceRequest request, Database database)
     throws ServletException {
@@ -84,65 +267,45 @@ public class ImportService extends WebService {
         };
 
 
-      //Execute query
+      //Execute query and group results by firm name
         HashMap<Long,HashMap<String, Value>> entries = new HashMap<>();
-        HashMap<Long,String> facilities = new HashMap<>();
         Session session = null;
         try{
             session = graph.getSession();
-
-
-          //Get entries
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
-
                 Long fei = new Value(r.get("fei").asObject()).toLong();
-
-
                 HashMap<String, Value> values = new HashMap<>();
                 for (String field: extraFields){
                     values.put(field, new Value(r.get(field).asObject()));
                 }
                 entries.put(fei, values);
             }
-
-
-          //Get establishment names
-            StringBuilder str = new StringBuilder();
-            str.append("MATCH (n:import_establishment)\n");
-            str.append("WHERE n.fei IN[\n");
-            Iterator<Long> it = entries.keySet().iterator();
-            while (it.hasNext()){
-                Long fei = it.next();
-                str.append(fei);
-                if (it.hasNext()) str.append(",");
-            }
-            str.append("]\n");
-            str.append("RETURN n.fei as fei, n.name as name");
-            sql = str.toString();
-            rs = session.run(sql);
-            while (rs.hasNext()){
-                Record r = rs.next();
-                Long fei = new Value(r.get("fei").asObject()).toLong();
-                String name = new Value(r.get("name").asObject()).toString();
-                facilities.put(fei, name);
-            }
-
-
             session.close();
         }
         catch(Exception e){
-            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
 
 
 
-      //Fuzzy match facility names and combine entries
-        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
-
+      //Get facility names
+        HashMap<String, ArrayList<Long>> uniqueFacilities = new HashMap<>();
+        synchronized(firmNames){
+            Iterator<Long> i2 = entries.keySet().iterator();
+            while (i2.hasNext()){
+                Long fei = i2.next();
+                String name = firmNames.get(fei);
+                ArrayList<Long> arr = uniqueFacilities.get(name);
+                if (arr==null){
+                    arr = new ArrayList<>();
+                    uniqueFacilities.put(name, arr);
+                }
+                arr.add(fei);
+            }
+        }
 
 
 
@@ -482,7 +645,8 @@ public class ImportService extends WebService {
             fields = Arrays.copyOf(fields, fields.length+1);
             fields[fields.length-1] = extraColumn;
         }
-        StringBuilder str = new StringBuilder(String.join(",", fields));
+
+        ArrayList<HashMap<String, Value>> records = new ArrayList<>();
         Session session = null;
         try{
             session = graph.getSession();
@@ -490,23 +654,78 @@ public class ImportService extends WebService {
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
-                str.append("\r\n");
 
-                for (int i=0; i<fields.length; i++){
-                    if (i>0) str.append(",");
-                    Object val = r.get(fields[i]).asObject();
-                    str.append(val);
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field : r.keys()){
+                    Value val = new Value(r.get(field).asObject());
+                    values.put(field, val);
                 }
+                records.add(values);
             }
 
 
             session.close();
         }
         catch(Exception e){
-            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
+
+
+        if (extraColumn.equals("manufacturer") || extraColumn.equals("consignee")){
+            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+            synchronized (firmNames){
+                for (HashMap<String, Value> record : records){
+                    Long fei = record.get(extraColumn).toLong();
+                    String name = firmNames.get(fei);
+                    String productCode = record.get("product_code").toString();
+
+
+                    Float lines = record.get("lines").toFloat();
+                    if (lines==null) lines = 0f;
+                    Float quantity = record.get("quantity").toFloat();
+                    if (quantity==null) quantity = 0f;
+                    Float value = record.get("value").toFloat();
+                    if (value==null) value = 0f;
+
+                    String key = productCode + "->" + name;
+                    HashMap<String, Value> g = group.get(key);
+                    if (g==null){
+                        g = new HashMap<>();
+                        g.put(extraColumn, new Value(name));
+                        g.put("product_code", new Value(productCode));
+                        g.put("lines", new Value(lines));
+                        g.put("quantity", new Value(quantity));
+                        g.put("value", new Value(value));
+                        group.put(key, g);
+                    }
+                    else{
+                        g.put("lines", new Value(lines+g.get("lines").toLong()));
+                        g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                        g.put("value", new Value(lines+g.get("value").toLong()));
+                    }
+                }
+            }
+            records = new ArrayList<>();
+            Iterator<String> it = group.keySet().iterator();
+            while (it.hasNext()){
+                HashMap<String, Value> record = group.get(it.next());
+                records.add(record);
+            }
+        }
+
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        for (HashMap<String, Value> record : records){
+            str.append("\r\n");
+            for (int i=0; i<fields.length; i++){
+                if (i>0) str.append(",");
+                String val = record.get(fields[i]).toString();
+                if (val==null) val = "";
+                if (val.contains(",")) val = "\"" + val + "\"";
+                str.append(val);
+            }
+        }
+
 
         return new ServiceResponse(str.toString());
     }
@@ -515,10 +734,11 @@ public class ImportService extends WebService {
   //**************************************************************************
   //** getNetwork
   //**************************************************************************
-  /** Returns a list of total lines, quantities, and values by product code
+  /** Returns a csv linking manufacturers->ports->consignee
    */
     public ServiceResponse getNetwork(ServiceRequest request, Database database)
     throws ServletException {
+
 
       //Get sql
         String sql = bluewave.queries.Index.getQuery("Imports_Network");
@@ -529,31 +749,381 @@ public class ImportService extends WebService {
         Neo4J graph = bluewave.Config.getGraph(user);
 
 
-      //Execute query and generate response
+      //Execute query
         String[] fields = new String[]{"manufacturer","lines","quantity","value","consignee","unladed_port"};
-        StringBuilder str = new StringBuilder(String.join(",", fields));
+        ArrayList<HashMap<String, Value>> records = new ArrayList<>();
+        HashMap<Long, Point> ports = new HashMap<>();
         Session session = null;
         try{
             session = graph.getSession();
 
+
+          //Get records
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
-                str.append("\r\n");
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field : fields){
+                    Value val = new Value(r.get(field).asObject());
+                    values.put(field, val);
+                }
+                records.add(values);
 
-                for (int i=0; i<fields.length; i++){
-                    if (i>0) str.append(",");
-                    Object val = r.get(fields[i]).asObject();
-                    str.append(val);
+                Long port = new Value(r.get("unladed_port").asObject()).toLong();
+                if (port!=null) ports.put(port, null);
+            }
+
+
+
+          //Get port names and coordinates
+            StringBuilder str = new StringBuilder();
+            str.append("MATCH (n:port_of_entry)\n");
+            str.append("WHERE n.id IN[\n");
+            Iterator<Long> it = ports.keySet().iterator();
+            while (it.hasNext()){
+                Long id = it.next();
+                str.append(id);
+                if (it.hasNext()) str.append(",");
+            }
+            str.append("]\n");
+            str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
+            str.append("RETURN n.id as id, n.name as name, a.lat as lat, a.lon as lon");
+            sql = str.toString();
+            ports.clear();
+            rs = session.run(sql);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long id = new Value(r.get("id").asObject()).toLong();
+                String name = new Value(r.get("name").asObject()).toString();
+                Double lat = new Value(r.get("lat").asObject()).toDouble();
+                Double lon = new Value(r.get("lon").asObject()).toDouble();
+                try{
+                    ports.put(id, JTS.createPoint(lat, lon));
+                }
+                catch(Exception e){
+                    //console.log("No coordinate for port " + id);
                 }
             }
 
             session.close();
         }
         catch(Exception e){
-            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
+        }
+
+
+
+      //Generate response
+        fields = new String[]{
+        "manufacturer","manufacturer_lat","manufacturer_lon","manufacturer_cc",
+        "unladed_port", "unladed_port_lat", "unladed_port_lon",
+        "consignee","consignee_lat","consignee_lon","consignee_cc",
+        "lines","quantity","value"};
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        synchronized (firmLocations){
+            synchronized(firmCountries){
+                for (HashMap<String, Value> record : records){
+                    str.append("\r\n");
+
+                    Long port = record.get("unladed_port").toLong();
+                    Long manufacturer = record.get("manufacturer").toLong();
+                    Long consignee = record.get("consignee").toLong();
+
+
+                    Point pt = ports.get(port);
+                    if (pt!=null) {
+                        record.put("unladed_port_lat", new Value(pt.getY()));
+                        record.put("unladed_port_lon", new Value(pt.getX()));
+                    }
+
+
+                    pt = firmLocations.get(manufacturer);
+                    if (pt!=null) {
+                        record.put("manufacturer_lat", new Value(pt.getY()));
+                        record.put("manufacturer_lon", new Value(pt.getX()));
+                    }
+                    String cc = firmCountries.get(manufacturer);
+                    if (cc!=null) record.put("manufacturer_cc", new Value(cc));
+
+
+                    pt = firmLocations.get(consignee);
+                    if (pt!=null) {
+                        record.put("consignee_lat", new Value(pt.getY()));
+                        record.put("consignee_lon", new Value(pt.getX()));
+                    }
+                    cc = firmCountries.get(manufacturer);
+                    if (cc!=null) record.put("consignee_cc", new Value(cc));
+
+
+                    for (int i=0; i<fields.length; i++){
+                        if (i>0) str.append(",");
+                        Value v = record.get(fields[i]);
+                        String val = v==null ? null : v.toString();
+                        if (val==null) val = "";
+                        if (val.contains(",")) val = "\"" + val + "\"";
+                        str.append(val);
+                    }
+                }
+            }
+        }
+        return new ServiceResponse(str.toString());
+    }
+
+
+  //**************************************************************************
+  //** getNetwork2
+  //**************************************************************************
+  /** Returns a csv linking manufacturers->consignee
+   */
+    public ServiceResponse getNetwork2(ServiceRequest request, Database database)
+    throws ServletException {
+
+
+      //Get query
+        String query = bluewave.queries.Index.getQuery("Imports_Network");
+
+      //Remove ports
+        query = query.replace("n.unladed_port as unladed_port", "").trim();
+        if (query.endsWith(",")) query = query.substring(0, query.length()-1);
+
+
+      //Get graph
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        Neo4J graph = bluewave.Config.getGraph(user);
+
+
+      //Execute query
+        HashSet<Long> manufacturerIDs = new HashSet<>();
+        HashSet<Long> consigneeIDs = new HashSet<>();
+        ArrayList<HashMap<String, Value>> records = new ArrayList<>();
+        Session session = null;
+        try{
+            session = graph.getSession();
+            Result rs = session.run(query);
+            while (rs.hasNext()){
+                Record r = rs.next();
+
+                Long manufacturer = new Value(r.get("manufacturer").asObject()).toLong();
+                Long consignee = new Value(r.get("consignee").asObject()).toLong();
+
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field : r.keys()){
+                    Value val = new Value(r.get(field).asObject());
+                    values.put(field, val);
+                }
+                records.add(values);
+                if (manufacturer!=null) manufacturerIDs.add(manufacturer);
+                if (consignee!=null) consigneeIDs.add(consignee);
+            }
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+            return new ServiceResponse(e);
+        }
+
+
+      //Get facility names
+        HashMap<String, ArrayList<Long>> manufacturers = new HashMap<>();
+        HashMap<String, ArrayList<Long>> consignees = new HashMap<>();
+        synchronized(firmNames){
+            for (Long fei : manufacturerIDs){
+                String name = firmNames.get(fei);
+                ArrayList<Long> arr = manufacturers.get(name);
+                if (arr==null){
+                    arr = new ArrayList<>();
+                    manufacturers.put(name, arr);
+                }
+                arr.add(fei);
+            }
+
+            for (Long fei : consigneeIDs){
+                String name = firmNames.get(fei);
+                ArrayList<Long> arr = consignees.get(name);
+                if (arr==null){
+                    arr = new ArrayList<>();
+                    consignees.put(name, arr);
+                }
+                arr.add(fei);
+            }
+        }
+
+
+
+      //Merge records by facility
+        ArrayList<HashMap<String, Value>> mergedRecords = new ArrayList<>();
+        Iterator<String> it = manufacturers.keySet().iterator();
+        while (it.hasNext()){
+            String facilityName = it.next();
+            ArrayList<Long> feis = manufacturers.get(facilityName);
+
+
+            StringBuilder str = new StringBuilder();
+            for (Long fei : feis){
+                if (str.length()>0) str.append(",");
+                str.append(fei);
+            }
+            String facilityFEIs = str.toString();
+
+
+            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+            for (HashMap<String, Value> record : records){
+                Long manufacturer = record.get("manufacturer").toLong();
+                if (manufacturer==null) continue;
+                for (Long fei : feis){
+                    if (manufacturer.equals(fei)){
+
+                        String countryCode = null;
+                        synchronized(firmCountries){
+                            countryCode = firmCountries.get(fei);
+                        }
+
+
+                        Long consignee = record.get("consignee").toLong();
+                        Float lines = record.get("lines").toFloat();
+                        if (lines==null) lines = 0f;
+                        Float quantity = record.get("quantity").toFloat();
+                        if (quantity==null) quantity = 0f;
+                        Float value = record.get("value").toFloat();
+                        if (value==null) value = 0f;
+
+                        String key = facilityFEIs+"->"+consignee;
+
+                        HashMap<String, Value> g = group.get(key);
+                        if (g==null){
+                            g = new HashMap<>();
+                            g.put("manufacturer_name", new Value(facilityName));
+                            g.put("manufacturer_fei", new Value(facilityFEIs));
+                            g.put("manufacturer_cc", new Value(countryCode));
+
+                            g.put("consignee", new Value(consignee));
+                            g.put("lines", new Value(lines));
+                            g.put("quantity", new Value(quantity));
+                            g.put("value", new Value(value));
+                            group.put(key, g);
+                        }
+                        else{
+                            g.put("lines", new Value(lines+g.get("lines").toLong()));
+                            g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                            g.put("value", new Value(lines+g.get("value").toLong()));
+                        }
+
+
+                        break;
+                    }
+                }
+            }
+
+
+            Iterator<String> i3 = group.keySet().iterator();
+            while (i3.hasNext()){
+                HashMap<String, Value> g = group.get(i3.next());
+                mergedRecords.add(g);
+            }
+        }
+
+
+        console.log("Reduced " + records.size() + " to " + mergedRecords.size() + " (merged " + (records.size()-mergedRecords.size()) + " records)");
+
+
+
+      //Merge records by consignee
+        ArrayList<HashMap<String, Value>> mergedRecords2 = new ArrayList<>();
+        Iterator<String> i2 = consignees.keySet().iterator();
+        while (i2.hasNext()){
+            String facilityName = i2.next();
+            ArrayList<Long> feis = consignees.get(facilityName);
+
+
+            StringBuilder str = new StringBuilder();
+            for (Long fei : feis){
+                if (str.length()>0) str.append(",");
+                str.append(fei);
+            }
+            String facilityFEIs = str.toString();
+
+            HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+            for (HashMap<String, Value> record : mergedRecords){
+                Long consignee = record.get("consignee").toLong();
+                if (consignee==null) continue;
+                for (Long fei : feis){
+                    if (consignee.equals(fei)){
+
+
+                        String countryCode = null;
+                        synchronized(firmCountries){
+                            countryCode = firmCountries.get(fei);
+                        }
+
+                        String manufacturerName = record.get("manufacturer_name").toString();
+                        String manufacturerFEIs = record.get("manufacturer_fei").toString();
+                        String manufacturerCC = record.get("manufacturer_cc").toString();
+
+                        Float lines = record.get("lines").toFloat();
+                        if (lines==null) lines = 0f;
+                        Float quantity = record.get("quantity").toFloat();
+                        if (quantity==null) quantity = 0f;
+                        Float value = record.get("value").toFloat();
+                        if (value==null) value = 0f;
+
+                        String key = manufacturerFEIs+"->"+facilityFEIs;
+
+                        HashMap<String, Value> g = group.get(key);
+                        if (g==null){
+                            g = new HashMap<>();
+                            g.put("manufacturer_name", new Value(manufacturerName));
+                            g.put("manufacturer_fei", new Value(manufacturerFEIs));
+                            g.put("manufacturer_cc", new Value(manufacturerCC));
+
+                            g.put("consignee_name", new Value(facilityName));
+                            g.put("consignee_fei", new Value(facilityFEIs));
+                            g.put("consignee_cc", new Value(countryCode));
+
+                            g.put("lines", new Value(lines));
+                            g.put("quantity", new Value(quantity));
+                            g.put("value", new Value(value));
+                            group.put(key, g);
+                        }
+                        else{
+                            g.put("lines", new Value(lines+g.get("lines").toLong()));
+                            g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                            g.put("value", new Value(lines+g.get("value").toLong()));
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            Iterator<String> i3 = group.keySet().iterator();
+            while (i3.hasNext()){
+                HashMap<String, Value> g = group.get(i3.next());
+                mergedRecords2.add(g);
+            }
+        }
+
+
+        console.log("Further reduced " + records.size() + " to " + mergedRecords2.size() + " (merged " + (records.size()-mergedRecords2.size()) + " records)");
+
+
+
+      //Generate response
+        String[] fields = new String[]{
+        "manufacturer_name","manufacturer_fei","manufacturer_cc",
+        "consignee_name","consignee_fei","consignee_cc",
+        "lines","quantity","value"};
+        StringBuilder str = new StringBuilder(String.join(",", fields));
+        for (HashMap<String, Value> record : mergedRecords2){
+            str.append("\r\n");
+
+            for (int i=0; i<fields.length; i++){
+                if (i>0) str.append(",");
+                String val = record.get(fields[i]).toString();
+                if (val==null) val = "";
+                if (val.contains(",")) val = "\"" + val + "\"";
+                str.append(val);
+            }
         }
 
         return new ServiceResponse(str.toString());
@@ -710,39 +1280,40 @@ public class ImportService extends WebService {
   //**************************************************************************
   //** getHistory
   //**************************************************************************
+  /** Returns imports per day by country and product code
+   */
     public ServiceResponse getHistory(ServiceRequest request, Database database)
     throws ServletException {
 
       //Get parameters
         String country = request.getParameter("country").toString();
-        if (country==null) return new ServiceResponse(400, "country is required");
+
+        String productCode = request.getParameter("productCode").toString();
+        if (productCode==null) productCode="LZA,FMC,LYZ,IWP,LZC,KGO,LYY,OPA,OPJ,OPC,QDO";
 
         Integer threshold = request.getParameter("threshold").toInteger();
         if (threshold==null || threshold<0 || threshold>100) threshold = 0;
 
+        String groupBy = request.getParameter("groupBy").toString();
+        if (groupBy!=null) groupBy = groupBy.toLowerCase(); //e.g. manufacturer
+
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
+        String sql;
+        if (groupBy!=null && groupBy.equals("country")){
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day_Country");
+            groupBy = null; //there's code below that's expecting an establishment type for the groupBy
+        }
+        else{
+            if (country==null) return new ServiceResponse(400, "country is required");
 
-
-      //Update sql with country keyword
-        if (country!=null){
-            StringBuilder str = new StringBuilder();
-            for (String cc : country.split(",")){
-                cc = cc.trim();
-                if (cc.isEmpty()) continue;
-                if (cc.startsWith("'") && cc.endsWith("'")){
-                    cc = cc.substring(1, cc.length()-1);
-                }
-                if (str.length()>0) str.append(",");
-                str.append("'" + cc + "'");
-            }
-            sql = sql.replace("{country}", str);
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
+            sql = sql.replace("{country}", addQuotes(country));
+            sql = sql.replace("{threshold}", threshold+"");
+            if (groupBy!=null) sql += ",n."+ groupBy + " as " + groupBy;
         }
 
-
-      //Update sql with additional keywords
-        sql = sql.replace("{threshold}", threshold+"");
+        sql = sql.replace("{product_code}", addQuotes(productCode));
 
 
       //Get graph
@@ -751,10 +1322,10 @@ public class ImportService extends WebService {
 
 
 
-
-      //Execute query and generate response
-        String[] fields = new String[]{"date","lines","quantity","value"};
-        StringBuilder str = new StringBuilder(String.join(",", fields));
+      //Execute query
+        HashSet<Long> establishmentIDs = new HashSet<>();
+        ArrayList<HashMap<String, Value>> records = new ArrayList<>();
+        LinkedHashSet<String> fields = new LinkedHashSet<>();
         Session session = null;
         try{
             session = graph.getSession();
@@ -762,23 +1333,149 @@ public class ImportService extends WebService {
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
-                str.append("\r\n");
 
-                for (int i=0; i<fields.length; i++){
-                    if (i>0) str.append(",");
-                    str.append(r.get(fields[i]).asObject());
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field : r.keys()){
+                    fields.add(field);
+                    Value val = new Value(r.get(field).asObject());
+                    values.put(field, val);
+                }
+                records.add(values);
+
+
+                if (groupBy!=null){
+                    Long establishmentID = new Value(r.get(groupBy).asObject()).toLong();
+                    establishmentIDs.add(establishmentID);
                 }
             }
-
 
             session.close();
         }
         catch(Exception e){
-            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
 
+
+
+      //Group records as needed
+        if (groupBy!=null){
+
+
+            HashMap<String, ArrayList<Long>> establishments = new HashMap<>();
+            synchronized(firmNames){
+                for (Long fei : establishmentIDs){
+                    String name = firmNames.get(fei);
+                    ArrayList<Long> arr = establishments.get(name);
+                    if (arr==null){
+                        arr = new ArrayList<>();
+                        establishments.put(name, arr);
+                    }
+                    arr.add(fei);
+                }
+            }
+
+
+          //Local fuzzy match
+            HashMap<Long, String> f = new HashMap<>();
+            Iterator<String> i2 = establishments.keySet().iterator();
+            while (i2.hasNext()){
+                String name = i2.next();
+                ArrayList<Long> arr = establishments.get(name);
+                for (Long id : arr){
+                    f.put(id, name);
+                }
+            }
+            establishments = mergeCompanies(f);
+
+
+          //Merge records by establishment
+            ArrayList<HashMap<String, Value>> mergedRecords = new ArrayList<>();
+            Iterator<String> it = establishments.keySet().iterator();
+            while (it.hasNext()){
+                String facilityName = it.next();
+                ArrayList<Long> feis = establishments.get(facilityName);
+
+                /*
+                StringBuilder str = new StringBuilder();
+                for (Long fei : feis){
+                    if (str.length()>0) str.append(",");
+                    str.append(fei);
+                }
+                String facilityFEIs = str.toString();
+                */
+
+
+                HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+                for (HashMap<String, Value> record : records){
+                    Long establishment = record.get(groupBy).toLong();
+                    if (establishment==null) continue;
+                    for (Long fei : feis){
+                        if (establishment.equals(fei)){
+
+                            String date = record.get("date").toString();
+                            Float lines = record.get("lines").toFloat();
+                            if (lines==null) lines = 0f;
+                            Float quantity = record.get("quantity").toFloat();
+                            if (quantity==null) quantity = 0f;
+                            Float value = record.get("value").toFloat();
+                            if (value==null) value = 0f;
+
+                            String key = facilityName+"->"+date;
+
+                            HashMap<String, Value> g = group.get(key);
+                            if (g==null){
+                                g = new HashMap<>();
+                                g.put("date", new Value(date));
+                                g.put("lines", new Value(lines));
+                                g.put("quantity", new Value(quantity));
+                                g.put("value", new Value(value));
+                                g.put(groupBy, new Value(facilityName));
+                                group.put(key, g);
+                            }
+                            else{
+                                g.put("lines", new Value(lines+g.get("lines").toLong()));
+                                g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                                g.put("value", new Value(lines+g.get("value").toLong()));
+                            }
+
+                            break;
+                        }
+                    }
+                }
+
+
+                Iterator<String> i3 = group.keySet().iterator();
+                while (i3.hasNext()){
+                    HashMap<String, Value> g = group.get(i3.next());
+                    mergedRecords.add(g);
+                }
+            }
+
+            records = mergedRecords;
+        }
+
+
+
+
+      //Generate response
+        StringBuilder str = new StringBuilder();
+        Iterator<String> it = fields.iterator();
+        while (it.hasNext()){
+            str.append(it.next());
+            if (it.hasNext()) str.append(",");
+        }
+        for (HashMap<String, Value> record : records){
+            str.append("\r\n");
+            it = fields.iterator();
+            while (it.hasNext()){
+                String val = record.get(it.next()).toString();
+                if (val==null) val = "";
+                if (val.contains(",")) val = "\"" + val + "\"";
+                str.append(val);
+                if (it.hasNext()) str.append(",");
+            }
+        }
         return new ServiceResponse(str.toString());
     }
 
@@ -845,45 +1542,19 @@ public class ImportService extends WebService {
         if (ids==null) return new ServiceResponse(400, "id is required");
 
 
-      //Get graph
-        bluewave.app.User user = (bluewave.app.User) request.getUser();
-        Neo4J graph = bluewave.Config.getGraph(user);
-
-
-      //Get establishment names
-        HashMap<Long,String> facilities = new HashMap<>();
-        Session session = null;
-        try{
-            session = graph.getSession();
-
-
-            StringBuilder str = new StringBuilder();
-            str.append("MATCH (n:import_establishment)\n");
-            str.append("WHERE n.fei IN[\n");
-            str.append(ids);
-            str.append("]\n");
-            str.append("RETURN n.fei as fei, n.name as name");
-
-            Result rs = session.run(str.toString());
-            while (rs.hasNext()){
-                Record r = rs.next();
-                Long fei = new Value(r.get("fei").asObject()).toLong();
-                String name = new Value(r.get("name").asObject()).toString();
-                facilities.put(fei, name);
+        HashMap<String, ArrayList<Long>> uniqueFacilities = new HashMap<>();
+        synchronized(firmNames){
+            for (String id : ids.split(",")){
+                Long fei = Long.parseLong(id);
+                String name = firmNames.get(fei);
+                ArrayList<Long> arr = uniqueFacilities.get(name);
+                if (arr==null){
+                    arr = new ArrayList<>();
+                    uniqueFacilities.put(name, arr);
+                }
+                arr.add(fei);
             }
-
-
-            session.close();
         }
-        catch(Exception e){
-            if (session!=null) session.close();
-            return new ServiceResponse(e);
-        }
-
-
-
-      //Fuzzy match facility names and combine entries
-        HashMap<String, ArrayList<Long>> uniqueFacilities = mergeCompanies(facilities);
 
 
 
@@ -1047,6 +1718,25 @@ public class ImportService extends WebService {
             if (it.hasNext()) str.append(",");
         }
         str.append("\"");
+        return str.toString();
+    }
+
+
+  //**************************************************************************
+  //** addQuotes
+  //**************************************************************************
+    private String addQuotes(String country){
+        if (country==null) return null;
+        StringBuilder str = new StringBuilder();
+        for (String cc : country.split(",")){
+            cc = cc.trim();
+            if (cc.isEmpty()) continue;
+            if (cc.startsWith("'") && cc.endsWith("'")){
+                cc = cc.substring(1, cc.length()-1);
+            }
+            if (str.length()>0) str.append(",");
+            str.append("'" + cc + "'");
+        }
         return str.toString();
     }
 }

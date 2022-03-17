@@ -1541,6 +1541,137 @@ public class Imports {
 
 
   //**************************************************************************
+  //** fixDates
+  //**************************************************************************
+  /** Used to reformat dates in the import_line nodes
+   */
+    public static void fixDates(Neo4J database) throws Exception {
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                Object[] arr = (Object[]) obj;
+                Long id = (Long) arr[0];
+                String date = (String) arr[1];
+
+
+
+                String node = "import_line";
+                StringBuilder query = new StringBuilder();
+                query.append("MATCH (n:" + node + ") WHERE ");
+                query.append("id(n)=" + id + " ");
+                query.append("SET n+= {");
+
+                String key = "date";
+                query.append(key);
+                query.append(": $");
+                query.append(key);
+
+                query.append("}");
+
+                try{
+                    Map<String, Object> params = new LinkedHashMap<>();
+
+                    if (date.contains("/")){
+                        String[] d = date.split("/");
+                        String year = d[2];
+                        String month = d[0];
+                        String day = d[1];
+                        if (month.length()==1) month = "0"+month;
+                        if (day.length()==1) day = "0"+day;
+                        date = year + "-" + month + "-" + day;
+
+                        params.put(key, date);
+                        getSession().run(query.toString(), params);
+
+                    }
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+
+
+                recordCounter.incrementAndGet();
+            }
+
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+
+
+
+
+
+        int totalRecords = 0;
+
+        Session session = null;
+        try{
+            session = database.getSession();
+            String query = "MATCH (n:import_line)\n" +
+            "RETURN id(n) as id, n.date as date";
+            Result rs = session.run(query);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                try{
+                    Long id = r.get("id").asLong();
+                    String date = r.get("date").asString();
+
+                    pool.add(new Object[]{id, date});
+                    totalRecords++;
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+
+        }
+
+
+
+      //Update statusLogger
+        statusLogger.setTotalRecords(totalRecords);
+
+
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
+    }
+
+
+  //**************************************************************************
   //** getShipmentsByPortOfUnlading
   //**************************************************************************
     public void getShipmentsByPortOfUnlading(Integer portOfEntryID, javaxt.io.File importsSummary) throws Exception {

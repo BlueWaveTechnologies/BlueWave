@@ -500,6 +500,10 @@ bluewave.charts.MapChart = function(parent, config) {
                 if (callback) callback();
             });
         }
+        else{
+            setExtent(extent);
+            if (callback) callback();
+        }
     };
 
 
@@ -593,8 +597,8 @@ bluewave.charts.MapChart = function(parent, config) {
         projection
             .rotate([-center[0], 0])
             .center([0, center[1]]);
-        
- 
+
+
         // draw();
 
         setExtent(extent, --base);
@@ -708,11 +712,15 @@ bluewave.charts.MapChart = function(parent, config) {
         .attr("stroke-width", outlineWidth)
         .attr("stroke-opacity", opacity)
         .on("click", function(feature, idx, siblings){
-            if (config.onClick) config.onClick.apply(me, [{
-                feature: feature,
-                element: siblings[idx],
-                layer: layer
-            }]);
+            if (config.onClick){
+                var e = d3.event;
+                config.onClick.apply(me, [{
+                    feature: feature,
+                    element: siblings[idx],
+                    layer: layer,
+                    event: e
+                }]);
+            }
         });
 
         layer.elements = points;
@@ -769,6 +777,7 @@ bluewave.charts.MapChart = function(parent, config) {
 
         layer.elements = lines;
     };
+
 
   //**************************************************************************
   //** renderGridLayer
@@ -839,7 +848,9 @@ bluewave.charts.MapChart = function(parent, config) {
         if (tooltip || config.onClick) highlight = true;
 
 
-        var mouseover = function(d) {
+        var mouseover = function(feature, idx, siblings) {
+            var d = feature;
+
             if (tooltip){
 
               //Get label
@@ -858,7 +869,17 @@ bluewave.charts.MapChart = function(parent, config) {
                 .style("z-index", zIndex);
             }
 
-            if (highlight) d3.select(this).transition().duration(100).attr("opacity", "0.8");
+            var el = d3.select(this);
+            if (highlight){
+                el.transition().duration(100);
+                el.attr("opacity", "0.8");
+            }
+
+            if (config.onMouseOver) config.onMouseOver.apply(me, [{
+                feature: feature,
+                element: el,
+                layer: layer
+            }]);
         };
 
         var mousemove = function() {
@@ -868,17 +889,30 @@ bluewave.charts.MapChart = function(parent, config) {
             .style('left', (e.clientX + 20) + "px");
         };
 
-        var mouseleave = function() {
+        var mouseleave = function(feature, idx, siblings) {
             if (tooltip) tooltip
             .style("opacity", 0)
             .style("display", "none");
 
-            if (highlight) d3.select(this).transition().duration(100).attr("opacity", "1");
+            var el = d3.select(this);
+            if (highlight){
+                el.transition().duration(100);
+                el.attr("opacity", "1");
+            }
+
+            if (config.onMouseLeave) config.onMouseLeave.apply(me, [{
+                feature: feature,
+                element: el,
+                layer: layer
+            }]);
         };
 
 
         var fill = style.fill;
         if (!fill) fill = "#DEDDE0";
+
+        var stroke = style.stroke;
+        if (!stroke) stroke = "#fff";
 
         var polygons = g.selectAll("*")
         .data(layer.features)
@@ -891,16 +925,21 @@ bluewave.charts.MapChart = function(parent, config) {
             }
             else return fill;
         })
-        .attr('stroke', 'white')
+        .attr('stroke', stroke)
+        .style("stroke-width", 0.4)
         .on("mouseover", mouseover)
         .on("mousemove", mousemove)
         .on("mouseleave", mouseleave)
         .on("click", function(feature, idx, siblings){
-            if (config.onClick) config.onClick.apply(me, [{
-                feature: feature,
-                element: siblings[idx],
-                layer: layer
-            }]);
+            if (config.onClick){
+                var e = d3.event;
+                config.onClick.apply(me, [{
+                    feature: feature,
+                    element: siblings[idx],
+                    layer: layer,
+                    event: e
+                }]);
+            }
         });
 
         layer.elements = polygons;
@@ -974,22 +1013,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** createTooltip
-  //**************************************************************************
-    var createTooltip = function(){
-        var tooltip = bluewave.charts.MapChart.Tooltip;
-        if (!tooltip){
-            tooltip = bluewave.charts.MapChart.Tooltip =
-            d3.select(document.body)
-            .append("div")
-            .style("opacity", 0)
-            .attr("class", "tooltip");
-        }
-        return tooltip;
-    };
-
-
-  //**************************************************************************
   //** getCoordinates
   //**************************************************************************
     var getCoordinates = function(d){
@@ -1012,6 +1035,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
+    var createTooltip = bluewave.chart.utils.createTooltip;
 
     init();
 };

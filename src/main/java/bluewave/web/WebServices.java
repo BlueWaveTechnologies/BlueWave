@@ -50,14 +50,22 @@ public class WebServices extends WebService {
             }
         }
 
+      //Get graph
+        Neo4J graph = Config.getGraph(null);
+
+      //Get local database
+        database = Config.getDatabase();
+
 
       //Sync bluewave user accounts with the graph database
-        Neo4J graph = Config.getGraph(null);
-        if (graph!=null) bluewave.graph.Maintenance.syncUsers(graph);
+        if (graph!=null){
+            try{
+                bluewave.graph.Maintenance.syncUsers(graph);
+            }
+            catch(Exception e){
+            }
+        }
 
-
-      //Get database
-        database = Config.getDatabase();
 
 
       //Instantiate additional web services
@@ -353,6 +361,9 @@ public class WebServices extends WebService {
         }
         else if (service.equals("query")){
             queryService.createWebSocket(request, response);
+        }
+        else if (service.equals("document")){
+            documentService.createWebSocket(request, response);
         }
         else{
             new WebSocketListener(request, response){

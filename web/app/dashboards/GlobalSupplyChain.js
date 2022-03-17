@@ -1,1401 +1,1562 @@
-if (!bluewave) var bluewave = {};
-if (!bluewave.dashboards) bluewave.dashboards = {};
+if(!bluewave) var bluewave={};
+if(!bluewave.dashboards) bluewave.dashboards={};
 
-bluewave.dashboards.GlobalSupplyChain = function (parent, config) {
-    let me = this;
-    let title = "Global Supply Chain";
-    let map, sankey, countryChart, volumeChart; //dashboard items
-    let innerDiv = "";
-    let slider;
-    let productOptions, monthOptions;
-    let monthKeys = [];
-    let monthData = {};
-    let politicalBoundaries, portsOfEntry; //static data
-    let linechartTooltip, linechartTooltipLine;
-    let tooltip, tooltipBody;
-    let legend;
-    let sankeyData;
-    let currProduct;
-    let displayNameDict;
+//******************************************************************************
+//**  GlobalSupplyChain
+//******************************************************************************
+/**
+ *   Used render a summary of imports by country, company, product code, etc
+ *
+ ******************************************************************************/
+
+bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
+
+    var me = this;
+    var title = "Medical Glove Supply Chain";
+
+    var dashboardPanel;
+    var yAxis = "lines";
+    var colors = [
+        "#4e79a7", //dark blue
+        "#a0cbe8", //light blue
+        "#f28e2b", //dark orange
+        "#ffbe7d", //light orange
+        "#59a14f"  //green
+    ];
+    
+  //Variables for the map panel
+    var mapData = {};
+    var countryNames = {};
+    var worldMapIsReady = false;
+
+    var importsByCountry = [];
+    var productCodes = {};
+    var mapPanel, sankeyPanel;
+    var popup, importSummary, usMap; //popup windows
+    var tooltip;
+    var waitmask;
+
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    var init = function () {
-        //Create main table
-        var table = createTable();
-        var tbody = table.firstChild;
-        parent.appendChild(table);
-        me.el = table;
-        var tr, td;
+    var init = function(){
+        if (!config) config = {};
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;
+        tooltip = createTooltip();
 
-        //Create toolbar
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        td.style.width = "100%";
-        tr.appendChild(td);
-        createToolbar(td);
+        var mainDiv = document.createElement("div");
+        mainDiv.style.position = "relative";
+        mainDiv.style.width = "100%";
+        mainDiv.style.height = "100%";
+        mainDiv.style.overflow = "hidden";
+        mainDiv.style.overflowY = "auto";
+        mainDiv.style.textAlign = "center";
+        parent.appendChild(mainDiv);
+        me.el = mainDiv;
 
-        //Create body
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        td.style.width = "100%";
-        td.style.height = "100%";
-        tr.appendChild(td);
 
-        var div = document.createElement("div");
-        div.style.height = "100%";
-        div.style.textAlign = "center";
-        div.style.overflowY = "auto";
-        td.appendChild(div);
+        var panel = document.createElement("div");
+        panel.className = "global-supply-chain";
+        panel.style.width = "1400px";
+        panel.style.height = "100%";
+        panel.style.display = "inline-block";
+        mainDiv.appendChild(panel);
 
-        innerDiv = document.createElement("div");
-        innerDiv.style.height = "100%";
-        innerDiv.style.display = "inline-block";
-        innerDiv.style.textAlign = "center";
-        innerDiv.style.maxWidth = "1658px";
-        innerDiv.style.position = "relative";
-        div.appendChild(innerDiv);
-
-        tooltip = d3
-            .select(tr)
-            .append("div")
-            .attr("class", "tooltip")
-            .style("display", "none")
-            .style("opacity", 0);
-        tooltipBody = tooltip.append("div").attr("class", "tooltip-body");
-
-        createMap(innerDiv);
-        createSankey(innerDiv);
-        createCountryOfOrigin(innerDiv);
-        createProductVolume(innerDiv);
-        createLinechartTooltip(innerDiv);
+        dashboardPanel = createDashboardPanel(panel);
     };
+
 
   //**************************************************************************
   //** getTitle
   //**************************************************************************
-    this.getTitle = function () {
+    this.getTitle = function(){
         return title;
     };
 
+
   //**************************************************************************
-  //** createToolbar
+  //** clear
   //**************************************************************************
-    var createToolbar = function (parent) {
-        var div = document.createElement("div");
-        div.className = "dashboard-toolbar";
-        parent.appendChild(div);
+    this.clear = function(){
 
-        var table = createTable();
-        div.appendChild(table);
-        var tbody = table.firstChild;
-        var tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        var td;
-
-        productOptions = createProductList(tr, config.style.combobox);
-        productOptions.clear();
-        productOptions.onChange = function (name, value) {
-            currProduct = value;
-            title = value + " Supply Chain Dashboard";
-
-            var arr = sankeyData[currProduct];
-            changeProductData(currProduct);
-            slider.setAttribute("max", arr.length);
-            slider.value = 1;
-            slider.onchange();
-        };
-
-        td = document.createElement("td");
-        td.style.width = "55px";
-        td.innerHTML = "Month:";
-        tr.appendChild(td);
-        td = document.createElement("td");
-        td.style.width = "175px";
-        tr.appendChild(td);
-
-        monthOptions = new javaxt.dhtml.ComboBox(td, {
-            style: config.style.combobox,
-            readOnly: true,
-        });
-        var sliding = false;
-
-        monthOptions.onChange = function (name, value) {
-            if (!sliding) {
-                var options = monthOptions.getOptions();
-                for (var i in options) {
-                    var option = options[i];
-                    if (option.value === value) {
-                        slider.value = i;
-                        break;
-                    }
-                }
-            }
-            updateMontlyCharts(name);
-        };
-
-        td = document.createElement("td");
-        tr.appendChild(td);
-        slider = document.createElement("input");
-        slider.type = "range";
-        slider.className = "dashboard-slider";
-        slider.style.maxWidth = "500px";
-        slider.style.marginLeft = "25px";
-        slider.setAttribute("min", 1);
-        slider.setAttribute("max", 3);
-        slider.value = 1;
-        slider.onchange = function () {
-            sliding = true;
-            var val = this.value - 1;
-            monthOptions.setValue(val);
-            sliding = false;
-        };
-        td.appendChild(slider);
+        dashboardPanel.clear();
+        if (importSummary) importSummary.hide();
+        if (popup) popup.hide();
+        importsByCountry = [];
     };
+
 
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function () {
-        sankeyData = [];
+    this.update = function(){
 
-        if (politicalBoundaries){
-            getDynamicData();
+        dashboardPanel.clear();
+        dashboardPanel.update();
+
+    };
+
+
+  //**************************************************************************
+  //** resize
+  //**************************************************************************
+    this.resize = function(){
+
+    };
+
+
+  //**************************************************************************
+  //** createDashboardPanel
+  //**************************************************************************
+    var createDashboardPanel = function(panel){
+
+
+      //Create table with 2 columns
+        var table = createTable();
+        var tbody = table.firstChild;
+        var tr, td;
+        panel.appendChild(table);
+
+
+      //Row 1
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+
+
+      //Column 1
+        td = document.createElement("td");
+        td.style.width = "100%";
+        td.style.height = "100%";
+        td.style.padding = "7px 0";
+        td.style.verticalAlign = "top";
+        tr.appendChild(td);
+        var leftCol = td;
+
+
+      //Column 2
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.padding = "7px 0";
+        tr.appendChild(td);
+        var rightCol = td;
+
+
+
+      //Populate left column
+        table = createTable();
+        leftCol.appendChild(table);
+        tbody = table.firstChild;
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "1px";
+        tr.appendChild(td);
+        
+      //Create panel to hold the map and sankey charts
+        var div = document.createElement("div");
+        div.style.width = "990px";
+        div.style.height = "485px";
+        div.style.display = "inline-block";
+        div.style.position = "relative";
+        div.style.border = "1px solid #e0e0e0";
+        td.appendChild(div);        
+        
+      //Add map
+        mapPanel = createWorldMap(div);
+        
+      //Add sankey
+        sankeyPanel = createSankeyPanel(div);
+        sankeyPanel.hide();
+        
+      //Add toggle button to switch from map to sankey view
+        var toggleBar = document.createElement("div");
+        toggleBar.style.position = "absolute";
+        toggleBar.style.top = "7px";
+        toggleBar.style.right = "7px";
+        toggleBar.style.zIndex = 2;
+        div.appendChild(toggleBar);
+        bluewave.utils.createToggleButton(toggleBar, {
+            options: ["Map","Sankey"],
+            defaultValue: "Map",
+            onChange: function(val){
+                if (val==="Map"){
+                    sankeyPanel.hide();
+                    mapPanel.show();
+                }
+                else{
+                    mapPanel.hide();
+                    sankeyPanel.show();
+                }
+            }
+        });
+        
+        
+      //Create line chart
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.verticalAlign = "top";
+        td.style.padding = "7px 0 0";
+        tr.appendChild(td);
+        var lineChart = createLineChart(td);
+
+
+
+        var div = document.createElement("div");
+        div.style.width = "400px";
+        div.style.height = "100%";
+        rightCol.appendChild(div);
+
+        table = createTable();
+        tbody = table.firstChild;
+        div.appendChild(table);
+
+        var createCell = function(){
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+            td = document.createElement("td");
+            td.style.width = "100%";
+            td.style.height = "25%";
+            td.style.padding = (tbody.childNodes.length>1 ? "7px" : "0") + " 0px 0px 0px";
+            tr.appendChild(td);
+            return td;
+        };
+
+
+
+        var productPanel = createDashboardItem("Top ProCodes", createCell());
+        var countryPanel = createDashboardItem("Top Countries by ProCode", createCell());
+        var manufacturerPanel = createDashboardItem("Top Manufacturers by ProCode", createCell());
+        var consigneePanel = createDashboardItem("Top Consignees by ProCode", createCell());
+
+
+        panel.clear = function(){
+            if (popup) popup.hide();
+            productPanel.innerDiv.innerHTML = "";
+            countryPanel.innerDiv.innerHTML = "";
+            manufacturerPanel.innerDiv.innerHTML = "";
+            consigneePanel.innerDiv.innerHTML = "";
+            //mapPanel.map.clear();
+        };
+
+        panel.update = function(){
+
+          //Update map
+            get("import/network", {
+                success: function(text) {
+
+
+                    if (!worldMapIsReady){
+                        var timer;
+
+                        var checkWidth = function(){
+                            if (!worldMapIsReady){
+                                timer = setTimeout(checkWidth, 200);
+                            }
+                            else{
+                                clearTimeout(timer);
+                                updateWorldMap(text, mapPanel.map);
+                            }
+                        };
+
+                        timer = setTimeout(checkWidth, 200);
+                    }
+                    else{
+                        updateWorldMap(text, mapPanel.map);
+                    }
+                }
+            });
+
+
+          //Update sankey
+            get("import/network2", {
+                success: function(text) {
+                    if (!sankeyPanel.sankey) return;
+                    updateSankey(text, sankeyPanel.sankey);
+                    sankeyPanel.onPopup = function(){
+                        var sankey = new bluewave.charts.SankeyChart(popup.getBody(), {});
+                        updateSankey(text, sankey);
+                    };
+                }
+            });
+            
+            
+          //Update sankey
+            get("import/history?groupBy=country", {
+                success: function(text) {
+                    var data = d3.csvParse(text);
+                    lineChart.update(data);
+                }
+            });
+
+
+          //Update bar charts
+            get("import/ProductCode?include=country_of_origin", {
+            //get("test/imports/country_of_origin.csv", {
+                success: function(text) {
+                    var data = d3.csvParse(text);
+                    importsByCountry = data;
+
+                  //Get product codes and values
+                    var productValues = {};
+                    data.forEach((d)=>{
+                        var val = parseFloat(d[yAxis]);
+                        var productCode = d.product_code;
+                        var currVal = productValues[productCode];
+                        if (isNaN(currVal)) currVal = 0;
+                        productValues[productCode] = currVal + val;
+                    });
+
+                  //Sort product codes by value
+                    var arr = [];
+                    for (var productCode in productValues) {
+                        if (productValues.hasOwnProperty(productCode)){
+                            arr.push({
+                                productCode: productCode,
+                                value: productValues[productCode]
+                            });
+                        }
+                    }
+                    arr.sort((a, b)=>{
+                        return b.value - a.value;
+                    });
+
+
+                  //Create color map
+                    var colorMap = {};
+                    for (var i=0; i<colors.length; i++){
+                        if (i>arr.length) break;
+                        colorMap[arr[i].productCode] = colors[i];
+                    }
+
+
+                  //Look-up product codes
+                    get("SupplyChain/ProductCodes?code="+Object.keys(productValues), {
+                        success: function(arr) {
+                            arr.forEach((d)=>{
+                                productCodes[d.product_code] = d;
+                            });
+                        }
+                    });
+
+
+                  //Render top products
+                    renderTopProducts(productPanel.innerDiv, data, colorMap);
+                    productPanel.onPopup = function(){
+                        renderTopProducts(popup.getBody(), data, colorMap);
+                    };
+
+
+                  //Render top countries
+                    renderTopCountries(countryPanel.innerDiv, data, colorMap);
+                    countryPanel.onPopup = function(){
+                        renderTopCountries(popup.getBody(), data, colorMap);
+                    };
+
+
+                  //Render top manufacturers
+                    get("import/ProductCode?include=manufacturer", {
+                        success: function(text) {
+                            var data = d3.csvParse(text);
+                            renderTopManufacturers(manufacturerPanel.innerDiv, data, colorMap);
+                            manufacturerPanel.onPopup = function(){
+                                renderTopManufacturers(popup.getBody(), data, colorMap);
+                            };
+                        }
+                    });
+
+
+                  //Render top consignee
+                    get("import/ProductCode?include=consignee", {
+                        success: function(text) {
+                            var data = d3.csvParse(text);
+                            renderTopConsignees(consigneePanel.innerDiv, data, colorMap);
+                            consigneePanel.onPopup = function(){
+                                renderTopConsignees(popup.getBody(), data, colorMap);
+                            };
+                        }
+                    });
+
+                }
+            });
+        };
+
+        return panel;
+    };
+
+
+  //**************************************************************************
+  //** renderTopProducts
+  //**************************************************************************
+    var renderTopProducts = function(parent, data, colorMap){
+
+        var barChart = createBarChart(parent, data, "product_code", yAxis, null, 10, colorMap);
+
+        var mouseover = function(label) {
+            var product = productCodes[label];
+            if (product) label += ": " + product.device_name;
+            tooltip.html(label).show();
+        };
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+        labels.on("click",function(label){
+
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderTopCountries
+  //**************************************************************************
+    var renderTopCountries = function(parent, data, colorMap){
+
+        var barChart = createBarChart(parent, data, "country_of_origin", yAxis, "product_code", 10, colorMap);
+
+        var mouseover = function(label) {
+            var countryName = countryNames[label];
+            if (countryName) label = countryName;
+            tooltip.html(label).show();
+        };
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+
+        var countries;
+        labels.on("click",function(label){
+            if (!countries){
+                countries = {};
+                data.forEach((d)=>{
+                    countries[d.country_of_origin] = d.country_of_origin;
+                });
+            }
+            showImportSummary(label);
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderTopManufacturers
+  //**************************************************************************
+    var renderTopManufacturers = function(parent, data, colorMap){
+
+        var manufacturerNames = {};
+
+        data.forEach((d)=>{
+            var label = getLabel(d.manufacturer);
+            manufacturerNames[label] = d.manufacturer;
+            d.manufacturer = label;
+        });
+        var barChart = createBarChart(parent, data, "manufacturer", yAxis, "product_code", 10, colorMap);
+
+
+
+        var mouseover = function(label) {
+            var manufacturerName = manufacturerNames[label];
+            if (manufacturerName) label = manufacturerName;
+            tooltip.html(label).show();
+        };
+
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+        labels.on("click",function(label){
+            //console.log(label);
+        });
+    };
+
+
+  //**************************************************************************
+  //** renderTopConsignees
+  //**************************************************************************
+    var renderTopConsignees = function(parent, data, colorMap){
+
+
+        var consigneeNames = {};
+        data.forEach((d)=>{
+            var label = getLabel(d.consignee);
+            consigneeNames[label] = d.consignee;
+            d.consignee = label;
+        });
+        var barChart = createBarChart(parent, data, "consignee", yAxis, "product_code", 10, colorMap);
+
+
+        var mouseover = function(label) {
+            var consigneeName = consigneeNames[label];
+            if (consigneeName) label = consigneeName;
+            tooltip.html(label).show();
+        };
+
+        var labels = barChart.getXAxis().selectAll("text");
+        labels.on("mouseover", mouseover);
+        labels.on("mousemove", mousemove);
+        labels.on("mouseleave", mouseleave);
+        labels.on("click",function(label){
+            //console.log(label);
+        });
+    };
+
+
+    var mousemove = function() {
+        var e = d3.event;
+        if (tooltip) tooltip
+        .style('top', (e.clientY) + "px")
+        .style('left', (e.clientX + 20) + "px");
+    };
+
+    var mouseleave = function() {
+        if (tooltip) tooltip.hide();
+    };
+
+
+    var maxLen = 10;
+    var getLabel = function(str){
+        if (isNumeric(str)){
+            return str+"_";
         }
         else{
-            getStaticData(function(){
-                getDynamicData();
-            });
+            if (str.length<=maxLen) return str;
+            str = str.substring(0, maxLen-3) + "...";
+            return str;
         }
     };
 
-    var getStaticData = function(callback){
-        getData("countries", function(data) {
-            politicalBoundaries = data;
-            createBackgroundMap()
-            getData("PortsOfEntry", function(data) {
-                displayNameDict = {}
-                data.forEach((port)=>{
-                    displayNameDict[port.country] = port.country;
-                    displayNameDict[port.iso2] = port.country;
-                    displayNameDict[port.iso3] = port.country;
-                })
-                portsOfEntry = data;
-                if (callback) callback.apply(me, []);
+
+    var getTopValues = function(data, key, value, numBars){
+
+        //Hopefully this isn't slow =(
+        var sumData = d3.nest()
+        .key(function(d){return d[key];})
+        .rollup(function(d){
+            return d3.sum(d,function(g){
+                return g[value];
             });
+        })
+        .entries(data)
+        .sort(function(a, b){
+            return d3.ascending(a.value, b.value);
         });
-    };
 
-
-    var getDynamicData = function(callback){
-        getData("SupplyChainSankey", function (data) {
-            sankeyData = data;
-            let products = Object.keys(data);
-            productOptions.clear();
-            products.forEach((val) => {
-                productOptions.add(val, val);
-            });
-
-            productOptions.setValue(products[0]);
-        });
+        var topVals = sumData.slice(sumData.length - numBars);
+        return topVals.map(d => d.key);
     };
 
 
   //**************************************************************************
-  //** changeProductData
+  //** createBarChart
   //**************************************************************************
-    const changeProductData = function (name) {
-        let selected = name;
-        let data = clone(sankeyData[selected]);
-        let lineData = clone(data);
-        let orders = [];
-        monthKeys = [];
+    var createBarChart = function(parent, data, xAxis, yAxis, groupBy, numBars, colorMap) {
 
-        monthOptions.clear();
-
-        data.forEach(({ name, data, notes }) => {
-            monthKeys.push(name);
-            monthData[name] = {
-                notes: notes || "",
-                data,
-            };
-        });
-
-        monthKeys.sort(function (a, b) {
-            a = parseInt(a.split("-").join(""));
-            b = parseInt(b.split("-").join(""));
-            return b - a;
-        });
-
-        monthKeys.forEach((month, i) => {
-            monthOptions.add(month, i);
-
-            let filled = 0;
-            let unfilled = 0;
-            monthData[month].data.links.forEach((val) => {
-                switch (val.meta) {
-                    case "filled":
-                        filled += val.value;
-                        break;
-                    case "unfilled":
-                        unfilled += val.value;
-                        break;
-
-                    default:
-                        break;
-                }
-            });
-            orders.push({
-                date: parseDate(month),
-                filled,
-                unfilled,
-            });
-        });
-
-        //Update slider
-        let currentMonth = monthKeys[monthKeys.length - 1];
-
-        slider.setAttribute("max", monthKeys.length);
-        monthOptions.setValue(currentMonth);
-
-        // Add All Dropdown option
-        // Merge existing monthly data to all data group
-        monthOptions.add("All");
-        let linkMap = {};
-        let nodeMap = {};
-        const merge = (data) => {
-            for (var key in data) {
-                data[key].data.links.forEach((val) => {
-                    if (linkMap[`${val.source}${val.target}`]) {
-                        linkMap[`${val.source}${val.target}`].value +=
-                            val.value;
-                    } else {
-                        linkMap[`${val.source}${val.target}`] = val;
-                    }
-                });
-                data[key].data.nodes.forEach((val) => {
-                    if (!nodeMap[val.name]) {
-                        nodeMap[val.name] = val;
-                    }
-                });
-            }
+        var config = {
+            xAxis: xAxis,
+            yAxis: yAxis,
+            group: groupBy,
+            stackValues: true,
+            showTooltip: true,
+            sort: "descending"
         };
-        merge(monthData);
-
-        monthData["All"] = { data: { links: [], nodes: [] } };
-        monthData["All"]["data"]["links"] = Object.values(linkMap);
-        monthData["All"]["data"]["nodes"] = Object.values(nodeMap);
-
-        updateMontlyCharts(currentMonth);
-        updateYearlyCharts(orders, lineData);
-    };
 
 
-  //**************************************************************************
-  //** updateYearlyCharts
-  //**************************************************************************
-    var updateYearlyCharts = (orders, lineData) => {
-        // Prep LineData
-        lineData = lineData.reduce((acc, month) => {
-            // for each month:
-            // filter only filled orders
-            // add dates and flatten array
-            let distributor = {};
-            month.data.links.forEach(({ source, value, meta }) => {
-                if (meta !== "filled") {
-                    return;
-                }
-                if (distributor[source]) {
-                    distributor[source] += value;
-                } else {
-                    distributor[source] = value;
-                }
-            });
-            let keys = Object.keys(distributor);
-
-            var str = month.name;
-            var date = parseDate(str)
-
-
-            let result = keys.map((key) => {
-                return { type: key, date, value: distributor[key] };
-            });
-
-            return [...acc, ...result];
-        }, []);
-
-        updateCountryOfOrigin(orders);
-        updateProductVolume(lineData);
-    };
-
-  //**************************************************************************
-  //** updateMontlyCharts
-  //**************************************************************************
-    var updateMontlyCharts = function (month) {
-        let { sankeyData, connectionsData } = getMonthlyData(month);
-
-        let volumeMap = {};
-        sankeyData.links.forEach((location) => {
-            if (volumeMap[location.source]) {
-                volumeMap[location.source] += location.value;
-            } else {
-                volumeMap[location.source] = location.value;
-            }
+        var topKeys = getTopValues(data, xAxis, yAxis, numBars);
+        var filteredData = data.filter(function (d) {
+            return topKeys.includes(d[xAxis]);
         });
-        connectionsData = connectionsData.map((location) => {
-            let {country,iso2,iso3} = location;
-            let value = volumeMap[country] || volumeMap[iso2] || volumeMap[iso3]
-            return { ...location, value };
-        });
-
-        updateMap(connectionsData);
-        updateSankey(sankeyData);
-    };
-
-  //**************************************************************************
-  //** Get Montly Data
-  //**************************************************************************
-    var getMonthlyData = function (month) {
-        let sankeyMonthData = clone(monthData[month].data);
-        let countries = {};
-
-        sankeyMonthData.nodes.forEach(({ name }) => {
-            countries[name] = true;
-        });
-
-        // Filter Countries by port country name Should check alias IE: iso2,iso3
-        let connectionsMonthData = portsOfEntry.filter((port) => {
-            if(countries[port.iso2] || countries[port.iso3] || countries[port.country]){
-                return true
-            }
-        });
-
-        return {
-            sankeyData: sankeyMonthData,
-            connectionsData: connectionsMonthData,
+        var barChart = new bluewave.charts.BarChart(parent, {});
+        barChart.getBarColor = function(d, i, arr){
+            var productCode = arr[0].product_code;
+            var color = colorMap[productCode];
+            if (!color) color = "#bebcc1";
+            return color;
         };
+        barChart.getTooltipLabel = function(d, i, arr){
+            var productCode = arr[0].product_code;
+            return productCode + ": " + formatNumber(d.value);
+        };
+        barChart.update(config, [filteredData]);
+        return barChart;
     };
 
+
   //**************************************************************************
-  //** createMap
+  //** createLineChart
   //**************************************************************************
-    var createMap = function(parent) {
-        let width = 980;
-        let height = 580;
-        map = createDashboardItem(parent, {
-            width: width,
-            height: height,
-        });
-        map.innerDiv.id = "world_map_div";
-        createLegend(map.innerDiv);
+    var createLineChart = function(parent){
 
-        map.projection = d3
-            .geoMercator()
-            .scale(width / 2 / Math.PI)
-            .rotate([120, 0])
-            .center([0, 30])
-            .translate([width / 2, height / 2]);
+        var div = document.createElement("div");
+        div.style.width = "990px";
+        div.style.height = "100%";
+        div.style.display = "inline-block";
+        div.style.position = "relative";
+        div.style.overflow = "hidden";
+        parent.appendChild(div);
 
-        map.path = d3.geoPath().projection(map.projection);
-
-        map.svg = d3
-            .select(map.innerDiv)
-            .append("svg")
-            .attr("id", "world_map")
-            .style("fill", "none")
-            .style("stroke", "#000")
-            .style("strokeLinejoin", "round")
-            .style("strokeLinecap", "round");
-
-        map.svg.attr("viewBox", "0 0 " + width + " " + height).attr(
-            "preserveAspectRatio",
-            "xMinYMin"
+        var panel = createDashboardItem(
+            "Import History",
+            "Shipments to the US by country of origin",
+            div
         );
 
-    };
-  //**************************************************************************
-  //** createBackgroundMap
-  //**************************************************************************
-    var createBackgroundMap = function (){
-
-        map.svg
-        .append("path")
-        .attr("class", "countries")
-        .attr("d", map.path(topojson.feature(politicalBoundaries, politicalBoundaries.objects.countries)))
-    }
 
 
-  //**************************************************************************
-  //** updateMap
-  //**************************************************************************
-    var updateMap = function (locations, monthlyVolume) {
-        let svg = map.svg;
-        let projection = map.projection;
-        let path = map.path;
-        var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-
-        // Add Path
-        let max = d3.max(locations, (d) => d.value);
-        let min = d3.min(locations, (d) => d.value);
-
-        let logScale = d3.scaleLinear().domain([min, max]).range([2, 15]);
-
-        svg.selectAll("#connection-path").remove();
-
-        let connections = svg.selectAll("#connection-path").data(locations);
-
-        connections
-            .enter()
-            .append("path")
-            .attr("id", "connection-path")
-            .attr("d", function (d) {
-                return path({
-                    type: "LineString",
-                    coordinates: [
-                        [d.imlongitude, d.imlatitude],
-                        [d.exlongitude, d.exlatitude],
-                    ],
-                });
-            })
-            .style("fill", "none")
-            .style("stroke-opacity", 0.5)
-            .style("stroke", (d) => {
-                return getColor(d.country);
-            })
-            .style("stroke-width", (d) => {
-                return logScale(d.value);
-            })
-            .on("mouseover", function (d) {
-                d3.select(this).style("stroke-opacity", 1);
-                tooltip.select(tooltipBody).html("");
-                tooltip.select(tooltipBody).html(() => {
-                    return (
-                        "<table>" +
-                        "<tr>" +
-                        "<td>Export:</td>" +
-                        "<td>" +
-                        d.country +
-                        "</td>" +
-                        "</tr>" +
-                        "<tr>" +
-                        "<td>Import:</td>" +
-                        "<td>" +
-                        d["im-port"] +
-                        "</td>" +
-                        "</tr>" +
-                        "<tr>" +
-                        "<td>Value:</td>" +
-                        "<td>" +
-                        fmtDollars(d.value) +
-                        "</td>" +
-                        "</tr>" +
-                        "</table>"
-                    );
-                });
-                tooltip.style("display", "block");
-                tooltip.style("opacity", 2);
-                tooltip.style("opacity", 2);
-            })
-            .on("mouseout", function (d) {
-                d3.select(this).style("stroke-opacity", 0.6);
-                tooltip.style("display", "none");
-                tooltip.style("opacity", 0);
-            })
-            .on("mousemove", function (d) {
-                tooltip
-                    .style("top", event.pageY - 128 + "px")
-                    .style("left", event.pageX + 12 + "px");
-            });
-
-        // Location Points
-        svg.selectAll("#connection-dot").remove();
-
-        let dots = svg
-            .append("g")
-            .attr("id", "connection-dot")
-            .selectAll("#connection-dot")
-            .data(locations)
-            .enter();
-
-        dots.append("circle")
-            .attr("cx", function (d) {
-                let lat = d.exlatitude;
-                let lon = d.exlongitude;
-                return projection([lon, lat])[0];
-            })
-            .attr("cy", function (d) {
-                let lat = d.exlatitude;
-                let lon = d.exlongitude;
-                return projection([lon, lat])[1];
-            })
-            .attr("r", 6)
-            .attr("fill", (d) => {
-                return getColor(d.country);
-            })
-            .on("mouseover", function (d) {
-                d3.select(this).style("stroke-opacity", 0.6);
-
-                tooltip.select(".tooltip-body").html("");
-                tooltip.select(".tooltip-body").html(() => {
-                    return (
-                        "<table>" +
-                        "<tr>" +
-                        "<td>Export:</td>" +
-                        "<td>" +
-                        d.country +
-                        "</td>" +
-                        "</tr>" +
-                        "<tr>" +
-                        "<td>Import:</td>" +
-                        "<td>" +
-                        d["im-port"] +
-                        "</td>" +
-                        "</tr>" +
-                        "<tr>" +
-                        "<td>Value:</td>" +
-                        "<td>" +
-                        fmtDollars(d.value) +
-                        "</td>" +
-                        "</tr>" +
-                        "</table>"
-                    );
-                });
-                tooltip.style("display", "block");
-                tooltip.style("opacity", 2);
-                tooltip.style("opacity", 2);
-            })
-            .on("mouseout", function (d) {
-                d3.select(this).style("stroke-opacity", d.opacity);
-                tooltip.style("display", "none");
-                tooltip.style("opacity", 0);
-            })
-            .on("mousemove", function (d) {
-                tooltip
-                    .style("top", event.pageY - 128 + "px")
-                    .style("left", event.pageX + 12 + "px");
-            });
-
-        dots.append("circle")
-            .attr("cx", function (d) {
-                let lat = d.imlatitude;
-                let lon = d.imlongitude;
-                return projection([lon, lat])[0];
-            })
-            .attr("cy", function (d) {
-                let lat = d.imlatitude;
-                let lon = d.imlongitude;
-                return projection([lon, lat])[1];
-            })
-            .attr("r", 6)
-            .attr("fill", (d) => {
-                return getColor(d["im-port"]);
-            })
-            .on("mouseover", function (d) {
-                d3.select(this).style("stroke-opacity", 0.6);
-                tooltip.select(".tooltip-body").html("");
-                tooltip.select(".tooltip-body").html(() => {
-                    return d["im-port"];
-                });
-                tooltip.style("display", "block");
-                tooltip.style("opacity", 2);
-                tooltip.style("opacity", 2);
-            })
-            .on("mouseout", function (d) {
-                d3.select(this).style("stroke-opacity", d.opacity);
-                tooltip.style("display", "none");
-                tooltip.style("opacity", 0);
-            })
-            .on("mousemove", function (d) {
-                tooltip
-                    .style("top", event.pageY - 128 + "px")
-                    .style("left", event.pageX + 12 + "px");
-            });
-
-        let labelMap = {};
-
-        let importLabels = locations.filter((location) => {
-            if (labelMap[location["im-port"]]) {
-                return false;
-            } else {
-                labelMap[location["im-port"]] = {
-                    label: location["im-port"],
-                    lat: location.imlatitude,
-                    lon: location.imlongitude,
-                };
-                return true;
-            }
-        });
-
-        let exportLabels = locations.filter((location) => {
-            if (labelMap[location["iso2"]]) {
-                return false;
-            } else {
-                labelMap[location["iso2"]] = {
-                    label: location.country,
-                    lat: location.exlatitude,
-                    lon: location.exlongitude,
-                };
-                return true;
-            }
-        });
-
-        let labels = [];
-
-        for (let label in labelMap) {
-            labels.push(labelMap[label]);
-        }
-
-        legend.innerHTML = "";
-        labels.forEach((label) => {
-            let name = label.label;
-            let rgb = colorValues(getColor(name));
-            legend.addItem(name, rgb);
-        });
-    };
-
-  //**************************************************************************
-  //** createLegend
-  //**************************************************************************
-    var createLegend = function (parent) {
-        legend = document.createElement("div");
-        legend.className = "map-legend";
-        legend.style.width = "120px";
-        legend.style.left = "15px";
-        parent.appendChild(legend);
-        legend.addItem = function (name, backgroundColor, borderColor) {
-            var row = document.createElement("div");
-            row.style.display = "inline-block";
-            row.style.width = "100%"; //remove to have label aligned horizontally
-            this.appendChild(row);
-
-            var icon = document.createElement("div");
-            icon.className = "map-legend-circle";
-            icon.style.backgroundColor = isArray(backgroundColor)
-                ? "rgba(" + backgroundColor.join(",") + ")"
-                : backgroundColor;
-            if (borderColor) {
-                icon.className += "-outline";
-                icon.style.borderColor = borderColor;
-            }
-            row.appendChild(icon);
-
-            var label = document.createElement("div");
-            label.className = "map-legend-label noselect";
-            label.innerHTML = name;
-            row.appendChild(label);
+        var chartConfig = {
+            yGrid: true,
+            endTags: true,
+            stackValues: false,
+            accumulateValues: false,
+            animationSteps: 0
         };
+
+        var lineChart = new bluewave.charts.LineChart(panel.innerDiv, chartConfig);
+
+
+
+        panel.clear = function(){
+            lineChart.clear();
+        };
+        
+        panel.update = function(data){
+            panel.clear();
+            console.log(data);
+            
+            var importsByCountry = {};
+            var importTotals = {};
+            data.forEach((d)=>{
+                var key = d.country;
+                var val = d[yAxis] = parseFloat(d[yAxis]);
+
+                var dt = Date.parse(d.date);
+                if (!isNaN(dt)){
+                    //d.date = dt;
+                    var date = new Date(dt);
+                    if (date.getFullYear()>2019){                                                                                    
+                        d.date = date;
+
+                        var arr = importsByCountry[key];
+                        if (!arr){
+                            arr = [];
+                            importsByCountry[key] = arr;
+                        }
+                        arr.push(d);
+
+
+                        var currTotal = importTotals[key];
+                        if (isNaN(currTotal)) importTotals[key] = val;
+                        else importTotals[key] += val;                    
+                    }
+                }
+
+            });
+
+
+
+            //console.log(importTotals);
+            var arr = [];
+            for (var key in importsByCountry){
+                if (importsByCountry.hasOwnProperty(key)){
+                    arr.push({
+                        establishment: key,
+                        totalImports: importTotals[key]
+                    });
+                }
+            }    
+            arr.sort((a, b)=>{
+                return b.totalImports - a.totalImports;
+            });
+            
+            
+var smoothing = 90;
+var smoothingType = "movingAverage";
+                
+            //console.log(importsByCountry);
+            lineChart.clear();
+            var lines = [];
+            var other = null;
+            var includeOtherData = true;
+            var lastDate = null;
+            arr.forEach((d, i)=>{
+                var key = d.establishment;
+                var data = importsByCountry[key];
+
+                if (i<5){
+
+
+                    data.sort(function(a, b){
+                        return a.date - b.date;
+                    });
+
+                    if (!lastDate) lastDate = data[data.length-1].date.getTime();
+                    else lastDate = Math.min(lastDate, data[data.length-1].date.getTime());
+
+                    var line = new bluewave.chart.Line({
+                        label: countryNames[key],
+                        smoothing: smoothingType,
+                        smoothingValue: smoothing
+                    });
+
+                    lines.push({
+                        line: line,
+                        data: data
+                    });
+
+                    //console.log(data);                        
+                    //lineChart.addLine(line, data, "date", yAxis);    
+                }
+                else{
+
+                    if (includeOtherData){
+
+                        if (!other) other = data;
+                        else{
+                            data.forEach((d)=>{
+                                var dt = d.date.getTime();
+                                var addRow = true;
+                                other.every((o)=>{
+                                    if (o.date.getTime()===dt){
+                                        addRow = false;
+                                        o[yAxis]+=d[yAxis];
+                                        return false;
+                                    }
+                                    return true;
+                                });
+
+                                if (addRow) other.push(d);
+
+                            });
+                        }
+
+                    }
+
+                }
+            });
+            
+            
+          //Add lines
+            if (other){
+                other.sort(function(a, b){
+                    return a.date - b.date;
+                });
+
+                var arr = [];
+                other.forEach((d)=>{
+                    if (d.date.getTime()<=lastDate){
+                        arr.push(d);
+                    }
+                });
+                other = arr;
+
+                var line = new bluewave.chart.Line({
+                    label: "Other",
+                    color: "#bebcc1",
+                    smoothing: smoothingType,
+                    smoothingValue: smoothing
+                });   
+                lineChart.addLine(line, other, "date", yAxis); 
+            }
+            lines.forEach((l, i)=>{
+                var lineColor = colors[i % colors.length];
+                l.line.setColor(lineColor);
+
+                var arr = [];
+                l.data.forEach((d)=>{
+                    if (d.date.getTime()<=lastDate){
+                        arr.push(d);
+                    }
+                });
+                l.data = arr;                    
+
+
+                lineChart.addLine(l.line, l.data, "date", yAxis);
+            });
+
+
+            lineChart.update();
+            
+        };
+        
+
+        return panel;
+    };
+    
+    
+  //**************************************************************************
+  //** createSankeyPanel
+  //**************************************************************************
+    var createSankeyPanel = function(parent){
+
+        var div = document.createElement("div");
+        div.style.width = "990px";
+        div.style.height = "100%";
+        div.style.display = "inline-block";
+        div.style.position = "relative";
+        div.style.overflow = "hidden";
+        parent.appendChild(div);
+        addShowHide(div);
+        
+        var panel = createDashboardItem(
+            "Supply Chain from Source to Consignee",
+            "Top manufacturers to top consignees",
+            div
+        );
+        panel.show = function(){
+            div.show();
+        };
+        panel.hide = function(){
+            div.hide();
+        };
+        
+        
+        var outerDiv = document.createElement("div");
+        outerDiv.style.width = "100%";
+        outerDiv.style.height = "100%";
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflow = "hidden";
+        outerDiv.style.overflowY = "auto";
+        panel.innerDiv.appendChild(outerDiv);
+
+
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "990px";
+        innerDiv.style.height = "500px";
+        innerDiv.style.position = "absolute";
+        outerDiv.appendChild(innerDiv);
+
+
+
+        var sankey = new bluewave.charts.SankeyChart(innerDiv, {});
+        sankey.getNodeLabel = function(node){
+            var name = node.name;
+            var idx = name.indexOf("_");
+            if (idx>-1) name = name.substring(0,idx);
+            return name;
+        };
+
+        panel.sankey = sankey;
+
+        return panel;
     };
 
-  //**************************************************************************
-  //** createSankey
-  //**************************************************************************
-    var createSankey = function (parent) {
-        var width = 560;
-        var height = 310;
-
-        sankey = createDashboardItem(parent, {
-            width,
-            height,
-            title: "Total Product Distribution",
-        });
-
-        sankey.innerDiv.id = "sankey_supply-parent";
-
-        var margin = { top: 10, right: 10, bottom: 20, left: 10 };
-        sankey.svg = d3.select(sankey.innerDiv)
-            .append("svg")
-            .attr("id", "sankey_supply")
-            .attr("width", width)
-            .attr("height", height)
-            .append("g")
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + margin.top + ")"
-            );
-
-        // Update width and height for the sankey
-        let sankeyWidth = width - margin.left - margin.right;
-        let sankeyHeight = height - margin.top - margin.bottom;
-
-        sankey.d3Sankey = d3
-            .sankey()
-            .nodeId((d) => d.name)
-            .nodeWidth(20)
-            .nodePadding(20)
-            .iterations([6])
-            .size([sankeyWidth, sankeyHeight]);
-
-    };
 
   //**************************************************************************
   //** updateSankey
   //**************************************************************************
-    var updateSankey = function (data) {
-        let svg = sankey.svg
-        let d3Sankey = sankey.d3Sankey
-        var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette());
+    var updateSankey = function(csv, sankey){
 
-        let graph = d3Sankey(data);
-        var size = d3Sankey.size();
-        var width = size[0];
-
-        var formatNumber = d3.format(",.0f"); // zero decimal places
-
-        svg.selectAll('.sankey-node').remove()
-        //Add the nodes
-        var node = svg
-            .append("g")
-            .selectAll(".node")
-            .data(graph.nodes)
-            .enter()
-            .append("g")
-            .attr("class", "sankey-node");
-
-        //Add the rectangles for the nodes
-        node.append("rect")
-            .attr("x", function (d) {
-                return d.x0;
-            })
-            .attr("y", function (d) {
-                return d.y0;
-            })
-            .attr("height", function (d) {
-                return d.y1 - d.y0;
-            })
-            .attr("width", d3Sankey.nodeWidth())
-            .style("fill", function (d) {
-                let name = displayNameDict[d.name]||d.name
-                return (d.color = getColor(name));
-            })
-            .style("stroke", function (d) {
-                return d3.rgb(d.color).darker(2);
-            })
-            .append("title")
-            .text(function (d) {
-                return d.name + "\n" + formatNumber(d.value);
-            });
-
-        svg.selectAll('.sankey-link').remove()
-        //Add the links
-        var link = svg
-            .append("g")
-            .selectAll(".link")
-            .data(graph.links)
-            .enter()
-            .append("path")
-            .attr("class", "sankey-link")
-            .attr("d", d3.sankeyLinkHorizontal())
-            .attr("stroke-width", function (d) {
-                return d.width;
-            })
-            .style("stroke-opacity", function (d) {
-                if ("meta" in d) {
-                    const opacity = d.meta == "unfilled" ? 0.15 : 0.45;
-                    return (d.opacity = opacity);
-                } else {
-                    return (d.opacity = 0.3);
-                }
-            })
-            .style("stroke", function (d) {
-                return d.source.color;
-            })
-            .on("mouseover", function (d) {
-                d3.select(this).style("stroke-opacity", 0.6);
-
-                tooltip.select(".tooltip-body").html("");
-                tooltip.select(".tooltip-body").html(() => {
-                    return (
-                        d.source.name +
-                        ">" +
-                        d.target.name +
-                        fmtDollars(d.value)
-                    );
-                });
-                tooltip.style("display", "block");
-                tooltip.style("opacity", 2);
-                tooltip.style("opacity", 2);
-            })
-            .on("mouseout", function (d) {
-                d3.select(this).style("stroke-opacity", d.opacity);
-                tooltip.style("display", "none");
-                tooltip.style("opacity", 0);
-            })
-            .on("mousemove", function (d) {
-                tooltip
-                    .style("top", event.pageY - 128 + "px")
-                    .style("left", event.pageX + 12 + "px");
-            });
-
-        //Add node labels
-        node.append("text")
-            .attr("x", function (d) {
-                return d.x0 - 6;
-            })
-            .attr("y", function (d) {
-                return (d.y1 + d.y0) / 2;
-            })
-            .attr("dy", "0.35em")
-            .attr("text-anchor", "end")
-            .text(function (d) {
-                return displayNameDict[d.name]||d.name;
-            })
-            .filter(function (d) {
-                return d.x0 < width / 2;
-            })
-            .attr("x", function (d) {
-                return d.x1 + 6;
-            })
-            .attr("text-anchor", "start");
-    };
-
-  //**************************************************************************
-  //** createCountry
-  //**************************************************************************
-    var createCountryOfOrigin = function (parent) {
-        countryChart = createDashboardItem(parent, {
-            width: 300,
-            height: 200,
-            title: "Order Volume",
+        var data = d3.csvParse(csv);
+        data.forEach((d)=>{
+            d[yAxis] = parseFloat(d[yAxis]);
         });
 
-        countryChart.innerDiv.id = "countryChart";
-    };
+        var getString = function(s){
+            if (!s) return null;
+            s = (s+"").trim();
+            if (s.length==0 || s=='null' || s=='undefined') s = null;
+            return s;
+        };
 
-  //**************************************************************************
-  //** updateCountry
-  //**************************************************************************
-    var updateCountryOfOrigin = function (data) {
-        var margin = { top: 10, right: 30, bottom: 30, left: 50 },
-            width = 300 - margin.left - margin.right,
-            height = 200 - margin.top - margin.bottom;
-
-        countryChart.innerHTML = ""
-        // append the svg object to the body of the page
-        var svg = d3
-            .select(countryChart.innerDiv)
-            .append("svg")
-            .attr("id", "country_chart_SVG")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + margin.top + ")"
-            );
+        var getTopManufacturers = function(data){
 
 
-        let subgroups = ["filled", "unfilled"];
+            var manufacturers = {};
+            var totalLines = 0;
+            data.forEach((d)=>{
+                var manufacturer = getString(d.manufacturer_name);
+                var v = manufacturers[manufacturer];
+                if (isNaN(v)) v = 0;
+                manufacturers[manufacturer] = (v+d.lines);
+                totalLines += d.lines;
+            });
 
-        let max = 0;
-
-        data.forEach(({ filled, unfilled }) => {
-            let newMax = filled + unfilled;
-            if (max < newMax) {
-                max = newMax;
-            }
-        });
-
-        let groups = d3
-            .map(data, function (d) {
-                return d.date;
-            })
-            .keys();
-
-        // Add X axis
-        var band = d3
-            .scaleBand()
-            .domain(groups)
-            .range([0, width])
-            .padding([0.1]);
-
-        var x = d3
-            .scaleTime()
-            .range([0, width])
-            .domain(
-                d3.extent(data, function (d) {
-                    return d.date;
-                })
-            );
-
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .call(d3.axisBottom(x).ticks(5).tickFormat(d3.timeFormat("%m/%y")));
-
-        // Add Y axis
-        var y = d3.scaleLinear()
-        .domain([0, max])
-        .range([height, 0]);
-
-        svg.append("g").call(
-            d3
-                .axisLeft(y)
-                .ticks(5, ",")
-                .tickFormat((d) => "$" + d3.format("~s")(d).replace("G", "B"))
-        );
-
-        // color palette = one color per subgroup
-        var color = d3
-            .scaleOrdinal()
-            .domain(subgroups)
-            .range(["#377eb8", "#e41a1c"]);
-
-        //stack the data? --> stack per subgroup
-        var stackedData = d3.stack().keys(subgroups)(data);
-
-        // Show the bars
-        svg.append("g")
-            .selectAll("g")
-            // Enter in the stack data = loop key per key = group per group
-            .data(stackedData)
-            .enter()
-            .append("g")
-            .attr("fill", function (d) {
-                return color(d.key);
-            })
-            .selectAll("rect")
-            // enter a second time = loop subgroup per subgroup to add all rectangles
-            .data(function (d) {
-                return d;
-            })
-            .enter()
-            .append("rect")
-            .attr("x", function (d) {
-                return band(d.data.date);
-            })
-            .attr("y", function (d) {
-                return y(d[1]);
-            })
-            .attr("height", function (d) {
-                let height = y(d[0]) - y(d[1]);
-                if(height<0) height = 0;
-                return height;
-            })
-            .attr("width", band.bandwidth())
-            .on("mouseover", function (d) {
-                tooltip.select(tooltipBody).html("");
-                tooltip
-                    .select(tooltipBody)
-                    .append("div")
-                    .html(() => {
-                        return "Filled: " + fmtDollars(d.data.filled);
-                    })
-                    .append("div")
-                    .html(() => {
-                        return "Unfilled: " + fmtDollars(d.data.unfilled);
+            var arr = [];
+            for (var manufacturer in manufacturers){
+                if (manufacturers.hasOwnProperty(manufacturer)){
+                    var val = manufacturers[manufacturer];
+                    arr.push({
+                        manufacturer: manufacturer,
+                        lines: val
                     });
-                tooltip.style("display", "block");
-                tooltip.style("opacity", 2);
-                tooltip.style("opacity", 2);
-            })
-            .on("mousemove", function (d) {
-                tooltip
-                    .style("top", event.pageY - 128 + "px")
-                    .style("left", event.pageX + 12 + "px");
-            })
-            .on("mouseout", function () {
-                tooltip.style("display", "none");
-                tooltip.style("opacity", 0);
-            });
-    };
+                }
+            }
 
-  //**************************************************************************
-  //** createCountry
-  //**************************************************************************
-    var createProductVolume = function (parent) {
-        volumeChart = createDashboardItem(parent, {
-            width: 300,
-            height: 200,
-            settings: false,
-            title: "Total Purchases Per Month",
+            arr.sort(function(a,b){
+                return b.lines-a.lines;
+            });
+
+            manufacturers = {};
+            var topLines = 0;
+            arr.slice(0, Math.min(data.length, 20)).forEach((d)=>{
+                manufacturers[d.manufacturer] = d.lines;
+                topLines += d.lines;
+            });
+            manufacturers["Other"] = totalLines-topLines;
+            return manufacturers;
+        };
+
+
+        var getTopConsignees = function(data){
+
+
+            var consignees = {};
+            var totalLines = 0;
+            data.forEach((d)=>{
+                var consignee = getString(d.consignee_name);
+                var v = consignees[consignee];
+                if (isNaN(v)) v = 0;
+                consignees[consignee] = (v+d.lines);
+                totalLines += d.lines;
+            });
+
+            var arr = [];
+            for (var consignee in consignees){
+                if (consignees.hasOwnProperty(consignee)){
+                    var val = consignees[consignee];
+                    arr.push({
+                        consignee: consignee,
+                        lines: val
+                    });
+                }
+            }
+
+            arr.sort(function(a,b){
+                return b.lines-a.lines;
+            });
+
+            consignees = {};
+            var topLines = 0;
+            arr.slice(0, Math.min(data.length, 20)).forEach((d)=>{
+                consignees[d.consignee] = d.lines;
+                topLines += d.lines;
+            });
+            consignees["Other"] = totalLines-topLines;
+            return consignees;
+        };
+
+
+      //Reduce data to the top 10 manufacturers
+        var topManufacturers = getTopManufacturers(data);
+        var data2 = [];
+        data.forEach((d)=>{
+            var manufacturer = getString(d.manufacturer_name);
+            if (topManufacturers[manufacturer]) data2.push(d);
+        });
+        data = data2;
+
+      //Reduce data to the top 10 consignees
+        var topConsignees = getTopConsignees(data);
+
+
+
+
+        var nodes = {};
+        var createNode = function(name, group){
+            var node = {
+                name: name,
+                group: group
+            };
+            var key = node.name+"_"+node.group;
+            nodes[key] = node;
+        };
+
+
+
+      //Add links
+        data.forEach((d)=>{
+            var value = d.lines;
+            var country = getString(d.manufacturer_cc);
+            var manufacturer = getString(d.manufacturer_name);
+            var consignee = getString(d.consignee_name);
+            //var port = getString(d.unladed_port);
+
+            if (!topConsignees[consignee]) return;
+
+
+
+          //Stringify FEIs
+            if (manufacturer) manufacturer+="_m";
+            if (consignee) consignee+="_c";
+            //if (port) port+="_p";
+
+            if (country) createNode(country, "country");
+            if (manufacturer) createNode(manufacturer, "manufacturer");
+            if (consignee) createNode(consignee, "consignee");
+            //if (port) createNode(port, "port");
+
+            if (country && manufacturer && consignee){
+                sankey.addLink(country, manufacturer, value);
+                sankey.addLink(manufacturer, consignee, value);
+            }
         });
 
-        volumeChart.innerDiv.id = "country_line";
-    };
 
-    var updateProductVolume = function (data) {
-        volumeChart.innerHTML = "";
+      //Add nodes
+        Object.values(nodes).forEach((node)=>{
+            sankey.addNode(node);
+        });
 
-        // Create data for the line graph
-        // set the dimensions and margins of the graph
-        var margin = { top: 10, right: 60, bottom: 30, left: 40 },
-            width = 300 - margin.left - margin.right,
-            height = 200 - margin.top - margin.bottom;
-
-        // append the svg object to the body of the page
-        var svg = d3
-            .select(volumeChart.innerDiv)
-            .append("svg")
-            .attr("id", "country_line_SVG")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr(
-                "transform",
-                "translate(" + margin.left + "," + margin.top + ")"
-            );
+      //Render sankey
+        sankey.update();
 
 
-        var getColor = d3.scaleOrdinal(bluewave.utils.getColorPalette(true));
-
-        // group the data: I want to draw one line per group
-        var sumstat = d3
-            .nest() // nest function allows to group the calculation per level of a factor
-            .key(function (d) {
-                return d.type;
-            })
-            .entries(data);
-
-        // Add X axis --> it is a date format
-        var x = d3
-            .scaleTime()
-            .domain(
-                d3.extent(data, function (d) {
-                    return d.date;
-                })
-            )
-            .range([0, width]);
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .call(d3.axisBottom(x).ticks(5));
-
-        // Add Y axis
-        var y = d3
-            .scaleLinear()
-            .domain([
-                0,
-                d3.max(data, function (d) {
-                    return +d.value;
-                }),
-            ])
-            .range([height, 0]);
-
-        svg.append("g").call(
-            d3
-                .axisLeft(y)
-                .ticks(5)
-                .tickFormat((d) => "$" + d3.format("~s")(d).replace("G", "B"))
-        );
-
-        var lines = {};
-        let types = data.reduce((acc, val) => {
-            if (acc[val.type]) {
-                acc[val.type].push(val);
-            } else {
-                acc[val.type] = [val];
-            }
-            return acc;
-        }, {});
-
-        for (var type in types) {
-            lines[type] = d3
-                .line()
-                .x(function (d) {
-                    return x(d.date);
-                })
-                .y(function (d) {
-                    return y(+d.value);
-                });
+      //Resize the chart when ready
+        var g = sankey.getChart();
+        if (g){
+            g.attr("transform", "scale(0.95,0.95)");
+        }
+        else {
+            var timer;
+            var getChart = function(){
+                g = sankey.getChart();
+                if (g){
+                    clearTimeout(timer);
+                    g.attr("transform", "scale(0.95,0.95)");
+                }
+                else {
+                    timer = setTimeout(getChart, 100);
+                }
+            };
+            timer = setTimeout(getChart, 100);
         }
 
-        var d = clone(data);
-        svg.append("rect")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("opacity", 0)
-            .on("mousemove", function () {
-                drawLinechartTooltip(this, x, d);
-            })
-            .on("mouseout", function () {
-                if (linechartTooltip) linechartTooltip.style("display", "none");
-                if (linechartTooltipLine)
-                    linechartTooltipLine.attr("stroke", "none");
-            });
-
-        //Add vertical line for the tooltip
-        linechartTooltipLine = svg
-            .append("line")
-            .attr("stroke", "black")
-            .attr("y1", 0)
-            .attr("y2", height);
-
-        let useLogScale = false;
-        for (type in types) {
-            var line = lines[type];
-            var arr = types[type];
-            let color = getColor(type);
-            svg.append("path")
-                .data([arr])
-                .attr("class", "line")
-                .style("stroke", color)
-                .attr("d", line)
-                .on("click", function (d) {
-                    raiseCorrespondingTag(d);
-                });
-
-            //Add label to the end of the line
-            var label = type;
-            var lastItem = arr[arr.length - 1];
-            var lastVal = lastItem.value;
-            var lastDate = lastItem.date;
-            var tx = x(lastDate) + 3; //vs width+3
-            var ty = useLogScale ? y(lastVal + 1) : y(lastVal);
-
-            var temp = svg
-                .append("text")
-                .attr("dy", ".35em")
-                .attr("text-anchor", "start")
-                .attr("font-size", "10px")
-                .text(label);
-            var box = temp.node().getBBox();
-            temp.remove();
-
-            var w = Math.max(box.width + 8, 40);
-            var h = box.height;
-            var a = h / 2;
-            var vertices = [
-                [0, 0], //ul
-                [w, 0], //ur
-                [w, h], //11
-                [0, h], //lr
-                [-a, a], //arrow point
-            ];
-
-            //Add tag (rect)
-            svg.append("polygon")
-                .attr("points", vertices.join(" "))
-                .attr(
-                    "transform",
-                    "translate(" + (tx + a) + "," + (ty - a) + ")"
-                )
-                .style("fill", color);
-
-            //Add label
-            svg.append("text")
-                .attr("transform", "translate(" + (tx + a + 4) + "," + ty + ")")
-                .attr("dy", ".35em")
-                .attr("text-anchor", "start")
-                .attr("font-size", "10px")
-                .style("fill", "#fff")
-                .text(label);
-        }
     };
 
+
   //**************************************************************************
-  //** createLinechartTooltip
+  //** createWorldMap
   //**************************************************************************
-    var createLinechartTooltip = function (parent) {
+    var createWorldMap = function(parent){
+
         var div = document.createElement("div");
-        div.className = "tooltip noselect";
+        div.style.width = "990px";
+        div.style.height = "485px";
+        //div.style.height = "65%";
+        div.style.display = "inline-block";
+        div.style.position = "relative";
+        div.style.overflow = "hidden";
+        //div.style.border = "1px solid #e0e0e0";
         parent.appendChild(div);
-        linechartTooltip = d3.select(div);
-    };
+        addShowHide(div);
 
-  //**************************************************************************
-  //** drawLinechartTooltip
-  //**************************************************************************
-    var drawLinechartTooltip = function (node, x, data) {
-        //Get date associated with the mouse position
-        const date = roundToYM(x.invert(d3.mouse(node)[0]));
-
-        //Update vertical line
-        const xOffset = x(date);
-        linechartTooltipLine
-            .attr("stroke", "black")
-            .attr("x1", xOffset)
-            .attr("x2", xOffset);
-
-        //Filter data by the selected date. Note that the data here is a clone
-        data = data.filter(
-            (d) => d.date.slice(0, 7) == d3.timeFormat("%Y-%m")(date)
-        );
-
-        var fmtDollars = function (val) {
-            val = Math.round(val).toLocaleString();
-            return '<div style="text-align:right">$' + val + "</div>";
-        };
-
-        var fmtLabel = function (label) {
-            var s = label;
-            s = s.replaceAll("_", " ");
-            const words = s.split(" ");
-            var ucwords = words.map(
-                (w) => w.charAt(0).toUpperCase() + w.slice(1)
-            );
-            return ucwords.join(" ");
-        };
-
-        var bound = linechartTooltipLine.node().getBoundingClientRect();
-        var html = document.documentElement;
-        var minY = bound.left + window.pageYOffset - html.clientLeft;
-        var minX = bound.left + window.pageXOffset - html.clientLeft;
+        var innerDiv = document.createElement("div");
+        innerDiv.style.width = "990px";
+        innerDiv.style.height = "560px";
+        innerDiv.style.ansolute = "realtive";
+        div.appendChild(innerDiv);
 
 
-        linechartTooltip
-            .html("<strong>" + d3.timeFormat("%b %Y")(date) + "</strong>")
-            .style("display", "block")
-            //.style('left', left+20) //d3.event.pageX + 20
-            .style('top', d3.event.pageY - 170)
-            .append("table")
-            .selectAll("tr")
-            .data(data)
-            .enter()
-            .append("tr")
-            .selectAll("td")
-            .data((d) => {
-                return [fmtLabel(d.type.split(" ")[0]), fmtDollars(d.value)];
-            })
-            .enter()
-            .append("td")
-            .html((d) => d);
+        var map = new bluewave.charts.MapChart(innerDiv, {});
+        map.disablePan();
+        map.update();
 
-
-      //Position the tooltip to the left of the vertical line
-      var el = tooltip.node();
-      var box = el.getBoundingClientRect();
-      linechartTooltip.style('left', ()=>{
-        return d3.event.pageX
-      } );
-    };
-
-  //**************************************************************************
-  //** Date utils
-  //**************************************************************************
-
-    var roundToYM = function (timeStamp) {
-        const y = timeStamp.getFullYear();
-        const m = timeStamp.getMonth();
-        const result = new Date(y, m);
-        if (timeStamp.getDate() > 15) {
-            result.setMonth(result.getMonth() + 1);
-        }
-        return result;
-    };
-
-    var isDateInArray = function (needle, haystack) {
-        for (var i = 0; i < haystack.length; i++) {
-            if (needle.getTime() === haystack[i].getTime()) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    var getUniqueDates = function (dates) {
-        var uniqueDates = [];
-        for (var i = 0; i < dates.length; i++) {
-            if (!isDateInArray(dates[i], uniqueDates)) {
-                uniqueDates.push(dates[i]);
-            }
-        }
-        return uniqueDates;
-    };
-
-    var fmtDollars = function (val) {
-        val = Math.round(val).toLocaleString();
-        return '<div style="text-align:right">$' + val + "</div>";
-    };
-
-
-
-  //**************************************************************************
-  //** clone
-  //**************************************************************************
-    var clone = function (json) {
-        if (json == null) return null;
-        return JSON.parse(JSON.stringify(json));
-    };
-
-  //**************************************************************************
-  //** color Value
-  //**************************************************************************
-    function colorValues(color) {
-        if (!color) return;
-        if (color.toLowerCase() === "transparent") return [0, 0, 0, 0];
-        if (color[0] === "#") {
-            if (color.length < 7) {
-                // convert #RGB and #RGBA to #RRGGBB and #RRGGBBAA
-                color =
-                    "#" +
-                    color[1] +
-                    color[1] +
-                    color[2] +
-                    color[2] +
-                    color[3] +
-                    color[3] +
-                    (color.length > 4 ? color[4] + color[4] : "");
-            }
-            return [
-                parseInt(color.substr(1, 2), 16),
-                parseInt(color.substr(3, 2), 16),
-                parseInt(color.substr(5, 2), 16),
-                color.length > 7 ? parseInt(color.substr(7, 2), 16) / 255 : 1,
-            ];
-        }
-        if (color.indexOf("rgb") === -1) {
-            // convert named colors
-            var temp_elem = document.body.appendChild(
-                document.createElement("fictum")
-            ); // intentionally use unknown tag to lower chances of css rule override with !important
-            var flag = "rgb(1, 2, 3)"; // this flag tested on chrome 59, ff 53, ie9, ie10, ie11, edge 14
-            temp_elem.style.color = flag;
-            if (temp_elem.style.color !== flag) return; // color set failed - some monstrous css rule is probably taking over the color of our object
-            temp_elem.style.color = color;
-            if (temp_elem.style.color === flag || temp_elem.style.color === "")
-                return; // color parse failed
-            color = getComputedStyle(temp_elem).color;
-            document.body.removeChild(temp_elem);
-        }
-        if (color.indexOf("rgb") === 0) {
-            if (color.indexOf("rgba") === -1) color += ",1"; // convert 'rgb(R,G,B)' to 'rgb(R,G,B)A' which looks awful but will pass the regxep below
-            return color.match(/[\.\d]+/g).map(function (a) {
-                return +a;
+        bluewave.utils.getMapData(function(data){
+            mapData = data;
+            var countries = mapData.countries;
+            map.addPolygons(countries.features, {
+                name: "countries",
+                style: {
+                    fill: "#f8f8f8",
+                    stroke: "#ccc"
+                }
             });
-        }
-    }
+
+
+            countries.features.forEach((feature)=>{
+                var p = feature.properties;
+                countryNames[p.code] = p.name;
+            });
+
+
+
+            map.setExtent([60, 70], [59, -68]); //US in the middle
+            map.update(function(){
+                worldMapIsReady = true;
+            });
+        });
+        
+        
+        
+        div.map = map;
+        return div;
+    };
+
 
   //**************************************************************************
-  //** updateMontlyCharts
+  //** updateWorldMap
   //**************************************************************************
-    const parseDate = function (str){
-        var date;
-        var idx = str.indexOf("_");
-        if (idx>-1){
-            var year = parseInt(str.substring(idx+1));
-            var month = str.substring(0,3).toLowerCase();
-            if (month=="jan") month = "01";
-            if (month=="feb") month = "02";
-            if (month=="mar") month = "03";
-            if (month=="apr") month = "04";
-            if (month=="may") month = "05";
-            if (month=="jun") month = "06";
-            if (month=="jul") month = "07";
-            if (month=="aug") month = "08";
-            if (month=="sep") month = "09";
-            if (month=="oct") month = "10";
-            if (month=="nov") month = "11";
-            if (month=="dec") month = "12";
-            date = new Date(year + "-" + month);
+    var updateWorldMap = function(csv, map){
+        var data = d3.csvParse(csv);
+        if (data.length===0) return;
+
+        var links = {};
+        var manufacturers = {};
+        var consignees = {};
+        var ports = {};
+        var countries = {};
+
+        var z = 9;
+        data.forEach((d)=>{
+
+            if (d.manufacturer_lat==0 && d.manufacturer_lon==0) return;
+            if (d.unladed_port_lat==0 && d.unladed_port_lon==0) return;
+            if (d.consignee_lat==0 && d.consignee_lat==0) return;
+
+            var m = kartographia.utils.getTileCoordinate(d.manufacturer_lat, d.manufacturer_lon, z);
+            var p = kartographia.utils.getTileCoordinate(d.unladed_port_lat, d.unladed_port_lon, z);
+            var c = kartographia.utils.getTileCoordinate(d.consignee_lat, d.consignee_lon, z);
+            var v = parseFloat(d.lines);
+
+
+            var val = manufacturers[m.join()];
+            if (!val) val = 0;
+            manufacturers[m.join()] = val + v;
+
+            var val = ports[p.join()];
+            if (!val) val = 0;
+            ports[p.join()] = val + v;
+
+            var val = consignees[c.join()];
+            if (!val) val = 0;
+            consignees[c.join()] = val + v;
+
+            var val = countries[d.manufacturer_cc];
+            if (!val) val = 0;
+            countries[d.manufacturer_cc] = val + v;
+
+            var link = m.join() + "," + p.join(); // + "," + c.join();
+            var val = links[link];
+            if (!val) val = 0;
+            links[link] = val + v;
+        });
+
+
+
+        var addPoints = function(facilities, color){
+            var features = [];
+
+            var extent = d3.extent(Object.values(facilities));
+            var maxVal = extent[1];
+            var maxRadius = 10;
+
+            Object.keys(facilities).forEach((tileCoord)=>{
+                var arr = tileCoord.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var lat = tile2lat(arr[1], z);
+                var lon = tile2lon(arr[0], z);
+
+                var feature = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: [lon, lat]
+                    },
+                    properties: {
+                        value: facilities[tileCoord]
+                    }
+                };
+
+                features.push(feature);
+            });
+
+            map.addPoints(features, {
+                style: {
+                    fill: color,
+                    opacity: 0.5,
+                    radius: function(d){
+                        var r = Math.round((d.properties.value/maxVal)*maxRadius);
+                        if (r<1) r = 1;
+                        return r;
+                    }
+                }
+            });
+        };
+
+        var addLines = function(){
+
+            var lines = [];
+            Object.keys(links).forEach((link)=>{
+                var arr = link.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var manufacturer_lat = tile2lat(arr[1], z);
+                var manufacturer_lon = tile2lon(arr[0], z);
+                var unladed_port_lat = tile2lat(arr[3], z);
+                var unladed_port_lon = tile2lon(arr[2], z);
+                var value = links[link];
+
+
+                var line = [[manufacturer_lon, manufacturer_lat], [unladed_port_lon, unladed_port_lat]];
+                var midPoint = null;
+
+                if (unladed_port_lon<-90){
+                    midPoint = map.getMidPoint(line, 0.2, "north");
+                }
+                else{
+                    if (manufacturer_lat>20){
+                        midPoint = map.getMidPoint(line, 0.2, "north");
+                    }
+                    else{
+                        midPoint = map.getMidPoint(line, 0.2, "south");
+                    }
+                }
+
+                if (midPoint){ line.splice(1, 0, midPoint);
+                lines.push(line);
+                }
+
+            });
+
+            map.addLines(lines, {
+                name: "links",
+                style: {
+                    color: "steelblue",
+                    opacity: 0.05,
+                    width: 1,
+                    smoothing: "curveNatural"
+                }
+            });
+        };
+
+        addLines();
+        addPoints(manufacturers, "green");
+        addPoints(consignees, "orange");
+        addPoints(ports, "red");
+
+
+      //Add overlay for clicking purposes
+        map.addPolygons(mapData.countries.features, {
+            name: "countryOverlay",
+            style: {
+                fill: "rgba(0,0,0,0.0)",
+                stroke: "none"
+            },
+            onClick: function(o){
+                var e = o.event;
+                //if (e.detail === 2) { //double click
+                    var countryCode = o.feature.properties.code;
+                    if (!countries[countryCode]) return;
+
+                    if (countryCode==='US'){
+                        showUSMap(data);
+                    }
+                    else{
+                        showImportSummary(countryCode);
+                    }
+                //}
+            },
+            onMouseOver: function(o){
+                var countryCode = o.feature.properties.code;
+                if (!countries[countryCode]) return;
+
+                o.element.transition().duration(100);
+                o.element.attr("fill", "rgba(0,0,0,0.3)");
+            },
+            onMouseLeave: function(o){
+                var countryCode = o.feature.properties.code;
+                if (!countries[countryCode]) return;
+
+                o.element.transition().duration(100);
+                o.element.attr("fill", "rgba(0,0,0,0.0)");
+            }
+        });
+
+
+        map.update();
+    };
+
+
+  //**************************************************************************
+  //** updateUSMap
+  //**************************************************************************
+    var updateUSMap = function(data, map){
+        //var data = d3.csvParse(csv);
+
+        var links = {};
+        var consignees = {};
+        var ports = {};
+
+        var z = 15;
+        data.forEach((d)=>{
+
+            if (d.unladed_port_lat==0 && d.unladed_port_lon==0) return;
+            if (d.consignee_lat==0 && d.consignee_lat==0) return;
+
+            var p = kartographia.utils.getTileCoordinate(d.unladed_port_lat, d.unladed_port_lon, z);
+            var c = kartographia.utils.getTileCoordinate(d.consignee_lat, d.consignee_lon, z);
+            var v = parseFloat(d.lines);
+
+
+            var val = ports[p.join()];
+            if (!val) val = 0;
+            ports[p.join()] = val + v;
+
+            var val = consignees[c.join()];
+            if (!val) val = 0;
+            consignees[c.join()] = val + v;
+
+
+            var link = p.join() + "," + c.join(); // + "," + c.join();
+            var val = links[link];
+            if (!val) val = 0;
+            links[link] = val + v;
+        });
+
+
+
+        var addPoints = function(facilities, color){
+            var features = [];
+
+            var extent = d3.extent(Object.values(facilities));
+            var maxVal = extent[1];
+            var maxRadius = 10;
+
+            Object.keys(facilities).forEach((tileCoord)=>{
+                var arr = tileCoord.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var lat = tile2lat(arr[1], z);
+                var lon = tile2lon(arr[0], z);
+
+                var feature = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: [lon, lat]
+                    },
+                    properties: {
+                        value: facilities[tileCoord]
+                    }
+                };
+
+                features.push(feature);
+            });
+
+            map.addPoints(features, {
+                style: {
+                    fill: color,
+                    opacity: 0.5,
+                    radius: function(d){
+                        var r = Math.round((d.properties.value/maxVal)*maxRadius);
+                        if (r<1) r = 1;
+                        return r;
+                    }
+                }
+            });
+        };
+
+        var addLines = function(){
+
+            var lines = [];
+            Object.keys(links).forEach((link)=>{
+                var arr = link.split(",");
+                arr.forEach((a,i)=>{
+                    arr[i] = parseInt(a);
+                });
+                var manufacturer_lat = tile2lat(arr[1], z);
+                var manufacturer_lon = tile2lon(arr[0], z);
+                var unladed_port_lat = tile2lat(arr[3], z);
+                var unladed_port_lon = tile2lon(arr[2], z);
+                var value = links[link];
+
+
+                var line = [[manufacturer_lon, manufacturer_lat], [unladed_port_lon, unladed_port_lat]];
+                var midPoint = null; //map.getMidPoint(line, 0.1);
+
+
+                if (midPoint){ line.splice(1, 0, midPoint);
+                //
+                }
+                lines.push(line);
+
+            });
+
+
+            map.addLines(lines, {
+                name: "links",
+                style: {
+                    color: "steelblue",
+                    opacity: 0.05,
+                    width: 1,
+                    smoothing: "curveNatural"
+                }
+            });
+        };
+
+        addLines();
+        addPoints(consignees, "orange");
+        addPoints(ports, "red");
+
+        map.update();
+    };
+
+
+  //**************************************************************************
+  //** showUSMap
+  //**************************************************************************
+    var showUSMap = function(data){
+        if (!usMap){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "US Network",
+                width: 1060,
+                height: 600,
+                modal: true,
+                style: config.style.window,
+                resizable: true
+            });
+
+
+            var map = new bluewave.charts.MapChart(win.getBody(), {});
+            map.disablePan();
+            map.update();
+
+            bluewave.utils.getMapData(function(data){
+                mapData = data;
+                var countries = mapData.countries;
+                map.addPolygons(countries.features, {
+                    name: "countries",
+                    style: {
+                        fill: "#f8f8f8",
+                        stroke: "#ccc"
+                    }
+                });
+
+                var states = mapData.states;
+                map.addPolygons(states.features, {
+                    name: "states",
+                    style: {
+                        fill: "#f8f8f8",
+                        stroke: "#ccc"
+                    }
+                });
+
+                map.setProjection("Albers");
+                //map.setExtent([-130, 50.5], [-65, 25.8]);
+                map.setExtent([-130, 40.5], [-65, 25.8]);
+                map.update();
+            });
+
+
+            usMap = {
+                update: function(data){
+                    updateUSMap(data, map);
+                },
+                show: function(){
+                    win.show();
+                },
+                hide: function(){
+                    win.hide();
+                }
+            };
+
         }
-        else{
-            date = new Date(str);
+
+        usMap.show();
+        usMap.update(data);
+
+    };
+
+
+  //**************************************************************************
+  //** showImportSummary
+  //**************************************************************************
+    var showImportSummary = function(countryCode){
+        if (!importSummary){
+            var win = new javaxt.dhtml.Window(document.body, {
+                title: "Import Summary",
+                width: 1410,
+                height: (1080-300),
+                modal: true,
+                style: config.style.window,
+                resizable: true
+            });
+
+            importSummary = new bluewave.dashboards.ImportSummary(win.getBody(), config);
+            importSummary.show = function(){
+                win.show();
+            };
+            importSummary.hide = function(){
+                win.hide();
+            };
         }
-        return date;
+
+        importSummary.clear();
+        importSummary.show();
+        importSummary.update(importsByCountry, countryCode);
+    };
+
+
+    Math.toDegrees = function(radians) {
+        return radians * (180/Math.PI);
+    };
+
+    var tile2lon = function(x, z) {
+        return x / Math.pow(2.0, z) * 360.0 - 180;
+    };
+
+    var tile2lat = function(y, z) {
+        var n = Math.PI - (2.0 * Math.PI * y) / Math.pow(2.0, z);
+        return Math.toDegrees(Math.atan(Math.sinh(n)));
+    };
+
+
+  //**************************************************************************
+  //** createDashboardItem
+  //**************************************************************************
+    var createDashboardItem = function(title, subtitle, parent){
+        if (arguments.length==2){
+            parent = subtitle;
+            subtitle = null;
+        }
+
+        var dashboardItem = bluewave.utils.createDashboardItem(parent, {
+            title: title,
+            subtitle: subtitle,
+            width: "100%",
+            height: "100%",
+            settings: true
+        });
+        dashboardItem.el.style.minHeight = "180px";
+        var icon = dashboardItem.settings.getElementsByTagName("i")[0];
+        if (icon) icon.className = "fas fa-expand";
+        dashboardItem.settings.onclick = function(){
+            if (!popup){
+                popup = new javaxt.dhtml.Window(document.body, {
+                    width: 1060,
+                    height: 600,
+                    modal: true,
+                    style: config.style.window,
+                    resizable: true
+                });
+            }
+            popup.getBody().innerHTML = "";
+            popup.setTitle(title);
+            popup.show();
+            if (dashboardItem.onPopup) dashboardItem.onPopup();
+        };
+        return dashboardItem;
     };
     
-
+    
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
-    var createDashboardItem = bluewave.utils.createDashboardItem;
-    var onRender = javaxt.dhtml.utils.onRender;
-    var getData = bluewave.utils.getData;
-    var parseCSV = bluewave.utils.parseCSV;
-    var isArray = javaxt.dhtml.utils.isArray;
-    var createProductList = bluewave.utils.createProductList;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var isNumeric = javaxt.dhtml.utils.isNumber;
+    
+    var get = bluewave.utils.get;
+    var createTooltip = bluewave.chart.utils.createTooltip;
+    var formatNumber = bluewave.utils.formatNumber;
 
     init();
 };
