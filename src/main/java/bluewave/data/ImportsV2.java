@@ -969,8 +969,6 @@ public class ImportsV2 {
 
                 try{
                     int index = 0;
-                    // CSV.Columns columns = CSV.getColumns(row, ",");
-                    
                     Long fei = row.get(index++).toLong();
                   //Discard invalid rows with 0 value for fei
                     if(fei == null || fei == 0) return;
@@ -981,7 +979,6 @@ public class ImportsV2 {
                     if(address!=null) {
                         try {
                             String[]parts = address.split("\\R");
-                            //System.out.println("address-split: " + parts[1] +" - "+parts[2]+" - "+parts[3]);
                             address = parts[1] +" "+parts[2]+" "+parts[3];
                             countryCode = parts[4];
                         }catch(Exception e){}
@@ -1010,10 +1007,7 @@ public class ImportsV2 {
                     if(lon != null) params.put("lon", lon);
 
 
-                    
-
                     String createAddress = getQuery("address", params);
-                    //getSession().writeTransaction( tx -> addRow( tx, createAddress, params ) );
                     Long addressID;
                     try{
                         addressID = session.run(createAddress, params).single().get(0).asLong();
@@ -1171,18 +1165,15 @@ public class ImportsV2 {
 
                             Cell cell = cellIter.next();
                             if(cell.getCellType() == CellType.BLANK || cell.getCellType() == CellType._NONE) {
-                                // System.out.println("BLANK/NONE type: " + formatter.formatCellValue(cell));
                                 rowBuffer.add(" ");
                             }
                             else if(cell.getCellType() == CellType.BOOLEAN) {
                                 rowBuffer.add(cell.getBooleanCellValue());
                             }
                             else if(cell.getCellType() == CellType.ERROR) {
-                               // System.out.println("ERROR type: " + formatter.formatCellValue(cell));
                                 rowBuffer.add(" ");
                             }
                             else if(cell.getCellType() == CellType.FORMULA) {
-                                System.out.println("FORMULA type: " + formatter.formatCellValue(cell));
                                 rowBuffer.add(" ");
                             }
                             else if(cell.getCellType() == CellType.NUMERIC) {
