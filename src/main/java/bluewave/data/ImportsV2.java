@@ -955,7 +955,7 @@ public class ImportsV2 {
         catch(Exception e){
             if (session!=null) session.close();
         }
-
+        HashSet sheetsProcessed = new HashSet();
 
 
       //Instantiate the ThreadPool
@@ -963,40 +963,54 @@ public class ImportsV2 {
             public void process(Object obj){
                 JSONObject jsonRowObject = (JSONObject) obj;
                 JSONArray row = jsonRowObject.get("row").toJSONArray();
+                String currentSheet = jsonRowObject.get("sheet").toString();
+               
+                sheetsProcessed.add(currentSheet);
 
                 try{
                     int index = 0;
                     // CSV.Columns columns = CSV.getColumns(row, ",");
                     
                     Long fei = row.get(index++).toLong();
+                  //Discard invalid rows with 0 value for fei
+                    if(fei == null || fei == 0) return;
+
                     String name = row.get(index++).toString();
                     String address = row.get(index++).toString();
-                    // System.out.println("address: "+address);
                     String countryCode = null;
                     if(address!=null) {
                         try {
                             String[]parts = address.split("\\R");
-                            System.out.println("address-split: " + parts[1] +" "+parts[2]+" "+parts[3]);
+                            //System.out.println("address-split: " + parts[1] +" - "+parts[2]+" - "+parts[3]);
                             address = parts[1] +" "+parts[2]+" "+parts[3];
                             countryCode = parts[4];
                         }catch(Exception e){}
-                    }
+                    } 
                     String duns = null;
-                    if(jsonRowObject.get("sheet").toString().equals("MFR Report")) {
+                    if(currentSheet.equals("MFR Report") || currentSheet.equals("DII Report")) {
                         duns = row.get(index++).toString();
                     }
-                    String op_status_code = row.get(index++).toString();                    
-                    String lat = row.get(index++).toString();
-                    String lon = row.get(index++).toString();
+  
+                    String op_status_code = null;
+                    String lat = null;
+                    String lon = null;
+                    if(!currentSheet.equals("DII Report")) {
+                        op_status_code = row.get(index++).toString();   
+                        lat = row.get(index++).toString();
+                        lon = row.get(index++).toString();
+                    }
 
+                    Session session = getSession();
+
+                    
                     Map<String, Object> params = new LinkedHashMap<>();
                     params.put("address", address);
                     if(countryCode != null) params.put("cc", countryCode);
-                    params.put("lat", lat);
-                    params.put("lon", lon);
+                    if(lat != null) params.put("lat", lat);
+                    if(lon != null) params.put("lon", lon);
 
 
-                    Session session = getSession();
+                    
 
                     String createAddress = getQuery("address", params);
                     //getSession().writeTransaction( tx -> addRow( tx, createAddress, params ) );
@@ -1007,15 +1021,15 @@ public class ImportsV2 {
                     catch(Exception e){
                         addressID = getIdFromError(e);
                     }
-
+                    
 
                     params = new LinkedHashMap<>();
                     params.put("fei", fei);
                     params.put("name", name);
                     if(duns != null) params.put("duns", duns);
+                    if(op_status_code != null) params.put("op_status_code", op_status_code);
 
-
-                    String createEstablishment = getQuery("import_establishment", params);
+                    String createEstablishment = getQuerySet("import_establishment", params, (duns != null));
                     //getSession().writeTransaction( tx -> addRow( tx, createEstablishment, params ) );
 
                     Long establishmentID;
@@ -1062,6 +1076,47 @@ public class ImportsV2 {
                 return q;
             }
 
+            private String getQuerySet(String node, Map<String, Object> params, boolean withDuns){
+                String key = "merge_"+node;
+                if(withDuns) 
+                    key = "merge_duns_"+node;
+                String q = (String) get(key);
+                if (q==null){
+                    StringBuilder query = new StringBuilder("MERGE (a:" + node + " { name: $name}) SET a += {");
+                    Iterator<String> it = params.keySet().iterator();
+                    while (it.hasNext()){
+                        String param = it.next();
+                        query.append(param);
+                        query.append(": $");
+                        query.append(param);
+                        if (it.hasNext()) query.append(" ,");
+                    }
+                    query.append("} RETURN id(a)");
+                    q = query.toString();
+                    set(key, q);
+                }
+                return q;
+            }            
+
+            private String getQueryMerge(String node, Map<String, Object> params){
+                String key = "merge_"+node;
+                String q = (String) get(key);
+                if (q==null){
+                    StringBuilder query = new StringBuilder("MERGE (a:" + node + " {");
+                    Iterator<String> it = params.keySet().iterator();
+                    while (it.hasNext()){
+                        String param = it.next();
+                        query.append(param);
+                        query.append(": $");
+                        query.append(param);
+                        if (it.hasNext()) query.append(" ,");
+                    }
+                    query.append("}) RETURN id(a)");
+                    q = query.toString();
+                    set(key, q);
+                }
+                return q;
+            }
 
             private Session getSession() throws Exception {
                 Session session = (Session) get("session");
@@ -1097,7 +1152,7 @@ public class ImportsV2 {
                     
                   String sheetName = iter.next();
                   Sheet sheet = workbook.getSheet(sheetName);
-                //   if(sheet == null || !sheetName.equals("MFR Report")) continue;
+                //  if(sheet == null || !sheetName.equals("DII Report")) continue;
                   if(sheet == null) continue;
 
                     JSONObject jsonRowObject = null;
@@ -1164,7 +1219,7 @@ public class ImportsV2 {
         pool.done();
         pool.join();
 
-
+       System.out.println("Sheets Processed: " + sheetsProcessed.toString());
       //Clean up
         // statusLogger.shutdown();
     }
