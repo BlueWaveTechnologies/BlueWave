@@ -243,20 +243,20 @@ public class FileIndex {
         Query contentsQuery = null;
         for (String term : searchTerms) {
 
-            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
+            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + term + WildcardQuery.WILDCARD_STRING));
             BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
             bqBuilder.add(wildcardBooleanClause);
 
-            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, QueryParser.escape(term).toLowerCase());
+            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, term);
             bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
 
-            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(term);
             bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
 
-            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(term);
             bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.SHOULD));
 
-            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(term);
             bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
         }
         BooleanQuery bbq = bqBuilder.build();

@@ -267,7 +267,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 else{
                     row.set("Name", record.name);
                 }
-                
+
                 var addSpan = function(label){
                     var span = document.createElement("span");
                     span.className = "document-search-info";
@@ -291,7 +291,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                     size = formatNumber(Math.round(size/1024)) + " KB";
                 }
                 row.set("Size", addSpan(size));
-                
+
                 if (record.type) row.set("Type", addSpan(record.type));
             }
         });
