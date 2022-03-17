@@ -23,6 +23,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var currPair = -1;
     var navbar;
     var ratings; // to be appended to the currently selected tag
+    var settings;
 
 
 
@@ -342,6 +343,143 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
   //**************************************************************************
+  //** createSettings
+  //**************************************************************************
+    var createSettings = function(parent){
+        console.log("create settings called!");
+
+        var comparisonConfig = {
+            imgSimilarities: true,
+            digitSimilarities: true,
+            textSimilarities: true
+        };
+
+        td = document.createElement("td");
+        td.className = "doc-compare-panel-cog";
+        settings = document.createElement("div");
+        settings.className = "doc-compare-panel-settings";
+        settings.innerHTML = '<i class="fas fa-cog"></i>';
+        td.colSpan = 2;
+        td.appendChild(settings);
+        parent.appendChild(td);
+
+        settings.onclick = function(){
+            console.log("settings was clicked!");
+            this.createContextMenu();
+        };
+
+        settings.createContextMenu = function(){
+            var config = {
+                style: javaxt.dhtml.style.default
+            };
+
+            //Update form
+            var settingsEditor = getStyleEditor(config);
+            var body = settingsEditor.getBody();
+            body.innerHTML = "";
+
+
+            var form = new javaxt.dhtml.Form(body, {
+                style: config.style.form,
+                items: [
+                    {
+                        group: "Comparisons",
+                        items: [
+                            {
+                                name: "imgSimilarities",
+                                label: "Image Similarities",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                        checked: false
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "digitSimilarities",
+                                label: "Digit Similarities",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                        checked: false
+                                    }
+
+                                ]
+                            },
+                            {
+                                name: "textSimilarities",
+                                label: "Text Similarities",
+                                type: "checkbox",
+                                options: [
+                                    {
+                                        label: "",
+                                        value: true,
+                                        checked: false
+                                    }
+
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+
+
+
+        //Set initial value for imgSimilarities
+            var imgSimilaritiesField = form.findField("imgSimilarities");
+            var imgSimilarities = comparisonConfig.imgSimilarities;
+            imgSimilaritiesField.setValue(imgSimilarities===true ? true : false);
+
+        //Set initial value for digitSimilarities
+            var digitSimilaritiesField = form.findField("digitSimilarities");
+            var digitSimilarities = comparisonConfig.digitSimilarities;
+            digitSimilaritiesField.setValue(digitSimilarities===true ? true : false);
+
+        //Set intial value for textSimilarities
+            var textSimilaritiesField = form.findField("textSimilarities");
+            var textSimilarities = comparisonConfig.textSimilarities;
+            textSimilaritiesField.setValue(textSimilarities===true ? true : false);
+
+
+        //Process onChange events
+            form.onChange = function(){
+                var settings = form.getData();
+
+            //Update form data
+                if (settings.imgSimilarities==="true") settings.imgSimilarities = true;
+                else settings.imgSimilarities = false;
+
+                if (settings.digitSimilarities==="true") settings.digitSimilarities = true;
+                else settings.digitSimilarities = false;
+
+                if (settings.textSimilarities==="true") settings.textSimilarities = true;
+                else settings.textSimilarities = false;
+
+
+            //Update comparisonConfig
+                comparisonConfig.imgSimilarities = settings.imgSimilarities;
+                comparisonConfig.digitSimilarities = settings.digitSimilarities;
+                comparisonConfig.textSimilarities = settings.textSimilarities;
+            };
+
+
+        // render settings Editor to the left of cog wheel icon
+            var rect = javaxt.dhtml.utils.getRect(settings);
+            settingsEditor.showAt(rect.x - 400,rect.y);
+            form.resize();
+
+        };
+        return settings;
+    };
+
+  //**************************************************************************
   //** createRatings
   //**************************************************************************
     var createRatings = function(){ // lazy loaded when a new img is pulled up
@@ -596,6 +734,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tr.appendChild(td);
         var title = td;
 
+      // Create cog options menu on same line as Title row
+        settings = createSettings(tr);
 
       //Create subtitle row
         tr = document.createElement("tr");
@@ -1147,6 +1287,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var get = bluewave.utils.get;
     var addResizeListener = javaxt.dhtml.utils.addResizeListener;
 
+    var getStyleEditor = bluewave.chart.utils.getStyleEditor;
 
     init();
 };
