@@ -52,8 +52,12 @@ public class ImportService extends WebService {
         firmNames = new ConcurrentHashMap<>();
         firmLocations = new ConcurrentHashMap<>();
         firmCountries = new ConcurrentHashMap<>();
-        Neo4J graph = bluewave.Config.getGraph(null);
-        if (graph!=null) updateFirmNames(graph);
+        try{
+            Neo4J graph = bluewave.Config.getGraph(null);
+            if (graph!=null) updateFirmNames(graph);
+        }
+        catch(Exception e){
+        }
     }
 
 
@@ -1283,7 +1287,6 @@ public class ImportService extends WebService {
 
       //Get parameters
         String country = request.getParameter("country").toString();
-        if (country==null) return new ServiceResponse(400, "country is required");
 
         String productCode = request.getParameter("productCode").toString();
         if (productCode==null) productCode="LZA,FMC,LYZ,IWP,LZC,KGO,LYY,OPA,OPJ,OPC,QDO";
@@ -1296,11 +1299,21 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
-        sql = sql.replace("{country}", addQuotes(country));
+        String sql;
+        if (groupBy!=null && groupBy.equals("country")){
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day_Country");
+            groupBy = null; //there's code below that's expecting an establishment type for the groupBy
+        }
+        else{
+            if (country==null) return new ServiceResponse(400, "country is required");
+
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
+            sql = sql.replace("{country}", addQuotes(country));
+            sql = sql.replace("{threshold}", threshold+"");
+            if (groupBy!=null) sql += ",n."+ groupBy + " as " + groupBy;
+        }
+
         sql = sql.replace("{product_code}", addQuotes(productCode));
-        sql = sql.replace("{threshold}", threshold+"");
-        if (groupBy!=null) sql += ",n."+ groupBy + " as " + groupBy;
 
 
       //Get graph
@@ -1361,6 +1374,19 @@ public class ImportService extends WebService {
                     arr.add(fei);
                 }
             }
+
+
+          //Local fuzzy match
+            HashMap<Long, String> f = new HashMap<>();
+            Iterator<String> i2 = establishments.keySet().iterator();
+            while (i2.hasNext()){
+                String name = i2.next();
+                ArrayList<Long> arr = establishments.get(name);
+                for (Long id : arr){
+                    f.put(id, name);
+                }
+            }
+            establishments = mergeCompanies(f);
 
 
           //Merge records by establishment
