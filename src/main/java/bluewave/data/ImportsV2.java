@@ -970,6 +970,7 @@ public class ImportsV2 {
                 try{
                     int index = 0;
                     Long fei = row.get(index++).toLong();
+                    
                   //Discard invalid rows with 0 value for fei
                     if(fei == null || fei == 0) return;
 
@@ -1002,10 +1003,10 @@ public class ImportsV2 {
                     
                     Map<String, Object> params = new LinkedHashMap<>();
                     params.put("address", address);
-                    if(countryCode != null) params.put("cc", countryCode);
-                    if(lat != null) params.put("lat", lat);
-                    if(lon != null) params.put("lon", lon);
-
+                    if(countryCode != null && !countryCode.isEmpty()) params.put("cc", countryCode);
+                    if(lat != null && !lat.isEmpty()) params.put("lat", lat);
+                    if(lon != null && !lon.isEmpty()) params.put("lon", lon);
+                   
 
                     String createAddress = getQuery("address", params);
                     Long addressID;
@@ -1020,10 +1021,11 @@ public class ImportsV2 {
                     params = new LinkedHashMap<>();
                     params.put("fei", fei);
                     params.put("name", name);
-                    if(duns != null) params.put("duns", duns);
-                    if(op_status_code != null) params.put("op_status_code", op_status_code);
+                    if(duns != null && !duns.isEmpty()) params.put("duns", duns);
+                    if(op_status_code != null && !op_status_code.isEmpty()) params.put("op_status_code", op_status_code);
+                    
+                    String createEstablishment = getEstablishmentByFEIQueryUsingSet("import_establishment", params);
 
-                    String createEstablishment = getQuerySet("import_establishment", params, (duns != null));
                     //getSession().writeTransaction( tx -> addRow( tx, createEstablishment, params ) );
 
                     Long establishmentID;
@@ -1070,47 +1072,20 @@ public class ImportsV2 {
                 return q;
             }
 
-            private String getQuerySet(String node, Map<String, Object> params, boolean withDuns){
-                String key = "merge_"+node;
-                if(withDuns) 
-                    key = "merge_duns_"+node;
-                String q = (String) get(key);
-                if (q==null){
-                    StringBuilder query = new StringBuilder("MERGE (a:" + node + " { name: $name}) SET a += {");
-                    Iterator<String> it = params.keySet().iterator();
-                    while (it.hasNext()){
-                        String param = it.next();
-                        query.append(param);
-                        query.append(": $");
-                        query.append(param);
-                        if (it.hasNext()) query.append(" ,");
-                    }
-                    query.append("} RETURN id(a)");
-                    q = query.toString();
-                    set(key, q);
+            private String getEstablishmentByFEIQueryUsingSet(String node, Map<String, Object> params){
+                
+                StringBuilder query = new StringBuilder("MERGE (a:" + node + " { fei: $fei}) SET a += {");
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String param = it.next();
+                    query.append(param);
+                    query.append(": $");
+                    query.append(param);
+                    if (it.hasNext()) query.append(" ,");
                 }
-                return q;
+                query.append("} RETURN id(a)");
+                return query.toString();
             }            
-
-            private String getQueryMerge(String node, Map<String, Object> params){
-                String key = "merge_"+node;
-                String q = (String) get(key);
-                if (q==null){
-                    StringBuilder query = new StringBuilder("MERGE (a:" + node + " {");
-                    Iterator<String> it = params.keySet().iterator();
-                    while (it.hasNext()){
-                        String param = it.next();
-                        query.append(param);
-                        query.append(": $");
-                        query.append(param);
-                        if (it.hasNext()) query.append(" ,");
-                    }
-                    query.append("}) RETURN id(a)");
-                    q = query.toString();
-                    set(key, q);
-                }
-                return q;
-            }
 
             private Session getSession() throws Exception {
                 Session session = (Session) get("session");
