@@ -1247,6 +1247,7 @@ li.tree-node:hover {
     margin-right: 10px;
 }
 
+
 /**************************************************************************/
 /** Document Search
 /**************************************************************************/
@@ -1270,6 +1271,11 @@ li.tree-node:hover {
 .document-search-fragment b {
     color: #ee9549;
 }
+
+.document-search-info {
+    color: #777;
+}
+
 
 /**************************************************************************/
 /** Admin Panel
@@ -1507,22 +1513,76 @@ li.tree-node:hover {
 
 
 /**************************************************************************/
-/** Global Supply Chain Dashboard
+/** Import Dashboards
 /**************************************************************************/
 
+.import-summary-header {
+    height: 75px;
+}
+
+.import-summary-header td {
+    padding:10px 0 10px 10px;
+}
+
+.import-summary-header-logo {
+    width: 50px;
+    height: 50px;
+    display: inline-block;
+    background-color: #0f6391;
+    color: #fff;
+    border-radius: 50%;
+    line-height: 50px;
+    text-align: center;
+    font-size: 20px;
+    border: 2px solid #3cbaff;
+}
+
+.import-summary-header-title {
+    display: inline-block;
+    font-size: 30px;
+    padding: 0 0 0 7px;
+    color: #004164;
+}
+
+.import-summary-header-stats {
+    width: 200px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    text-align: center;
+    height: 100%;
+}
+
+.import-summary-header-stats div:first-child {
+  font-size: 30px;
+}
+
+.import-summary-header-stats div:last-child {
+  color: #686868;
+}
+
+
+.import-summary .tick,
 .global-supply-chain .tick {
     color: #777;
 }
 
+.import-summary .chart-title,
 .global-supply-chain .chart-title {
     font-size: 13px;
     text-align: left;
 }
 
+.import-summary .dashboard-item,
 .global-supply-chain .dashboard-item {
     margin: 0;
     padding: 7px;
 }
+
+.import-summary .dashboard-item-settings,
+.global-supply-chain .dashboard-item-settings {
+    font-size: 13px;
+}
+
 
 .global-supply-chain .sankey-node text {
     font-size: 11px;
@@ -1672,4 +1732,179 @@ svg text {
 
 .iScrollVerticalScrollbar{
     right: 2px;
+}
+
+
+/**************************************************************************/
+/** Bounce
+/**************************************************************************/
+/** The following classes are used to define a bounce effect. To apply
+ *  simply add the "bounce" class to an element. Credit:
+ *  https://daneden.github.io/animate.css/
+ */
+
+@-webkit-keyframes bounce {
+  from,
+  20%,
+  53%,
+  80%,
+  to {
+    -webkit-animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+
+  40%,
+  43% {
+    -webkit-animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    -webkit-transform: translate3d(0, -30px, 0);
+    transform: translate3d(0, -30px, 0);
+  }
+
+  70% {
+    -webkit-animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    -webkit-transform: translate3d(0, -15px, 0);
+    transform: translate3d(0, -15px, 0);
+  }
+
+  90% {
+    -webkit-transform: translate3d(0, -4px, 0);
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+@keyframes bounce {
+  from,
+  20%,
+  53%,
+  80%,
+  to {
+    -webkit-animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+
+  40%,
+  43% {
+    -webkit-animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    -webkit-transform: translate3d(0, -30px, 0);
+    transform: translate3d(0, -30px, 0);
+  }
+
+  70% {
+    -webkit-animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    -webkit-transform: translate3d(0, -15px, 0);
+    transform: translate3d(0, -15px, 0);
+  }
+
+  90% {
+    -webkit-transform: translate3d(0, -4px, 0);
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+.bounce {
+    -webkit-animation-name: bounce;
+    animation-name: bounce;
+    -webkit-transform-origin: center bottom;
+    transform-origin: center bottom;
+
+    -webkit-animation-duration: 1s;
+    animation-duration: 1s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+}
+
+
+
+@-webkit-keyframes bounceInDown {
+  from,
+  60%,
+  75%,
+  90%,
+  to {
+    -webkit-animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+  }
+
+  0% {
+    opacity: 0;
+    -webkit-transform: translate3d(0, -3000px, 0);
+    transform: translate3d(0, -3000px, 0);
+  }
+
+  60% {
+    opacity: 1;
+    -webkit-transform: translate3d(0, 25px, 0);
+    transform: translate3d(0, 25px, 0);
+  }
+
+  75% {
+    -webkit-transform: translate3d(0, -10px, 0);
+    transform: translate3d(0, -10px, 0);
+  }
+
+  90% {
+    -webkit-transform: translate3d(0, 5px, 0);
+    transform: translate3d(0, 5px, 0);
+  }
+
+  to {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes bounceInDown {
+  from,
+  60%,
+  75%,
+  90%,
+  to {
+    -webkit-animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+  }
+
+  0% {
+    opacity: 0;
+    -webkit-transform: translate3d(0, -3000px, 0);
+    transform: translate3d(0, -3000px, 0);
+  }
+
+  60% {
+    opacity: 1;
+    -webkit-transform: translate3d(0, 25px, 0);
+    transform: translate3d(0, 25px, 0);
+  }
+
+  75% {
+    -webkit-transform: translate3d(0, -10px, 0);
+    transform: translate3d(0, -10px, 0);
+  }
+
+  90% {
+    -webkit-transform: translate3d(0, 5px, 0);
+    transform: translate3d(0, 5px, 0);
+  }
+
+  to {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.bounceInDown {
+  -webkit-animation-name: bounceInDown;
+  animation-name: bounceInDown;
+
+    -webkit-animation-duration: 1s;
+    animation-duration: 1s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
 }

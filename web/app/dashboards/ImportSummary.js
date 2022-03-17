@@ -13,17 +13,27 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
     var me = this;
     var title = "Import Summary";
+    var header;
     var grid;
     var data = [];
     var lineData = [];
+    var countryNames = {};
     var countryOptions, productOptions, establishmentOptions; //dropdowns
     var slider, thresholdInput;
-    var lineChart, barChart, scatterChart;
+    var lineChart, barChart, pieChart, scatterChart;
     var yAxis;
     var nodeView;
     var companyProfile; //popup
     var waitmask;
-
+    var colors = [
+        "#6699CC", //blue
+        "#98DFAF", //green
+        "#FF3C38", //red
+        "#FF8C42", //orange
+        "#933ed5", //purple
+        "#bebcc1"  //gray
+    ];
+           
 
   //**************************************************************************
   //** Constructor
@@ -34,11 +44,60 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         waitmask = config.waitmask;
 
 
+        var mainDiv = document.createElement("div");
+        mainDiv.className = "import-summary center";
+        mainDiv.style.position = "relative";
+        mainDiv.style.height = "100%";
+        parent.appendChild(mainDiv);
+        me.el = mainDiv;
+        
+        
+
       //Create main table
         var table = createTable();
-        var tbody = table.firstChild;
+        var tbody = table.firstChild;        
         var tr, td;
+        mainDiv.appendChild(table);
 
+
+      //Create header
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.className = "import-summary-header";
+        tr.appendChild(td);
+        createHeader(td);
+        
+        
+      //Create body
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.verticalAlign = "top";
+        tr.appendChild(td);
+        
+        var outerDiv = document.createElement("div");
+        outerDiv.style.position = "relative";
+        outerDiv.style.overflowX = "hidden";
+        outerDiv.style.overflowY = "auto";
+        outerDiv.style.height = "100%";
+        td.appendChild(outerDiv);
+        
+        
+        var innerDiv = document.createElement("div");
+        innerDiv.style.position = "absolute";
+        innerDiv.style.width = "100%";
+        innerDiv.style.height = "100%";
+        outerDiv.appendChild(innerDiv);
+        
+        
+        
+        table = createTable();
+        table.style.height = "";
+        innerDiv.appendChild(table);
+        tbody = table.firstChild;
+        
 
       //Create toolbar
         tr = document.createElement("tr");
@@ -53,7 +112,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         tbody.appendChild(tr);
         td = document.createElement("td");
         td.style.width = "100%";
-        td.style.height = "100%";
+        td.style.height = "450px";
         tr.appendChild(td);
         createGrid(td);
 
@@ -62,13 +121,10 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
-        td.style.height = "350px";
+        //td.style.height = "350px";
         tr.appendChild(td);
         createCharts(td);
 
-
-        parent.appendChild(table);
-        me.el = table;
     };
 
 
@@ -101,83 +157,84 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(productCodes, countryCodes, defaultCountry){
+    this.update = function(importsByCountry, defaultCountry){
         me.clear();
+        
 
-        var onReady = function(){
-            productOptions.setValue("All", true);
-            if (!defaultCountry) defaultCountry = "TH"; //Select Thailand by default for demo purposes
-            countryOptions.setValue(defaultCountry, true);
-            update();
-        };
+        var onReady = function(data){
 
+          //Get product codes and values
+            var productValues = {};
+            var countryValues = {};
+            data.forEach((d)=>{
+                var val = parseFloat(d.lines);
+                var productCode = d.product_code;
+                var countryCode = d.country_of_origin;
 
-        if (arguments.length===0){
-
-          //Get data and populate the dropdowns
-            waitmask.show(500);
-            getData("Imports_Products", function(csv){
-
-                var productCodes = [];
-                var uniqueCountries = {};
-
-              //Parse csv
-                var rows = parseCSV(csv, ",");
-                for (var i=1; i<rows.length; i++){ //skip header
-                    var col = rows[i];
-                    var productCode = col[0];
-                    var productCount = parseFloat(col[1]);
-                    var countries = getArray(col[2]);
-
-                    productCodes.push(productCode);
-                    for (var j=0; j<countries.length; j++){
-                        uniqueCountries[countries[j]] = true;
-                    }
-                }
-
-
-              //Update productOptions
-                productCodes.sort();
-                for (var i=0; i<productCodes.length; i++){
-                    var productCode = productCodes[i];
-                    productOptions.add(productCode, productCode);
-                }
-
-
-              //Update countryOptions
-                var arr = [];
-                for (var country in uniqueCountries) {
-                    if (uniqueCountries.hasOwnProperty(country)){
-                        arr.push(country);
-                    }
-                }
-                arr.sort();
-                for (var i=0; i<arr.length; i++){
-                    var country = arr[i];
-                    countryOptions.add(country, country);
-                }
-
-
-                onReady();
-
-                waitmask.hide();
+                var currVal = productValues[productCode];
+                if (isNaN(currVal)) currVal = 0;
+                productValues[productCode] = currVal + val;
                 
-                
+                currVal = countryValues[countryCode];
+                if (isNaN(currVal)) currVal = 0;
+                countryValues[countryCode] = currVal + val;
             });
-        }
-        else{
 
+
+          //Update productOptions
+            var productCodes = Object.keys(productValues);    
+            productCodes.sort();
             productCodes.forEach((productCode)=>{
                 productOptions.add(productCode, productCode);
             });
 
-            countryCodes.forEach((countryCode)=>{
+
+          //Update country pulldowns
+            var uniqueCountries = Object.keys(countryValues);
+            uniqueCountries.sort();
+            uniqueCountries.forEach((countryCode)=>{
+                //var label = countryCode + " - " + countryNames[countryCode];
                 countryOptions.add(countryCode, countryCode);
             });
             
-            onReady();
+            
 
-        }
+          //Update pulldowns
+            productOptions.setValue("All", true);
+            if (!defaultCountry) defaultCountry = "TH"; //Select Thailand by default for demo purposes
+            countryOptions.setValue(defaultCountry, true);
+            header.update(countryValues, defaultCountry);
+            update();
+        };
+
+
+
+
+
+        waitmask.show(500);
+        bluewave.utils.getMapData(function(mapData){
+            mapData.countries.features.forEach((feature)=>{
+                var p = feature.properties;
+                countryNames[p.code] = p.name;
+            });
+            
+            if (!importsByCountry){
+                get("import/ProductCode?include=country_of_origin", {
+                    success: function(csv){ 
+                        onReady(d3.csvParse(csv));
+                        waitmask.hide();
+                    },
+                    failure: function(request){
+                        alert(request);
+                        waitmask.hide();
+                    }
+                });
+            }
+            else{
+                onReady(importsByCountry);
+                waitmask.hide();
+            }
+        });
     };
 
 
@@ -241,49 +298,9 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
               //Update line chart
                 lineChart.clear();
-                get("import/history?country=" + country + "&threshold=" + threshold, {
+                get("import/history?country=" + country + "&threshold=" + threshold + "&groupBy=" + establishment, {
                     success: function(csv){
-                        lineData = [];
-
-                        var rows = parseCSV(csv, ",");
-                        var header = rows.shift();
-                        var createRecord = function(row){
-                            var r = {};
-                            header.forEach((field, i)=>{
-                                var val = row[i];
-                                if (field!=="date"){
-                                    val = Math.round(parseFloat(val));
-                                }
-                                r[field] = val;
-                            });
-                            return r;
-                        };
-
-                        rows.forEach((row)=>{
-                            var d = createRecord(row);
-
-                            var date = new Date(d.date).getTime();
-                            if (!isNaN(date)){
-                                d.date = date;
-                                lineData.push(d);
-                            }
-                        });
-
-                        lineData.sort(function(a,b){
-                            return a.date-b.date;
-                        });
-
-//                        var firstDate = new Date(lineData[0].date);
-//                        var lastDate = new Date(lineData[lineData.length-1].date);
-//                        console.log(lineData.length);
-//                        console.log(firstDate, lastDate);
-
-
-                        lineData.forEach((d)=>{
-                            var date = new Date(d.date);
-                            d.date = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
-                        });
-
+                        lineData = d3.csvParse(csv);
                         lineChart.update();
                     }
                 });
@@ -291,20 +308,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
               //Update bar chart
-                if (barChart){
-                    var chartData = [];
-                    for (var i=0; i<Math.min(10,data.length); i++){
-                        var d = data[i];
-                        chartData.push({
-                            name: d.name,
-                            quantity: d.totalLines
-                        });
-                    }
-                    barChart.update({
-                        xAxis: "name",
-                        yAxis: "quantity"
-                    }, [chartData]);
-                }
+                if (barChart) barChart.update(data);
 
 
                 scatterChart.update();
@@ -485,6 +489,112 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
 
 
   //**************************************************************************
+  //** createHeader
+  //**************************************************************************
+    var createHeader = function(parent){
+
+        var table = createTable();        
+        var tbody = table.firstChild;
+        var tr, td;
+        
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        
+        td = document.createElement("td");
+        td.style.width = "100%";
+        tr.appendChild(td);
+        
+        var iconDiv = document.createElement("div");
+        iconDiv.className = "import-summary-header-logo";
+        td.appendChild(iconDiv);
+        
+        var titleDiv = document.createElement("div");
+        titleDiv.className = "import-summary-header-title";
+        td.appendChild(titleDiv);        
+        
+        
+        var addStats = function(){
+            td = document.createElement("td");
+            tr.appendChild(td);
+            
+            var div = document.createElement("div");
+            div.className = "import-summary-header-stats";
+            td.appendChild(div);
+            
+            var stat = document.createElement("div");
+            div.appendChild(stat);
+            
+            var text = document.createElement("div");
+            div.appendChild(text);            
+            
+            return {
+                update: function(a, b){
+                    stat.innerText = a;
+                    text.innerText = b;
+                }
+            };
+        };
+        
+        var rank = addStats();
+        var percentRank = addStats();
+        var totalLines = addStats();
+        
+        parent.appendChild(table);
+        
+        
+        
+        
+        header = {
+            update: function(countryValues, countryCode){
+                
+                iconDiv.innerText = countryCode;
+                titleDiv.innerText = countryNames[countryCode];
+                
+                
+                var total = 0;
+                var target = 0;
+                var arr = [];
+                for (var key in countryValues){
+                    if (countryValues.hasOwnProperty(key)){
+                        var val = countryValues[key];
+                        total+=val;
+                        if (key===countryCode){
+                            target = val;
+                            totalLines.update(formatNumber(target), "Total lines");
+                        }
+                        arr.push({
+                            countryCode: key,
+                            value: val
+                        });
+                    }
+                }
+                
+                arr.sort((a, b)=>{
+                    return b.value - a.value;
+                });
+                arr.every((d, i)=>{
+                    if (d.countryCode===countryCode){
+                        var pos = i+1;
+                        if (pos===1) pos+="st";
+                        else if (pos===2) pos+="nd";
+                        else if (pos===3) pos+="rd";
+                        else pos+="th";
+                        rank.update(pos, "Largest manufacturer");
+                        return false;
+                    }
+                    return true;
+                });
+                var percent = formatPercent(target/total);
+                percentRank.update(percent, "Imports into the US");
+            }
+        };
+        
+    };
+    
+
+
+
+  //**************************************************************************
   //** createToolbar
   //**************************************************************************
     var createToolbar = function(parent){
@@ -621,25 +731,58 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
             update: function(row, d){
                 var name = d.name;
                 if (d.fei.length>1) name += " (" + formatNumber(d.fei.length) + ")";
-                row.set('Name', name);
+                //row.set('Name', name);
+                
+                var link = document.createElement("a");
+                link.innerText = name;
+                link.record = d;
+                link.onclick = function(){
+                    showCompanyProfile(this.record);
+                };
+                var div = document.createElement("div");
+                div.className = "document-analysis-comparison-results";
+                div.appendChild(link);
+                row.set('Name', div);
+                
+                
                 row.set('Reported Quantity', formatNumber(d.totalQuantity));
                 row.set('Reported Value', "$"+formatNumber(d.totalValue));
                 row.set('Total Lines', formatNumber(d.totalLines));
+                
+                
+                var addIcon = function(label){
+                    var summary = document.createElement("div");
+                    summary.className = "document-analysis-comparison-results";
+                    var icon = document.createElement("div");
+                    icon.className = "fas fa-exclamation-triangle";
+                    summary.appendChild(icon);
+                    var span = document.createElement("span");
+                    span.innerText = label;
+                    summary.appendChild(span);
+                    return summary;
+                };
+                
                 if (d.fieldExams>0){
                     var str = formatNumber(d.fieldExams);
-                    if (d.failedFieldExams>0) str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
+                    if (d.failedFieldExams>0){ 
+                        str += " (" + formatNumber(d.failedFieldExams) + " Failed)";
+                        str = addIcon(str);
+                    }
                     row.set('Field Exams', str);
                 }
                 if (d.labelExams>0){
                     var str = formatNumber(d.labelExams);
-                    if (d.failedLabelExams>0) str += " (" + formatNumber(d.failedLabelExams) + " Failed)";
+                    if (d.failedLabelExams>0){ 
+                        str += " (" + formatNumber(d.failedLabelExams) + " Failed)";
+                        str = addIcon(str);
+                    }
                     row.set('Label Exams', str);
                 }
                 if (d.totalSamples>0){
                     var str = formatNumber(d.totalSamples);
                     if (d.badSamples>0){
                         str += " (" + formatNumber(d.badSamples) + " Bad)";
-
+                        str = addIcon(str);
                     }
                     row.set('Samples', str);
                 }
@@ -705,44 +848,78 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     var createCharts = function(parent){
 
-      //Create table
-        var table = createTable();
-        parent.appendChild(table);
-        var tbody = table.firstChild;
-        var tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        var td;
+        var div, table, tbody, tr, td;
 
+      //Create first row
+        div = document.createElement("div");
+        div.style.width = "100%";
+        div.style.height = "400px";
+        parent.appendChild(div);
+        table = createTable();
+        div.appendChild(table);
+        tbody = table.firstChild;
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
 
       //Create line chart
         td = document.createElement("td");
         td.style.height = "100%";
-        td.style.width = "34%";
+        td.style.width = "65%";
         td.style.padding = "10px";
+        td.style.paddingRight = "0px";
         td.style.overflow = "hidden";
         tr.appendChild(td);
         createLineChart(td);
 
-
-      //Create bar chart
+      //Create pie chart
         td = document.createElement("td");
         td.style.height = "100%";
-        td.style.width = "33%";
-        td.style.padding = "10px 0px";
-        td.style.overflow = "hidden";
-        tr.appendChild(td);
-        //createBarChart(td);
-        createRelationshipGraph(td);
-
-
-      //Create scatter chart
-        td = document.createElement("td");
-        td.style.height = "100%";
-        td.style.width = "33%";
+        td.style.width = "35%";
         td.style.padding = "10px";
         td.style.overflow = "hidden";
         tr.appendChild(td);
+        createPieChart(td);
+        
+        
+      //Create second row
+        div = document.createElement("div");
+        div.style.width = "100%";
+        div.style.height = "400px";
+        parent.appendChild(div);
+        table = createTable();
+        div.appendChild(table);
+        tbody = table.firstChild;
+        tr = document.createElement("tr");
+        tbody.appendChild(tr);
+        
+        
+      //Create scatter chart
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.width = "65%";
+        td.style.padding = "10px";
+        td.style.paddingRight = "0px";
+        td.style.overflow = "hidden";
+        tr.appendChild(td);
         createScatterChart(td);
+
+
+      //Create exam chart
+        td = document.createElement("td");
+        td.style.height = "100%";
+        td.style.width = "35%";
+        td.style.padding = "10px";
+        td.style.overflow = "hidden";
+        tr.appendChild(td);
+        createBarChart(td);
+        
+        
+      //Create third row
+        div = document.createElement("div");
+        div.style.width = "100%";
+        div.style.height = "600px";
+        parent.appendChild(div);
+        createRelationshipGraph(div);
     };
 
 
@@ -751,13 +928,17 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     var createLineChart = function(parent){
         var dashboardItem = createDashboardItem(parent,{
-            title: "Timeline",
             width: "100%",
-            height: "360px"
+            height: "100%"
         });
         dashboardItem.el.style.margin = "0px";
-        //dashboardItem.el.style.display = "table";
-        lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{});
+        lineChart = new bluewave.charts.LineChart(dashboardItem.innerDiv,{
+            yGrid: true,
+            endTags: true,
+            stackValues: false,
+            accumulateValues: false,
+            animationSteps: 1500
+        });
         lineChart._update = lineChart.update;
         lineChart.update = function(){
 
@@ -775,56 +956,308 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 default:
                     break;
             }
-
-
+            
+            var establishment = getEstablishment();            
             var title = yAxis.replace("total","");
-            dashboardItem.title.innerText = title + " Per Day";
+            dashboardItem.title.innerText = "Top " + establishment + "s";
+            dashboardItem.subtitle.innerText = "Imports per day using entry " + title.toLowerCase();
 
-            var rawValueLine = new bluewave.chart.Line({
-                color: "#6699cc" //blue
+            
+            var yValues = key;
+            var smoothing = 90;
+            var smoothingType = "movingAverage";            
+
+  
+            var t1 = new Date().getTime();
+            var t0 = t1;
+
+            var importsByEstablishment = {};
+            var importTotals = {};
+            lineData.forEach((d)=>{
+                var key = d[establishment];
+                var val = d[yValues] = parseFloat(d[yValues]);
+
+                var dt = Date.parse(d.date);
+                if (!isNaN(dt)){
+                    //d.date = dt;
+                    var date = new Date(dt);
+                    if (date.getFullYear()>2019){
+                        d.date = date;
+
+                        var arr = importsByEstablishment[key];
+                        if (!arr){
+                            arr = [];
+                            importsByEstablishment[key] = arr;
+                        }
+                        arr.push(d);
+
+                        var currTotal = importTotals[key];
+                        if (isNaN(currTotal)) importTotals[key] = val;
+                        else importTotals[key] += val;                    
+                    }
+                }
+            });
+            
+
+                
+            t1 = new Date().getTime();
+            console.log("Parsed",t1-t0);
+            t0 = t1;
+
+            //console.log(importTotals);
+            var arr = [];
+            for (var key in importsByEstablishment){
+                if (importsByEstablishment.hasOwnProperty(key)){
+                    arr.push({
+                        establishment: key,
+                        totalImports: importTotals[key]
+                    });
+                }
+            }    
+            arr.sort((a, b)=>{
+                return b.totalImports - a.totalImports;
+            });
+            if (pieChart) pieChart.update(arr);
+
+
+            t1 = new Date().getTime();
+            console.log("Find top establishments",t1-t0);
+            t0 = t1;
+                
+
+                
+            //console.log(importsByEstablishment);
+            lineChart.clear();
+            var lines = [];
+            var other = null;
+            var includeOtherData = true;
+            var lastDate = null;
+            arr.forEach((d, i)=>{
+                var key = d.establishment;
+                var data = importsByEstablishment[key];
+
+                if (i<5){
+
+
+                    data.sort(function(a, b){
+                        return a.date - b.date;
+                    });
+                    if (!lastDate) lastDate = data[data.length-1].date.getTime();
+                    else lastDate = Math.min(lastDate, data[data.length-1].date.getTime());                    
+                    
+
+                    var line = new bluewave.chart.Line({
+                        label: key,
+                        smoothing: smoothingType,
+                        smoothingValue: smoothing
+                    });
+
+                    lines.push({
+                        line: line,
+                        data: data
+                    });
+ 
+                }
+                else{
+
+                    if (includeOtherData){
+
+                        if (!other) other = data;
+                        else{
+                            data.forEach((d)=>{
+                                var dt = d.date.getTime();
+                                var addRow = true;
+                                other.every((o)=>{
+                                    if (o.date.getTime()===dt){
+                                        addRow = false;
+                                        o[yValues]+=d[yValues];
+                                        return false;
+                                    }
+                                    return true;
+                                });
+
+                                if (addRow) other.push(d);
+
+                            });
+                        }
+
+                    }
+
+                }
+            });
+                
+            t1 = new Date().getTime();
+            console.log("Create line data",t1-t0);
+            t0 = t1;
+                
+
+          //Add lines
+            if (other){
+                
+              //Sort "other" data
+                other.sort(function(a, b){
+                    return a.date - b.date;
+                });
+                
+                
+              //Trim "other" data
+                var arr = [];
+                other.forEach((d)=>{
+                    if (d.date.getTime()<=lastDate){
+                        arr.push(d);
+                    }
+                });
+                other = arr;                
+                
+                
+              //Create line
+                var line = new bluewave.chart.Line({
+                    label: "Other",
+                    color: colors[colors.length-1],
+                    smoothing: smoothingType,
+                    smoothingValue: smoothing
+                });   
+                
+                
+              //Add line to chart
+                lineChart.addLine(line, other, "date", yValues); 
+            }
+            lines.forEach((l, i)=>{
+                var lineColor = colors[i % colors.length];
+                l.line.setColor(lineColor);
+                
+                    var arr = [];
+                    l.data.forEach((d)=>{
+                        if (d.date.getTime()<=lastDate){
+                            arr.push(d);
+                        }
+                    });
+                    l.data = arr;                  
+                
+                lineChart.addLine(l.line, l.data, "date", yValues);
             });
 
-            var movingAverageLine = new bluewave.chart.Line({
-                color: "#ff7800", //orange
-                smoothing: "movingAverage",
-                smoothingValue: 30
-            });
 
-            lineChart.addLine(rawValueLine, lineData, "date", key);
-            lineChart.addLine(movingAverageLine, lineData, "date", key);
+            //lineChart.update();
             lineChart._update();
+
+            t1 = new Date().getTime();
+            console.log("Render line data",t1-t0);
+            t0 = t1;
         };
+    };
+
+
+  //**************************************************************************
+  //** createPieChart
+  //**************************************************************************
+    var createPieChart = function(parent){
+        var dashboardItem = createDashboardItem(parent,{
+            width: "100%",
+            height: "100%"
+        });
+        dashboardItem.el.style.margin = "0px";
+        
+        var chartConfig = {
+            pieKey: "establishment",
+            pieValue: "totalImports",
+            showLabels: true,
+            colors: colors,
+            colorScaling: "ordinal",
+            showTooltip: true
+        };
+        
+        pieChart = new bluewave.charts.PieChart(dashboardItem.innerDiv,chartConfig);        
+        pieChart._update = pieChart.update;
+        pieChart.update = function(rawData){     
+
+            var arr = rawData.slice(0, Math.min(rawData.length, 5));
+            var other = 0;
+            for (var i=5; i<rawData.length; i++){
+                other += rawData[i].totalImports;
+            }
+            if (other>0) arr.push({
+                establishment: "Other",
+                totalImports: other
+            });
+            
+            var establishment = getEstablishment(); 
+            dashboardItem.title.innerText = "Top " + (arr.length-1) + " " + establishment + "s";
+            
+            pieChart._update(chartConfig, arr);
+        };        
     };
 
 
   //**************************************************************************
   //** createBarChart
   //**************************************************************************
-    var createBarChart = function(parent, config){
+    var createBarChart = function(parent){
         var dashboardItem = createDashboardItem(parent,{
-            title: config.title,
+            title: "Exam history",
             width: "100%",
-            height: config.height
+            height: "100%"
         });
-        //dashboardItem.el.style.margin = "0px";
-        return new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
-    };
+        dashboardItem.el.style.margin = "0px";
+        
+        
+        barChart = new bluewave.charts.BarChart(dashboardItem.innerDiv,{});
+        barChart._update = barChart.update;
+        barChart.update = function(rawData){  
+            
+            
+            var key;
+            switch (yAxis) {
+                case "totalQuantity":
+                    key = "quantity";
+                    break;
+                case "totalValue":
+                    key = "value";
+                    break;
+                case "totalLines":
+                    key = "lines";
+                    break;
+                default:
+                    break;
+            }
+            
+            var establishment = getEstablishment();              
+            
+            var totalLines = 0;
+            var totalExams = 0;
+            var totalSamples = 0;
+            var labelExams = 0;
+            
+            rawData.forEach((d)=>{
+                var name = d.name;
+                totalLines+= d.totalLines;
+                totalExams+=d.totalExams;
+                labelExams+=d.labelExams;
+                totalSamples+=d.totalSamples;
+            });
 
-
-  //**************************************************************************
-  //** createMapChart
-  //**************************************************************************
-    var createMapChart = function(parent, config){
-        var map = new bluewave.charts.MapChart(parent, {});
-        return map;
-    };
-
-
-  //**************************************************************************
-  //** createSankeyChart
-  //**************************************************************************
-    var createSankeyChart = function(parent){
-
+            
+            
+            dashboardItem.innerDiv.innerHTML = "";
+            dashboardItem.innerDiv.style.verticalAlign = "top";
+            var div = document.createElement("div");
+            div.className = "chart-subtitle";
+            dashboardItem.innerDiv.appendChild(div);
+            
+            
+            var span = document.createElement("div");
+            div.appendChild(span);
+            span.innerText = "Total Exams: " + totalExams + " (" + formatPercent(totalExams/totalLines) + ")";
+            
+            var span = document.createElement("div");
+            div.appendChild(span);
+            span.innerText = "Total Samples: " + totalSamples + " (" + formatPercent(totalSamples/totalLines) + ")";
+            
+            var span = document.createElement("div");
+            div.appendChild(span);
+            span.innerText = "Label Exams: " + labelExams + " (" + formatPercent(labelExams/totalLines) + ")";            
+            
+        };                
     };
 
 
@@ -835,18 +1268,41 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         var dashboardItem = createDashboardItem(parent,{
             title: "Exams",
             width: "100%",
-            height: "360px"
+            height: "100%"
         });
         dashboardItem.el.style.margin = "0px";
-        //dashboardItem.el.style.display = "table";
-        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv,{
 
-        });
+        scatterChart = new bluewave.charts.ScatterChart(dashboardItem.innerDiv);
+        var chartConfig = {
+            xAxis: "Exams",
+            yAxis: "yAxis",
+            xGrid: true,
+            yGrid: true,
+            xLabel: true,
+            yLabel: false,
+            pointLabels: true,
+            showTooltip: true
+        };
+        
+        scatterChart.getPointLabel = function(d){
+            return d.label;
+        };
+        
+        scatterChart.getPointColor = function(d){
+            if (d.failedExams>0) return "#e66869";
+            return "#6699cc";
+        };
+        
+        scatterChart.getTooltipLabel = function(d){
+            return d.label + "<br/>" + d.Exams + " Exam" + (d.Exams===1 ? "" : "s");
+        };        
+        
+        
         scatterChart._update = scatterChart.update;
         scatterChart.update = function(){
 
             var title = yAxis.replace("total","");
-            dashboardItem.title.innerText = title + " vs Exams";
+            dashboardItem.subtitle.innerText = "Number of exams per import " + title.toLowerCase();
 
             var chartData = [];
             data.forEach((d)=>{
@@ -868,28 +1324,7 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
                 }
             });
 
-            scatterChart._update({
-                xAxis: "Exams",
-                yAxis: "yAxis",
-                xGrid: true,
-                yGrid: true,
-                xLabel: true,
-                yLabel: false,
-                margin: {
-                    top: 15,
-                    right: 65,
-                    bottom: 32,
-                    left: 82
-                },
-                pointLabels: true,
-                getPointLabel: function(d){
-                    return d.label;
-                },
-                getPointColor: function(d){
-                    if (d.failedExams>0) return "#e66869";
-                    return "#6699cc";
-                }
-            },[chartData]);
+            scatterChart._update(chartConfig,[chartData]);
         };
     };
 
@@ -899,11 +1334,20 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
   //**************************************************************************
     var createRelationshipGraph = function(parent){
 
+/*
+            manufacturer: "green",
+            shipper: "orange",
+            importer: "red",
+            consignee: "blue",
+            dii: "purple"
+ */
+
       //Create dashboard item
         var dashboardItem = createDashboardItem(parent,{
             title: "Relationships",
+            subtitle: "Network graph illustrating relationships between manufacturers, shippers, consignee, importers, and DII",
             width: "100%",
-            height: "360px"
+            height: "100%"
         });
         dashboardItem.el.style.margin = "0px";
         //dashboardItem.el.style.display = "table";
@@ -993,6 +1437,16 @@ bluewave.dashboards.ImportSummary = function(parent, config) {
         return str.substring(0, str.length-1).split(", ");
     };
 
+
+    var formatPercent = function(f){
+        var percent = f*100;
+        if (percent>=1) percent = round(percent);
+        else{
+            percent = round(percent, 2);
+            if (percent===0.0) percent = "<0.01";
+        } 
+        return percent + "%";
+    };
 
   //**************************************************************************
   //** Utils

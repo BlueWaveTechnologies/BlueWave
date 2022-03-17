@@ -988,6 +988,57 @@ public class SupplyChainService extends WebService {
 
 
   //**************************************************************************
+  //** getProductCodes
+  //**************************************************************************
+    public ServiceResponse getProductCodes(ServiceRequest request, Database database)
+        throws ServletException, IOException {
+
+        String productCodes = request.getParameter("code").toString();
+        if (productCodes==null) productCodes = "";
+        else productCodes = productCodes.trim();
+
+
+        Session session = null;
+        try {
+            session = getSession(request);
+
+            JSONArray arr = new JSONArray();
+
+            String query =
+            "match (p:registrationlisting_product)-[]-(n:registrationlisting_product_openfda)\n" +
+            (productCodes.isEmpty() ? "" : "where p.product_code in ['" + productCodes.replace(",", "','") + "']\n") +
+            "return distinct(p.product_code) as product_code,\n" +
+            "n.device_name, n.medical_specialty_description,\n" +
+            "n.device_class, n.regulation_number";
+
+
+            Result rs = session.run(query);
+            while (rs.hasNext()){
+                Record record = rs.next();
+                JSONObject json = new JSONObject();
+
+                for (String key : record.keys()){
+                    Object val = record.get(key).asObject();
+                    int idx = key.indexOf(".");
+                    if (idx>-1) key = key.substring(idx+1);
+                    json.set(key, val);
+                }
+
+                arr.add(json);
+            }
+            session.close();
+
+
+            return new ServiceResponse(arr);
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+            return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
   //** saveProduct
   //**************************************************************************
     public ServiceResponse saveProduct(ServiceRequest request, Database database)

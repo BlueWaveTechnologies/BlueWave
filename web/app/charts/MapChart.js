@@ -1013,22 +1013,6 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
-  //** createTooltip
-  //**************************************************************************
-    var createTooltip = function(){
-        var tooltip = bluewave.charts.MapChart.Tooltip;
-        if (!tooltip){
-            tooltip = bluewave.charts.MapChart.Tooltip =
-            d3.select(document.body)
-            .append("div")
-            .style("opacity", 0)
-            .attr("class", "tooltip");
-        }
-        return tooltip;
-    };
-
-
-  //**************************************************************************
   //** getCoordinates
   //**************************************************************************
     var getCoordinates = function(d){
@@ -1051,6 +1035,7 @@ bluewave.charts.MapChart = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
+    var createTooltip = bluewave.chart.utils.createTooltip;
 
     init();
 };

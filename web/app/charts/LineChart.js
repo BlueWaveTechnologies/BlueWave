@@ -491,6 +491,9 @@ bluewave.charts.LineChart = function(parent, config) {
         arr.forEach(function(a){
             var sumData = a.sumData;
             xKeys.forEach(function(key){
+                
+                if (key instanceof Date && !stackValues) key = key+""; //hack to deal with dates as keys
+                
 
                 for (var i=0; i<sumData.length; i++){
                     var d = sumData[i];
@@ -501,7 +504,7 @@ bluewave.charts.LineChart = function(parent, config) {
                       //Update minData array
                         var foundMatch = false;
                         for (var j=0; j<minData.length; j++){
-                            var entry = minData[j];
+                            var entry = minData[j];                            
                             if (entry.key==key){
                                 foundMatch = true;
                                 entry.value = Math.min(entry.value, val);
