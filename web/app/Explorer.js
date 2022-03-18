@@ -1682,10 +1682,7 @@ bluewave.Explorer = function(parent, config) {
                 waitmask: waitmask,
                 queryLanguage: "cypher",
                 queryService: "query/job/",
-                getTables: function(tree){
-                    waitmask.show(500);
-                    getNodes(tree);
-                },
+                getTables: function(){}, //empty function so we can populate the tree ourselves
                 onTreeClick: function(item){
                     var cql = "MATCH (n:" + item.name + ")\n";
                     var properties = item.node.properties;
@@ -1713,23 +1710,25 @@ bluewave.Explorer = function(parent, config) {
                 }
             });
 
+            var timer;
+
             dbView.show = function(){
+                win.show();
                 waitmask.show(500);
                 getNodes(dbView.getComponents().tree);
-                win.show();
+                
+                if (!timer){
+                    timer = setInterval(function(){
+                        if (win.isOpen()){
+                            getNodes(dbView.getComponents().tree);
+                        }
+                    }, 15*1000);
+                }
             };
 
             dbView.hide = function(){
                 win.hide();
             };
-
-
-            setInterval(function(){
-                if (win.isOpen()){
-                    getNodes(dbView.getComponents().tree);
-                }
-            }, 15*1000);
-
         }
 
         dbView.onClose = function(){
