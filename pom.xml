@@ -14,7 +14,7 @@
   <!-- =========================================================== -->
     <groupId>bluewave</groupId>
     <artifactId>bluewave</artifactId>
-    <version>2.0.0</version>
+    <version>dev</version>
     <packaging>jar</packaging>
 
   <!-- =========================================================== -->

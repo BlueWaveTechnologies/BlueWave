@@ -27,7 +27,7 @@ All command line options require an external `config.json` file.
 To start the server, open a terminal and run the following:
 ```console
 cd /path/to/project/
-java -jar target/bluewave-2.0.0.jar -config ../config.json
+java -jar target/bluewave-dev.jar -config ../config.json
 ```
 Note that you will need a user account to login. If this is the first time
 you are starting the server, stop the server and create an admin account via
@@ -38,7 +38,7 @@ the command line.
 To create a new user, open a terminal and run the following:
 ```console
 cd /path/to/project/
-java -jar target/bluewave-2.0.0.jar -config ../config.json -addUser john -accessLevel 5
+java -jar target/bluewave-dev.jar -config ../config.json -addUser john -accessLevel 5
 ```
 In this example, we will create a new user with a login username called `john` with level 5 access (admin rights).
 The application will prompt the user for a password. Note that you can add, edit, and delete users via the web application
