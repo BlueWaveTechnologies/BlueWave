@@ -1153,6 +1153,7 @@ li.tree-node:hover {
     top: 5px;
     color: #0f6391;
     position: absolute;
+    z-index: 5;
 }
 
 .doc-compare-panel-subtitle {

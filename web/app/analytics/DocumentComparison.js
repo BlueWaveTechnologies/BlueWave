@@ -24,7 +24,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var navbar;
     var ratings; // to be appended to the currently selected tag
     var settings;
-
+    var overlayElements = []; // for enabling/disabling overlay elements depending on user selection
+    var comparisonConfig = {
+        imgSimilarities: true,
+        digitSimilarities: true,
+        textSimilarities: true
+    };
+    var settingsEditor;
 
 
   //**************************************************************************
@@ -69,6 +75,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     this.getSummaryPanel = function(){
         return summaryPanel.el;
     };
+
 
 
   //**************************************************************************
@@ -212,6 +219,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
     var getSuspiciousPages = function(fileIndex){
 
+
         var files = results.files;
         var file = files[fileIndex];
 
@@ -346,16 +354,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** createSettings
   //**************************************************************************
     var createSettings = function(parent){
-        console.log("create settings called!");
-
-        var comparisonConfig = {
-            imgSimilarities: true,
-            digitSimilarities: true,
-            textSimilarities: true
-        };
+        // settings cogwheel and icon that is attached to the current page of the document comparison
+        // updated & re-attached when the page changes
 
         td = document.createElement("td");
-        td.className = "doc-compare-panel-cog";
         settings = document.createElement("div");
         settings.className = "doc-compare-panel-settings";
         settings.innerHTML = '<i class="fas fa-cog"></i>';
@@ -365,119 +367,208 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         settings.onclick = function(){
             console.log("settings was clicked!");
-            this.createContextMenu();
+            if (!settingsEditor) {
+                settingsEditor = createSettingsContextMenu();
+                console.log("settings editor created for the first time!");
+            };
+            settingsEditor.show();
         };
 
-        settings.createContextMenu = function(){
-            var config = {
-                style: javaxt.dhtml.style.default
-            };
-
-            //Update form
-            var settingsEditor = getStyleEditor(config);
-            var body = settingsEditor.getBody();
-            body.innerHTML = "";
-
-
-            var form = new javaxt.dhtml.Form(body, {
-                style: config.style.form,
-                items: [
-                    {
-                        group: "Comparisons",
-                        items: [
-                            {
-                                name: "imgSimilarities",
-                                label: "Image Similarities",
-                                type: "checkbox",
-                                options: [
-                                    {
-                                        label: "",
-                                        value: true,
-                                        checked: false
-                                    }
-
-                                ]
-                            },
-                            {
-                                name: "digitSimilarities",
-                                label: "Digit Similarities",
-                                type: "checkbox",
-                                options: [
-                                    {
-                                        label: "",
-                                        value: true,
-                                        checked: false
-                                    }
-
-                                ]
-                            },
-                            {
-                                name: "textSimilarities",
-                                label: "Text Similarities",
-                                type: "checkbox",
-                                options: [
-                                    {
-                                        label: "",
-                                        value: true,
-                                        checked: false
-                                    }
-
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            });
-
-
-
-
-        //Set initial value for imgSimilarities
-            var imgSimilaritiesField = form.findField("imgSimilarities");
-            var imgSimilarities = comparisonConfig.imgSimilarities;
-            imgSimilaritiesField.setValue(imgSimilarities===true ? true : false);
-
-        //Set initial value for digitSimilarities
-            var digitSimilaritiesField = form.findField("digitSimilarities");
-            var digitSimilarities = comparisonConfig.digitSimilarities;
-            digitSimilaritiesField.setValue(digitSimilarities===true ? true : false);
-
-        //Set intial value for textSimilarities
-            var textSimilaritiesField = form.findField("textSimilarities");
-            var textSimilarities = comparisonConfig.textSimilarities;
-            textSimilaritiesField.setValue(textSimilarities===true ? true : false);
-
-
-        //Process onChange events
-            form.onChange = function(){
-                var settings = form.getData();
-
-            //Update form data
-                if (settings.imgSimilarities==="true") settings.imgSimilarities = true;
-                else settings.imgSimilarities = false;
-
-                if (settings.digitSimilarities==="true") settings.digitSimilarities = true;
-                else settings.digitSimilarities = false;
-
-                if (settings.textSimilarities==="true") settings.textSimilarities = true;
-                else settings.textSimilarities = false;
-
-
-            //Update comparisonConfig
-                comparisonConfig.imgSimilarities = settings.imgSimilarities;
-                comparisonConfig.digitSimilarities = settings.digitSimilarities;
-                comparisonConfig.textSimilarities = settings.textSimilarities;
-            };
-
-
-        // render settings Editor to the left of cog wheel icon
-            var rect = javaxt.dhtml.utils.getRect(settings);
-            settingsEditor.showAt(rect.x - 400,rect.y);
-            form.resize();
-
+        settings.detach = function(){
+            // if settings container div is attached somewhere within the dom, detach it
+                if (this.parentNode.parentNode ) this.parentNode.parentNode.removeChild(this.parentNode);
         };
-        return settings;
+
+        settings.attach = function(parent){
+            // append the settings container div to the first child of the parent element
+                parent.appendChild(this.parentNode);
+        };
+
+        settings.updateSelection = function(parent){
+            console.log("called update selection for settings!");
+            settings.detach();
+            settings.attach(parent.getElementsByClassName("doc-compare-panel-title")[0].parentNode);
+        };
     };
+
+  //**************************************************************************
+  //** createContextMenu
+  //**************************************************************************
+    createSettingsContextMenu = function(){
+        var config = {
+            style: javaxt.dhtml.style.default
+        };
+
+        //Update form
+        editor = new javaxt.dhtml.Window(document.body, {
+            title: "Edit Settings",
+            width: 400,
+            valign: "top",
+            modal: false,
+            resizable: false,
+            style: config.style.window
+        });
+
+        var body = editor.getBody();
+        body.innerHTML = "";
+
+
+        var form = new javaxt.dhtml.Form(body, {
+            style: config.style.form,
+            items: [
+                {
+                    group: "Comparisons",
+                    items: [
+                        {
+                            name: "imgSimilarities",
+                            label: "Image Similarities",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "digitSimilarities",
+                            label: "Digit Similarities",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "textSimilarities",
+                            label: "Text Similarities",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+
+
+    //Set initial value for imgSimilarities
+        var imgSimilaritiesField = form.findField("imgSimilarities");
+        var imgSimilarities = comparisonConfig.imgSimilarities;
+        imgSimilaritiesField.setValue(imgSimilarities===true ? true : false);
+
+    //Set initial value for digitSimilarities
+        var digitSimilaritiesField = form.findField("digitSimilarities");
+        var digitSimilarities = comparisonConfig.digitSimilarities;
+        digitSimilaritiesField.setValue(digitSimilarities===true ? true : false);
+
+    //Set intial value for textSimilarities
+        var textSimilaritiesField = form.findField("textSimilarities");
+        var textSimilarities = comparisonConfig.textSimilarities;
+        textSimilaritiesField.setValue(textSimilarities===true ? true : false);
+
+
+    //Process onChange events
+        form.onChange = function(){
+            var settings = form.getData();
+
+        //Update form data
+            if (settings.imgSimilarities==="true") settings.imgSimilarities = true;
+            else settings.imgSimilarities = false;
+
+            if (settings.digitSimilarities==="true") settings.digitSimilarities = true;
+            else settings.digitSimilarities = false;
+
+            if (settings.textSimilarities==="true") settings.textSimilarities = true;
+            else settings.textSimilarities = false;
+
+
+        //Update comparisonConfig
+            comparisonConfig.imgSimilarities = settings.imgSimilarities;
+            comparisonConfig.digitSimilarities = settings.digitSimilarities;
+            comparisonConfig.textSimilarities = settings.textSimilarities;
+
+            refreshComparisons(comparisonConfig);
+        };
+
+
+    // render settings Editor to the left of cog wheel icon
+        var rect = javaxt.dhtml.utils.getRect(settings);
+        editor.showAt(rect.x - 400,rect.y);
+        form.resize();
+
+        return editor;
+    };
+
+
+
+
+
+
+
+
+  //**************************************************************************
+  //** refreshComparisons
+  //**************************************************************************
+    var refreshComparisons = function(config){
+        console.log("refresh comparisons called!");
+        console.log("logging config here");
+        console.log(config);
+        console.log(JSON.stringify(config,null,4));
+
+        var imgSimilarities = [];
+        var textSimilarities = [];
+        var digitSimilarities = [];
+
+        console.log(overlayElements);
+        for (i in overlayElements){
+            // console.log(i);
+            // console.log(i.type);
+            console.log(overlayElements[i].type)
+            if (overlayElements[i].type ==="Identical image") imgSimilarities.push(overlayElements[i]);
+            else if (overlayElements[i].type ==="Common text string") textSimilarities.push(overlayElements[i]);
+            else if (overlayElements[i].type ==="Common digit sequence") digitSimilarities.push(overlayElements[i]);
+
+        };
+
+        // list currently enabled images similarities
+        console.log("listing currently enabled images");
+        console.log(imgSimilarities);
+        if (comparisonConfig.imgSimilarities) for (i in imgSimilarities) imgSimilarities[i].showSimilarity();
+        else for (i in imgSimilarities) imgSimilarities[i].hideSimilarity();
+
+        // list currently enabled text similarities
+        console.log("listing currently enabled text");
+        console.log(textSimilarities);
+        if (comparisonConfig.textSimilarities) for (i in textSimilarities) textSimilarities[i].showSimilarity();
+        else for (i in textSimilarities) textSimilarities[i].hideSimilarity();
+
+        // list currently enabled digit similarities
+        console.log("listing currently enabled digits");
+        console.log(digitSimilarities);
+        if (comparisonConfig.digitSimilarities) for (i in digitSimilarities) digitSimilarities[i].showSimilarity();
+        else for (i in digitSimilarities) digitSimilarities[i].hideSimilarity();
+
+        console.log(comparisonConfig);
+
+        // don't show pages that ONLY have selections that aren't enabled
+
+        // reload the current overlays
+    };
+
 
   //**************************************************************************
   //** createRatings
@@ -628,7 +719,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         d.removeSimilarity = function(){
+            this.remove();
+        };
+
+        d.hideSimilarity = function(){ // used with custom user options set for specific type of similarities
             this.hide();
+        };
+
+        d.showSimilarity = function(){ // used with custom user options set for specific type of similarities
+            this.show();
         };
         return d;
     };
@@ -692,6 +791,18 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             this.d.removeSimilarity();
         };
 
+        tag.hideSimilarity = function(){ // used with custom user options set for specific type of similarities
+            this.matchingD.hideSimilarity();
+            this.d.hideSimilarity();
+            this.hide();
+        };
+
+        tag.showSimilarity = function(){ // used with custom user options set for specific type of similarities
+            this.matchingD.showSimilarity();
+            this.d.showSimilarity();
+            this.show();
+        };
+
         tag.onmouseover = function(){
             this.matchingD.highlight();
             this.matchingTag.hide();
@@ -734,8 +845,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tr.appendChild(td);
         var title = td;
 
-      // Create cog options menu on same line as Title row
-        settings = createSettings(tr);
+        createSettings(tr);
 
       //Create subtitle row
         tr = document.createElement("tr");
@@ -807,6 +917,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 img.onload = function(){
                     img = this;
                     setTimeout(function(){
+
                         clearOverlays();
                         getImages(img).forEach((rightImage)=>{
                             getImages(rightImage.matchingImg).forEach((leftImage)=>{
@@ -814,6 +925,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 leftImage.LoadOverlay();  // render left image
                                 rightImage.matchingImg = leftImage; // update matched reference
                                 rightImage.LoadOverlay(); // render right image
+
+                                settings.updateSelection(rightImage.parentNode.parentNode.parentNode.parentNode);
                             });
                         });
                     }, 1200); //add slight delay for the carousel to finish sliding
@@ -834,6 +947,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         var box = boxes[i];
 
                         var type = box.type;
+                        if (box.type === "Identical image") if (!comparisonConfig.imgSimilarities) return;
+                        if (box.type === "Common text string") if (!comparisonConfig.textSimilarities) return;
+                        if (box.type === "Common digit sequence") if (!comparisonConfig.digitSimilarities) return;
+
                         int++;
 
                         var updateMatchingImg = function(){
@@ -865,6 +982,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                         tag.d = d;
                         tag.type = type;
+                        overlayElements.push(tag);
+
 
                         img.d.push(d);
                         img.tag.push(tag);
@@ -999,7 +1118,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 type: suspiciousPair.type,
                                 boxes: page.bbox
                             };
-                        }
+                        };
                     });
 
                     if (leftBox && rightBox){
@@ -1017,6 +1136,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                 leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
                 rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
+
+                // settings.updateSelection(rightPanel.parentNode.parentNode.parentNode.parentNode);
             }
         };
     };
@@ -1090,14 +1211,18 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         backButton.onclick = function(){
             currPair--;
-            if (currPair >= 0) navbar.updateSelection(currPair);
+            if (currPair >= 0) {
+                navbar.updateSelection(currPair);
+            };
             this.disabled = true;
             raisePanel(true);
         };
 
         nextButton.onclick = function(){
             currPair++;
-            if (currPair >= 0) navbar.updateSelection(currPair);
+            if (currPair >= 0) {
+                navbar.updateSelection(currPair);
+            };
             this.disabled = true;
             raisePanel(false);
         };
