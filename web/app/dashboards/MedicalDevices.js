@@ -2,7 +2,7 @@ if(!bluewave) var bluewave={};
 if(!bluewave.dashboards) bluewave.dashboards={};
 
 //******************************************************************************
-//** 
+//** MedicalDevices
 //******************************************************************************
 /**
  *   Panel for displaying medical device groups
@@ -144,7 +144,7 @@ bluewave.dashboards.MedicalDevices = function(parent, config) {
         dashboardItem.innerDiv.style.textAlign = "center";
         dashboardItem.el.addEventListener("mouseover", function(event) {
         
-          // console.log("yep")
+          // console.log("mouseover")
          
         });
 
@@ -153,10 +153,8 @@ bluewave.dashboards.MedicalDevices = function(parent, config) {
         };
 
         var icon = document.createElement("img");
-        // icon.className = "fas fa-camera";
         icon.src = groupURLs[group];
         icon.style.height = "100%";
-        // icon.style.width = "100%";
 
         dashboardItem.innerDiv.appendChild(icon);
         dashboardItem.icon = icon;
@@ -194,7 +192,6 @@ bluewave.dashboards.MedicalDevices = function(parent, config) {
     };
 
 
-
   //**************************************************************************
   //** createWindow
   //**************************************************************************
@@ -203,7 +200,6 @@ bluewave.dashboards.MedicalDevices = function(parent, config) {
         windows.push(win);
         return win;
     };
-
 
 
   //**************************************************************************
@@ -218,8 +214,14 @@ bluewave.dashboards.MedicalDevices = function(parent, config) {
     "Gloves": "../../images/medical_icons/ppe_gloves.svg",
     "Masks": "../../images/medical_icons/ppe_face_mask.svg",
     "Gowns": "../../images/medical_icons/ppe_gown.svg",
-    // "Shoes": "../../images/medical_icons/.svg",
     "Shields": "../../images/medical_icons/ppe_face_shield.svg",
+    "Shoes": "../../images/medical_icons/foot.svg",
+    "Disinfectant": "../../images/medical_icons/disinfecting_wipes.svg",
+    "Ventilators": "../../images/medical_icons/ventilator.svg",
+    "Respirators": "../../images/medical_icons/respirator.svg",
+    "Tests": "../../images/medical_icons/microscope.svg",
+    "Oxygen": "../../images/medical_icons/oxygen_tank.svg",
+    "First Aid": "../../images/medical_icons/health_alt.svg",
     "Dental": "../../images/medical_icons/tooth.svg",
     "Orthopedic": "../../images/medical_icons/orthopaedics.svg", //meh
     "Radiology": "../../images/medical_icons/radiology.svg",
