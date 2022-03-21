@@ -42,32 +42,7 @@ bluewave.dashboards.MedicalDevices = function(parent, config) {
         div.appendChild(innerDiv);
         mainDiv = innerDiv;
   
-            
-      //Add listeners to the "Dashboard" store
-        // var dashboards = config.dataStores["Dashboard"];
-        // dashboards.addEventListener("add", function(dashboard){
-        //     deleteGroupStore();
-        //     refresh();
-        // }, me);
 
-        // dashboards.addEventListener("update", function(dashboard){
-        //     t = new Date().getTime();
-        //     refresh();
-        // }, me);
-
-        // dashboards.addEventListener("remove", function(dashboard){
-        //     deleteGroupStore();
-        //     refresh();
-        // }, me);
-
-    };
-
-
-  //**************************************************************************
-  //** getTitle
-  //**************************************************************************
-    this.getTitle = function(){
-        return "Dashboards";
     };
 
 
@@ -161,7 +136,8 @@ bluewave.dashboards.MedicalDevices = function(parent, config) {
         dashboardItem.data = rows.filter(function(row){
           var g1 = row.group.toLowerCase();
           var g2 = group.toLowerCase();
-          if (g1.includes(g2) || g2.includes(g1)) return true;
+          var medSpec = row["n.medical_specialty_description"].toLowerCase();
+          if (g1.includes(g2) || g2.includes(g1) || g2 == medSpec) return true;
 
           return false;
         })
