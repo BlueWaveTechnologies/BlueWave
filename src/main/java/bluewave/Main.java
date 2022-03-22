@@ -258,9 +258,14 @@ public class Main {
             importPremier(args);
         }
         else if (str.equalsIgnoreCase("Imports")){
-            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
+            // Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
             //imports.exportSummary();
             //imports.removeDuplicateEstablishments();
+            Neo4J database = Config.getGraph(null);
+            File file = new javaxt.io.File(args.get("-path"));
+            ImportsV2 importsV2 = new ImportsV2(file);
+            ImportsV2.loadLines(file, database);
+            database.close();
         }
         else if (str.equalsIgnoreCase("Establishments")){
             Neo4J database = Config.getGraph(null);

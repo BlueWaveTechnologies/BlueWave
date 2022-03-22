@@ -44,7 +44,7 @@ import org.neo4j.driver.Session;
 public class ImportsV2 {
 
     private javaxt.io.File file;
-    private LinkedHashMap<String, Integer> header;
+    private static LinkedHashMap<String, Integer> header;
     private GeoCoder geocoder;
     private int sheetID;
     private static String[] establishmentTypes = new String[]{
@@ -111,21 +111,21 @@ public class ImportsV2 {
    *  "port_of_entry" nodes. Obviously these nodes need to be created BEFORE
    *  calling this function.
    */
-    public void loadLines(Neo4J database) throws Exception {
+    public static void loadLines(javaxt.io.File csvFile, Neo4J database) throws Exception {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+        // StatusLogger statusLogger = new StatusLogger(recordCounter, null);
 
 
       //Generate list of fields
         ArrayList<String> fields = new ArrayList<>(Arrays.asList(
-        "Entry","DOC","Line","Date","Port of Entry","Unladed Port","Country of Origin",
-        "Shipment Method","Product Code","Product Name","Quantity","Value"));
+        "Entry","DOC","Line","Date","Port of Entry","Port of Entry District Code","Unladed Port","Country of Origin",
+        "Shipment Method Code","Shipment Method","Product Code","Product Name","Quantity","Value"));
         for (String establishment : establishmentTypes){
             fields.add(establishment);
         }
-        fields.add("Affirmations");
+        // fields.add("Affirmations");
         fields.add("Final Disposition");
         fields.add("Predict Risk");
         fields.add("Predict Score");
@@ -157,6 +157,11 @@ public class ImportsV2 {
             try{ session.run("CREATE CONSTRAINT ON (n:" + node + ") ASSERT n.unique_key IS UNIQUE"); }
             catch(Exception e){}
             try{ session.run("CREATE INDEX idx_" + node + " IF NOT EXISTS FOR (n:" + node + ") ON (n.unique_key)"); }
+            catch(Exception e){}
+
+            try{ session.run("CREATE CONSTRAINT ON (n:import_affirmation) ASSERT n.pm IS UNIQUE"); }
+            catch(Exception e){}
+            try{ session.run("CREATE INDEX idx_affirmation IF NOT EXISTS FOR (n:import_affirmation) ON (n.pm)"); }
             catch(Exception e){}
 
             session.close();
@@ -239,6 +244,7 @@ public class ImportsV2 {
                 }
                 if (nodeID==null) return;
 
+            
 
 
                 for (String establishmentType : establishmentTypes){
@@ -274,9 +280,68 @@ public class ImportsV2 {
                     }
                 }
 
+
+              //Affirmation params
+                params = new LinkedHashMap<>();
+                String affirmation = json.get("affirmations").toString();
+                if(affirmation != null && !affirmation.trim().isEmpty()) {
+                    String[]pairs = null;
+                    if(affirmation.contains(";")) {
+                        pairs = affirmation.trim().split(";");
+                        for(int i=0;i<pairs.length;i++) {
+                            String[]parts = pairs[i].trim().split(" ");
+                            if(parts.length == 2) params.put(parts[0].contains("#") ? parts[0].replaceAll("#","").trim().toLowerCase() : parts[0].trim().toLowerCase(), parts[1].trim());
+                        }
+                    } else if(affirmation.trim().contains(" ")) {
+                        pairs = affirmation.trim().split(" ");
+                        if(pairs != null) {
+                            if(pairs.length == 2)  params.put(pairs[0].contains("#") ? pairs[0].replaceAll("#","").trim().toLowerCase() : pairs[0].trim().toLowerCase(), pairs[1].trim());
+                        }
+                    }
+                
+
+               
+                    if(params.size() > 0) {
+                        Long affirmationId;
+                        String createAffirmations = getAffirmationsQuery("import_affirmation", params);
+                        
+                        try{
+                            affirmationId = getSession().run(createAffirmations, params).single().get(0).asLong();
+                        }
+                        catch(Exception e){
+                            affirmationId = getIdFromError(e);
+
+                        }
+
+
+                        try {
+                            getSession().run("MATCH (r),(s:import_affirmation) WHERE id(r) =" + nodeID + " AND id(s) = " + affirmationId +
+                            " CREATE(r)-[:has]->(s)");
+                        }catch(Exception e) {
+                            e.printStackTrace();
+                        }
+                    }   
+                }
+
+
                 recordCounter.incrementAndGet();
             }
 
+
+            private String getAffirmationsQuery(String node, Map<String, Object> params){
+                StringBuilder query = new StringBuilder("MERGE (a:" + node + " {");
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String param = it.next();
+                    query.append(param);
+                    query.append(": $");
+                    query.append(param);
+                    if (it.hasNext()) query.append(" ,");
+                }
+                query.append("}) RETURN id(a)");
+                return query.toString();  
+            }
+  
 
             private Session getSession() throws Exception {
                 Session session = (Session) get("session");
@@ -298,14 +363,14 @@ public class ImportsV2 {
 
 
       //Parse records and add them to the pool
-        java.io.InputStream is = file.getInputStream();
+        java.io.InputStream is = csvFile.getInputStream();
         Workbook workbook = StreamingReader.builder()
             .rowCacheSize(10)
             .bufferSize(4096)
             .open(is);
 
         int rowID = 0;
-        for (Row row : workbook.getSheetAt(sheetID)){
+        for (Row row : workbook.getSheetAt(0)){
             if (rowID>0){
 
                 try{
@@ -332,36 +397,28 @@ public class ImportsV2 {
                     json.set("line",line);
 
 
-                  //Get Entry Number
-                    String entryNumber = row.getCell(header.get("Entry Number")).getStringCellValue();
-                    if(entryNumber != null) {
-                        entryNumber = entryNumber.trim();
-                        json.set("entry_number", entryNumber);
-                    }
-
-
                   //Get date
                     String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
                     if (date!=null) date = date.trim();
                     if (date.isEmpty()) date = row.getCell(header.get("Submission Date")).getStringCellValue();
+                    String[]d = date.split("/");
+                    String year = d[2];
+                    String month = d[0];
+                    String day = d[1];
+                    if (month.length()==1) month = "0"+month;
+                    if (day.length()==1) day = "0"+day;
+                    date = year + "-" + month + "-" + day;
                     json.set("date",date);
 
 
-
                   //Get port of entry code
-                    String port = row.getCell(header.get("Port of Entry Code & Name")).getStringCellValue();
-                    if (port!=null){
-                        port = port.trim();
-                        if (!port.isEmpty()){
-                            int idx = port.indexOf(" - ");
-                            if (idx>-1){
-                                port = port.substring(0, idx).trim();
-                            }
-                        }
-                    }
+                    String port = row.getCell(header.get("Port of Entry Code")).getStringCellValue();
                     json.set("port_of_entry",port);
 
 
+                  // Port of entry district
+                    json.set("port_entry_district_code", row.getCell(header.get("Port of Entry Distrct Abrvtn")).getStringCellValue());
+                  
 
                   //Unladed Thru Port Code
                     String thruPort = row.getCell(header.get("Unladed Thru Port Code")).getStringCellValue();
@@ -372,6 +429,9 @@ public class ImportsV2 {
                   //Country of Origin
                     json.set("country_of_origin", row.getCell(header.get("Country Of Origin")).getStringCellValue());
 
+
+                  //Carrier type code
+                    json.set("shipment_method_code", row.getCell(header.get("Carrier Type Code")).getStringCellValue());
 
 
                   //Carrier Type
@@ -395,13 +455,7 @@ public class ImportsV2 {
 
 
                   //Product code
-                    String productCode = row.getCell(header.get("Product Code")).getStringCellValue();
-                    String industryCode = row.getCell(header.get("Industry Code")).getStringCellValue();
-                    if (productCode!=null){
-                        if (productCode.startsWith(industryCode)){
-                            productCode = productCode.substring(industryCode.length());
-                        }
-                    }
+                    String productCode = row.getCell(header.get("Product Code (Abbr.)")).getStringCellValue();
                     json.set("product_code",productCode);
 
 
@@ -452,15 +506,23 @@ public class ImportsV2 {
                     json.set("predict_score",row.getCell(header.get("PREDICT Total Risk Score")).getStringCellValue());
 
 
+                  //PREDICT Score
+                    json.set("predict_recommendation",row.getCell(header.get("PREDICT Recommendation")).getStringCellValue());
+
                     pool.add(json);
 
                 }
                 catch(Exception e){
+                    e.printStackTrace();
                     console.log("Failed to parse row " + rowID);
                 }
 
             }
             rowID++;
+            
+
+            // TODO Remove
+            if(rowID > 100) break;
         }
 
 
@@ -474,7 +536,7 @@ public class ImportsV2 {
 
 
       //Clean up
-        statusLogger.shutdown();
+        // statusLogger.shutdown();
 
     }
 
@@ -970,7 +1032,7 @@ public class ImportsV2 {
                 try{
                     int index = 0;
                     Long fei = row.get(index++).toLong();
-                    
+
                   //Discard invalid rows with 0 value for fei
                     if(fei == null || fei == 0) return;
 
