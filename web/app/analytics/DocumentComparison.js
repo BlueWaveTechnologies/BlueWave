@@ -24,13 +24,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var navbar;
     var ratings; // to be appended to the currently selected tag
     var settings;
-    var overlayElements = []; // for enabling/disabling overlay elements depending on user selection
+    // var overlayElements = []; // for enabling/disabling overlay elements depending on user selection
     var comparisonConfig = {
         imgSimilarities: true,
         digitSimilarities: true,
         textSimilarities: true
     };
-    var settingsEditor;
+    var settingsEditor, originalSimilarities;
 
 
   //**************************************************************************
@@ -120,6 +120,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         if (arguments.length>0){
 
             if (isArray(arguments[0])){
+                console.log("got here! isarray")
                 files = "";
                 var inputs = arguments[0];
                 for (var i=0; i<inputs.length; i++){
@@ -133,14 +134,22 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             }
             else{
+                console.log('got here instead!');
                 similarities = arguments[0];
-            }
-        }
+
+                if (!similarities.isCopy){
+                    console.log("is not a copy of the array!");
+                    originalSimilarities = similarities;
+                };
+            };
+        };
 
 
       //Update the panel
         if (similarities){
-            results = similarities;
+          // modify similarity results depending on user selections in Settings menu
+            results = getFilteredSimilarities(originalSimilarities);
+
             update(results);
         }
         else{
@@ -366,10 +375,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         parent.appendChild(td);
 
         settings.onclick = function(){
-            console.log("settings was clicked!");
             if (!settingsEditor) {
                 settingsEditor = createSettingsContextMenu();
-                console.log("settings editor created for the first time!");
             };
             settingsEditor.show();
         };
@@ -385,7 +392,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         settings.updateSelection = function(parent){
-            console.log("called update selection for settings!");
             settings.detach();
             settings.attach(parent.getElementsByClassName("doc-compare-panel-title")[0].parentNode);
         };
@@ -501,9 +507,19 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             comparisonConfig.digitSimilarities = settings.digitSimilarities;
             comparisonConfig.textSimilarities = settings.textSimilarities;
 
-            refreshComparisons(comparisonConfig);
+            editor.refreshComparisons();
         };
 
+
+        editor.refreshComparisons = function(){
+            me.update(results);
+
+            // update GUI counts
+                editor.textCount = results.textCount;
+                editor.imgCount = results.imgCount;
+                editor.digitCount = results.digitCount;
+
+        };
 
     // render settings Editor to the left of cog wheel icon
         var rect = javaxt.dhtml.utils.getRect(settings);
@@ -514,59 +530,70 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
-
-
-
-
-
-
   //**************************************************************************
-  //** refreshComparisons
+  //** getFilteredSimilarities
   //**************************************************************************
-    var refreshComparisons = function(config){
-        console.log("refresh comparisons called!");
-        console.log("logging config here");
-        console.log(config);
-        console.log(JSON.stringify(config,null,4));
+    var getFilteredSimilarities = function(similarities){
+        // create new filtered json object from the raw similarities results
+        var config = comparisonConfig;
+        console.log("filtered similarities check")
+        var imgCount = 0;
+        var textCount = 0;
+        var digitCount = 0;
 
-        var imgSimilarities = [];
-        var textSimilarities = [];
-        var digitSimilarities = [];
+        var filteredSimilarities = {
+            // files:[],
+            num_suspicious_pairs:0,
+            suspicious_pairs:[],
+            elapsed_time_sec:0,
+            pages_per_second:0,
 
-        console.log(overlayElements);
-        for (i in overlayElements){
-            // console.log(i);
-            // console.log(i.type);
-            console.log(overlayElements[i].type)
-            if (overlayElements[i].type ==="Identical image") imgSimilarities.push(overlayElements[i]);
-            else if (overlayElements[i].type ==="Common text string") textSimilarities.push(overlayElements[i]);
-            else if (overlayElements[i].type ==="Common digit sequence") digitSimilarities.push(overlayElements[i]);
+            // values directly from previous obj
+            similarity_scores: similarities.similarity_scores,
+            time: similarities.time,
+            version: similarities.version,
+            files: similarities.files,
 
+            // value to distinguish this is a copy of the original search results
+            isCopy: true
         };
+        console.log(similarities);
 
-        // list currently enabled images similarities
-        console.log("listing currently enabled images");
-        console.log(imgSimilarities);
-        if (comparisonConfig.imgSimilarities) for (i in imgSimilarities) imgSimilarities[i].showSimilarity();
-        else for (i in imgSimilarities) imgSimilarities[i].hideSimilarity();
+        // add filtered paired similarities
+            for (i in similarities.suspicious_pairs) {
+                // console.log(similarities.suspicious_pairs[i]);
+                pair = similarities.suspicious_pairs[i];
+                if (pair.type === "Identical image" && config.imgSimilarities) {
+                    filteredSimilarities.suspicious_pairs.push(pair);
+                    imgCount++;
+                }
+                else if (pair.type === "Common digit sequence" && config.digitSimilarities){
+                     filteredSimilarities.suspicious_pairs.push(pair);
+                     digitCount++;
+                }
+                else if (pair.type === "Common text string" && config.textSimilarities){
+                     filteredSimilarities.suspicious_pairs.push(pair);
+                     textCount++;
+                };
+            };
 
-        // list currently enabled text similarities
-        console.log("listing currently enabled text");
-        console.log(textSimilarities);
-        if (comparisonConfig.textSimilarities) for (i in textSimilarities) textSimilarities[i].showSimilarity();
-        else for (i in textSimilarities) textSimilarities[i].hideSimilarity();
+        // add count of paired similarities
+            filteredSimilarities.num_suspicious_pairs = filteredSimilarities.suspicious_pairs.length;
 
-        // list currently enabled digit similarities
-        console.log("listing currently enabled digits");
-        console.log(digitSimilarities);
-        if (comparisonConfig.digitSimilarities) for (i in digitSimilarities) digitSimilarities[i].showSimilarity();
-        else for (i in digitSimilarities) digitSimilarities[i].hideSimilarity();
+        // add count of each paired similarity type
+            filteredSimilarities.textCount = textCount;
+            filteredSimilarities.imgCount = imgCount;
+            filteredSimilarities.digitCount = digitCount;
 
-        console.log(comparisonConfig);
+        // add files
 
-        // don't show pages that ONLY have selections that aren't enabled
 
-        // reload the current overlays
+
+
+
+        return filteredSimilarities;
+
+
     };
 
 
@@ -753,6 +780,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tooltip.innerText = ""; // assigned on mouseOver
         tag.appendChild(tooltip);
         tag.tooltip = tooltip;
+        tag.img = img;
 
 
         // dynamically set styles
@@ -918,7 +946,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     img = this;
                     setTimeout(function(){
 
-                        clearOverlays();
+                        clearOverlay();
                         getImages(img).forEach((rightImage)=>{
                             getImages(rightImage.matchingImg).forEach((leftImage)=>{
                                 leftImage.matchingImg = rightImage; // add match reference
@@ -945,12 +973,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     img.tag = [];
                     for ( var i=0; i<boxes.length; i++){
                         var box = boxes[i];
-
-                        var type = box.type;
-                        if (box.type === "Identical image") if (!comparisonConfig.imgSimilarities) return;
-                        if (box.type === "Common text string") if (!comparisonConfig.textSimilarities) return;
-                        if (box.type === "Common digit sequence") if (!comparisonConfig.digitSimilarities) return;
-
                         int++;
 
                         var updateMatchingImg = function(){
@@ -981,8 +1003,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         };
 
                         tag.d = d;
-                        tag.type = type;
-                        overlayElements.push(tag);
+                        tag.type = box.type;
 
 
                         img.d.push(d);
@@ -1017,7 +1038,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         // remove all current overlay elements assigned to DOM
-        var clearOverlays = function(){
+        var clearOverlay = function(){
+            console.log("clear overlay called");
             var overlayTags = document.getElementsByClassName("doc-compare-panel-similarity-tag");
             var overlayDs = document.getElementsByClassName("doc-compare-panel-similarity-d");
             for (var i = 0; i < overlayTags.length; i++) {
