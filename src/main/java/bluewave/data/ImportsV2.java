@@ -310,7 +310,6 @@ public class ImportsV2 {
                         }
                         catch(Exception e){
                             affirmationId = getIdFromError(e);
-
                         }
 
 
@@ -522,7 +521,7 @@ public class ImportsV2 {
             
 
             // TODO Remove
-            if(rowID > 100) break;
+            //if(rowID > 100) break;
         }
 
 
@@ -1042,7 +1041,7 @@ public class ImportsV2 {
                     if(address!=null) {
                         try {
                             String[]parts = address.split("\\R");
-                            address = parts[1] +" "+parts[2]+" "+parts[3];
+                            address = parts[2]+" "+parts[3];
                             countryCode = parts[4];
                         }catch(Exception e){}
                     } 
