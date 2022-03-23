@@ -24,13 +24,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var navbar;
     var ratings; // to be appended to the currently selected tag
     var settings;
-    // var overlayElements = []; // for enabling/disabling overlay elements depending on user selection
     var comparisonConfig = {
         imgSimilarities: true,
         digitSimilarities: true,
         textSimilarities: true
     };
-    var settingsEditor, originalSimilarities;
+    var settingsEditor;
 
 
   //**************************************************************************
@@ -120,7 +119,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         if (arguments.length>0){
 
             if (isArray(arguments[0])){
-                console.log("got here! isarray")
                 files = "";
                 var inputs = arguments[0];
                 for (var i=0; i<inputs.length; i++){
@@ -134,40 +132,35 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             }
             else{
-                console.log('got here instead!');
                 similarities = arguments[0];
-
-                if (!similarities.isCopy){
-                    console.log("is not a copy of the array!");
-                    originalSimilarities = similarities;
-                };
             };
         };
 
 
       //Update the panel
         if (similarities){
-          // modify similarity results depending on user selections in Settings menu
-            results = getFilteredSimilarities(originalSimilarities);
+            results = similarities;
 
-            update(results);
+          // modify similarity results depending on user selections in Settings menu
+            update(getFilteredSimilarities(results));
         }
         else{
             if (files){
+                console.alert("waitmask showing")
                 waitmask.show(500);
                 get("document/similarity?files="+files,{
                     success: function(json){
                         waitmask.hide();
                         results = json;
-                        update(results);
+                        update(getFilteredSimilarities(results));
                     },
                     failure: function(request){
                         alert(request);
                         waitmask.hide();
                     }
                 });
-            }
-        }
+            };
+        };
     };
 
 
@@ -177,14 +170,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   /** Used to populate the panels in the carousel control. Assumes that the
    *  carousel is cleared (see clear method)
    */
-    var update = function(){
+    var update = function(results){
         var files = results.files;
         if (files.length>2) return; //only 2 docs supported at this time
         fileIndex = 0;
 
 
       //Get suspicious pages and count total number of pages to display
-        suspiciousPages = getSuspiciousPages(fileIndex);
+        suspiciousPages = getSuspiciousPages(fileIndex, results);
         suspiciousPages.forEach((suspiciousPage)=>{
             var similarPages = {};
             suspiciousPage.suspiciousPairs.forEach((suspiciousPair)=>{
@@ -220,13 +213,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
         navbar.update();
+
+        return results;
     };
 
 
   //**************************************************************************
   //** getSuspiciousPages
   //**************************************************************************
-    var getSuspiciousPages = function(fileIndex){
+    var getSuspiciousPages = function(fileIndex, results){
 
 
         var files = results.files;
@@ -418,6 +413,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var body = editor.getBody();
         body.innerHTML = "";
 
+        var imgCount = document.createElement("div");
+        var digitCount = document.createElement("div");
+        var textCount = document.createElement("div");
+
+        editor.imgCount = imgCount;
+        editor.digitCount = digitCount;
+        editor.textCount = textCount;
 
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
@@ -431,7 +433,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             type: "checkbox",
                             options: [
                                 {
-                                    label: "",
+                                    label: editor.imgCount.innerText,
                                     value: true,
                                     checked: false
                                 }
@@ -444,7 +446,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             type: "checkbox",
                             options: [
                                 {
-                                    label: "",
+                                    label: editor.digitCount.innerText,
                                     value: true,
                                     checked: false
                                 }
@@ -457,7 +459,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             type: "checkbox",
                             options: [
                                 {
-                                    label: "",
+                                    label: editor.textCount.innerText,
                                     value: true,
                                     checked: false
                                 }
@@ -489,36 +491,116 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
     //Process onChange events
         form.onChange = function(){
-            var settings = form.getData();
+            var formSettings = form.getData();
 
         //Update form data
-            if (settings.imgSimilarities==="true") settings.imgSimilarities = true;
-            else settings.imgSimilarities = false;
+            if (formSettings.imgSimilarities==="true") formSettings.imgSimilarities = true;
+            else formSettings.imgSimilarities = false;
 
-            if (settings.digitSimilarities==="true") settings.digitSimilarities = true;
-            else settings.digitSimilarities = false;
+            if (formSettings.digitSimilarities==="true") formSettings.digitSimilarities = true;
+            else formSettings.digitSimilarities = false;
 
-            if (settings.textSimilarities==="true") settings.textSimilarities = true;
-            else settings.textSimilarities = false;
+            if (formSettings.textSimilarities==="true") formSettings.textSimilarities = true;
+            else formSettings.textSimilarities = false;
 
 
         //Update comparisonConfig
-            comparisonConfig.imgSimilarities = settings.imgSimilarities;
-            comparisonConfig.digitSimilarities = settings.digitSimilarities;
-            comparisonConfig.textSimilarities = settings.textSimilarities;
+            comparisonConfig.imgSimilarities = formSettings.imgSimilarities;
+            comparisonConfig.digitSimilarities = formSettings.digitSimilarities;
+            comparisonConfig.textSimilarities = formSettings.textSimilarities;
 
-            editor.refreshComparisons();
+
+            console.log(settingsEditor)
+
+            // disable/re-enable settings menu to prevent users from changing setting during rendering
+            if (settingsEditor){
+                settingsEditor.disableThis();
+            };
+
+            var newResults = update(getFilteredSimilarities(results));
+
+
+            // update GUI counts
+                // console.log(results.textCount);
+                console.log(newResults);
+                console.log(newResults.textCount);
+                console.log(newResults.imgCount);
+                console.log(newResults.digitCount);
+                editor.textCount.innerText = newResults.textCount;
+                editor.imgCount.innerText = newResults.imgCount;
+                editor.digitCount.innerText = newResults.digitCount;
+                console.log(editor.digitCount.innerText)
+                console.log(editor.imgCount.innerText)
+                console.log(editor.textCount.innerText)
+
+
+
+                // digitCount =  results.digitCount;
+                // textCount = results.textCount;
+
+                // var formElement = this.getForm();
+                // var textLabels = formElement.getElementsByClassName("form-label noselect");
+                // for (i in textLabels){
+                //     var el = textLabels[i];
+                //     // console.log(el)
+                //     // console.log(el.innerText)
+                //     if (el.innerText){
+                //         // console.log("innertext exists")
+                //         if (el.innerText.includes("Image")){
+                //             console.log("found text label for image")
+                //             console.log(el)
+                //             console.log(el.parentNode)
+                //             var label = el.parentNode.getElementsByClassName("form-label noselect")[0];
+                //             // console.log(label)
+                //             // console.log(label.innerText)
+                //             // label.innerText = editor.imgCount;
+                //             // return
+
+                //         }
+                //         else if (el.innerText.includes("Text")){
+                //             console.log("found text label for text")
+                //             var label = el.getElementsByClassName("form-label noselect")[0];
+                //             label.innerText = editor.textCount;
+                //         }
+                //         else if (el.innerText.includes("Digit")){
+                //             console.log("found text label for digit")
+                //             var label = el.getElementsByClassName("form-label noselect")[0];
+                //             console.log(label)
+                //             console.log(label.innerText)
+                //             label.innerText = editor.digitCount;
+                //         }
+
+                //     console.log(editor.digitCount)
+                //     }
+                // }
+
         };
 
 
-        editor.refreshComparisons = function(){
-            me.update(results);
+        editor.disableThis = function(){ // used for temporarily disabling settings options while changes render
+            // modify style of fields to indicate this form is disabled
+                form.disableField("imgSimilarities");
+                form.disableField("digitSimilarities");
+                form.disableField("textSimilarities");
 
-            // update GUI counts
-                editor.textCount = results.textCount;
-                editor.imgCount = results.imgCount;
-                editor.digitCount = results.digitCount;
+            // disable checkboxes
+                var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
+                for (i in formCheckboxes){
+                    formCheckboxes[i].disabled = true;
+                };
+        };
 
+        editor.enableThis = function(){
+        // modify style of fields to indicate this form is enabled
+            form.enableField("imgSimilarities");
+            form.enableField("digitSimilarities");
+            form.enableField("textSimilarities");
+
+        // enabled checkboxes
+            var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
+            for (i in formCheckboxes){
+                formCheckboxes[i].disabled = false;
+            };
         };
 
     // render settings Editor to the left of cog wheel icon
@@ -552,10 +634,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             similarity_scores: similarities.similarity_scores,
             time: similarities.time,
             version: similarities.version,
-            files: similarities.files,
-
-            // value to distinguish this is a copy of the original search results
-            isCopy: true
+            files: similarities.files
         };
         console.log(similarities);
 
@@ -945,8 +1024,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 img.onload = function(){
                     img = this;
                     setTimeout(function(){
-
                         clearOverlay();
+
                         getImages(img).forEach((rightImage)=>{
                             getImages(rightImage.matchingImg).forEach((leftImage)=>{
                                 leftImage.matchingImg = rightImage; // add match reference
@@ -956,7 +1035,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                                 settings.updateSelection(rightImage.parentNode.parentNode.parentNode.parentNode);
                             });
+                            if (settingsEditor){
+                                setTimeout(() => {
+                                    settingsEditor.enableThis();
+
+                                }, 100);
+                            };
                         });
+
                     }, 1200); //add slight delay for the carousel to finish sliding
                 };
             };
