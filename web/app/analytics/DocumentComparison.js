@@ -413,13 +413,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var body = editor.getBody();
         body.innerHTML = "";
 
-        var imgCount = document.createElement("div");
-        var digitCount = document.createElement("div");
-        var textCount = document.createElement("div");
-
-        editor.imgCount = imgCount;
-        editor.digitCount = digitCount;
-        editor.textCount = textCount;
 
         var form = new javaxt.dhtml.Form(body, {
             style: config.style.form,
@@ -433,7 +426,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             type: "checkbox",
                             options: [
                                 {
-                                    label: editor.imgCount.innerText,
+                                    label: "",
                                     value: true,
                                     checked: false
                                 }
@@ -446,7 +439,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             type: "checkbox",
                             options: [
                                 {
-                                    label: editor.digitCount.innerText,
+                                    label: "",
                                     value: true,
                                     checked: false
                                 }
@@ -459,7 +452,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             type: "checkbox",
                             options: [
                                 {
-                                    label: editor.textCount.innerText,
+                                    label: "",
                                     value: true,
                                     checked: false
                                 }
@@ -473,18 +466,23 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
 
+
     //Set initial value for imgSimilarities
         var imgSimilaritiesField = form.findField("imgSimilarities");
         var imgSimilarities = comparisonConfig.imgSimilarities;
+        var imgSimilaritiesFieldLabel = imgSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
         imgSimilaritiesField.setValue(imgSimilarities===true ? true : false);
 
     //Set initial value for digitSimilarities
         var digitSimilaritiesField = form.findField("digitSimilarities");
+        var digitSimilaritiesFieldLabel = digitSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
         var digitSimilarities = comparisonConfig.digitSimilarities;
+
         digitSimilaritiesField.setValue(digitSimilarities===true ? true : false);
 
     //Set intial value for textSimilarities
         var textSimilaritiesField = form.findField("textSimilarities");
+        var textSimilaritiesFieldLabel = textSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
         var textSimilarities = comparisonConfig.textSimilarities;
         textSimilaritiesField.setValue(textSimilarities===true ? true : false);
 
@@ -521,59 +519,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
             // update GUI counts
-                // console.log(results.textCount);
-                console.log(newResults);
-                console.log(newResults.textCount);
-                console.log(newResults.imgCount);
-                console.log(newResults.digitCount);
-                editor.textCount.innerText = newResults.textCount;
-                editor.imgCount.innerText = newResults.imgCount;
-                editor.digitCount.innerText = newResults.digitCount;
-                console.log(editor.digitCount.innerText)
-                console.log(editor.imgCount.innerText)
-                console.log(editor.textCount.innerText)
+                if (newResults.digitCount < 1)digitSimilaritiesFieldLabel.innerText = '';
+                else digitSimilaritiesFieldLabel.innerText = newResults.digitCount + " results";
 
+                if (newResults.textCount < 1)textSimilaritiesFieldLabel.innerText = '';
+                else textSimilaritiesFieldLabel.innerText = newResults.textCount + " results";
 
-
-                // digitCount =  results.digitCount;
-                // textCount = results.textCount;
-
-                // var formElement = this.getForm();
-                // var textLabels = formElement.getElementsByClassName("form-label noselect");
-                // for (i in textLabels){
-                //     var el = textLabels[i];
-                //     // console.log(el)
-                //     // console.log(el.innerText)
-                //     if (el.innerText){
-                //         // console.log("innertext exists")
-                //         if (el.innerText.includes("Image")){
-                //             console.log("found text label for image")
-                //             console.log(el)
-                //             console.log(el.parentNode)
-                //             var label = el.parentNode.getElementsByClassName("form-label noselect")[0];
-                //             // console.log(label)
-                //             // console.log(label.innerText)
-                //             // label.innerText = editor.imgCount;
-                //             // return
-
-                //         }
-                //         else if (el.innerText.includes("Text")){
-                //             console.log("found text label for text")
-                //             var label = el.getElementsByClassName("form-label noselect")[0];
-                //             label.innerText = editor.textCount;
-                //         }
-                //         else if (el.innerText.includes("Digit")){
-                //             console.log("found text label for digit")
-                //             var label = el.getElementsByClassName("form-label noselect")[0];
-                //             console.log(label)
-                //             console.log(label.innerText)
-                //             label.innerText = editor.digitCount;
-                //         }
-
-                //     console.log(editor.digitCount)
-                //     }
-                // }
-
+                if (newResults.imgCount < 1)imgSimilaritiesFieldLabel.innerText = '';
+                else imgSimilaritiesFieldLabel.innerText = newResults.imgCount + " results";
         };
 
 
