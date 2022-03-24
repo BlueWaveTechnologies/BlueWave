@@ -449,9 +449,23 @@ public class Main {
             Session session = null;
             try{
                 session = graph.getSession();
-                String versionString = session.readTransaction( tx -> tx.run( "RETURN 1" ).consume().server().version() );
-                System.out.println(versionString);
 
+              //Get Neo4J server version and edition
+                String versionString = null;
+                try{
+                    String q = "call dbms.components() yield name, versions, edition unwind versions as version return name, version, edition;";
+                    Result rs = session.run(q);
+                    if (rs.hasNext()){
+                        org.neo4j.driver.Record r = rs.next();
+                        versionString = r.get(0).asString() + "/" + r.get(1).asString() + " (" + r.get(2).asString() + ")";
+                    }
+                }
+                catch(Exception e){}
+                if (versionString==null) System.out.println("Unknown Neo4J version"); 
+                else System.out.println(versionString);
+                
+                
+                
                 String query = args.get("-query");
                 if (query!=null){
                     query = bluewave.queries.Index.getQuery(query, "cypher");
@@ -546,6 +560,9 @@ public class Main {
         if (download.equalsIgnoreCase("Premier")){
             new bluewave.data.Premier(args.get("-username"), args.get("-password"))
                     .downloadShards(args.get("-path"));
+        }
+        else if (download.equalsIgnoreCase("Ports")){
+            new bluewave.data.Ports().downloadUSPortsofEntry(args.get("-path"));
         }
         else{
             console.log("Unsupported download: " + download);

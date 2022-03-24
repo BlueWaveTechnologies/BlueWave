@@ -1,3 +1,21 @@
+# delete all remote tags (linux version)
+# git ls-remote --tags origin | awk '/^(.*)(s+)(.*[a-zA-Z0-9])$/ {print ":" $2}' | xargs git push origin
+
+# delete one remote tag & matching local tag
+# git push --delete origin <tag_name> & git tag -d <tag_name>
+# example: git push --delete origin v1.0 & git tag -d v1.0
+
+
+# note:
+# the git command line doesn't have permissions to delete releases, only tags (it's part of Github only)
+
+
+# execute github workflow
+# git tag <release_name> (must include v in release name) & git push origin <release_name>
+# example: git tag v1.0 & git push origin v1.0
+
+
+
 on:
   push:
     tags:
@@ -13,35 +31,36 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
-      
-      - name: get tag reference id
+
+      - name: Get tag reference id
             # parse the github reference tag from the direct input (github.ref)
         run: |
              githubRef=${{ github.ref }}
              githubRef="${githubRef/'refs/tags'/''}"
              githubRef="${githubRef/'/'/''}"
-             echo "tagName=$githubRef" >> $GITHUB_ENV
+             githubRef="${githubRef/'v'/''}"
+             echo "releaseLabel=$githubRef" >> $GITHUB_ENV
 
-      - name: Read exported variable - (test to verify the dynamic tagName Variable is global)
+      - name: Read exported variable - (test to verify the dynamic releaseLabel Variable is global)
         run: |
-          echo $tagName
+          echo $releaseLabel
 
 
-     # create project directory 
-      - name: create Project Directory
+     # create project directory
+      - name: Create compiled project directory
         run: mkdir compiledProjectDirectory
 
-    ### Minify JS and consolidate into one file 
+    ### Minify JS and consolidate into one file
 
      # Minify web/app file directory into individually minified files
-      - name: minify web/app directory
+      - name: Minify all files within web/app directory
         uses: nizarmah/auto-minify@v2.1
         with:
           directory: ./web/app
           overwrite: true
 
      # Append all minified files of web/app into a single file (bluewave.js)
-      - name: Stack minified files into one 
+      - name: Combine minified web files into bluewave.js file
         run: find ./web/app -name '*.js' -exec cat {} \; > ./web/bluewave.js
 
      # delete web/app directory so it's not included in release
@@ -51,104 +70,105 @@ jobs:
           path: web/app
 
     ### Prepare machine to generate jar file
-      
-     # add/instantiate JDK 11 on runner 
+
+     # add/instantiate JDK 11 on runner
       - name: Set up JDK 11
         uses: actions/setup-java@v2
         with:
           java-version: '11'
           distribution: 'adopt'
 
-
      # install maven 3.6.3 (current default latest version Ubuntu)
-      - name: install maven
+      - name: Install Maven
         run: sudo apt install maven
 
-     # show current maven version in Github Actions output (should be 3.6.3) 
+     # show current maven version in Github Actions output (should be 3.6.3)
      # Note: errors may occur when using other versions
-      - name: check Maven Version 
+      - name: Check Maven Version
         run: mvn -version
 
 
     ### build jar file
 
-     # build jar file 
-      - name: build jar 
+     # build jar file
+      - name: Build jar using Maven
         run: mvn --batch-mode install verify -U -X
 
      # copy jar file to main directory
-      - name: copy jar
-      #env:
-    #tagName: $tagName
-
+      - name: Copy jar file to main directory
         run: |
-          cp target/bluewave-1.0.0.jar bluewave-${{ env.tagName }}.jar
+          cp target/bluewave-1.0.0.jar bluewave-${{ env.releaseLabel }}.jar
           cp -r target/lib lib
 
 
-
-          
     ### Add all compiled project files to new directory
 
-     # copy all Release assets to compiled project Directory
-      - name: copy all files/folders to compiled project Directory
-        run: cp -r web models lib bluewave-${{ env.tagName }}.jar compiledProjectDirectory
+     # Copy release assets to compiled project Directory
+      - name: Copy release assets to compiled project Directory
+        run: cp -r web models lib bluewave-${{ env.releaseLabel }}.jar compiledProjectDirectory
 
+    ### execute python files
 
-     # replace main.html file with new reference to minified bluewave file
-      - name: setup python
+      # Set up environment
+      - name: Set up Python environment for script execution
         uses: actions/setup-python@v2
         with:
           python-version: 3.8 #install the python needed
 
-
+      # Install python dependencies
       # - name: Install Python dependencies
       #   uses: py-actions/py-dependency-install@v2
       #   with:
       #     path: "scripts/githubWorkflowActions/requirements.txt"
 
-
-      - name: execute editHTML script 
+     # replace main.html file with new reference to minified bluewave file
+      - name: Replace main.html file with new main.html - references minified bluewave file
         run: |
           python scripts/githubWorkflowActions/editMainHtmlFile.py
 
+      ### add template config.json file to release directory
+      - name: Create & copy config.py to release directory
+        run: |
+          python scripts/githubWorkflowActions/createConfig.py
+
+      ### copy project-dependent python scripts to release directory
+
+      # delete python directories that should not be included in release version
+      - name: Delete github workflows directory (do not include in release)
+        run: rm -f -r scripts/githubWorkflowActions
+
+      # Copy remaining files from scripts directory -> release directory
+      - name: Copy project-dependent python scripts to release directory
+        run: cp -r scripts compiledProjectDirectory
+
+      # Zip project
+      - name: Zip configured project directory into downloadable release.zip file
+        run: cd compiledProjectDirectory; zip -r ../bluewave-${{ env.releaseLabel }}.zip *
 
 
-
-     # Package new directory into zip file       
-      - name: add minified project to a zip
-        uses: papeloto/action-zip@v1
-        with:
-          files: ./compiledProjectDirectory
-          
-          recursive: true
-          dest: bluewave-${{ env.tagName }}.zip
-
-
-
-     # create the release to serve as a place to export to
+     # Create the release to serve as a place to export to
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions
         with:
-          tag_name: ${{ env.tagName }}
-          release_name: Release ${{ env.tagName }}
+          tag_name: ${{ env.releaseLabel }}
+          release_name: Release ${{ env.releaseLabel }}
           body: |
-            BlueWave Release ${{ env.tagName }}
+            BlueWave Release ${{ env.releaseLabel }}
           draft: false
           prerelease: false
 
 
-     # add project to Release
-      - name: Upload Packaged project to Release
+     # add packaged project to Github Release page
+      - name: Upload packaged project to Github Release page
         id: upload-release-asset-minified
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: bluewave-${{ env.tagName }}.zip
-          asset_name: bluewave-${{ env.tagName }}.zip
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: bluewave-${{ env.releaseLabel }}.zip
+          asset_name: bluewave-${{ env.releaseLabel }}.zip
           asset_content_type: application/zip
