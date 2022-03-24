@@ -1376,3 +1376,129 @@ svg text {
     color: #636363;
     box-shadow: 0 12px 14px 0 rgba(0, 0, 0, 0.2), 0 13px 20px 0 rgba(0, 0, 0, 0.2);
 }
+
+
+
+/* html, body, ul, li {
+    margin: 0;
+    padding: 0;
+    font-family: 'Nunito', sans-serif;
+    color:#272424;
+    background-color: #f1f1f6;
+} */
+
+.timeline ul, .timeline li{
+    margin: 0;
+    padding: 0;
+}
+
+.timeline-container {
+    padding: 20px 0;
+}
+
+.timeline-container h1 {
+    text-align: center;
+}
+
+.timeline {
+    position: relative;
+    margin: 0 auto;
+    width: 90%;
+    
+}
+
+.timeline ul li {
+    margin-bottom: 50px;
+    list-style-type: none;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.timeline-point {
+    min-width: 20px;
+    height: 20px;
+    /* background-color: #be9fe1; */
+    background-color: steelblue;
+    border-radius: 100%;
+    z-index: 2;
+    border: 3px #333333 solid;
+    position: relative;
+    left: 1px;
+}
+
+.timeline ul li .timeline-content {
+    width: 50%;
+    padding: 0 20px;
+}
+
+/* .timeline ul li:nth-child(odd) .timeline-content {
+    padding-left: 0;
+}
+
+.timeline ul li:nth-child(odd) .timeline-date {
+    padding-right: 0;
+}
+
+.timeline ul li:nth-child(even) .timeline-content {
+    padding-right: 0;
+}
+
+.timeline ul li:nth-child(even) .timeline-date {
+    padding-left: 0;
+} */
+
+.timeline ul li .timeline-date {
+    width: 50%;
+    padding: 0 20px;
+    font-weight: normal;
+}
+
+.timeline ul li .timeline-date h4 {
+    /* background-color: #e1ccec; */
+    background-color: lightsteelblue;
+    width: 100px;
+    text-align: center;
+    padding: 5px 10px;
+    border-radius: 10px;
+}
+
+.timeline ul li .timeline-content h3 {
+    padding: 10px 20px;
+    /* background-color: #be9fe1; */
+    background-color: steelblue;
+    margin-bottom: 0;
+    text-align: center;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.timeline ul li .timeline-content p {
+    padding: 10px 20px;
+    /* background-color: #e1d9ec; */
+    background-color: lightsteelblue;
+    margin-top: 0;
+    text-align: center;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+/* here to flip */
+.timeline ul li:nth-child(even) {
+    flex-direction: row-reverse;
+}
+
+.timeline ul li:nth-child(even) .timeline-date h4 {
+    float: right
+}
+
+
+/* middle line */
+.timeline::before {
+    content: "";
+    position: absolute;
+    height: 100%;
+    width: 3px;
+    left: 50%;
+    background-color: #333333;
+}
