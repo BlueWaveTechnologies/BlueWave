@@ -14,6 +14,7 @@ bluewave.charts.TimelineChart = function(parent, config) {
     var me = this;
     var defaultConfig = {
         layout: "vertical",
+        alignment: "alternating",
         equalInterval: false,
         style: {
 
@@ -34,22 +35,12 @@ bluewave.charts.TimelineChart = function(parent, config) {
         me.setConfig(config);
 
         var div = document.createElement("div");
-        //temp height
-        div.style.height = "550";
+        div.style.height = "100%";
         div.style.overflowY = "auto";
         parent.appendChild(div);
         me.el = div;
 
 
-
-      //Create main table
-        // var table = createTable();
-        // tbody = table.firstChild;
-        // tbody = me.el;
-
-
-
-        // div.appendChild(table);
 
         var timeLineContainer = document.createElement("div");
         timeLineContainer.className = "timeline-container";
@@ -107,12 +98,6 @@ bluewave.charts.TimelineChart = function(parent, config) {
         var row = addRow(e.date, e.event, e.details, e.options);
       });
    
-      onRender(tbody, function(){
-
-          // drawLine();
-      })
-
-      
     };
 
 
@@ -121,12 +106,15 @@ bluewave.charts.TimelineChart = function(parent, config) {
   //**************************************************************************
     var addRow = function(date, event, details, options){
  
-      
+
+        var alignment = config.alignment;
+
         var timeFormat = options.timeFormat;
-        var alignment = options.alignment;
+        var color = options.color;
 
         if (!timeFormat) timeFormat = d3.timeFormat("%d %b %Y");
         if (!alignment) alignment = "alternating";
+        if (!color) color = "steelblue";
 
 
         var li = document.createElement("li");
@@ -137,15 +125,19 @@ bluewave.charts.TimelineChart = function(parent, config) {
 
         var h = document.createElement("h3");
         h.textContent = timeFormat(date) + " -- "+ event;
+        h.style.backgroundColor = color;
 
         var p = document.createElement("p")
         p.textContent = details;
+        p.className = "timeline-details";
+        p.style.backgroundColor = color;
 
         content.append(h, p);
 
 
         var point = document.createElement("div");
         point.className = "timeline-point";
+        point.style.backgroundColor = color;
 
         var d = document.createElement("div");
         d.className = "timeline-date";
@@ -159,8 +151,6 @@ bluewave.charts.TimelineChart = function(parent, config) {
 
         tbody.appendChild(li);
 
-alignment = "right"
-
 
         if (alignment !== "alternating"){
           var list = document.querySelectorAll(".timeline ul li");
@@ -171,51 +161,7 @@ alignment = "right"
         }
 
 
-        
-  
-        // var lineContainer = d3.select(d).append("svg");
-        // lineContainer
-        //   .append("line")
-        //   .style("stroke", "black")
-        //   .style("stroke-width", 3)
-        //   .attr("x1", 0)
-        //   .attr("y1", 0)
-        //   .attr("x2", 200)
-        //   .attr("y2", 200);
-
         return li;
-    };
-
-
-  //**************************************************************************
-  //** drawLine
-  //**************************************************************************
-    var drawLine = function(){
-
-          d3.selectAll(".timeline-point")
-            .append("svg")
-            .append("line")
-            .style("stroke", "black")
-            .style("stroke-width", 5)
-            .attr("x1", function(d, i){
-
-              var width = this.getBoundingClientRect().width;
-              // console.log(bbox)
-              // console.log(this)
-              return width/2;
-
-            })
-            .attr("y1", function(){
-              return 0;
-            })
-            .attr("x2", function(){
-              // return this.getBoundingClientRect().x;
-              return 0
-            })
-            .attr("y2", function(){
-              return 500;
-            });
-
     };
 
 
