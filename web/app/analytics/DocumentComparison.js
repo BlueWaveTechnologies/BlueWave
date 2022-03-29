@@ -91,13 +91,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     this.clear = function(){
         results = {};
         suspiciousPages = [];
-        totalPages = 0;
         currPair = -1;
         backButton.disabled = true;
         nextButton.disabled = true;
 
         navbar.clear();
-        navbar.hide();
 
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
@@ -174,10 +172,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var files = results.files;
         if (files.length>2) return; //only 2 docs supported at this time
         fileIndex = 0;
-
-
+        totalPages = 0;
       //Get suspicious pages and count total number of pages to display
-        suspiciousPages = getSuspiciousPages(fileIndex, results);
+        suspiciousPages = getSuspiciousPages(fileIndex, getFilteredSimilarities(results));
         suspiciousPages.forEach((suspiciousPage)=>{
             var similarPages = {};
             suspiciousPage.suspiciousPairs.forEach((suspiciousPair)=>{
@@ -188,8 +185,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         var rightPage = page.page;
                         var rightFile = page.file_index;
                         similarPages[rightFile +","+ rightPage] = true;
-                    }
-                }
+                    };
+                };
             });
             totalPages+=Object.keys(similarPages).length;
         });
@@ -213,8 +210,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
         navbar.update();
-
-        return results;
     };
 
 
@@ -226,7 +221,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         var files = results.files;
         var file = files[fileIndex];
-
         var suspiciousPages = [];
         file.suspicious_pages.forEach((pageNumber)=>{
             var suspiciousPairs = [];
@@ -238,8 +232,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     if (page.file_index===fileIndex && page.page===pageNumber){
                         addPair = true;
                         break;
-                    }
-                }
+                    };
+                };
                 if (addPair) suspiciousPairs.push(suspiciousPair);
             });
 
@@ -418,37 +412,47 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             style: config.style.form,
             items: [
                 {
-                    group: "Comparisons",
+                    group: "Text",
+                    items: [
+                        {
+                            name: "textSimilarities",
+                            label: "Show",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        }
+                    ]
+                },
+                {
+                    group: "Digit",
+                    items: [
+                        {
+                            name: "digitSimilarities",
+                            label: "Show",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        }
+                    ]
+                },
+                {
+                    group: "Other",
                     items: [
                         {
                             name: "imgSimilarities",
-                            label: "Image Similarities",
-                            type: "checkbox",
-                            options: [
-                                {
-                                    label: "",
-                                    value: true,
-                                    checked: false
-                                }
-
-                            ]
-                        },
-                        {
-                            name: "digitSimilarities",
-                            label: "Digit Similarities",
-                            type: "checkbox",
-                            options: [
-                                {
-                                    label: "",
-                                    value: true,
-                                    checked: false
-                                }
-
-                            ]
-                        },
-                        {
-                            name: "textSimilarities",
-                            label: "Text Similarities",
+                            label: "Show Images",
                             type: "checkbox",
                             options: [
                                 {
@@ -486,10 +490,30 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var textSimilarities = comparisonConfig.textSimilarities;
         textSimilaritiesField.setValue(textSimilarities===true ? true : false);
 
+        var warnCurrentSelection = function(formSettings){ // show warning - at least one selection required
+
+            if (comparisonConfig.digitSimilarities){
+                warn("At least one comparison is required",digitSimilaritiesField);
+                digitSimilaritiesField.setValue(true);
+            }
+            else if (comparisonConfig.imgSimilarities){
+                warn("At least one comparison is required",imgSimilaritiesField);
+                imgSimilaritiesField.setValue(true);
+            }
+            else if (comparisonConfig.textSimilarities){
+                warn("At least one comparison is required",textSimilaritiesField);
+                textSimilaritiesField.setValue(true);
+            };
+        };
 
     //Process onChange events
         form.onChange = function(){
             var formSettings = form.getData();
+
+            if (formSettings.imgSimilarities!=="true" && formSettings.digitSimilarities!=="true" && formSettings.textSimilarities!=="true" ){
+                warnCurrentSelection(formSettings);
+                return;
+            };
 
         //Update form data
             if (formSettings.imgSimilarities==="true") formSettings.imgSimilarities = true;
@@ -508,27 +532,28 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             comparisonConfig.textSimilarities = formSettings.textSimilarities;
 
 
-            console.log(settingsEditor)
-
-            // disable/re-enable settings menu to prevent users from changing setting during rendering
+        // disable/re-enable settings menu to prevent users from changing setting during rendering
             if (settingsEditor){
                 settingsEditor.disableThis();
             };
 
-            var newResults = update(getFilteredSimilarities(results));
-
-
-            // update GUI counts
-                if (newResults.digitCount < 1)digitSimilaritiesFieldLabel.innerText = '';
-                else digitSimilaritiesFieldLabel.innerText = newResults.digitCount + " results";
-
-                if (newResults.textCount < 1)textSimilaritiesFieldLabel.innerText = '';
-                else textSimilaritiesFieldLabel.innerText = newResults.textCount + " results";
-
-                if (newResults.imgCount < 1)imgSimilaritiesFieldLabel.innerText = '';
-                else imgSimilaritiesFieldLabel.innerText = newResults.imgCount + " results";
+            me.update(results);
+            updateGUI(getFilteredSimilarities(results));
+            navbar.update();
         };
 
+        var updateGUI = function(similarities){
+
+            // update GUI counts
+                if (similarities.digitCount < 1)digitSimilaritiesFieldLabel.innerText = '';
+                else digitSimilaritiesFieldLabel.innerText = similarities.digitCount + " similarities";
+
+                if (similarities.textCount < 1)textSimilaritiesFieldLabel.innerText = '';
+                else textSimilaritiesFieldLabel.innerText = similarities.textCount + " similarities";
+
+                if (similarities.imgCount < 1)imgSimilaritiesFieldLabel.innerText = '';
+                else imgSimilaritiesFieldLabel.innerText = similarities.imgCount + " similarities";
+        };
 
         editor.disableThis = function(){ // used for temporarily disabling settings options while changes render
             // modify style of fields to indicate this form is disabled
@@ -560,7 +585,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var rect = javaxt.dhtml.utils.getRect(settings);
         editor.showAt(rect.x - 400,rect.y);
         form.resize();
-
+        updateGUI(getFilteredSimilarities(results));
         return editor;
     };
 
@@ -571,7 +596,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var getFilteredSimilarities = function(similarities){
         // create new filtered json object from the raw similarities results
         var config = comparisonConfig;
-        console.log("filtered similarities check")
         var imgCount = 0;
         var textCount = 0;
         var digitCount = 0;
@@ -589,12 +613,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             version: similarities.version,
             files: similarities.files
         };
-        console.log(similarities);
 
         // add filtered paired similarities
-            for (i in similarities.suspicious_pairs) {
-                // console.log(similarities.suspicious_pairs[i]);
-                pair = similarities.suspicious_pairs[i];
+            for (var i in similarities.suspicious_pairs) {
+                var pair = similarities.suspicious_pairs[i];
                 if (pair.type === "Identical image" && config.imgSimilarities) {
                     filteredSimilarities.suspicious_pairs.push(pair);
                     imgCount++;
@@ -617,15 +639,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             filteredSimilarities.imgCount = imgCount;
             filteredSimilarities.digitCount = digitCount;
 
-        // add files
-
-
-
-
-
         return filteredSimilarities;
-
-
     };
 
 
@@ -963,6 +977,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
 
+
             if (matchingImg){
                 img.matchingImg = matchingImg;
                 img.isFirstDocument = false;
@@ -1078,7 +1093,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         // remove all current overlay elements assigned to DOM
         var clearOverlay = function(){
-            console.log("clear overlay called");
             var overlayTags = document.getElementsByClassName("doc-compare-panel-similarity-tag");
             var overlayDs = document.getElementsByClassName("doc-compare-panel-similarity-d");
             for (var i = 0; i < overlayTags.length; i++) {
@@ -1189,7 +1203,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 });
 
 
-
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
                 var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes);
@@ -1198,7 +1211,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
                 rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
 
-                // settings.updateSelection(rightPanel.parentNode.parentNode.parentNode.parentNode);
             }
         };
     };
@@ -1472,6 +1484,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
     var addResizeListener = javaxt.dhtml.utils.addResizeListener;
+    var warn = bluewave.utils.warn;
 
     var getStyleEditor = bluewave.chart.utils.getStyleEditor;
 
