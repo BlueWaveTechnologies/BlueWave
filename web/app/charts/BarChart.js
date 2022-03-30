@@ -21,6 +21,7 @@ bluewave.charts.BarChart = function(parent, config) {
     var svg, chart, plotArea;
     var x, y;
     var xAxis, yAxis;
+    var layers = [];
 
 
   //**************************************************************************
@@ -95,6 +96,19 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** addLine
+  //**************************************************************************
+    this.addLine = function(line, data, xAxis, yAxis){
+        layers.push({
+            line: line,
+            data: data,
+            xAxis: xAxis + "",
+            yAxis: yAxis + ""
+        });
+    };
+
+
+  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
@@ -160,6 +174,35 @@ bluewave.charts.BarChart = function(parent, config) {
                     return parseFloat(g[yKey]);
                 });
             }).entries(mergedData);
+
+
+        //To ensure max is found in line data - probably phenomenally inefficient
+        if (layers.length > 0) {
+
+            let max = d3.max(maxData, d => parseFloat(d.value));
+
+            layers.forEach(function(l){
+                let lineData = l.data;
+                let xKey = l.xAxis;
+                let yKey = l.yAxis;
+                let lineMax = d3.max(lineData, d=>parseFloat(d[yKey]));
+
+                if (lineMax > max){
+
+                    maxData = d3.nest()
+                        .key(function (d) { return d[xKey]; })
+                        .rollup(function (d) {
+                            return d3.sum(d, function (g) {
+                                return parseFloat(g[yKey]);
+                            });
+                        }).entries(lineData);
+
+                }
+
+            });
+
+        }
+        
         //Get sum of tallest bar
         //TODO: axis being set by first dataset - set with largest data
 
@@ -721,6 +764,12 @@ bluewave.charts.BarChart = function(parent, config) {
         });
 
 
+        //Render lines
+        layers.forEach(function(layer){
+
+            renderLine(layer);
+        });
+
         //Draw grid lines
         if (chartConfig.xGrid || chartConfig.yGrid){
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
@@ -757,6 +806,79 @@ bluewave.charts.BarChart = function(parent, config) {
         yAxis = plotArea
             .append("g")
             .call(d3.axisLeft(y));
+    };
+
+
+  //**************************************************************************
+  //** renderLine
+  //**************************************************************************
+    var renderLine = function(layer){
+
+        var xKey = layer.xAxis;
+        var yKey = layer.yAxis;
+
+        var lineConfig;
+        if (layer.line.getConfig) lineConfig = layer.line.getConfig();
+        if (!lineConfig) lineConfig = new bluewave.chart.Line().getConfig();
+
+        let lineColor = lineConfig.color;
+        let lineStyle = lineConfig.style;
+        let lineWidth = lineConfig.width;
+        let opacity = lineConfig.opacity;
+        let smoothing = lineConfig.smoothing;
+
+        
+        var getX = function(d){
+            var xoffset = x.bandwidth()/2;
+            
+            if(keyType==="date"){
+                return x(new Date(d.key)) + xoffset;
+            }else{
+                return x(d.key) + xoffset;
+            }
+        };
+
+        var getY = function(d){
+            var v = parseFloat(d["value"]);
+            return y(v);
+        };
+
+
+        var getLine = function(){
+            if (smoothing && smoothing !== "none"){
+                return d3.line().x(getX).y(getY).curve(d3[smoothing]);
+            }
+            return d3.line().x(getX).y(getY);
+        };
+
+
+        var sumData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.sum(d, function (g) {
+                    return g[yKey];
+                });
+            }).entries(layer.data);
+        let keyType = getType(sumData[0].key);
+        if(keyType == "date") keyType = "string";
+  
+
+        plotArea
+            .append("path")
+            .datum(sumData)
+            .attr("fill", "none")
+            .attr("stroke", lineColor)
+            .attr("stroke-width", lineWidth)
+            .attr("opacity", opacity)
+            .attr("stroke-dasharray", function (d) {
+                if (lineStyle === "dashed") return "5, 5";
+                else if (lineStyle === "dotted") return "0, 5";
+            })
+            .attr("stroke-linecap", function (d) {
+                if (lineStyle === "dotted") return "round";
+            })
+            .attr("d", getLine());
+
     };
 
 
