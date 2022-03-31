@@ -685,27 +685,48 @@ bluewave.charts.BarChart = function(parent, config) {
 
       //Set bar transitions
         var animationSteps = chartConfig.animationSteps;
-        if (stackValues) animationSteps = 0;
         if (!isNaN(animationSteps) && animationSteps>50){
-            var max = d3.max(maxData, d => parseFloat(d.value));
+        
+            //Persist original position/dimension attributes
+            bars
+                .attr("yInitial", function () {
+                    return this.getAttribute("y")
+                })
+                .attr("heightInitial", function () {
+                    return this.getAttribute("height")
+                })
+                .attr("widthInitial", function () {
+                    return this.getAttribute("width")
+                });
+
+
             if (layout === "vertical"){
 
-                var heightRatio = max / height;
+                //Set bar height to 0 and position to x-axis
                 bars.attr("y", height).attr("height", 0);
 
                 bars.transition().duration(animationSteps)
-                    .attr("y", function (d) { return height - d.value / heightRatio; })
-                    .attr("height", function (d) { return d.value / heightRatio; });
+                    .attr("y", function () {
+                        return parseFloat(this.getAttribute("yInitial")) ;
+                    })
+                    .attr("height", function () {
+                        return parseFloat(this.getAttribute("heightInitial")) ;
+                    });
+ 
+                    
             }else if(layout === "horizontal"){
 
-                var widthRatio = max/width;
+                //Set bar width to 0 and position to y-axis
                 bars.attr("x", 0).attr("width", 0);
 
                 bars.transition().duration(animationSteps)
-                    .attr("width", function (d) { return d.value / widthRatio; });
+                    .attr("width", function () { 
+                        return parseFloat(this.getAttribute("widthInitial")); 
+                    });
 
             }
-        }
+
+        };
 
 
         var tooltip;
@@ -738,12 +759,18 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
         //Create d3 event listeners for bars
-        bars.on("mouseover", mouseover);
-        bars.on("mousemove", mousemove);
-        bars.on("mouseleave", mouseleave);
+        var addMouseEvents = function(){
 
+            if (!animationSteps) animationSteps = 0;
+            setTimeout(function(){
 
+                bars.on("mouseover", mouseover);
+                bars.on("mousemove", mousemove);
+                bars.on("mouseleave", mouseleave);
 
+            }, animationSteps)
+        };
+        
 
         var getSiblings = function(bar){
             var arr = [];
@@ -774,6 +801,8 @@ bluewave.charts.BarChart = function(parent, config) {
         if (chartConfig.xGrid || chartConfig.yGrid){
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
         }
+
+        addMouseEvents();
     };
 
 
