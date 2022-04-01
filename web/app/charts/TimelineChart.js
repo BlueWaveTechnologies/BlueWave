@@ -112,7 +112,9 @@ bluewave.charts.TimelineChart = function(parent, config) {
         var timeFormat = options.timeFormat;
         var color = options.color;
 
-        if (!timeFormat) timeFormat = d3.timeFormat("%d %b %Y");
+        if (!timeFormat) timeFormat = "%d %b %Y";
+        formatTime = d3.timeFormat(timeFormat);
+
         if (!alignment) alignment = "alternating";
         if (!color) color = "steelblue";
 
@@ -124,7 +126,7 @@ bluewave.charts.TimelineChart = function(parent, config) {
         content.className = "timeline-content";
 
         var h = document.createElement("h3");
-        h.textContent = timeFormat(date) + " -- "+ event;
+        h.textContent = formatTime(date) + " -- "+ event;
         h.style.backgroundColor = color;
 
         var p = document.createElement("p")
