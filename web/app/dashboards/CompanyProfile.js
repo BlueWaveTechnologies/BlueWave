@@ -1009,33 +1009,61 @@ bluewave.dashboards.CompanyProfile = function(parent, config) {
             columns: [
                 {header: 'Entry/DOC/Line', width:'150'},
                 {header: 'Date', width:'85', align:'right'},
-                {header: 'Port of Entry', width:'75'},
-                {header: 'Unladed Port', width:'75'},
-                {header: 'CC', width:'35'},
-                {header: 'Shipment Method', width:'75'},
-                {header: 'Product Code', width:'75'},
-                {header: 'Product Name', width:'100%'},
                 {header: 'Quantity', width:'120', align:'right'},
                 {header: 'Value', width:'120', align:'right'},
+                
+                {header: 'ProCode', width:'75'},
+                {header: 'Product Name', width:'150'},                
+                
+
+                {header: 'Shipment Method', width:'75'},
+
+
 //                {header: 'Manufacturer', width:'75'},
 //                {header: 'Shipper', width:'75'},
 //                {header: 'Importer', width:'75'},
 //                {header: 'Consignee', width:'75'},
 //                {header: 'DII', width:'75'},
-                {header: 'Affirmations', width:'75'},
-                {header: 'Final Disposition', width:'75'},
+                {header: 'Affirmations', width:'150'},
+                {header: 'Final Disposition', width:'150'},
                 {header: 'Predict Risk', width:'75'},
-                {header: 'Predict Score', width:'75'}
+                {header: 'Predict Score', width:'75'},
+                
+                {header: 'Port of Entry', width:'75'},
+                {header: 'Unladed Port', width:'75'},
+                {header: 'CC', width:'100%'},                
+                
             ],
             update: function(row, entry){
+                
+                //date,shipper,importer,final_disposition,consignee,quantity,dii,line,
+                //shipment_method,unique_key,country_of_origin,affirmations,product_code,
+                //manufacturer,entry,port_of_entry,unladed_port,doc,predict_score,value,predict_risk,product_name
+                
                 //console.log(entry);
                 row.set("Entry/DOC/Line", entry.entry+"/"+entry.doc+"/"+entry.line);
                 row.set("Date",entry.date);
                 row.set("CC",entry.country_of_origin);
+                
+                row.set("ProCode", entry.product_code);
+                row.set("Product Name", entry.product_name);
+                
+                row.set("Shipment Method", entry.shipment_method);
+                row.set("Affirmations", entry.affirmations);
+                row.set("Final Disposition", entry.final_disposition);
+                
+                
                 var quantity = parseFloat(entry.quantity);
                 if (!isNaN(quantity)) row.set('Quantity', formatNumber(Math.round(quantity)));
                 var value = parseFloat(entry.value);
                 if (!isNaN(value)) row.set('Value', "$"+formatNumber(value));
+                
+                
+                row.set("Predict Risk", entry.predict_risk);
+                row.set("Predict Score", entry.predict_score);
+                
+                row.set("Port of Entry", entry.port_of_entry);
+                row.set("Unladed Port", entry.unladed_port);
             }
         });
 

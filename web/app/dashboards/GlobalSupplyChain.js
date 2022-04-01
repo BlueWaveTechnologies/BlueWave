@@ -23,13 +23,15 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         "#ffbe7d", //light orange
         "#59a14f"  //green
     ];
-
+    
   //Variables for the map panel
     var mapData = {};
     var countryNames = {};
     var worldMapIsReady = false;
 
+    var importsByCountry = [];
     var productCodes = {};
+    var mapPanel, sankeyPanel;
     var popup, importSummary, usMap; //popup windows
     var tooltip;
     var waitmask;
@@ -45,20 +47,22 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         tooltip = createTooltip();
 
         var mainDiv = document.createElement("div");
-        mainDiv.className = "global-supply-chain center";
         mainDiv.style.position = "relative";
-        mainDiv.style.width = "1400px";
+        mainDiv.style.width = "100%";
         mainDiv.style.height = "100%";
+        mainDiv.style.overflow = "hidden";
+        mainDiv.style.overflowY = "auto";
+        mainDiv.style.textAlign = "center";
         parent.appendChild(mainDiv);
         me.el = mainDiv;
 
 
         var panel = document.createElement("div");
-        panel.style.width = "100%";
+        panel.className = "global-supply-chain";
+        panel.style.width = "1400px";
         panel.style.height = "100%";
+        panel.style.display = "inline-block";
         mainDiv.appendChild(panel);
-
-
 
         dashboardPanel = createDashboardPanel(panel);
     };
@@ -80,6 +84,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         dashboardPanel.clear();
         if (importSummary) importSummary.hide();
         if (popup) popup.hide();
+        importsByCountry = [];
     };
 
 
@@ -124,6 +129,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         td = document.createElement("td");
         td.style.width = "100%";
         td.style.height = "100%";
+        td.style.padding = "7px 0";
         td.style.verticalAlign = "top";
         tr.appendChild(td);
         var leftCol = td;
@@ -132,6 +138,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
       //Column 2
         td = document.createElement("td");
         td.style.height = "100%";
+        td.style.padding = "7px 0";
         tr.appendChild(td);
         var rightCol = td;
 
@@ -146,15 +153,55 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         td = document.createElement("td");
         td.style.height = "1px";
         tr.appendChild(td);
-        var map = createWorldMap(td);
+        
+      //Create panel to hold the map and sankey charts
+        var div = document.createElement("div");
+        div.style.width = "990px";
+        div.style.height = "485px";
+        div.style.display = "inline-block";
+        div.style.position = "relative";
+        div.style.border = "1px solid #e0e0e0";
+        td.appendChild(div);        
+        
+      //Add map
+        mapPanel = createWorldMap(div);
+        
+      //Add sankey
+        sankeyPanel = createSankeyPanel(div);
+        sankeyPanel.hide();
+        
+      //Add toggle button to switch from map to sankey view
+        var toggleBar = document.createElement("div");
+        toggleBar.style.position = "absolute";
+        toggleBar.style.top = "7px";
+        toggleBar.style.right = "7px";
+        toggleBar.style.zIndex = 2;
+        div.appendChild(toggleBar);
+        bluewave.utils.createToggleButton(toggleBar, {
+            options: ["Map","Sankey"],
+            defaultValue: "Map",
+            onChange: function(val){
+                if (val==="Map"){
+                    sankeyPanel.hide();
+                    mapPanel.show();
+                }
+                else{
+                    mapPanel.hide();
+                    sankeyPanel.show();
+                }
+            }
+        });
+        
+        
+      //Create line chart
         tr = document.createElement("tr");
         tbody.appendChild(tr);
         td = document.createElement("td");
         td.style.height = "100%";
         td.style.verticalAlign = "top";
-        td.style.padding = "10px 0 0";
+        td.style.padding = "7px 0 0";
         tr.appendChild(td);
-        var sankeyPanel = createSankeyPanel(td);
+        var lineChart = createLineChart(td);
 
 
 
@@ -173,7 +220,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             td = document.createElement("td");
             td.style.width = "100%";
             td.style.height = "25%";
-            td.style.padding = (tbody.childNodes.length>1 ? "10px" : "0") + " 10px 0px 0px";
+            td.style.padding = (tbody.childNodes.length>1 ? "7px" : "0") + " 0px 0px 0px";
             tr.appendChild(td);
             return td;
         };
@@ -192,6 +239,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             countryPanel.innerDiv.innerHTML = "";
             manufacturerPanel.innerDiv.innerHTML = "";
             consigneePanel.innerDiv.innerHTML = "";
+            //mapPanel.map.clear();
         };
 
         panel.update = function(){
@@ -210,14 +258,14 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                             }
                             else{
                                 clearTimeout(timer);
-                                updateWorldMap(text, map);
+                                updateWorldMap(text, mapPanel.map);
                             }
                         };
 
                         timer = setTimeout(checkWidth, 200);
                     }
                     else{
-                        updateWorldMap(text, map);
+                        updateWorldMap(text, mapPanel.map);
                     }
                 }
             });
@@ -226,11 +274,21 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
           //Update sankey
             get("import/network2", {
                 success: function(text) {
+                    if (!sankeyPanel.sankey) return;
                     updateSankey(text, sankeyPanel.sankey);
                     sankeyPanel.onPopup = function(){
                         var sankey = new bluewave.charts.SankeyChart(popup.getBody(), {});
                         updateSankey(text, sankey);
                     };
+                }
+            });
+            
+            
+          //Update sankey
+            get("import/history?groupBy=country", {
+                success: function(text) {
+                    var data = d3.csvParse(text);
+                    lineChart.update(data);
                 }
             });
 
@@ -240,6 +298,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             //get("test/imports/country_of_origin.csv", {
                 success: function(text) {
                     var data = d3.csvParse(text);
+                    importsByCountry = data;
 
                   //Get product codes and values
                     var productValues = {};
@@ -378,7 +437,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                     countries[d.country_of_origin] = d.country_of_origin;
                 });
             }
-            showImportSummary(Object.keys(countries), label);
+            showImportSummary(label);
         });
     };
 
@@ -528,6 +587,207 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
 
   //**************************************************************************
+  //** createLineChart
+  //**************************************************************************
+    var createLineChart = function(parent){
+
+        var div = document.createElement("div");
+        div.style.width = "990px";
+        div.style.height = "100%";
+        div.style.display = "inline-block";
+        div.style.position = "relative";
+        div.style.overflow = "hidden";
+        parent.appendChild(div);
+
+        var panel = createDashboardItem(
+            "Import History",
+            "Shipments to the US by country of origin",
+            div
+        );
+
+
+
+        var chartConfig = {
+            yGrid: true,
+            endTags: true,
+            stackValues: false,
+            accumulateValues: false,
+            animationSteps: 0
+        };
+
+        var lineChart = new bluewave.charts.LineChart(panel.innerDiv, chartConfig);
+
+
+
+        panel.clear = function(){
+            lineChart.clear();
+        };
+        
+        panel.update = function(data){
+            panel.clear();
+            console.log(data);
+            
+            var importsByCountry = {};
+            var importTotals = {};
+            data.forEach((d)=>{
+                var key = d.country;
+                var val = d[yAxis] = parseFloat(d[yAxis]);
+
+                var dt = Date.parse(d.date);
+                if (!isNaN(dt)){
+                    //d.date = dt;
+                    var date = new Date(dt);
+                    if (date.getFullYear()>2019){                                                                                    
+                        d.date = date;
+
+                        var arr = importsByCountry[key];
+                        if (!arr){
+                            arr = [];
+                            importsByCountry[key] = arr;
+                        }
+                        arr.push(d);
+
+
+                        var currTotal = importTotals[key];
+                        if (isNaN(currTotal)) importTotals[key] = val;
+                        else importTotals[key] += val;                    
+                    }
+                }
+
+            });
+
+
+
+            //console.log(importTotals);
+            var arr = [];
+            for (var key in importsByCountry){
+                if (importsByCountry.hasOwnProperty(key)){
+                    arr.push({
+                        establishment: key,
+                        totalImports: importTotals[key]
+                    });
+                }
+            }    
+            arr.sort((a, b)=>{
+                return b.totalImports - a.totalImports;
+            });
+            
+            
+var smoothing = 90;
+var smoothingType = "movingAverage";
+                
+            //console.log(importsByCountry);
+            lineChart.clear();
+            var lines = [];
+            var other = null;
+            var includeOtherData = true;
+            var lastDate = null;
+            arr.forEach((d, i)=>{
+                var key = d.establishment;
+                var data = importsByCountry[key];
+
+                if (i<5){
+
+
+                    data.sort(function(a, b){
+                        return a.date - b.date;
+                    });
+
+                    if (!lastDate) lastDate = data[data.length-1].date.getTime();
+                    else lastDate = Math.min(lastDate, data[data.length-1].date.getTime());
+
+                    var line = new bluewave.chart.Line({
+                        label: countryNames[key],
+                        smoothing: smoothingType,
+                        smoothingValue: smoothing
+                    });
+
+                    lines.push({
+                        line: line,
+                        data: data
+                    });
+
+                    //console.log(data);                        
+                    //lineChart.addLine(line, data, "date", yAxis);    
+                }
+                else{
+
+                    if (includeOtherData){
+
+                        if (!other) other = data;
+                        else{
+                            data.forEach((d)=>{
+                                var dt = d.date.getTime();
+                                var addRow = true;
+                                other.every((o)=>{
+                                    if (o.date.getTime()===dt){
+                                        addRow = false;
+                                        o[yAxis]+=d[yAxis];
+                                        return false;
+                                    }
+                                    return true;
+                                });
+
+                                if (addRow) other.push(d);
+
+                            });
+                        }
+
+                    }
+
+                }
+            });
+            
+            
+          //Add lines
+            if (other){
+                other.sort(function(a, b){
+                    return a.date - b.date;
+                });
+
+                var arr = [];
+                other.forEach((d)=>{
+                    if (d.date.getTime()<=lastDate){
+                        arr.push(d);
+                    }
+                });
+                other = arr;
+
+                var line = new bluewave.chart.Line({
+                    label: "Other",
+                    color: "#bebcc1",
+                    smoothing: smoothingType,
+                    smoothingValue: smoothing
+                });   
+                lineChart.addLine(line, other, "date", yAxis); 
+            }
+            lines.forEach((l, i)=>{
+                var lineColor = colors[i % colors.length];
+                l.line.setColor(lineColor);
+
+                var arr = [];
+                l.data.forEach((d)=>{
+                    if (d.date.getTime()<=lastDate){
+                        arr.push(d);
+                    }
+                });
+                l.data = arr;                    
+
+
+                lineChart.addLine(l.line, l.data, "date", yAxis);
+            });
+
+
+            lineChart.update();
+            
+        };
+        
+
+        return panel;
+    };
+    
+    
+  //**************************************************************************
   //** createSankeyPanel
   //**************************************************************************
     var createSankeyPanel = function(parent){
@@ -539,14 +799,21 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         div.style.position = "relative";
         div.style.overflow = "hidden";
         parent.appendChild(div);
-
+        addShowHide(div);
+        
         var panel = createDashboardItem(
             "Supply Chain from Source to Consignee",
             "Top manufacturers to top consignees",
             div
         );
-
-
+        panel.show = function(){
+            div.show();
+        };
+        panel.hide = function(){
+            div.hide();
+        };
+        
+        
         var outerDiv = document.createElement("div");
         outerDiv.style.width = "100%";
         outerDiv.style.height = "100%";
@@ -734,9 +1001,29 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             sankey.addNode(node);
         });
 
+      //Render sankey
         sankey.update();
 
-        sankey.getChart().attr("transform", "scale(0.95,0.95)");
+
+      //Resize the chart when ready
+        var g = sankey.getChart();
+        if (g){
+            g.attr("transform", "scale(0.95,0.95)");
+        }
+        else {
+            var timer;
+            var getChart = function(){
+                g = sankey.getChart();
+                if (g){
+                    clearTimeout(timer);
+                    g.attr("transform", "scale(0.95,0.95)");
+                }
+                else {
+                    timer = setTimeout(getChart, 100);
+                }
+            };
+            timer = setTimeout(getChart, 100);
+        }
 
     };
 
@@ -753,8 +1040,9 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         div.style.display = "inline-block";
         div.style.position = "relative";
         div.style.overflow = "hidden";
-        div.style.border = "1px solid #e0e0e0";
+        //div.style.border = "1px solid #e0e0e0";
         parent.appendChild(div);
+        addShowHide(div);
 
         var innerDiv = document.createElement("div");
         innerDiv.style.width = "990px";
@@ -791,7 +1079,11 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                 worldMapIsReady = true;
             });
         });
-        return map;
+        
+        
+        
+        div.map = map;
+        return div;
     };
 
 
@@ -957,7 +1249,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
                         showUSMap(data);
                     }
                     else{
-                        showImportSummary(Object.keys(countries), countryCode);
+                        showImportSummary(countryCode);
                     }
                 //}
             },
@@ -1177,7 +1469,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
   //**************************************************************************
   //** showImportSummary
   //**************************************************************************
-    var showImportSummary = function(countryCodes, countryCode){
+    var showImportSummary = function(countryCode){
         if (!importSummary){
             var win = new javaxt.dhtml.Window(document.body, {
                 title: "Import Summary",
@@ -1199,7 +1491,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
 
         importSummary.clear();
         importSummary.show();
-        importSummary.update(Object.keys(productCodes), countryCodes, countryCode);
+        importSummary.update(importsByCountry, countryCode);
     };
 
 
@@ -1233,6 +1525,7 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
             height: "100%",
             settings: true
         });
+        dashboardItem.el.style.minHeight = "180px";
         var icon = dashboardItem.settings.getElementsByTagName("i")[0];
         if (icon) icon.className = "fas fa-expand";
         dashboardItem.settings.onclick = function(){
@@ -1252,13 +1545,15 @@ bluewave.dashboards.GlobalSupplyChain = function(parent, config) {
         };
         return dashboardItem;
     };
-
-
+    
+    
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
     var isNumeric = javaxt.dhtml.utils.isNumber;
+    
     var get = bluewave.utils.get;
     var createTooltip = bluewave.chart.utils.createTooltip;
     var formatNumber = bluewave.utils.formatNumber;

@@ -369,7 +369,27 @@ public class Main {
   //**************************************************************************
     private static void delete(HashMap<String, String> args) throws Exception {
         String str = args.get("-delete").toLowerCase();
-        if (str.equals("nodes")){
+        if (str.equals("user")){
+
+            Config.initDatabase();
+            User user = null;
+            try{
+                user = new User(Long.parseLong(args.get("-id")));
+            }
+            catch(Exception e){
+                e.printStackTrace();
+                try{
+                    user = User.get("username=", args.get("-username"));
+                }
+                catch(Exception ex){
+                    ex.printStackTrace();
+                }
+            }
+
+            user.delete();
+
+        }
+        else if (str.equals("nodes")){
             Neo4J graph = Config.getGraph(null);
             bluewave.graph.Maintenance.deleteNodes(args.get("-label"), graph);
             graph.close();
@@ -449,9 +469,23 @@ public class Main {
             Session session = null;
             try{
                 session = graph.getSession();
-                String versionString = session.readTransaction( tx -> tx.run( "RETURN 1" ).consume().server().version() );
-                System.out.println(versionString);
 
+              //Get Neo4J server version and edition
+                String versionString = null;
+                try{
+                    String q = "call dbms.components() yield name, versions, edition unwind versions as version return name, version, edition;";
+                    Result rs = session.run(q);
+                    if (rs.hasNext()){
+                        org.neo4j.driver.Record r = rs.next();
+                        versionString = r.get(0).asString() + "/" + r.get(1).asString() + " (" + r.get(2).asString() + ")";
+                    }
+                }
+                catch(Exception e){}
+                if (versionString==null) System.out.println("Unknown Neo4J version"); 
+                else System.out.println(versionString);
+                
+                
+                
                 String query = args.get("-query");
                 if (query!=null){
                     query = bluewave.queries.Index.getQuery(query, "cypher");
@@ -549,6 +583,9 @@ public class Main {
         if (download.equalsIgnoreCase("Premier")){
             new bluewave.data.Premier(args.get("-username"), args.get("-password"))
                     .downloadShards(args.get("-path"));
+        }
+        else if (download.equalsIgnoreCase("Ports")){
+            new bluewave.data.Ports().downloadUSPortsofEntry(args.get("-path"));
         }
         else{
             console.log("Unsupported download: " + download);

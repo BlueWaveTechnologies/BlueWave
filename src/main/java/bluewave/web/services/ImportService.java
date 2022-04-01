@@ -52,7 +52,12 @@ public class ImportService extends WebService {
         firmNames = new ConcurrentHashMap<>();
         firmLocations = new ConcurrentHashMap<>();
         firmCountries = new ConcurrentHashMap<>();
-        updateFirmNames();
+        try{
+            Neo4J graph = bluewave.Config.getGraph(null);
+            if (graph!=null) updateFirmNames(graph);
+        }
+        catch(Exception e){
+        }
     }
 
 
@@ -61,7 +66,7 @@ public class ImportService extends WebService {
   //**************************************************************************
   /** Used to generate a list of firm names using fuzzy matching by country
    */
-    private void updateFirmNames() throws Exception {
+    private void updateFirmNames(Neo4J graph) throws Exception {
 
         HashMap<Long, String> facilities = new HashMap<>();
         HashMap<Long, Point> coordinates = new HashMap<>();
@@ -70,7 +75,6 @@ public class ImportService extends WebService {
       //Get establishment names and coordinates
         Session session = null;
         try{
-        Neo4J graph = bluewave.Config.getGraph(null);
             session = graph.getSession();
 
             StringBuilder str = new StringBuilder();
@@ -1276,39 +1280,40 @@ public class ImportService extends WebService {
   //**************************************************************************
   //** getHistory
   //**************************************************************************
+  /** Returns imports per day by country and product code
+   */
     public ServiceResponse getHistory(ServiceRequest request, Database database)
     throws ServletException {
 
       //Get parameters
         String country = request.getParameter("country").toString();
-        if (country==null) return new ServiceResponse(400, "country is required");
+
+        String productCode = request.getParameter("productCode").toString();
+        if (productCode==null) productCode="LZA,FMC,LYZ,IWP,LZC,KGO,LYY,OPA,OPJ,OPC,QDO";
 
         Integer threshold = request.getParameter("threshold").toInteger();
         if (threshold==null || threshold<0 || threshold>100) threshold = 0;
 
+        String groupBy = request.getParameter("groupBy").toString();
+        if (groupBy!=null) groupBy = groupBy.toLowerCase(); //e.g. manufacturer
+
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
+        String sql;
+        if (groupBy!=null && groupBy.equals("country")){
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day_Country");
+            groupBy = null; //there's code below that's expecting an establishment type for the groupBy
+        }
+        else{
+            if (country==null) return new ServiceResponse(400, "country is required");
 
-
-      //Update sql with country keyword
-        if (country!=null){
-            StringBuilder str = new StringBuilder();
-            for (String cc : country.split(",")){
-                cc = cc.trim();
-                if (cc.isEmpty()) continue;
-                if (cc.startsWith("'") && cc.endsWith("'")){
-                    cc = cc.substring(1, cc.length()-1);
-                }
-                if (str.length()>0) str.append(",");
-                str.append("'" + cc + "'");
-            }
-            sql = sql.replace("{country}", str);
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
+            sql = sql.replace("{country}", addQuotes(country));
+            sql = sql.replace("{threshold}", threshold+"");
+            if (groupBy!=null) sql += ",n."+ groupBy + " as " + groupBy;
         }
 
-
-      //Update sql with additional keywords
-        sql = sql.replace("{threshold}", threshold+"");
+        sql = sql.replace("{product_code}", addQuotes(productCode));
 
 
       //Get graph
@@ -1317,10 +1322,10 @@ public class ImportService extends WebService {
 
 
 
-
-      //Execute query and generate response
-        String[] fields = new String[]{"date","lines","quantity","value"};
-        StringBuilder str = new StringBuilder(String.join(",", fields));
+      //Execute query
+        HashSet<Long> establishmentIDs = new HashSet<>();
+        ArrayList<HashMap<String, Value>> records = new ArrayList<>();
+        LinkedHashSet<String> fields = new LinkedHashSet<>();
         Session session = null;
         try{
             session = graph.getSession();
@@ -1328,23 +1333,149 @@ public class ImportService extends WebService {
             Result rs = session.run(sql);
             while (rs.hasNext()){
                 Record r = rs.next();
-                str.append("\r\n");
 
-                for (int i=0; i<fields.length; i++){
-                    if (i>0) str.append(",");
-                    str.append(r.get(fields[i]).asObject());
+                HashMap<String, Value> values = new HashMap<>();
+                for (String field : r.keys()){
+                    fields.add(field);
+                    Value val = new Value(r.get(field).asObject());
+                    values.put(field, val);
+                }
+                records.add(values);
+
+
+                if (groupBy!=null){
+                    Long establishmentID = new Value(r.get(groupBy).asObject()).toLong();
+                    establishmentIDs.add(establishmentID);
                 }
             }
-
 
             session.close();
         }
         catch(Exception e){
-            e.printStackTrace();
             if (session!=null) session.close();
             return new ServiceResponse(e);
         }
 
+
+
+      //Group records as needed
+        if (groupBy!=null){
+
+
+            HashMap<String, ArrayList<Long>> establishments = new HashMap<>();
+            synchronized(firmNames){
+                for (Long fei : establishmentIDs){
+                    String name = firmNames.get(fei);
+                    ArrayList<Long> arr = establishments.get(name);
+                    if (arr==null){
+                        arr = new ArrayList<>();
+                        establishments.put(name, arr);
+                    }
+                    arr.add(fei);
+                }
+            }
+
+
+          //Local fuzzy match
+            HashMap<Long, String> f = new HashMap<>();
+            Iterator<String> i2 = establishments.keySet().iterator();
+            while (i2.hasNext()){
+                String name = i2.next();
+                ArrayList<Long> arr = establishments.get(name);
+                for (Long id : arr){
+                    f.put(id, name);
+                }
+            }
+            establishments = mergeCompanies(f);
+
+
+          //Merge records by establishment
+            ArrayList<HashMap<String, Value>> mergedRecords = new ArrayList<>();
+            Iterator<String> it = establishments.keySet().iterator();
+            while (it.hasNext()){
+                String facilityName = it.next();
+                ArrayList<Long> feis = establishments.get(facilityName);
+
+                /*
+                StringBuilder str = new StringBuilder();
+                for (Long fei : feis){
+                    if (str.length()>0) str.append(",");
+                    str.append(fei);
+                }
+                String facilityFEIs = str.toString();
+                */
+
+
+                HashMap<String, HashMap<String, Value>> group = new HashMap<>();
+                for (HashMap<String, Value> record : records){
+                    Long establishment = record.get(groupBy).toLong();
+                    if (establishment==null) continue;
+                    for (Long fei : feis){
+                        if (establishment.equals(fei)){
+
+                            String date = record.get("date").toString();
+                            Float lines = record.get("lines").toFloat();
+                            if (lines==null) lines = 0f;
+                            Float quantity = record.get("quantity").toFloat();
+                            if (quantity==null) quantity = 0f;
+                            Float value = record.get("value").toFloat();
+                            if (value==null) value = 0f;
+
+                            String key = facilityName+"->"+date;
+
+                            HashMap<String, Value> g = group.get(key);
+                            if (g==null){
+                                g = new HashMap<>();
+                                g.put("date", new Value(date));
+                                g.put("lines", new Value(lines));
+                                g.put("quantity", new Value(quantity));
+                                g.put("value", new Value(value));
+                                g.put(groupBy, new Value(facilityName));
+                                group.put(key, g);
+                            }
+                            else{
+                                g.put("lines", new Value(lines+g.get("lines").toLong()));
+                                g.put("quantity", new Value(lines+g.get("quantity").toLong()));
+                                g.put("value", new Value(lines+g.get("value").toLong()));
+                            }
+
+                            break;
+                        }
+                    }
+                }
+
+
+                Iterator<String> i3 = group.keySet().iterator();
+                while (i3.hasNext()){
+                    HashMap<String, Value> g = group.get(i3.next());
+                    mergedRecords.add(g);
+                }
+            }
+
+            records = mergedRecords;
+        }
+
+
+
+
+      //Generate response
+        StringBuilder str = new StringBuilder();
+        Iterator<String> it = fields.iterator();
+        while (it.hasNext()){
+            str.append(it.next());
+            if (it.hasNext()) str.append(",");
+        }
+        for (HashMap<String, Value> record : records){
+            str.append("\r\n");
+            it = fields.iterator();
+            while (it.hasNext()){
+                String val = record.get(it.next()).toString();
+                if (val==null) val = "";
+                if (val.contains(",")) val = "\"" + val + "\"";
+                str.append(val);
+                if (it.hasNext()) str.append(",");
+            }
+        }
         return new ServiceResponse(str.toString());
     }
 
@@ -1587,6 +1718,25 @@ public class ImportService extends WebService {
             if (it.hasNext()) str.append(",");
         }
         str.append("\"");
+        return str.toString();
+    }
+
+
+  //**************************************************************************
+  //** addQuotes
+  //**************************************************************************
+    private String addQuotes(String country){
+        if (country==null) return null;
+        StringBuilder str = new StringBuilder();
+        for (String cc : country.split(",")){
+            cc = cc.trim();
+            if (cc.isEmpty()) continue;
+            if (cc.startsWith("'") && cc.endsWith("'")){
+                cc = cc.substring(1, cc.length()-1);
+            }
+            if (str.length()>0) str.append(",");
+            str.append("'" + cc + "'");
+        }
         return str.toString();
     }
 }

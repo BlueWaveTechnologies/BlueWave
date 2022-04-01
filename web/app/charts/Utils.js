@@ -954,6 +954,9 @@ bluewave.chart.utils = {
             d3.select(document.body)
             .append("div")
             .style("opacity", 0)
+            .style("top", 0)
+            .style("left", 0)
+            .style("display", "none")
             .attr("class", "tooltip");
 
 

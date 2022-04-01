@@ -30,7 +30,24 @@ public class Maintenance {
         String cmd = "CREATE USER " + username + " IF NOT EXISTS SET PASSWORD '" +
         password + "' CHANGE NOT REQUIRED";
         try{
+
+          //Create user
             execute(cmd, graph);
+
+
+          //Set password in case the user account already existed in the database
+            try{
+                setPassword(username, password, graph);
+            }
+            catch(org.neo4j.driver.exceptions.ClientException e){
+                //TODO: Parse error message like this:
+                //Failed to alter the specified user 'bw_....': Old password and new password cannot be the same.
+            }
+            catch(Exception e){
+                throw e;
+            }
+
+            
             log("Successfully created user: " + username);
         }
         catch(Exception e){

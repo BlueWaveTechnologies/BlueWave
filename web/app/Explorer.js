@@ -1654,42 +1654,35 @@ bluewave.Explorer = function(parent, config) {
             div.style.borderRadius = "0 0 5px 5px";
             body.appendChild(div);
 
+            var getNodes = function(tree){
+                get("graph/properties", {
+                    success: function(nodes){
+                        if (waitmask) waitmask.hide();
+
+                      //Clear current
+                        tree.el.innerHTML = "";
+
+                      //Sort nodes alphabetically
+                        nodes.sort(function(a, b){
+                            return a.name.localeCompare(b.name);
+                        });
+
+                      //Add nodes to the tree
+                        tree.addNodes(nodes);
+                    },
+                    failure: function(request){
+                        if (waitmask) waitmask.hide();
+                        //alert(request);
+                    }
+                });
+            };
 
 
             dbView = new javaxt.express.DBView(div, {
                 waitmask: waitmask,
                 queryLanguage: "cypher",
                 queryService: "query/job/",
-                getTables: function(tree){
-                    waitmask.show();
-                    get("graph/properties", {
-                        success: function(nodes){
-                            waitmask.hide();
-
-                          //Parse response
-                            var arr = [];
-                            for (var i=0; i<nodes.length; i++){
-                                var nodeName = nodes[i].node;
-                                if (nodeName){
-                                    arr.push({
-                                        name: nodes[i].node,
-                                        properties: nodes[i].properties
-                                    });
-                                }
-                            }
-                            arr.sort(function(a, b){
-                                return a.name.localeCompare(b.name);
-                            });
-
-                          //Add nodes to the tree
-                            tree.addNodes(arr);
-                        },
-                        failure: function(request){
-                            if (waitmask) waitmask.hide();
-                            alert(request);
-                        }
-                    });
-                },
+                getTables: function(){}, //empty function so we can populate the tree ourselves
                 onTreeClick: function(item){
                     var cql = "MATCH (n:" + item.name + ")\n";
                     var properties = item.node.properties;
@@ -1717,8 +1710,20 @@ bluewave.Explorer = function(parent, config) {
                 }
             });
 
+            var timer;
+
             dbView.show = function(){
                 win.show();
+                waitmask.show(500);
+                getNodes(dbView.getComponents().tree);
+                
+                if (!timer){
+                    timer = setInterval(function(){
+                        if (win.isOpen()){
+                            getNodes(dbView.getComponents().tree);
+                        }
+                    }, 15*1000);
+                }
             };
 
             dbView.hide = function(){
