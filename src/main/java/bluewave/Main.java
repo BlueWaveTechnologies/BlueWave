@@ -105,6 +105,8 @@ public class Main {
                 Integer port = webConfig.get("port").toInteger();
                 addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
                 new javaxt.http.Server(addresses, 250, new WebApp(webConfig)).start();
+                
+                // bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
             }
         }
     }
@@ -273,6 +275,18 @@ public class Main {
             ImportsV2.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             database.close();
         }
+        else if (str.equalsIgnoreCase("Ports")){
+            Neo4J database = Config.getGraph(null);
+            // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            Ports.loadUSPortsofEntry(new javaxt.io.File(args.get("-path")), database);
+            database.close();
+        }    
+        else if (str.equalsIgnoreCase("Exams")){
+            Neo4J database = Config.getGraph(null);
+            // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            ImportsV2.loadExamsAsNodes(new javaxt.io.File(args.get("-path")), database);
+            database.close();
+        }                
         else{
             java.io.File f = new java.io.File(str);
             if (f.isFile()) importFile(args);
@@ -517,6 +531,9 @@ public class Main {
             }
 
             console.log("done! hits: " + totalHits);
+        }
+        else if (test.equalsIgnoreCase("syncUsers")){
+            bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
         }
         else{
             console.log("Unsupported test: " + test);

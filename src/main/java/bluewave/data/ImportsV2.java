@@ -371,7 +371,7 @@ public class ImportsV2 {
         int rowID = 0;
         for (Row row : workbook.getSheetAt(0)){
             if (rowID>0){
-
+                // if (rowID>452620){
                 try{
 
                     JSONObject json = new JSONObject();
@@ -1391,6 +1391,208 @@ public class ImportsV2 {
       //Clean up
         statusLogger.shutdown();
     }
+
+  //**************************************************************************
+  //** loadExamsAsNodes
+  //**************************************************************************
+  /** Used to update import_line nodes with exam details from an input xlsx
+   */
+  public static void loadExamsAsNodes(javaxt.io.File file, Neo4J database) throws Exception {
+
+    //Start console logger
+      AtomicLong recordCounter = new AtomicLong(0);
+      StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+      
+      Session session = null;
+      try{
+          session = database.getSession();
+
+        //Create unique key constraint
+          try{ session.run("CREATE CONSTRAINT ON (n:import_exam) ASSERT n.exam_key IS UNIQUE"); }
+          catch(Exception e){}
+
+
+        //Create indexes
+          try{ session.run("CREATE INDEX idx_exam IF NOT EXISTS FOR (n:import_exam) ON (n.exam_key)"); }
+          catch(Exception e){}
+
+
+          session.close();
+      }
+      catch(Exception e){
+          if (session!=null) session.close();
+      }
+
+    //Instantiate the ThreadPool
+      ThreadPool pool = new ThreadPool(20, 1000){
+          public void process(Object obj){
+              Object[] arr = (Object[]) obj;
+              String entry = (String) arr[0];
+              String doc = (String) arr[1];
+              String line = (String) arr[2];
+              String importEntryKey = entry+"_"+doc+"_"+line;
+              Map<String, Object> params = (Map<String, Object>) arr[3];
+              
+              Session session = database.getSession();
+            try{
+                String createExam = getQuery("import_exam", params);
+                Long examID;
+                try{
+                    examID = session.run(createExam, params).single().get(0).asLong();
+                }
+                catch(Exception e){
+                    examID = getIdFromError(e);  
+                }
+
+                session.run("MATCH (r),(s:import_line{unique_key:'" + importEntryKey +"'}) WHERE id(r) =" + examID + 
+                " MERGE(s)-[:has]->(r)");
+            }
+            catch(Exception e){
+                e.printStackTrace();
+                console.log(e.getMessage(), importEntryKey);
+            }
+            recordCounter.incrementAndGet();
+          }
+
+          private String getQuery(String node, Map<String, Object> params){
+            String key = "create_"+node;
+            String q = (String) get(key);
+            if (q==null){
+                StringBuilder query = new StringBuilder("CREATE (a:" + node + " {");
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String param = it.next();
+                    query.append(param);
+                    query.append(": $");
+                    query.append(param);
+                    if (it.hasNext()) query.append(" ,");
+                }
+                query.append("}) RETURN id(a)");
+                q = query.toString();
+                set(key, q);
+            }
+            return q;
+        }
+
+          private Session getSession() throws Exception {
+              Session session = (Session) get("session");
+              if (session==null){
+                  session = database.getSession(false);
+                  set("session", session);
+              }
+              return session;
+          }
+
+          public void exit(){
+              Session session = (Session) get("session");
+              if (session!=null){
+                  session.close();
+              }
+          }
+      }.start();
+
+
+
+
+      java.io.InputStream is = file.getInputStream();
+      Workbook workbook = StreamingReader.builder()
+          .rowCacheSize(10)
+          .bufferSize(4096)
+          .open(is);
+
+      LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+
+      int rowID = 0;
+      int totalRecords = 0;
+      Sheet sheet = workbook.getSheet("Exam Report");
+      if(sheet == null) return;
+      for (Row row : sheet){
+          if (rowID==0){
+
+            //Parse header
+              int idx = 0;
+              for (Cell cell : row) {
+                  header.put(cell.getStringCellValue(), idx);
+                  idx++;
+              }
+
+          }
+          else{
+              try{
+
+                //Get entry
+                  String entry = "";
+                  String doc = "";
+                  String line = "";
+                  String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                  if (id!=null){
+                      id = id.trim();
+                      if (!id.isEmpty()){
+                          String[] arr = id.split("/");
+                          if (arr.length>0) entry = arr[0];
+                          if (arr.length>1) doc = arr[1];
+                          if (arr.length>2) line = arr[2];
+                      }
+                  }
+
+                  Map<String, Object> params = new LinkedHashMap<>();
+                  String importEntryKey = entry+"_"+doc+"_"+line;
+                  params.put("import_entry_key", importEntryKey);
+
+                  String activityNumber = row.getCell(header.get("Activity Number")).getStringCellValue();
+                  String examKey = entry+"_"+doc+"_"+line+"_"+activityNumber;
+                  params.put("exam_key", examKey);
+
+                  String[] fields = new String[]{
+                      "Activity Description","Activity Date Time",
+                      "Expected Availability Date","Sample Availability Date",
+                      "Problem Area Flag","Problem Area Description","PAC",
+                      "PAC Description","Suspected Counterfeit Reason",
+                      "Lab Classification Code","Lab Classification","Remarks","Summary"
+                  };
+
+                  for (String field : fields){
+                      String val = row.getCell(header.get(field)).getStringCellValue();
+
+                      String colName = field;
+                      while (colName.contains("  ")) colName = colName.replace("  ", " ");
+                      colName = colName.toLowerCase().replace(" ", "_");
+                      colName = colName.trim().toLowerCase();
+
+                      params.put(colName, val);
+                  }
+
+
+                  pool.add(new Object[]{entry,doc,line,params});
+                  totalRecords++;
+              }
+              catch(Exception e){
+                  console.log("Failed to parse row " + rowID);
+              }
+
+          }
+          rowID++;
+      }
+
+
+    //Update statusLogger
+      statusLogger.setTotalRecords(totalRecords);
+
+
+    //Close workbook
+      workbook.close();
+      is.close();
+
+
+    //Notify the pool that we have finished added records and Wait for threads to finish
+      pool.done();
+      pool.join();
+
+
+    //Clean up
+      statusLogger.shutdown();
+  }
 
 
   //**************************************************************************

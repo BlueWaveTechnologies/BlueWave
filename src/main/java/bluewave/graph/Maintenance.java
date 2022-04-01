@@ -247,10 +247,11 @@ public class Maintenance {
                 StackTraceElement el = stacktrace[i];
                 String className = el.getClassName();
                 if (!el.getClassName().equals("bluewave.graph.Maintenance")){
-                    el = stacktrace[i+1];
+                    if(stacktrace.length > (i+1))   el = stacktrace[i+1];
                     if (el.getClassName().equals("bluewave.Main")){
                         print = true;
                     }
+                    
                     break;
                 }
             }
