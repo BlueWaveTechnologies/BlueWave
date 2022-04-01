@@ -286,7 +286,19 @@ public class Main {
             // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             ImportsV2.loadExamsAsNodes(new javaxt.io.File(args.get("-path")), database);
             database.close();
-        }                
+        }     
+        else if (str.equalsIgnoreCase("All")){
+            String filePath = args.get("-path");
+            Neo4J database = Config.getGraph(null);
+            ImportsV2.loadEstablishments(new javaxt.io.File(filePath), database);
+
+            File file = new javaxt.io.File(filePath);
+            ImportsV2 importsV2 = new ImportsV2(file);
+            ImportsV2.loadLines(file, database);      
+                  
+            ImportsV2.loadExamsAsNodes(new javaxt.io.File(filePath), database);
+            database.close();
+        }                     
         else{
             java.io.File f = new java.io.File(str);
             if (f.isFile()) importFile(args);

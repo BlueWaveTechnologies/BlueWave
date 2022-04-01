@@ -1038,11 +1038,16 @@ public class ImportsV2 {
                     String name = row.get(index++).toString();
                     String address = row.get(index++).toString();
                     String countryCode = null;
+                    String state = null;
                     if(address!=null) {
                         try {
                             String[]parts = address.split("\\R");
                             address = parts[2]+" "+parts[3];
                             countryCode = parts[4];
+                            if(countryCode.equals("US")) {
+                                String[]cityStateZip = parts[3].split(",");
+                                state = cityStateZip[1].trim().split(" ")[0];
+                            }
                         }catch(Exception e){}
                     } 
                     String duns = null;
@@ -1064,7 +1069,8 @@ public class ImportsV2 {
                     
                     Map<String, Object> params = new LinkedHashMap<>();
                     params.put("address", address);
-                    if(countryCode != null && !countryCode.isEmpty()) params.put("cc", countryCode);
+                    params.put("state", (state==null?"":state));
+                    if(countryCode != null && !countryCode.isEmpty()) params.put("country", countryCode);
                     if(lat != null && !lat.isEmpty()) params.put("lat", lat);
                     if(lon != null && !lon.isEmpty()) params.put("lon", lon);
                    
