@@ -232,19 +232,28 @@ public class Maintenance {
         ThreadPool pool = new ThreadPool(12, 10000){
             public void process(Object obj){
                 Long id = (Long) obj;
-
-                StringBuilder query = new StringBuilder();
-                query.append("MATCH (n:" + nodeName + ")-[r]-() WHERE ");
-                query.append("id(n)=" + id + " ");
-                query.append("DELETE r, n");
-
+                StringBuilder query;
                 try{
+
+
+                  //Delete any relationships associated with the node
+                    query = new StringBuilder();
+                    query.append("MATCH (n:" + nodeName + ")-[r]-() WHERE ");
+                    query.append("id(n)=" + id + " ");
+                    query.append("DELETE r");
+                    getSession().run(query.toString());
+
+
+                  //Delete the node
+                    query = new StringBuilder();
+                    query.append("MATCH (n:" + nodeName + ") WHERE ");
+                    query.append("id(n)=" + id + " ");
+                    query.append("DELETE n");
                     getSession().run(query.toString());
                 }
                 catch(Exception e){
                     console.log(e.getMessage());
                 }
-
 
 
                 recordCounter.incrementAndGet();
