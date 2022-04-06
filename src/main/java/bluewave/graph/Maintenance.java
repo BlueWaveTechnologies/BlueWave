@@ -234,9 +234,9 @@ public class Maintenance {
                 Long id = (Long) obj;
 
                 StringBuilder query = new StringBuilder();
-                query.append("MATCH (n:" + nodeName + ") WHERE ");
+                query.append("MATCH (n:" + nodeName + ")-[r]-() WHERE ");
                 query.append("id(n)=" + id + " ");
-                query.append("DELETE n");
+                query.append("DELETE r, n");
 
                 try{
                     getSession().run(query.toString());
