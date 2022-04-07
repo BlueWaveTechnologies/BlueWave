@@ -26,6 +26,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var settings;
     var comparisonConfig = {
         imgSimilarities: true,
+        duplicatePageSimilarities: true,
         digitSimilarities: true,
         textSimilarities: true,
         minDigitCount: 1,
@@ -530,9 +531,23 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 }
 
                             ]
+                        },
+                        {
+                            name: "duplicatePageSimilarities",
+                            label: "Show Duplicate Pages",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
                         }
                     ]
-                }
+                },
+
             ]
         });
 
@@ -608,6 +623,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var minTextCharacters = comparisonConfig.minTextCharacters;
         minTextCharactersField.setValue(minTextCharacters);
 
+    //Set initial value for duplicatePageSimilarities
+       var duplicatePageSimilaritiesField = form.findField("duplicatePageSimilarities");
+       var duplicatePageSimilaritiesFieldLabel = duplicatePageSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+       var duplicatePageSimilarities = comparisonConfig.duplicatePageSimilarities;
+       duplicatePageSimilaritiesField.setValue(duplicatePageSimilarities===true ? true : false);
+
+
+
+
         var isPopulated = function(config){ // determine the options/availability when passing new config
             var similarities = getFilteredSimilarities(results, config);
 
@@ -640,6 +664,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             else if (formSettings.minDecimalPlaces !== comparisonConfig.minDecimalPlaces) return minDecimalPlacesField;
             else if (formSettings.minTextWords !== comparisonConfig.minTextWords) return minTextWordsField;
             else if (formSettings.minTextCharacters !== comparisonConfig.minTextCharacters) return minTextCharactersField;
+            else if (formSettings.duplicatePageSimilarities !== comparisonConfig.duplicatePageSimilarities) return duplicatePageSimilaritiesField;
+
         };
 
         var revertFormChanges = function(){
@@ -653,6 +679,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 minDecimalPlacesField.setValue(comparisonConfig.minDecimalPlaces);
                 minTextWordsField.setValue(comparisonConfig.minTextWords);
                 minTextCharactersField.setValue(comparisonConfig.minTextCharacters);
+                duplicatePageSimilaritiesField.setValue(comparisonConfig.duplicatePageSimilarities);
+
         };
 
         var updateSavedState = function(formSettings){
@@ -666,6 +694,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 comparisonConfig.minDecimalPlaces = formSettings.minDecimalPlaces;
                 comparisonConfig.minTextWords = formSettings.minTextWords;
                 comparisonConfig.minTextCharacters = formSettings.minTextCharacters;
+                comparisonConfig.duplicatePageSimilarities = formSettings.duplicatePageSimilarities;
         };
 
     //Process onChange events
@@ -701,6 +730,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             if (formSettings.decimalsOnly==="true") formSettings.decimalsOnly = true;
             else formSettings.decimalsOnly = false;
+
+            if (formSettings.duplicatePageSimilarities==="true") formSettings.duplicatePageSimilarities = true;
+            else formSettings.duplicatePageSimilarities = false;
 
             console.log("got to the ispopulated check");
             console.log(formSettings);
@@ -749,6 +781,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                 if (similarities.imgCount < 1)imgSimilaritiesFieldLabel.innerText = '';
                 else imgSimilaritiesFieldLabel.innerText = similarities.imgCount + " similarities";
+
+                if (similarities.duplicatePageCount < 1)duplicatePageSimilaritiesFieldLabel.innerText = '';
+                else duplicatePageSimilaritiesFieldLabel.innerText = similarities.duplicatePageCount + " similarities";
         };
 
         editor.disableThis = function(){ // used for temporarily disabling settings options while changes render
@@ -762,6 +797,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 form.disableField("minTextCharacters");
                 form.disableField("minTextWords");
                 form.disableField("decimalsOnly");
+                form.disableField("duplicatePageSimilarities");
 
             // disable checkboxes
                 var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
@@ -781,6 +817,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             form.enableField("minTextCharacters");
             form.enableField("minTextWords");
             form.enableField("decimalsOnly");
+            form.enableField("duplicatePageSimilarities");
 
         // enabled checkboxes
             var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
@@ -802,6 +839,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** getFilteredSimilarities
   //**************************************************************************
     var getFilteredSimilarities = function(similarities, config){
+        console.log(similarities);
+        console.log("logging similarities passed, above");
+
         // create new filtered json object from the raw similarities results
         if (!config){
             console.log("config is not declared! assigning the main comparisonConfig");
@@ -810,6 +850,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var imgCount = 0;
         var textCount = 0;
         var digitCount = 0;
+        var duplicatePageCount = 0;
         var ignoredTexts = 0;
 
         var filteredSimilarities = {
@@ -836,6 +877,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     imgCount++;
                 }
                 else if (pair.type === "Common digit sequence" && config.digitSimilarities){
+                    var skip;
                     console.log(pair);
                     console.log(pair.string);
                     if (pair.string.includes(" ")){
@@ -849,12 +891,19 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         else console.log("digit spaces were allowed!");
                     }
 
-                    if (pair.string.includes(".")){
-                        console.log("this string contains a decimal!")
-                        console.log(pair.string)
-                        if (config.decimalsOnly) continue;
-                        else alert("decimal detected, and is allowed!")
-                    };
+                    if (config.decimalsOnly){
+                        if (!pair.string.includes(".")){
+                            console.log(pair.string);
+                            console.log("skipped pair above because it was missing a decimal");
+                            continue;
+                        };
+                    }
+                    // if (pair.string.includes(".")){
+                        // console.log("this string contains a decimal!")
+                        // console.log(pair.string)
+                        // if (config.decimalsOnly) continue;
+                        // else console.log("decimal detected, and is allowed!")
+                    // };
 
                     console.log(`string length is ${pair.string.length} `)
                     if (pair.string.length < config.minDigitCount){
@@ -900,6 +949,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                     filteredSimilarities.suspicious_pairs.push(pair);
                     textCount++;
+                }
+                else if (pair.type === "Duplicate page" && config.duplicatePageSimilarities) {
+                    console.log("found a duplicate page!");
+                    filteredSimilarities.suspicious_pairs.push(pair);
+                    duplicatePageCount++;
                 };
             };
 
@@ -910,6 +964,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             filteredSimilarities.textCount = textCount;
             filteredSimilarities.imgCount = imgCount;
             filteredSimilarities.digitCount = digitCount;
+            filteredSimilarities.duplicatePageCount = duplicatePageCount;
 
         console.log("total number ignored texts is "+ ignoredTexts);
         console.log(filteredSimilarities);
@@ -1153,6 +1208,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         tag.onmouseover = function(){
+            console.log(tag.string);
+            console.log("logging string of tag to console above");
             this.matchingD.highlight();
             this.matchingTag.hide();
             this.tooltip.innerText = this.type;
@@ -1252,7 +1309,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
 
-
             if (matchingImg){
                 img.matchingImg = matchingImg;
                 img.isFirstDocument = false;
@@ -1333,7 +1389,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                         tag.d = d;
                         tag.type = box.type;
-
+                        console.log(box);
+                        console.log("logging box obj above");
+                        tag.string = box.string;
 
                         img.d.push(d);
                         img.tag.push(tag);
@@ -1460,14 +1518,21 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         if (page.file_index===fileIndex && page.page===leftPage){
                             leftBox = {
                                 type: suspiciousPair.type,
+                                string: suspiciousPair.string,
                                 boxes: page.bbox
                             };
+                            page.bbox.string = suspiciousPair.string;
                         }
                         if (page.file_index===rightIndex && page.page===rightPage){
                             rightBox = {
                                 type: suspiciousPair.type,
-                                boxes: page.bbox
+                                boxes: page.bbox,
+                                string: suspiciousPair.string
                             };
+                            // page.bbox.string = suspiciousPair.string;
+                            console.log(suspiciousPair);
+                            console.log(suspiciousPair.string);
+                            console.log("logging suspicious pair object above to see options");
                         };
                     });
 
