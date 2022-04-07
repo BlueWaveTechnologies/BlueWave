@@ -113,6 +113,8 @@ public class ImportsV2 {
    */
     public static void loadLines(javaxt.io.File csvFile, Neo4J database) throws Exception {
 
+        System.out.println("\n\nLoading lines\n");
+
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
         StatusLogger statusLogger = new StatusLogger(recordCounter, null);
@@ -370,6 +372,8 @@ public class ImportsV2 {
 
         int rowID = 0;
         for (Row row : workbook.getSheetAt(0)){
+            if(row == null) break;
+
             if (rowID>0){
                 try{
 
@@ -380,7 +384,9 @@ public class ImportsV2 {
                     String entry = "";
                     String doc = "";
                     String line = "";
-                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                    Cell cell = row.getCell(header.get("Entry/DOC/Line"));
+                    if(cell == null) continue;
+                    String id = cell.getStringCellValue();
                     if (id!=null){
                         id = id.trim();
                         if (!id.isEmpty()){
@@ -965,6 +971,7 @@ public class ImportsV2 {
     public static void loadEstablishments(javaxt.io.File csvFile, Neo4J database)
     throws Exception {
 
+        System.out.println("\n\nLoading Establishments\n");
 
       //Count total records in the file
         AtomicLong totalRecords = new AtomicLong(0);
@@ -1247,7 +1254,7 @@ public class ImportsV2 {
         pool.done();
         pool.join();
 
-       System.out.println("Sheets Processed: " + sheetsProcessed.toString());
+       System.out.println("\nSheets Processed: " + sheetsProcessed.toString());
       //Clean up
         statusLogger.shutdown();
     }
@@ -1288,7 +1295,7 @@ public class ImportsV2 {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
 
 
       //Instantiate the ThreadPool
@@ -1399,7 +1406,7 @@ public class ImportsV2 {
   /** Used to update import_line nodes with exam details from an input xlsx
    */
   public static void loadExamsAsNodes(javaxt.io.File file, Neo4J database) throws Exception {
-
+      System.out.println("\n\nLoading Exams\n");
     //Start console logger
       AtomicLong recordCounter = new AtomicLong(0);
       StatusLogger statusLogger = new StatusLogger(recordCounter, null);
@@ -1509,6 +1516,7 @@ public class ImportsV2 {
       Sheet sheet = workbook.getSheet("Exam Report");
       if(sheet == null) return;
       for (Row row : sheet){
+          
           if (rowID==0){
 
             //Parse header
@@ -1526,7 +1534,9 @@ public class ImportsV2 {
                   String entry = "";
                   String doc = "";
                   String line = "";
-                  String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                  Cell cell = row.getCell(header.get("Entry/DOC/Line"));
+                  if(cell == null) continue;
+                  String id = cell.getStringCellValue();
                   if (id!=null){
                       id = id.trim();
                       if (!id.isEmpty()){
