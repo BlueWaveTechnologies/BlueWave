@@ -115,7 +115,7 @@ public class ImportsV2 {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-        // StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
 
 
       //Generate list of fields
@@ -371,7 +371,6 @@ public class ImportsV2 {
         int rowID = 0;
         for (Row row : workbook.getSheetAt(0)){
             if (rowID>0){
-                // if (rowID>452620){
                 try{
 
                     JSONObject json = new JSONObject();
@@ -519,9 +518,6 @@ public class ImportsV2 {
             }
             rowID++;
             
-
-            // TODO Remove
-            //if(rowID > 100) break;
         }
 
 
@@ -535,7 +531,7 @@ public class ImportsV2 {
 
 
       //Clean up
-        // statusLogger.shutdown();
+        statusLogger.shutdown();
 
     }
 
@@ -989,7 +985,7 @@ public class ImportsV2 {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-       // StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
+       StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
 
 
 
@@ -1188,7 +1184,6 @@ public class ImportsV2 {
                     
                   String sheetName = iter.next();
                   Sheet sheet = workbook.getSheet(sheetName);
-                //  if(sheet == null || !sheetName.equals("DII Report")) continue;
                   if(sheet == null) continue;
 
                     JSONObject jsonRowObject = null;
@@ -1254,7 +1249,7 @@ public class ImportsV2 {
 
        System.out.println("Sheets Processed: " + sheetsProcessed.toString());
       //Clean up
-        // statusLogger.shutdown();
+        statusLogger.shutdown();
     }
 
 
