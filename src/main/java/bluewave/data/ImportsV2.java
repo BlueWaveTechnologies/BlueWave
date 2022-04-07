@@ -2276,4 +2276,59 @@ public class ImportsV2 {
         }
         return name.trim();
     }
+
+    public static void entries(javaxt.io.File[] files) {
+
+        LinkedHashMap<Integer, String> hashish = new LinkedHashMap<>();
+        System.out.println("\n\nCounting unique entries... \n");
+        //Start console logger
+        // AtomicLong recordCounter = new AtomicLong(0);
+        // StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+        int totalRows = 0;
+        for(javaxt.io.File file: files) {
+            try(java.io.InputStream is = file.getInputStream()) {
+
+                Workbook workbook = StreamingReader.builder()
+                    .rowCacheSize(10)
+                    .bufferSize(4096)
+                    .open(is);
+            
+                LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+                int rowID = 0;
+                int totalRecords = 0;
+                Sheet sheet = workbook.getSheet("Entry Report");
+                if(sheet == null) continue;
+
+                for (Row row : sheet) {
+                
+                    if (rowID==0){
+                    //Parse header
+                        int idx = 0;
+                        for (Cell cell : row) {
+                            header.put(cell.getStringCellValue(), idx);
+                            idx++;
+                        }
+            
+                    } else {
+                        totalRows++;
+                        Cell cell = row.getCell(header.get("Entry/DOC/Line"));
+                        if(cell == null) continue;
+                        String id = cell.getStringCellValue();
+                        if (id!=null){
+                            id = id.trim();
+                            if (!id.isEmpty()){
+                                hashish.put(id.hashCode(), id);
+                            }
+                        }
+                    }
+                    rowID++;
+                }
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        System.out.println("\n\nFound "+ hashish.keySet().size()+" unique entries from "+  totalRows +" total entry rows. \n");
+
+    }
 }
