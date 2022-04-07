@@ -61,7 +61,7 @@ def main(filename):
                 'Common digit sequence': 'blue',
                 'Identical image': 'green',
             }
-            color = COLORS[sp['type']]
+            color = COLORS.get(sp['type'], 'black')
             # create rectangle image
             shape = [x0, y0, x1, y1]
             rect = ImageDraw.Draw(im)  

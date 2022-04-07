@@ -37,7 +37,7 @@ from pydivsufsort import divsufsort, kasai
 
 import argparse
 
-VERSION = "1.4.1"
+VERSION = "1.5.0"
 
 TEXT_SEP = '^_^'
 PAGE_SEP = '@@@'
@@ -226,6 +226,36 @@ def get_page_image_hashes(filename):
     return hashes
 
 
+def page_skip_conditions(page_text):
+    conds = [
+        'FORM FDA ' in page_text,
+        'Form FDA ' in page_text,
+        'PAPERWORK REDUCTION ACT' in page_text,
+        'PAYMENT IDENTIFICATION NUMBER' in page_text,
+        'For more assistance with Adobe Reader' in page_text,
+        '..................................................................' in page_text,
+    ]
+    return conds
+
+
+def block_skip_conditions(block_text):
+    conds = [
+        '510(k)' in block_text,
+        'New Hampshire Avenue' in block_text,
+        'ISO ' in block_text,
+        'IEC ' in block_text,
+        '..............' in block_text,
+        'Tel.:' in block_text,
+        'TEL:' in block_text,
+        'FAX:' in block_text,
+        'Fax:' in block_text,
+        '+86-' in block_text,
+        '86-519' in block_text,
+        not block_text,
+    ]
+    return conds
+
+
 def read_blocks_and_hashes(filename):
     if filename[-4:] != '.pdf':
         raise Exception('Fitz cannot read non-PDF file', filename)
@@ -239,6 +269,10 @@ def read_blocks_and_hashes(filename):
         cum_block_len = 0
         for page in doc:
             n_pages += 1
+
+            if any(page_skip_conditions(page.get_text())):
+                continue
+
             block_num = 0
             # t0 = time.time()
             # page_d = page.get_text('dict')
@@ -270,9 +304,10 @@ def read_blocks_and_hashes(filename):
                         'page_num': page.number+1,
                         'block_num': block_num,
                     }
-                    text_blocks.append(block)
-                    cum_block_len += len(block_text)
-                    block_num += 1
+                    if not any(block_skip_conditions(block_text)):
+                        text_blocks.append(block)
+                        cum_block_len += len(block_text)
+                        block_num += 1
             # print(time.time()-t0, 'other stuff')
 
     return text_blocks, image_hashes, n_pages
@@ -332,7 +367,7 @@ def get_file_data(filenames, regen_cache):
         if not blocks_text and not image_hashes and not n_pages:
             blocks_text, image_hashes, n_pages = read_blocks_and_hashes(full_filename)
 
-            blocks_text = add_ignore_to_blocks(blocks_text)
+            # blocks_text = add_ignore_to_blocks(blocks_text)
 
             # And cache the data
             with open(cached_filename, 'w') as f:
@@ -388,11 +423,11 @@ def get_digits(text):
             n_letters += 1
         elif c.isalpha():
             n_letters += 1
-    # try:
-    #     if len(text) > 10 and len(digits) / n_letters < 0.2:
-    #         return ''
-    # except ZeroDivisionError:
-    #     pass
+    try:
+        if len(text) > 10 and len(digits) / n_letters < 0.1:
+            return ''
+    except ZeroDivisionError:
+        pass
 
     return digits
 
@@ -482,13 +517,11 @@ def find_blocks_of_sus_substr(blocks, sus_start, h):
     return blocks_covered
 
 
-def get_lined_up_blocks(blocks1, blocks2, j1, j2, h):
+def get_lined_up_blocks(blocks1, blocks2, sus_str, j1, j2, h):
     """
     Inputs:
         blocks1 - list of dicts
-            blocks in text1 where the string is located
         blocks2 - list of dicts
-            blocks in text2 where the string is located
         j1 - index of occurrence in text 1
         j2 - index of occurrence in text 2
         h - length of suspicious string
@@ -513,12 +546,20 @@ def get_lined_up_blocks(blocks1, blocks2, j1, j2, h):
         block_idxs = []
         block_i = 0
         for block in blocks:
-            pages += [block['page_num']]*len(block['text'])
-            block_idxs += [block_i]*len(block['text'])
-            block_i += 1
+            too_early = block['cum_len'] + len(block['text']) < j
+            too_late = block['cum_len'] > j + h + 1
+            if too_early or too_late:
+                block_i += 1
+            else:
+                pages += [block['page_num']]*len(block['text'])
+                block_idxs += [block_i]*len(block['text'])
+                block_i += 1
         # trim
-        pad_start = j - blocks[0]['cum_len'] # How many chars until we see the sus string
-        pad_end = (blocks[-1]['cum_len'] + len(blocks[-1]['text'])) - (j+h) # Extra chars at the end
+        first_block = blocks[block_idxs[0]]
+        last_block = blocks[block_idxs[-1]]
+        pad_start = j - first_block['cum_len'] # How many chars until we see the sus string
+        pad_end = (last_block['cum_len'] + len(last_block['text'])) - (j+h) # Extra chars at the end
+
         if pad_end == 0: # because [-0] index works weirdly
             pages = pages[pad_start:]
             block_idxs = block_idxs[pad_start:]
@@ -529,10 +570,13 @@ def get_lined_up_blocks(blocks1, blocks2, j1, j2, h):
 
     pages1, block_idxs_1 = get_page_str_block_str(blocks1, j1, h)
     pages2, block_idxs_2 = get_page_str_block_str(blocks2, j2, h)
+    assert len(blocks1) > 0
     assert len(block_idxs_1) == len(block_idxs_2) # Should be same bc the common substring is same
     assert len(blocks1) >= max(block_idxs_1)
+    assert len(pages1) == len(sus_str)
 
     result = []
+    sus_str_bit = sus_str[0] # First char
     queue1 = set([block_idxs_1[0]])
     queue2 = set([block_idxs_2[0]])
     for i in range(1, len(block_idxs_1)):
@@ -543,80 +587,22 @@ def get_lined_up_blocks(blocks1, blocks2, j1, j2, h):
         both_blocks_changed = blocks1_change and blocks2_change
         any_pages_changed = page1_change or page2_change
         if both_blocks_changed or any_pages_changed:
-            result.append((list(queue1), list(queue2)))
+            result.append((list(queue1), list(queue2), sus_str_bit))
+            sus_str_bit = ''
             queue1 = set([block_idxs_1[i]])
             queue2 = set([block_idxs_2[i]])
         else:
+            sus_str_bit += sus_str[i]
             queue1.add(block_idxs_1[i])
             queue2.add(block_idxs_2[i])
 
     result2 = []
-    for idxs1, idxs2 in result:
+    for idxs1, idxs2, sus_str_bit in result:
         lblocks1 = [blocks1[i] for i in idxs1]
         lblocks2 = [blocks2[i] for i in idxs2]
-        result2.append((lblocks1, lblocks2))
+        result2.append((lblocks1, lblocks2, sus_str_bit))
 
     return result2
-
-
-def get_bboxes_by_page(sus_str, blocks1, blocks2, j1, j2, h):
-    """
-    Inputs:
-        sus_str - the suspiciuos str
-        blocks1 - list of tups (text, cum_txt_len, bbox, page_num)
-            blocks in text1 where the string is located
-        blocks2 - list of tups (text, cum_txt_len, bbox, page_num)
-            blocks in text2 where the string is located
-        j1 - index of occurrence in text 1
-        j2 - index of occurrence in text 2
-        h - length of suspicious string
-    
-    Outputs:
-        list of tups (sus_substr, page_a, bbox_a, page_b, bbox_b)
-    """
-    uniq_page_blocks = {}
-    for i in range(len(pages1)):
-        page_pair = (pages1[i], pages2[i])
-        try:
-            block_1_i = blocks1[block_idxs_1[i]]
-            block_2_i = blocks2[block_idxs_2[i]]
-            uniq_page_blocks[page_pair]['blocks1'][block_1_i] = 0
-            uniq_page_blocks[page_pair]['blocks2'][block_2_i] = 0
-            uniq_page_blocks[page_pair]['str_len'] += 1
-        except KeyError:
-            uniq_page_blocks[page_pair] = {
-                'blocks1': {block_1_i: 0},
-                'blocks2': {block_2_i: 0},
-                'str_len': 1
-            }
-
-    result = []
-    for page_pair, block_dict in uniq_page_blocks.items():
-        page_a, page_b = page_pair
-        
-        bbox_a = [box for txt, cum, box, p in block_dict['blocks1']]
-        bbox_b = [box for txt, cum, box, p in block_dict['blocks2']]
-        bbox_a = combine_bboxes(bbox_a)
-        bbox_b = combine_bboxes(bbox_b)
-
-        page_str = ''.join(txt for txt, cum, box, p in block_dict['blocks1'])
-        if sus_str in page_str:
-            result.append((sus_str, page_a, bbox_a, page_b, bbox_b))
-        elif page_str in sus_str:
-            result.append((page_str, page_a, bbox_a, page_b, bbox_b))
-        else:        
-            # Try from start
-            from_start = page_str[:block_dict['str_len']]
-            from_end = page_str[-block_dict['str_len']:]
-            if from_start in sus_str:
-                result.append((from_start, page_a, bbox_a, page_b, bbox_b))
-            elif from_end in sus_str:
-                result.append((from_end, page_a, bbox_a, page_b, bbox_b))
-            else:
-                print(page_str, sus_str, block_dict['str_len'])
-                raise Exception('Cant get substring')
-
-    return result
 
 
 def find_page_of_sus_image(pages, sus_hash):
@@ -705,12 +691,13 @@ def agglomerative_cluster_blocks(block_pairs, threshold=0.5):
     clusters = {}
     # print(m)
     for block_pair, label in zip(block_pairs, u):
-        block1, block2 = block_pair
+        block1, block2, sus_str = block_pair
         try:
-            clust_block1, clust_block2 = clusters[label]
+            clust_block1, clust_block2, clust_sus_str = clusters[label]
             new_block1 = merge_blocks([block1, clust_block1])
             new_block2 = merge_blocks([block2, clust_block2])
-            clusters[label] = (new_block1, new_block2)
+            new_sus_str = sus_str + clust_sus_str
+            clusters[label] = (new_block1, new_block2, new_sus_str)
         except KeyError:
             clusters[label] = block_pair
 
@@ -742,15 +729,15 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
             lined_up_blocks = get_lined_up_blocks(
                 data_a[f'blocks_{text_suffix}'],
                 data_b[f'blocks_{text_suffix}'],
-                j1, j2, h
+                sus_str, j1, j2, h
             )
             all_lined_up_blocks.extend(lined_up_blocks)
 
         # Merge all the lined up blocks
         merged_blocks = []
-        for line_a, line_b in all_lined_up_blocks:
+        for line_a, line_b, sus_str in all_lined_up_blocks:
             merged_blocks.append(
-                (merge_blocks(line_a), merge_blocks(line_b))
+                (merge_blocks(line_a), merge_blocks(line_b), sus_str)
             )
 
         # Intelligently combine the merged blocks
@@ -759,9 +746,9 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
         # Filter out merged blocks
         #TODO
 
-        for block0, block1 in intelligently_combined_block_pairs:
-            sus_substr = block0['text'] # Temporary
-            if len(sus_substr) <= 5:
+        for block0, block1, sus_substr in intelligently_combined_block_pairs:
+            # sus_substr = block0['text'] # Temporary
+            if len(sus_substr) <= int(min_len*0.75):
                 continue
 
             str_preview = sus_substr
@@ -785,21 +772,168 @@ def compare_texts(data_a, data_b, text_suffix, min_len, comparison_type_name):
                     },
                 ]
             }
+
             results.append(sus_result)
 
-
-            # blocks_a = find_blocks_of_sus_substr(data_a[f'blocks_{text_suffix}'], j1, h)
-            # blocks_b = find_blocks_of_sus_substr(data_b[f'blocks_{text_suffix}'], j2, h)
-
-
-
-            # combined_blocks = combine_blocks(sus_str, blocks_a, blocks_b, j1, j2, h)
-
-            # for sus_substr, blocks_a, blocks_b, bbox_a, page_b, bbox_b in combined_blocks:
-
-                # if len(sus_substr) < 5:
-                    # continue
     return results
+
+
+def find_duplicate_pages(data_a, data_b):
+    """
+    block:                     
+        block = {
+                        'text': block_text,
+                        'cum_len': cum_block_len,
+                        'bbox': bbox,
+                        'page_num': page.number+1,
+                        'block_num': block_num,
+                    }
+    """
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    def get_page_texts(blocks):
+        d = {}
+        for block in blocks:
+            l = d.get(block['page_num'], [])
+            l.append(block['text'])
+            d[block['page_num']] = l
+
+        result = [(p, ' '.join(texts)) for p, texts in d.items()]
+        return zip(*result)
+
+    ps_a, texts_a = get_page_texts(data_a['blocks_text'])
+    ps_b, texts_b = get_page_texts(data_b['blocks_text'])
+
+    vectorizer = TfidfVectorizer()
+    corpus = texts_a + texts_b
+    X = vectorizer.fit_transform(corpus)
+    m = pairwise_distances(X, X, metric='cosine')
+    np.fill_diagonal(m, 1)
+    m[np.tril_indices(len(m))] = 1
+ 
+    combined_ps = [(p, data_a['file_index']) for p in ps_a] + [(p, data_b['file_index']) for p in ps_b]
+    idxs_1, idxs_2 = np.where(m < 0.01)
+
+    pairs = [((combined_ps[i], combined_ps[j]), m[i][j]) for i, j in zip(idxs_1, idxs_2)]
+    return pairs
+
+
+def get_dup_page_results(duplicate_pages):
+    cross_pairs = [p for p in duplicate_pages if p[0][0][1] != p[0][1][1]]
+
+    results = []
+    for pair in cross_pairs:
+        tups, dist = pair
+        page1, file_index1 = tups[0]
+        page2, file_index2 = tups[1]
+        sus_result = {
+            'type': 'Duplicate page',
+            'cosine_distance': dist,
+            'pages': [
+                {
+                    'file_index': file_index1,
+                    'page': page1,
+                    'bbox': (0.01, 0.01, 0.99, 0.99),
+                }, {
+                    'file_index': file_index2, 
+                    'page': page2,
+                    'bbox': (0.01, 0.01, 0.99, 0.99),
+                },
+            ]
+        }
+        results.append(sus_result)
+
+    return results
+    
+
+def remove_duplicate_pages(file_data, duplicate_pages):
+    """
+    Rewrite the data object as if the duplicate pages didnt exist.
+
+    Image hash element: (hash_, bbox, page.number+1)
+
+    block = {
+        'text': block_text,
+        'cum_len': cum_block_len,
+        'bbox': bbox,
+        'page_num': page.number+1,
+        'block_num': block_num,
+    }
+
+    Inputs:
+        duplicate_pages - list of tups [(((page, file_index), (page_file_index)), dist), ...]
+
+    """
+    pages_to_ignore = set()
+    for pair, dist in duplicate_pages:
+        betw_files = pair[0][1] != pair[1][1]
+        if betw_files:
+            for page, file_index in pair:
+                if file_index == file_data['file_index']:
+                    pages_to_ignore.add(page)
+        else:
+            if pair[0][1] == file_data['file_index']:
+                # Add second occurrence of page
+                pages_to_ignore.add(pair[1][0])
+
+    # assert all(p < file_data['n_pages'] for p in pages_to_ignore)
+
+    new_block_num = 0
+    new_cum_len_text = 0
+    new_blocks_text = []
+    for old_block in file_data['blocks_text']:
+        if old_block['page_num'] not in pages_to_ignore:
+            # Recalculate cumulative length and block number
+            new_block = {
+                'text': old_block['text'],
+                'cum_len': new_cum_len_text,
+                'bbox': old_block['bbox'],
+                'page_num': old_block['page_num'],
+                'block_num': new_block_num,
+            }
+            new_blocks_text.append(new_block)
+            new_cum_len_text += len(new_block['text'])
+            new_block_num += 1
+            
+    new_image_hashes = [i for i in file_data['image_hashes'] if i[2] not in pages_to_ignore]
+    
+    new_blocks_digits = []
+    cum_len_digit = 0
+    for block in new_blocks_text:
+        # Create digit block
+        digit_block = {k: v for k, v in block.items()} # copy
+        digits = get_digits(block['text'])
+        digit_block['text'] = digits
+        digit_block['cum_len'] = cum_len_digit
+        cum_len_digit += len(digits)
+        new_blocks_digits.append(digit_block)
+
+    new_full_text = ''.join(b['text'] for b in new_blocks_text)
+    new_full_digits = ''.join(b['text'] for b in new_blocks_digits)
+
+    file_data_new = {
+        'path_to_file': file_data['path_to_file'],
+        'filename': file_data['filename'],
+        'file_index': file_data['file_index'],
+        'blocks_text': new_blocks_text,
+        'blocks_digits': new_blocks_digits,
+        'full_text': new_full_text,
+        'full_digits': new_full_digits,
+        'image_hashes': new_image_hashes,
+        'n_pages': file_data['n_pages'],
+    }
+
+    return file_data_new
+
+
+def get_pages_ignore(dup_page_results):
+    pages_ignore = {}
+    for result in dup_page_results:
+        for page in result['pages']:
+            l = pages_ignore.get(page['file_index'], [])
+            l.append(page['page'])
+            pages_ignore[page['file_index']] = l
+    return pages_ignore
 
 
 #-------------------------------------------------------------------------------
@@ -922,15 +1056,27 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
             a = file_data[i]
             b = file_data[j]
 
+            # Find duplicate pages and remove those from the analysis
+            if verbose: print('Finding duplicate pages...')
+            duplicate_pages = find_duplicate_pages(
+                data_a=a,
+                data_b=b
+            )
+            dup_page_results = get_dup_page_results(duplicate_pages)
+            suspicious_pairs.extend(dup_page_results)
+
+            a_new = remove_duplicate_pages(a, duplicate_pages)
+            b_new = remove_duplicate_pages(b, duplicate_pages)
+
             # Compare numbers
             if 'digits' in methods:
                 if verbose: print('Comparing digits...')
                 digit_results = compare_texts(
-                    data_a=a,
-                    data_b=b,
+                    data_a=a_new,
+                    data_b=b_new,
                     text_suffix='digits',
-                    min_len=10,
-                    comparison_type_name='Common digit sequence'
+                    min_len=20,
+                    comparison_type_name='Common digit sequence',
                 )
                 suspicious_pairs.extend(digit_results)
 
@@ -938,11 +1084,11 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
             if 'text' in methods:
                 if verbose: print('Comparing texts...')
                 text_results = compare_texts(
-                    data_a=a,
-                    data_b=b,
+                    data_a=a_new,
+                    data_b=b_new,
                     text_suffix='text',
-                    min_len=200,
-                    comparison_type_name='Common text string'
+                    min_len=300,
+                    comparison_type_name='Common text string',
                 )
                 suspicious_pairs.extend(text_results)
 
@@ -950,8 +1096,8 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
             if 'images' in methods:
                 if verbose: print('Comparing images...')
                 identical_images = compare_images(
-                    a['image_hashes'],
-                    b['image_hashes'],
+                    a_new['image_hashes'],
+                    b_new['image_hashes'],
                 )
                 any_images_are_sus = len(identical_images) > 0
                 if any_images_are_sus:
