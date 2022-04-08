@@ -272,7 +272,21 @@ public class Main {
         else if (str.equalsIgnoreCase("Establishments")){
             Neo4J database = Config.getGraph(null);
             // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
-            ImportsV2.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            // ImportsV2.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            javaxt.io.File[]files = {
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
+            };
+
+            ImportsV2.loadEstablishments(files, database);
             database.close();
         }
         else if (str.equalsIgnoreCase("Ports")){
@@ -290,7 +304,7 @@ public class Main {
         else if (str.equalsIgnoreCase("All")){
             String filePath = args.get("-path");
             Neo4J database = Config.getGraph(null);
-            ImportsV2.loadEstablishments(new javaxt.io.File(filePath), database);
+            ImportsV2.loadEstablishments(new javaxt.io.File [] {new javaxt.io.File(filePath)}, database);
 
             File file = new javaxt.io.File(filePath);
             ImportsV2 importsV2 = new ImportsV2(file);
@@ -300,20 +314,36 @@ public class Main {
             database.close();
         }else if(str.equalsIgnoreCase("UniqueEntries")) {                     
             javaxt.io.File[]files = {
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("c://Users/Mark.Sebik/Downloads/data/"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
             };
             ImportsV2.entries(files);
-
-        }else{
+        }else if(str.equalsIgnoreCase("MissingNodes")) {  
+            javaxt.io.File[]files = {
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx"),
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
+            };
+            Neo4J database = Config.getGraph(null);
+            ImportsV2.findMissingRows(files, database);
+            database.close();
+        }
+        else{
             java.io.File f = new java.io.File(str);
             if (f.isFile()) importFile(args);
             else{

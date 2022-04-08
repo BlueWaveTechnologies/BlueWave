@@ -968,11 +968,9 @@ public class ImportsV2 {
   //**************************************************************************
   //** loadEstablishments
   //**************************************************************************
-    public static void loadEstablishments(javaxt.io.File csvFile, Neo4J database)
-    throws Exception {
+    private static void _loadEstablishments(javaxt.io.File csvFile, Neo4J database, java.io.BufferedWriter errorWriter) throws Exception {
 
         System.out.println("\n\nLoading Establishments\n");
-
       //Count total records in the file
         AtomicLong totalRecords = new AtomicLong(0);
         if (true){
@@ -992,7 +990,7 @@ public class ImportsV2 {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-       StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
 
 
 
@@ -1030,10 +1028,10 @@ public class ImportsV2 {
                 String currentSheet = jsonRowObject.get("sheet").toString();
                
                 sheetsProcessed.add(currentSheet);
-
+                Long fei = null;
                 try{
                     int index = 0;
-                    Long fei = row.get(index++).toLong();
+                    fei = row.get(index++).toLong();
 
                   //Discard invalid rows with 0 value for fei
                     if(fei == null || fei == 0) return;
@@ -1051,7 +1049,10 @@ public class ImportsV2 {
                                 String[]cityStateZip = parts[3].split(",");
                                 state = cityStateZip[1].trim().split(" ")[0];
                             }
-                        }catch(Exception e){}
+                        }catch(Exception e){
+                            errorWriter.write("FEI: " + fei + " " + e.toString());
+                            errorWriter.newLine();errorWriter.newLine();
+                        }
                     } 
                     String duns = null;
                     if(currentSheet.equals("MFR Report") || currentSheet.equals("DII Report")) {
@@ -1063,14 +1064,19 @@ public class ImportsV2 {
                     String lon = null;
                     if(!currentSheet.equals("DII Report")) {
                         op_status_code = row.get(index++).toString();   
-                        lat = row.get(index++).toString();
-                        lon = row.get(index++).toString();
+                        try {
+                            lat = row.get(index++).toString();
+                            lon = row.get(index++).toString();
+                        } catch (Exception e) {
+                            errorWriter.write("FEI: " + fei + " " + e.toString());
+                            errorWriter.newLine();errorWriter.newLine();
+                        }
+                       
                     }
 
                     Session session = getSession();
-
-                    
                     Map<String, Object> params = new LinkedHashMap<>();
+
                     params.put("address", address);
                     params.put("state", (state==null?"":state));
                     if(countryCode != null && !countryCode.isEmpty()) params.put("country", countryCode);
@@ -1078,13 +1084,19 @@ public class ImportsV2 {
                     if(lon != null && !lon.isEmpty()) params.put("lon", lon);
                    
 
-                    String createAddress = getQuery("address", params);
+                    // String createAddress = getQuery("address", params);
+                    String createAddress = getUpsertQuery("address", params);
+                    
                     Long addressID;
                     try{
                         addressID = session.run(createAddress, params).single().get(0).asLong();
                     }
                     catch(Exception e){
                         addressID = getIdFromError(e);
+                        if(addressID == null) {
+                            errorWriter.write("FEI: " + fei + " " + e.toString());
+                            errorWriter.newLine();errorWriter.newLine();
+                        }
                     }
                     
 
@@ -1095,32 +1107,48 @@ public class ImportsV2 {
                     if(op_status_code != null && !op_status_code.isEmpty()) params.put("op_status_code", op_status_code);
                     
                     String createEstablishment = getEstablishmentByFEIQueryUsingSet("import_establishment", params);
-
-                    //getSession().writeTransaction( tx -> addRow( tx, createEstablishment, params ) );
-
+                   
                     Long establishmentID;
                     try{
                         establishmentID = session.run(createEstablishment, params).single().get(0).asLong();
                     }
                     catch(Exception e){
                         establishmentID = getIdFromError(e);
+                        if(establishmentID == null){
+                            errorWriter.write("FEI: " + fei + " " + e.toString());
+                            errorWriter.newLine();errorWriter.newLine();
+                        }
                     }
-
 
                     session.run("MATCH (r),(s) WHERE id(r) =" + establishmentID + " AND id(s) = " + addressID +
                     " MERGE(r)-[:has]->(s)");
 
                 }
                 catch(Exception e){
-                    e.printStackTrace();
-                    console.log(e.getMessage(), row);
+                    try {
+                        errorWriter.write("FEI: " + fei + " " + e.toString());
+                        errorWriter.newLine();errorWriter.newLine();
+                    }catch(java.io.IOException ioe) {}
                 }
 
                 recordCounter.incrementAndGet();
             }
 
+            private String getUpsertQuery(String node, Map<String, Object> params){
 
-
+                StringBuilder query = new StringBuilder("MERGE (a:" + node + " {");
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String param = it.next();
+                    query.append(param);
+                    query.append(": $");
+                    query.append(param);
+                    if (it.hasNext()) query.append(" ,");
+                }
+                query.append("}) RETURN id(a)");
+                    
+                return query.toString();
+            }
 
             private String getQuery(String node, Map<String, Object> params){
                 String key = "create_"+node;
@@ -1176,6 +1204,7 @@ public class ImportsV2 {
 
         List<String> sheets = Arrays.asList("Entry Report", "Listing Report", "MFR Report", "Shipper Report", "Importer Report", "Consignee Report", "DII Report", "Exam Report", "Sample Report", "Joint Firm Report", "Query Summary");
         HashSet<String>establishmentSheetNames = new HashSet<>(Arrays.asList("MFR Report", "Shipper Report", "Importer Report", "Consignee Report", "DII Report"));
+        // HashSet<String>establishmentSheetNames = new HashSet<>(Arrays.asList("MFR Report"));
 
         int sheetIndex = 0;
           //Parse file
@@ -1185,11 +1214,13 @@ public class ImportsV2 {
               .bufferSize(4096)     // buffer size to use when reading InputStream to file (defaults to 1024)
               .open(is);            // InputStream or File for XLSX file (required)
 
+          String sheetName = null;
+          long rowNum = 0;
           try{
                 Iterator<String>iter = establishmentSheetNames.iterator();
                 while(iter.hasNext()) {
                     
-                  String sheetName = iter.next();
+                  sheetName = iter.next();
                   Sheet sheet = workbook.getSheet(sheetName);
                   if(sheet == null) continue;
 
@@ -1197,7 +1228,9 @@ public class ImportsV2 {
                     JSONArray rowBuffer = null;
                     DataFormatter formatter = new DataFormatter();
                     boolean skippedHeaderRow = false;
+                    rowNum = 0;
                     for (Row row : sheet){
+                        rowNum++;
                         if(!skippedHeaderRow) {
                             skippedHeaderRow = true;
                             continue;
@@ -1231,32 +1264,48 @@ public class ImportsV2 {
                         jsonRowObject.set("sheet", sheetName);
                         jsonRowObject.set("row", rowBuffer);
                         pool.add(jsonRowObject);
-                  }
-              }
-          }
+                    }
+                }
+            }
           catch(Exception e){
-              e.printStackTrace();
+            errorWriter.write("Sheet: " + sheetName + " row: "+rowNum+" " + e.toString());
+            errorWriter.newLine();errorWriter.newLine();
           }
   
           workbook.close();
           is.close();
 
-      //Insert records
-        // java.io.BufferedReader reader = csvFile.getBufferedReader();
-        // String row = reader.readLine();  //skip header
-        // while ((row = reader.readLine()) != null){
-        //     pool.add(row);
-        // }
-        // reader.close();
-
-
       //Notify the pool that we have finished added records and Wait for threads to finish
         pool.done();
         pool.join();
 
-       System.out.println("\nSheets Processed: " + sheetsProcessed.toString());
+        System.out.println("\nSheets Processed: " + sheetsProcessed.toString());
       //Clean up
         statusLogger.shutdown();
+
+
+    }
+
+    public static void loadEstablishments(javaxt.io.File[] files, Neo4J database) {
+        javaxt.io.File errorLog = new javaxt.io.File("loadEstablishmentsErrors.log");
+        if(!errorLog.exists()) {
+            errorLog.create();
+        }
+        
+        try(java.io.BufferedWriter errorWriter = errorLog.getBufferedWriter("UTF-8")) {
+            javaxt.utils.Date date = new javaxt.utils.Date();
+            errorWriter.write("Begin: " + date);
+            errorWriter.newLine();errorWriter.newLine();
+            for(javaxt.io.File file : files) {
+                _loadEstablishments(file, database, errorWriter);
+            }
+            date = new javaxt.utils.Date();
+            errorWriter.newLine();
+            errorWriter.write("End: " + date);
+            errorWriter.flush();
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -2277,58 +2326,151 @@ public class ImportsV2 {
         return name.trim();
     }
 
+
+    /**
+     * Checks for duplicate rows and creates a csv containing them.
+     * @param files
+     */
     public static void entries(javaxt.io.File[] files) {
-
+        javaxt.io.File duplicatesLog = new javaxt.io.File("dups.csv");
+        if(!duplicatesLog.exists()) {
+            duplicatesLog.create();
+        }
+        
         LinkedHashMap<Integer, String> hashish = new LinkedHashMap<>();
-        System.out.println("\n\nCounting unique entries... \n");
-        //Start console logger
-        // AtomicLong recordCounter = new AtomicLong(0);
-        // StatusLogger statusLogger = new StatusLogger(recordCounter, null);
         int totalRows = 0;
-        for(javaxt.io.File file: files) {
-            try(java.io.InputStream is = file.getInputStream()) {
-
-                Workbook workbook = StreamingReader.builder()
-                    .rowCacheSize(10)
-                    .bufferSize(4096)
-                    .open(is);
+        try(java.io.BufferedWriter bWriter = duplicatesLog.getBufferedWriter("UTF-8")) {
             
-                LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
-                int rowID = 0;
-                int totalRecords = 0;
-                Sheet sheet = workbook.getSheet("Entry Report");
-                if(sheet == null) continue;
+            System.out.println("\n\nCounting unique entries... \n");
+     
+            for(javaxt.io.File file: files) {
+                bWriter.write("\nProcessing file: "+file.getName()+",\n");bWriter.flush();
+                try(java.io.InputStream is = file.getInputStream()) {
 
-                for (Row row : sheet) {
+                    Workbook workbook = StreamingReader.builder()
+                        .rowCacheSize(10)
+                        .bufferSize(4096)
+                        .open(is);
                 
-                    if (rowID==0){
-                    //Parse header
-                        int idx = 0;
-                        for (Cell cell : row) {
-                            header.put(cell.getStringCellValue(), idx);
-                            idx++;
-                        }
-            
-                    } else {
-                        totalRows++;
-                        Cell cell = row.getCell(header.get("Entry/DOC/Line"));
-                        if(cell == null) continue;
-                        String id = cell.getStringCellValue();
-                        if (id!=null){
-                            id = id.trim();
-                            if (!id.isEmpty()){
-                                hashish.put(id.hashCode(), id);
+                    LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+                    int rowID = 0;
+                    int totalRecords = 0;
+                    Sheet sheet = workbook.getSheet("Entry Report");
+                    if(sheet == null) continue;
+
+                    for (Row row : sheet) {
+                    
+                        if (rowID==0){
+                        //Parse header
+                            int idx = 0;
+                            for (Cell cell : row) {
+                                header.put(cell.getStringCellValue(), idx);
+                                idx++;
+                            }
+                
+                        } else {
+                            totalRows++;
+                            Cell cell = row.getCell(header.get("Entry/DOC/Line"));
+                            if(cell == null) continue;
+                            String id = cell.getStringCellValue();
+                            if (id!=null){
+                                id = id.trim();
+                                if (!id.isEmpty()){
+                                    if(hashish.containsKey(id.hashCode())) {
+                                        bWriter.write(id+",\n");bWriter.flush();
+                                    } else {
+                                        hashish.put(id.hashCode(), id);
+                                    }
+                                }
                             }
                         }
+                        rowID++;
                     }
-                    rowID++;
+                } catch(Exception e) {
+                    e.printStackTrace();
                 }
-            } catch(Exception e) {
-                e.printStackTrace();
             }
+        }catch(Exception e) {
+            e.printStackTrace();
         }
-
         System.out.println("\n\nFound "+ hashish.keySet().size()+" unique entries from "+  totalRows +" total entry rows. \n");
 
     }
+
+    
+    public static void findMissingRows(javaxt.io.File[] files, Neo4J database) {
+        Integer missingKeys = 0;
+        HashSet fromServer = new HashSet();
+
+        javaxt.io.File missingLog = new javaxt.io.File("missing.csv");
+        if(!missingLog.exists()) {
+            missingLog.create();
+        }
+        
+        try(java.io.BufferedWriter mWriter = missingLog.getBufferedWriter("UTF-8")) {
+        
+            try (Session session = database.getSession()) {
+                List<org.neo4j.driver.Record> uniqueKeys = session.run("MATCH (n:import_line) return n.unique_key").list();
+                System.out.println("unique keys: " + uniqueKeys.size());
+                for(org.neo4j.driver.Record keyObj : uniqueKeys) {
+                    String key = keyObj.get(0).asString().replaceAll("_","/");
+                    fromServer.add(key);
+                    //System.out.println("key: " + key);
+                }
+            }
+            
+            for(javaxt.io.File file: files) {
+                System.out.println("\n\n Comparing file: "+ file.getName()+" \n");
+                mWriter.write("\n\n Comparing file: "+ file.getName()+", \n");
+                try(java.io.InputStream is = file.getInputStream()) {
+
+                    Workbook workbook = StreamingReader.builder()
+                        .rowCacheSize(10)
+                        .bufferSize(4096)
+                        .open(is);
+                
+                    LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+                    int rowID = 0;
+                    Sheet sheet = workbook.getSheet("Entry Report");
+                    if(sheet == null) continue;
+                    JSONArray jsonArray = new JSONArray();
+                    for (Row row : sheet) {
+                    
+                        if (rowID==0){
+                        //Parse header
+                            int idx = 0;
+                            for (Cell cell : row) {
+                                header.put(cell.getStringCellValue(), idx);
+                                idx++;
+                            }
+                
+                        } else {
+                            Cell cell = row.getCell(header.get("Entry/DOC/Line"));
+                            if(cell == null) continue;
+                            String id = cell.getStringCellValue();
+                            if (id!=null){
+                                id = id.trim();
+                                if (!id.isEmpty()){
+                                    if(!fromServer.contains(id)) {
+                                        mWriter.write(id + " ,\n");
+                                        System.out.println(id+ " is missing from the server.");
+                                    }
+                                }
+                            }
+                        }
+                        rowID++;
+                    }
+
+
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            mWriter.flush();
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }
