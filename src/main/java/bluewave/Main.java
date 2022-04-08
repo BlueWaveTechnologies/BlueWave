@@ -299,6 +299,7 @@ public class Main {
             Neo4J database = Config.getGraph(null);
             // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             ImportsV2.loadExams(new javaxt.io.File(args.get("-path")), database);
+            ImportsV2.loadSamples(new javaxt.io.File(args.get("-path")), database);
             database.close();
         }
         else if (str.equalsIgnoreCase("All")){
@@ -309,8 +310,9 @@ public class Main {
             File file = new javaxt.io.File(filePath);
             ImportsV2 importsV2 = new ImportsV2(file);
             ImportsV2.loadLines(file, database);
-                  
+
             ImportsV2.loadExams(new javaxt.io.File(filePath), database);
+            ImportsV2.loadSamples(new javaxt.io.File(filePath), database);
             database.close();
         }else if(str.equalsIgnoreCase("UniqueEntries")) {
             javaxt.io.File[]files = {
