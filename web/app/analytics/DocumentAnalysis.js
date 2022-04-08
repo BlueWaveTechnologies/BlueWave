@@ -1134,7 +1134,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** showSimilarityResults
   //**************************************************************************
     var showSimilarityResults = function(doc){
-        console.log("show similarity results called");
 
         if (!similarityResults){
 
@@ -1153,20 +1152,17 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 localSort: true,
                 columns: [
                     {header: 'Similar Document', width:'100%', sortable: true},
+                    {header: 'Page Similarity', width:'120', sortable: true},
                     {header: 'Digit Similarity', width:'120', sortable: true},
                     {header: 'Text Similarity', width:'120', sortable: true},
                     {header: 'Similarities', width:'120', sortable: true}
                 ],
                 update: function(row, record){
-                    console.log(row);
-                    console.log(record);
-                    console.log("logging row and record above");
                     if (record.suspicious_pages < 1){
-                        // console.log("record showed less than 1 suspicious page! we'll ignore it");
                         row.remove();
                         return;
                     }
-                    console.log("doc analysis update function called!");
+
                     var link = document.createElement("a");
                     link.innerText = record.name;
                     link.record = record;
@@ -1179,13 +1175,10 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     div.appendChild(link);
 
                     row.set("Similar Document", div);
-
-                    console.log(record);
-                    console.log("logging returned record above ");
-                    console.log(record.suspicious_pages);
-
-                    console.log("logging records suspicious pages count above");
                     row.set("Similarities", record.suspicious_pages);
+                    row.set("Text Similarity", record.results.textCount);
+                    row.set("Digit Similarity", record.results.digitCount);
+                    row.set("Page Similarity", record.results.duplicatePageCount);
                 }
             });
 
@@ -1200,11 +1193,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                   //Create records for the grid
                     var data = [];
-                    console.log(document);
-                    console.log("logging the document above");
-                    document.similarities.forEach((similarity)=>{
-                        console.log(similarity.results);
 
+                    document.similarities.forEach((similarity)=>{
 
                       //Find "file" entry
                         var file;
@@ -1216,6 +1206,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                             return true;
                         });
 
+                        if (!documentSimilarities) createDocumentSimilaries();
 
                       //Create record
                         data.push({
@@ -1223,7 +1214,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                             name: file.filename,
                             suspicious_pages: file.n_suspicious_pages,
                             sourceID: documentID,
-                            results: similarity.results
+                            results: documentSimilarities.getFilteredResults(similarity.results)
                         });
 
                     });
@@ -1244,10 +1235,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
 
   //**************************************************************************
-  //** showDocumentSimilarities
+  //** createDocumentSimilarities
   //**************************************************************************
-    var showDocumentSimilarities = function(record){
-        console.log("show document similarities called");
+    var createDocumentSimilaries = function(){
         if (!documentSimilarities){
 
             var win = createWindow({
@@ -1264,10 +1254,20 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 show: win.show,
                 update: function(similarities){
                     docCompare.update(similarities);
+                },
+                getFilteredResults: function(results){
+                    return docCompare.getFilteredSimilarities(results);
                 }
             };
-        }
+        };
+    };
 
+
+  //**************************************************************************
+  //** showDocumentSimilarities
+  //**************************************************************************
+    var showDocumentSimilarities = function(record){
+        if (!documentSimilarities) createDocumentSimilaries();
         documentSimilarities.update(record.results);
         documentSimilarities.show();
     };

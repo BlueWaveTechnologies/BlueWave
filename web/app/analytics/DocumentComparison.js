@@ -834,6 +834,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         return editor;
     };
 
+  //**************************************************************************
+  //** this.getFilteredSimilarities
+  //**************************************************************************
+    this.getFilteredSimilarities = function(similarities){ // used by documentAnalysis for processing results information
+        return getFilteredSimilarities(similarities);
+    };
 
   //**************************************************************************
   //** getFilteredSimilarities
