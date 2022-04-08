@@ -105,7 +105,7 @@ public class Main {
                 Integer port = webConfig.get("port").toInteger();
                 addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
                 new javaxt.http.Server(addresses, 250, new WebApp(webConfig)).start();
-                
+
                 // bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
             }
         }
@@ -294,13 +294,13 @@ public class Main {
             // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             Ports.loadUSPortsofEntry(new javaxt.io.File(args.get("-path")), database);
             database.close();
-        }    
+        }
         else if (str.equalsIgnoreCase("Exams")){
             Neo4J database = Config.getGraph(null);
             // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
-            ImportsV2.loadExamsAsNodes(new javaxt.io.File(args.get("-path")), database);
+            ImportsV2.loadExams(new javaxt.io.File(args.get("-path")), database);
             database.close();
-        }     
+        }
         else if (str.equalsIgnoreCase("All")){
             String filePath = args.get("-path");
             Neo4J database = Config.getGraph(null);
@@ -308,11 +308,11 @@ public class Main {
 
             File file = new javaxt.io.File(filePath);
             ImportsV2 importsV2 = new ImportsV2(file);
-            ImportsV2.loadLines(file, database);      
+            ImportsV2.loadLines(file, database);
                   
-            ImportsV2.loadExamsAsNodes(new javaxt.io.File(filePath), database);
+            ImportsV2.loadExams(new javaxt.io.File(filePath), database);
             database.close();
-        }else if(str.equalsIgnoreCase("UniqueEntries")) {                     
+        }else if(str.equalsIgnoreCase("UniqueEntries")) {
             javaxt.io.File[]files = {
                 new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
                 new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
@@ -326,7 +326,7 @@ public class Main {
                 new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
             };
             ImportsV2.entries(files);
-        }else if(str.equalsIgnoreCase("MissingNodes")) {  
+        }else if(str.equalsIgnoreCase("MissingNodes")) {
             javaxt.io.File[]files = {
                 new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
                 new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
@@ -537,11 +537,11 @@ public class Main {
                     }
                 }
                 catch(Exception e){}
-                if (versionString==null) System.out.println("Unknown Neo4J version"); 
+                if (versionString==null) System.out.println("Unknown Neo4J version");
                 else System.out.println(versionString);
-                
-                
-                
+
+
+
                 String query = args.get("-query");
                 if (query!=null){
                     query = bluewave.queries.Index.getQuery(query, "cypher");
