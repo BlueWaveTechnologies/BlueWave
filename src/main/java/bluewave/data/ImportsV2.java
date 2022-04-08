@@ -1449,13 +1449,35 @@ public class ImportsV2 {
         statusLogger.shutdown();
     }
 
+
   //**************************************************************************
   //** loadExams
   //**************************************************************************
-  /** Used to create import_exam nodes and link them to import_line nodes
+  /** Used to load records from the "Exam Report" worksheet
    */
     public static void loadExams(javaxt.io.File xlsx, Neo4J database) throws Exception {
         System.out.println("\n\nLoading Exams\n");
+        loadActivity("Exam Report", xlsx, database);
+    }
+
+
+  //**************************************************************************
+  //** loadSamples
+  //**************************************************************************
+  /** Used to load records from the "Sample Report" worksheet
+   */
+    public static void loadSamples(javaxt.io.File xlsx, Neo4J database) throws Exception {
+        System.out.println("\n\nLoading Samples\n");
+        loadActivity("Sample Report", xlsx, database);
+    }
+
+
+  //**************************************************************************
+  //** loadActivity
+  //**************************************************************************
+  /** Used to create import_activity nodes and link them to import_line nodes
+   */
+    private static void loadActivity(String sheetName, javaxt.io.File xlsx, Neo4J database) throws Exception {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
@@ -1467,12 +1489,12 @@ public class ImportsV2 {
             session = database.getSession();
 
           //Create unique key constraint
-            try{ session.run("CREATE CONSTRAINT ON (n:import_exam) ASSERT n.unique_key IS UNIQUE"); }
+            try{ session.run("CREATE CONSTRAINT ON (n:import_activity) ASSERT n.unique_key IS UNIQUE"); }
             catch(Exception e){}
 
 
           //Create indexes
-            try{ session.run("CREATE INDEX idx_exam IF NOT EXISTS FOR (n:import_exam) ON (n.unique_key)"); }
+            try{ session.run("CREATE INDEX idx_import_activity IF NOT EXISTS FOR (n:import_activity) ON (n.unique_key)"); }
             catch(Exception e){}
 
 
@@ -1518,31 +1540,32 @@ public class ImportsV2 {
 
 
               //Add additional params
+                params.put("activity",sheetName);
                 params.put("entry",entry);
                 params.put("doc",doc);
                 params.put("line",line);
                 String foreignKey = entry+"_"+doc+"_"+line;
-                String uniqueKey = foreignKey+"_"+activityDate.toISOString();
+                String uniqueKey = sheetName.toLowerCase().replace(" ", "_")+"_"+foreignKey+"_"+activityDate.toISOString();
                 params.put("unique_key", uniqueKey);
 
 
-
+              //Create import_activity node and link to import_line
                 Session session = database.getSession();
                 try{
-                    String createExam = getQuery("import_exam", params);
-                    Long examID;
+                    String createNode = getQuery("import_activity", params);
+                    Long nodeID;
                     try{
-                        examID = session.run(createExam, params).single().get(0).asLong();
+                        nodeID = session.run(createNode, params).single().get(0).asLong();
                     }
                     catch(Exception e){
-                        examID = getIdFromError(e);
+                        nodeID = getIdFromError(e);
                     }
 
-                    session.run("MATCH (r),(s:import_line{unique_key:'" + foreignKey +"'}) WHERE id(r) =" + examID +
+                    session.run("MATCH (r),(s:import_line{unique_key:'" + foreignKey +"'}) WHERE id(r) =" + nodeID +
                     " MERGE(s)-[:has]->(r)");
                 }
                 catch(Exception e){
-                    console.log(e.getMessage(), foreignKey);
+                    console.log(e.getMessage(), uniqueKey);
                 }
                 recordCounter.incrementAndGet();
             }
@@ -1598,7 +1621,7 @@ public class ImportsV2 {
 
         int rowID = 0;
         int totalRecords = 0;
-        Sheet sheet = workbook.getSheet("Exam Report");
+        Sheet sheet = workbook.getSheet(sheetName);
         if(sheet == null) return;
         for (Row row : sheet){
 
@@ -1634,11 +1657,19 @@ public class ImportsV2 {
 
                     Map<String, Object> params = new LinkedHashMap<>();
                     String[] fields = new String[]{
+
+                      //Common fields
                         "Activity Number","Activity Description","Activity Date Time",
                         "Expected Availability Date","Sample Availability Date",
-                        "Problem Area Flag","Problem Area Description","PAC",
-                        "PAC Description","Suspected Counterfeit Reason",
-                        "Lab Classification Code","Lab Classification","Remarks","Summary"
+                        "Problem Area Flag","Problem Area Description","PAC","PAC Description",
+                        "Remarks",
+
+                      //Exam specific fields
+                        "Suspected Counterfeit Reason","Lab Classification Code","Lab Classification","Summary",
+
+                      //Sample specific fields
+                        "Sample Tracking Number	LAB CLASSIFICATION","LAB CLASSIFICATION DESCRIPTION","LAB CONCLUSION"
+
                     };
 
                     for (String field : fields){
@@ -1650,172 +1681,6 @@ public class ImportsV2 {
                         colName = colName.trim().toLowerCase();
 
                         params.put(colName, val);
-                    }
-
-
-                    pool.add(new Object[]{entry,doc,line,params});
-                    totalRecords++;
-                }
-                catch(Exception e){
-                    console.log("Failed to parse row " + rowID);
-                }
-
-            }
-            rowID++;
-        }
-
-
-    //Update statusLogger
-      statusLogger.setTotalRecords(totalRecords);
-
-
-    //Close workbook
-      workbook.close();
-      is.close();
-
-
-    //Notify the pool that we have finished added records and Wait for threads to finish
-      pool.done();
-      pool.join();
-
-
-    //Clean up
-      statusLogger.shutdown();
-  }
-
-
-  //**************************************************************************
-  //** loadSamples
-  //**************************************************************************
-  /** Used to update import_line nodes with sample details from an input xlsx
-   */
-    public static void loadSamples(javaxt.io.File file, Neo4J database) throws Exception {
-
-      //Start console logger
-        AtomicLong recordCounter = new AtomicLong(0);
-        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
-
-
-      //Instantiate the ThreadPool
-        ThreadPool pool = new ThreadPool(20, 1000){
-            public void process(Object obj){
-                Object[] arr = (Object[]) obj;
-                String entry = (String) arr[0];
-                String doc = (String) arr[1];
-                String line = (String) arr[2];
-                Map<String, Object> params = (Map<String, Object>) arr[3];
-
-
-
-                String node = "import_line";
-                StringBuilder query = new StringBuilder();
-                query.append("MATCH (n:" + node + ") WHERE ");
-                query.append("n.entry='" + entry + "' AND ");
-                query.append("n.doc='" + doc + "' AND ");
-                query.append("n.line='" + line + "' ");
-                query.append("SET n+= {");
-
-
-                Iterator<String> it = params.keySet().iterator();
-                while (it.hasNext()){
-                    String key = it.next();
-                    query.append(key);
-                    query.append(": $");
-                    query.append(key);
-                    if (it.hasNext()) query.append(", ");
-                }
-
-                query.append("}");
-
-                try{
-                    getSession().run(query.toString(), params);
-                }
-                catch(Exception e){
-                    console.log(e.getMessage());
-                }
-
-
-
-                recordCounter.incrementAndGet();
-            }
-
-
-            private Session getSession() throws Exception {
-                Session session = (Session) get("session");
-                if (session==null){
-                    session = database.getSession(false);
-                    set("session", session);
-                }
-                return session;
-            }
-
-            public void exit(){
-                Session session = (Session) get("session");
-                if (session!=null){
-                    session.close();
-                }
-            }
-        }.start();
-
-
-
-
-        java.io.InputStream is = file.getInputStream();
-        Workbook workbook = StreamingReader.builder()
-            .rowCacheSize(10)
-            .bufferSize(4096)
-            .open(is);
-
-        LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
-
-        int rowID = 0;
-        int totalRecords = 0;
-        for (Row row : workbook.getSheetAt(1)){
-            if (rowID==0){
-
-              //Parse header
-                int idx = 0;
-                for (Cell cell : row) {
-                    header.put(cell.getStringCellValue(), idx);
-                    idx++;
-                }
-
-            }
-            else{
-                try{
-
-                  //Get entry
-                    String entry = "";
-                    String doc = "";
-                    String line = "";
-                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
-                    if (id!=null){
-                        id = id.trim();
-                        if (!id.isEmpty()){
-                            String[] arr = id.split("/");
-                            if (arr.length>0) entry = arr[0];
-                            if (arr.length>1) doc = arr[1];
-                            if (arr.length>2) line = arr[2];
-                        }
-                    }
-
-
-                    Map<String, Object> params = new LinkedHashMap<>();
-
-                    String[] fields = new String[]{
-                        "Sample Lab Classification"
-                    };
-
-                    for (String field : fields){
-                        String val = row.getCell(header.get(field)).getStringCellValue();
-
-                        String colName = field;
-                        while (colName.contains("  ")) colName = colName.replace("  ", " ");
-                        colName = colName.toLowerCase().replace(" ", "_");
-                        colName = colName.trim().toLowerCase();
-
-                        params.put(colName, val);
-
                     }
 
 
