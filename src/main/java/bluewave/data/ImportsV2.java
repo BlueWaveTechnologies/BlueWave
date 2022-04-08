@@ -246,7 +246,7 @@ public class ImportsV2 {
                 }
                 if (nodeID==null) return;
 
-            
+
 
 
                 for (String establishmentType : establishmentTypes){
@@ -300,13 +300,13 @@ public class ImportsV2 {
                             if(pairs.length == 2)  params.put(pairs[0].contains("#") ? pairs[0].replaceAll("#","").trim().toLowerCase() : pairs[0].trim().toLowerCase(), pairs[1].trim());
                         }
                     }
-                
 
-               
+
+
                     if(params.size() > 0) {
                         Long affirmationId;
                         String createAffirmations = getAffirmationsQuery("import_affirmation", params);
-                        
+
                         try{
                             affirmationId = getSession().run(createAffirmations, params).single().get(0).asLong();
                         }
@@ -321,7 +321,7 @@ public class ImportsV2 {
                         }catch(Exception e) {
                             e.printStackTrace();
                         }
-                    }   
+                    }
                 }
 
 
@@ -340,9 +340,9 @@ public class ImportsV2 {
                     if (it.hasNext()) query.append(" ,");
                 }
                 query.append("}) RETURN id(a)");
-                return query.toString();  
+                return query.toString();
             }
-  
+
 
             private Session getSession() throws Exception {
                 Session session = (Session) get("session");
@@ -404,14 +404,11 @@ public class ImportsV2 {
                   //Get date
                     String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
                     if (date!=null) date = date.trim();
-                    if (date.isEmpty()) date = row.getCell(header.get("Submission Date")).getStringCellValue();
-                    String[]d = date.split("/");
-                    String year = d[2];
-                    String month = d[0];
-                    String day = d[1];
-                    if (month.length()==1) month = "0"+month;
-                    if (day.length()==1) day = "0"+day;
-                    date = year + "-" + month + "-" + day;
+                    if (date==null || date.isEmpty()){ 
+                        date = row.getCell(header.get("Submission Date")).getStringCellValue();
+                        if (date!=null) date = date.trim();
+                    }
+                    date = getShortDate(date);
                     json.set("date",date);
 
 
@@ -422,7 +419,7 @@ public class ImportsV2 {
 
                   // Port of entry district
                     json.set("port_entry_district_code", row.getCell(header.get("Port of Entry Distrct Abrvtn")).getStringCellValue());
-                  
+
 
                   //Unladed Thru Port Code
                     String thruPort = row.getCell(header.get("Unladed Thru Port Code")).getStringCellValue();
@@ -523,7 +520,7 @@ public class ImportsV2 {
 
             }
             rowID++;
-            
+
         }
 
 
@@ -1028,7 +1025,7 @@ public class ImportsV2 {
                 JSONObject jsonRowObject = (JSONObject) obj;
                 JSONArray row = jsonRowObject.get("row").toJSONArray();
                 String currentSheet = jsonRowObject.get("sheet").toString();
-               
+
                 sheetsProcessed.add(currentSheet);
                 Long fei = null;
                 try{
@@ -1060,17 +1057,17 @@ public class ImportsV2 {
                             errorWriter.write("FEI: " + fei + " " + e.toString());
                             errorWriter.newLine();errorWriter.newLine();
                         }
-                    } 
+                    }
                     String duns = null;
                     if(currentSheet.equals("MFR Report") || currentSheet.equals("DII Report")) {
                         duns = row.get(index++).toString();
                     }
-  
+
                     String op_status_code = null;
                     String lat = null;
                     String lon = null;
                     if(!currentSheet.equals("DII Report")) {
-                        op_status_code = row.get(index++).toString();   
+                        op_status_code = row.get(index++).toString();
                         try {
                             lat = row.get(index++).toString();
                             lon = row.get(index++).toString();
@@ -1078,7 +1075,7 @@ public class ImportsV2 {
                             errorWriter.write("FEI: " + fei + " " + e.toString());
                             errorWriter.newLine();errorWriter.newLine();
                         }
-                       
+
                     }
 
                     Session session = getSession();
@@ -1089,11 +1086,11 @@ public class ImportsV2 {
                     if(countryCode != null && !countryCode.isEmpty()) params.put("country", countryCode);
                     if(lat != null && !lat.isEmpty()) params.put("lat", lat);
                     if(lon != null && !lon.isEmpty()) params.put("lon", lon);
-                   
+
 
                     // String createAddress = getQuery("address", params);
                     String createAddress = getUpsertQuery("address", params);
-                    
+
                     Long addressID;
                     try{
                         addressID = session.run(createAddress, params).single().get(0).asLong();
@@ -1105,16 +1102,16 @@ public class ImportsV2 {
                             errorWriter.newLine();errorWriter.newLine();
                         }
                     }
-                    
+
 
                     params = new LinkedHashMap<>();
                     params.put("fei", fei);
                     params.put("name", name);
                     if(duns != null && !duns.isEmpty()) params.put("duns", duns);
                     if(op_status_code != null && !op_status_code.isEmpty()) params.put("op_status_code", op_status_code);
-                    
+
                     String createEstablishment = getEstablishmentByFEIQueryUsingSet("import_establishment", params);
-                   
+
                     Long establishmentID;
                     try{
                         establishmentID = session.run(createEstablishment, params).single().get(0).asLong();
@@ -1153,7 +1150,7 @@ public class ImportsV2 {
                     if (it.hasNext()) query.append(" ,");
                 }
                 query.append("}) RETURN id(a)");
-                    
+
                 return query.toString();
             }
 
@@ -1178,7 +1175,7 @@ public class ImportsV2 {
             }
 
             private String getEstablishmentByFEIQueryUsingSet(String node, Map<String, Object> params){
-                
+
                 StringBuilder query = new StringBuilder("MERGE (a:" + node + " { fei: $fei}) SET a += {");
                 Iterator<String> it = params.keySet().iterator();
                 while (it.hasNext()){
@@ -1190,7 +1187,7 @@ public class ImportsV2 {
                 }
                 query.append("} RETURN id(a)");
                 return query.toString();
-            }            
+            }
 
             private Session getSession() throws Exception {
                 Session session = (Session) get("session");
@@ -1226,7 +1223,7 @@ public class ImportsV2 {
           try{
                 Iterator<String>iter = establishmentSheetNames.iterator();
                 while(iter.hasNext()) {
-                    
+
                   sheetName = iter.next();
                   Sheet sheet = workbook.getSheet(sheetName);
                   if(sheet == null) continue;
@@ -1265,9 +1262,9 @@ public class ImportsV2 {
                             }
                             else if(cell.getCellType() == CellType.STRING) {
                                rowBuffer.add(cell.getStringCellValue());
-                            }                                                                                                                
+                            }
                         }
-                       
+
                         jsonRowObject.set("sheet", sheetName);
                         jsonRowObject.set("row", rowBuffer);
                         pool.add(jsonRowObject);
@@ -1279,7 +1276,7 @@ public class ImportsV2 {
             errorWriter.write("Sheet: " + sheetName + " row: "+rowNum+" " + e.toString());
             errorWriter.newLine();errorWriter.newLine();
           }
-  
+
           workbook.close();
           is.close();
 
@@ -1312,7 +1309,7 @@ public class ImportsV2 {
         if(!errorLog.exists()) {
             errorLog.create();
         }
-        
+
         try(java.io.BufferedWriter errorWriter = errorLog.getBufferedWriter("UTF-8")) {
             javaxt.utils.Date date = new javaxt.utils.Date();
             errorWriter.write("Begin: " + date);
@@ -1504,391 +1501,60 @@ public class ImportsV2 {
         statusLogger.shutdown();
     }
 
-  //**************************************************************************
-  //** loadExamsAsNodes
-  //**************************************************************************
-  /** Used to update import_line nodes with exam details from an input xlsx
-   */
-  public static void loadExamsAsNodes(javaxt.io.File file, Neo4J database) throws Exception {
-      System.out.println("\n\nLoading Exams\n");
-    //Start console logger
-      AtomicLong recordCounter = new AtomicLong(0);
-      StatusLogger statusLogger = new StatusLogger(recordCounter, null);
-
-      
-      Session session = null;
-      try{
-          session = database.getSession();
-
-        //Create unique key constraint
-          try{ session.run("CREATE CONSTRAINT ON (n:import_exam) ASSERT n.exam_key IS UNIQUE"); }
-          catch(Exception e){}
-
-
-        //Create indexes
-          try{ session.run("CREATE INDEX idx_exam IF NOT EXISTS FOR (n:import_exam) ON (n.exam_key)"); }
-          catch(Exception e){}
-
-
-          session.close();
-      }
-      catch(Exception e){
-          if (session!=null) session.close();
-      }
-
-    //Instantiate the ThreadPool
-      ThreadPool pool = new ThreadPool(20, 1000){
-          public void process(Object obj){
-              Object[] arr = (Object[]) obj;
-              String entry = (String) arr[0];
-              String doc = (String) arr[1];
-              String line = (String) arr[2];
-              String importEntryKey = entry+"_"+doc+"_"+line;
-              Map<String, Object> params = (Map<String, Object>) arr[3];
-              
-              Session session = database.getSession();
-            try{
-                String createExam = getQuery("import_exam", params);
-                Long examID;
-                try{
-                    examID = session.run(createExam, params).single().get(0).asLong();
-                }
-                catch(Exception e){
-                    examID = getIdFromError(e);  
-                }
-
-                session.run("MATCH (r),(s:import_line{unique_key:'" + importEntryKey +"'}) WHERE id(r) =" + examID + 
-                " MERGE(s)-[:has]->(r)");
-            }
-            catch(Exception e){
-                e.printStackTrace();
-                console.log(e.getMessage(), importEntryKey);
-            }
-            recordCounter.incrementAndGet();
-          }
-
-          private String getQuery(String node, Map<String, Object> params){
-            String key = "create_"+node;
-            String q = (String) get(key);
-            if (q==null){
-                StringBuilder query = new StringBuilder("CREATE (a:" + node + " {");
-                Iterator<String> it = params.keySet().iterator();
-                while (it.hasNext()){
-                    String param = it.next();
-                    query.append(param);
-                    query.append(": $");
-                    query.append(param);
-                    if (it.hasNext()) query.append(" ,");
-                }
-                query.append("}) RETURN id(a)");
-                q = query.toString();
-                set(key, q);
-            }
-            return q;
-        }
-
-          private Session getSession() throws Exception {
-              Session session = (Session) get("session");
-              if (session==null){
-                  session = database.getSession(false);
-                  set("session", session);
-              }
-              return session;
-          }
-
-          public void exit(){
-              Session session = (Session) get("session");
-              if (session!=null){
-                  session.close();
-              }
-          }
-      }.start();
-
-
-
-
-      java.io.InputStream is = file.getInputStream();
-      Workbook workbook = StreamingReader.builder()
-          .rowCacheSize(10)
-          .bufferSize(4096)
-          .open(is);
-
-      LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
-
-      int rowID = 0;
-      int totalRecords = 0;
-      Sheet sheet = workbook.getSheet("Exam Report");
-      if(sheet == null) return;
-      for (Row row : sheet){
-          
-          if (rowID==0){
-
-            //Parse header
-              int idx = 0;
-              for (Cell cell : row) {
-                  header.put(cell.getStringCellValue(), idx);
-                  idx++;
-              }
-
-          }
-          else{
-              try{
-
-                //Get entry
-                  String entry = "";
-                  String doc = "";
-                  String line = "";
-                  Cell cell = row.getCell(header.get("Entry/DOC/Line"));
-                  if(cell == null) continue;
-                  String id = cell.getStringCellValue();
-                  if (id!=null){
-                      id = id.trim();
-                      if (!id.isEmpty()){
-                          String[] arr = id.split("/");
-                          if (arr.length>0) entry = arr[0];
-                          if (arr.length>1) doc = arr[1];
-                          if (arr.length>2) line = arr[2];
-                      }
-                  }
-
-                  Map<String, Object> params = new LinkedHashMap<>();
-                  String importEntryKey = entry+"_"+doc+"_"+line;
-                  params.put("import_entry_key", importEntryKey);
-
-                  String activityNumber = row.getCell(header.get("Activity Number")).getStringCellValue();
-                  String examKey = entry+"_"+doc+"_"+line+"_"+activityNumber;
-                  params.put("exam_key", examKey);
-
-                  String[] fields = new String[]{
-                      "Activity Description","Activity Date Time",
-                      "Expected Availability Date","Sample Availability Date",
-                      "Problem Area Flag","Problem Area Description","PAC",
-                      "PAC Description","Suspected Counterfeit Reason",
-                      "Lab Classification Code","Lab Classification","Remarks","Summary"
-                  };
-
-                  for (String field : fields){
-                      String val = row.getCell(header.get(field)).getStringCellValue();
-
-                      String colName = field;
-                      while (colName.contains("  ")) colName = colName.replace("  ", " ");
-                      colName = colName.toLowerCase().replace(" ", "_");
-                      colName = colName.trim().toLowerCase();
-
-                      params.put(colName, val);
-                  }
-
-
-                  pool.add(new Object[]{entry,doc,line,params});
-                  totalRecords++;
-              }
-              catch(Exception e){
-                  console.log("Failed to parse row " + rowID);
-              }
-
-          }
-          rowID++;
-      }
-
-
-    //Update statusLogger
-      statusLogger.setTotalRecords(totalRecords);
-
-
-    //Close workbook
-      workbook.close();
-      is.close();
-
-
-    //Notify the pool that we have finished added records and Wait for threads to finish
-      pool.done();
-      pool.join();
-
-
-    //Clean up
-      statusLogger.shutdown();
-  }
-
 
   //**************************************************************************
   //** loadExams
   //**************************************************************************
-  /** Used to update import_line nodes with exam details from an input xlsx
+  /** Used to load records from the "Exam Report" worksheet
    */
-    public static void loadExams(javaxt.io.File file, Neo4J database) throws Exception {
-
-      //Start console logger
-        AtomicLong recordCounter = new AtomicLong(0);
-        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
-
-
-      //Instantiate the ThreadPool
-        ThreadPool pool = new ThreadPool(20, 1000){
-            public void process(Object obj){
-                Object[] arr = (Object[]) obj;
-                String entry = (String) arr[0];
-                String doc = (String) arr[1];
-                String line = (String) arr[2];
-                Map<String, Object> params = (Map<String, Object>) arr[3];
-
-
-
-                String node = "import_line";
-                StringBuilder query = new StringBuilder();
-                query.append("MATCH (n:" + node + ") WHERE ");
-                query.append("n.entry='" + entry + "' AND ");
-                query.append("n.doc='" + doc + "' AND ");
-                query.append("n.line='" + line + "' ");
-                query.append("SET n+= {");
-
-
-                Iterator<String> it = params.keySet().iterator();
-                while (it.hasNext()){
-                    String key = it.next();
-                    query.append(key);
-                    query.append(": $");
-                    query.append(key);
-                    if (it.hasNext()) query.append(", ");
-                }
-
-                query.append("}");
-
-                try{
-                    getSession().run(query.toString(), params);
-                }
-                catch(Exception e){
-                    console.log(e.getMessage());
-                }
-
-
-
-                recordCounter.incrementAndGet();
-            }
-
-
-            private Session getSession() throws Exception {
-                Session session = (Session) get("session");
-                if (session==null){
-                    session = database.getSession(false);
-                    set("session", session);
-                }
-                return session;
-            }
-
-            public void exit(){
-                Session session = (Session) get("session");
-                if (session!=null){
-                    session.close();
-                }
-            }
-        }.start();
-
-
-
-
-        java.io.InputStream is = file.getInputStream();
-        Workbook workbook = StreamingReader.builder()
-            .rowCacheSize(10)
-            .bufferSize(4096)
-            .open(is);
-
-        LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
-
-        int rowID = 0;
-        int totalRecords = 0;
-        for (Row row : workbook.getSheetAt(0)){
-            if (rowID==0){
-
-              //Parse header
-                int idx = 0;
-                for (Cell cell : row) {
-                    header.put(cell.getStringCellValue(), idx);
-                    idx++;
-                }
-
-            }
-            else{
-                try{
-
-                  //Get entry
-                    String entry = "";
-                    String doc = "";
-                    String line = "";
-                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
-                    if (id!=null){
-                        id = id.trim();
-                        if (!id.isEmpty()){
-                            String[] arr = id.split("/");
-                            if (arr.length>0) entry = arr[0];
-                            if (arr.length>1) doc = arr[1];
-                            if (arr.length>2) line = arr[2];
-                        }
-                    }
-
-
-                    Map<String, Object> params = new LinkedHashMap<>();
-
-                    String[] fields = new String[]{
-                        "Activity Number","Activity Description","Activity Date",
-                        "Expected Availability Date","Sample Availability Date",
-                        "Problem Area Flag","Problem Area Description","PAC",
-                        "PAC Description","Suspected Counterfeit Reason",
-                        "Lab Classification Code","Lab Classification","Remarks","Summary"
-                    };
-
-                    for (String field : fields){
-                        String val = row.getCell(header.get(field)).getStringCellValue();
-
-                        String colName = field;
-                        while (colName.contains("  ")) colName = colName.replace("  ", " ");
-                        colName = colName.toLowerCase().replace(" ", "_");
-                        colName = colName.trim().toLowerCase();
-
-                        params.put(colName, val);
-                    }
-
-
-                    pool.add(new Object[]{entry,doc,line,params});
-                    totalRecords++;
-                }
-                catch(Exception e){
-                    console.log("Failed to parse row " + rowID);
-                }
-
-            }
-            rowID++;
-        }
-
-
-      //Update statusLogger
-        statusLogger.setTotalRecords(totalRecords);
-
-
-      //Close workbook
-        workbook.close();
-        is.close();
-
-
-      //Notify the pool that we have finished added records and Wait for threads to finish
-        pool.done();
-        pool.join();
-
-
-      //Clean up
-        statusLogger.shutdown();
+    public static void loadExams(javaxt.io.File xlsx, Neo4J database) throws Exception {
+        System.out.println("\n\nLoading Exams\n");
+        loadActivity("Exam Report", xlsx, database);
     }
 
 
   //**************************************************************************
   //** loadSamples
   //**************************************************************************
-  /** Used to update import_line nodes with sample details from an input xlsx
+  /** Used to load records from the "Sample Report" worksheet
    */
-    public static void loadSamples(javaxt.io.File file, Neo4J database) throws Exception {
+    public static void loadSamples(javaxt.io.File xlsx, Neo4J database) throws Exception {
+        System.out.println("\n\nLoading Samples\n");
+        loadActivity("Sample Report", xlsx, database);
+    }
+
+
+  //**************************************************************************
+  //** loadActivity
+  //**************************************************************************
+  /** Used to create import_activity nodes and link them to import_line nodes
+   */
+    private static void loadActivity(String sheetName, javaxt.io.File xlsx, Neo4J database) throws Exception {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
         StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+
+        Session session = null;
+        try{
+            session = database.getSession();
+
+          //Create unique key constraint
+            try{ session.run("CREATE CONSTRAINT ON (n:import_activity) ASSERT n.unique_key IS UNIQUE"); }
+            catch(Exception e){}
+
+
+          //Create indexes
+            try{ session.run("CREATE INDEX idx_import_activity IF NOT EXISTS FOR (n:import_activity) ON (n.unique_key)"); }
+            catch(Exception e){}
+
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }
 
 
       //Instantiate the ThreadPool
@@ -1901,39 +1567,83 @@ public class ImportsV2 {
                 Map<String, Object> params = (Map<String, Object>) arr[3];
 
 
-
-                String node = "import_line";
-                StringBuilder query = new StringBuilder();
-                query.append("MATCH (n:" + node + ") WHERE ");
-                query.append("n.entry='" + entry + "' AND ");
-                query.append("n.doc='" + doc + "' AND ");
-                query.append("n.line='" + line + "' ");
-                query.append("SET n+= {");
-
-
-                Iterator<String> it = params.keySet().iterator();
-                while (it.hasNext()){
-                    String key = it.next();
-                    query.append(key);
-                    query.append(": $");
-                    query.append(key);
-                    if (it.hasNext()) query.append(", ");
+              //Parse/update activity date
+                javaxt.utils.Date activityDate = null;
+                try{
+                    String key = getKey("Activity Date Time");
+                    activityDate = new javaxt.utils.Date(params.get(key).toString());
+                    params.put(key, activityDate.toISOString());
+                }
+                catch(Exception e){}
+                if (activityDate==null){
+                    console.log("Missing Activity Date Time for row " + entry+"/"+doc+"/"+line);
+                    return;
                 }
 
-                query.append("}");
 
+              //Parse/update other dates
+                for (String key : new String[]{"Expected Availability Date","Sample Availability Date"}){
+                    try{
+                        key = getKey(key);
+                        String date = getShortDate(params.get(key).toString());
+                        params.put(key, date);
+                    }
+                    catch(Exception e){}
+                }
+
+
+
+              //Add additional params
+                params.put("activity",sheetName);
+                params.put("entry",entry);
+                params.put("doc",doc);
+                params.put("line",line);
+                String foreignKey = entry+"_"+doc+"_"+line;
+                String uniqueKey = sheetName.toLowerCase().replace(" ", "_")+"_"+foreignKey+"_"+activityDate.toISOString();
+                params.put("unique_key", uniqueKey);
+
+
+              //Create import_activity node and link to import_line
+                Session session = database.getSession();
                 try{
-                    getSession().run(query.toString(), params);
+                    String createNode = getQuery("import_activity", params);
+                    Long nodeID;
+                    try{
+                        nodeID = session.run(createNode, params).single().get(0).asLong();
+                    }
+                    catch(Exception e){
+                        nodeID = getIdFromError(e);
+                    }
+
+                    session.run("MATCH (r),(s:import_line{unique_key:'" + foreignKey +"'}) WHERE id(r) =" + nodeID +
+                    " MERGE(s)-[:has]->(r)");
                 }
                 catch(Exception e){
-                    console.log(e.getMessage());
+                    console.log(e.getMessage(), uniqueKey);
                 }
-
-
-
                 recordCounter.incrementAndGet();
             }
 
+
+            private String getQuery(String node, Map<String, Object> params){
+                String key = "create_"+node;
+                String q = (String) get(key);
+                if (q==null){
+                    StringBuilder query = new StringBuilder("CREATE (a:" + node + " {");
+                    Iterator<String> it = params.keySet().iterator();
+                    while (it.hasNext()){
+                        String param = it.next();
+                        query.append(param);
+                        query.append(": $");
+                        query.append(param);
+                        if (it.hasNext()) query.append(" ,");
+                    }
+                    query.append("}) RETURN id(a)");
+                    q = query.toString();
+                    set(key, q);
+                }
+                return q;
+            }
 
             private Session getSession() throws Exception {
                 Session session = (Session) get("session");
@@ -1955,7 +1665,7 @@ public class ImportsV2 {
 
 
 
-        java.io.InputStream is = file.getInputStream();
+        java.io.InputStream is = xlsx.getInputStream();
         Workbook workbook = StreamingReader.builder()
             .rowCacheSize(10)
             .bufferSize(4096)
@@ -1965,7 +1675,10 @@ public class ImportsV2 {
 
         int rowID = 0;
         int totalRecords = 0;
-        for (Row row : workbook.getSheetAt(1)){
+        Sheet sheet = workbook.getSheet(sheetName);
+        if(sheet == null) return;
+        for (Row row : sheet){
+
             if (rowID==0){
 
               //Parse header
@@ -1983,7 +1696,9 @@ public class ImportsV2 {
                     String entry = "";
                     String doc = "";
                     String line = "";
-                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
+                    Cell cell = row.getCell(header.get("Entry/DOC/Line"));
+                    if(cell == null) continue;
+                    String id = cell.getStringCellValue();
                     if (id!=null){
                         id = id.trim();
                         if (!id.isEmpty()){
@@ -1994,23 +1709,36 @@ public class ImportsV2 {
                         }
                     }
 
-
                     Map<String, Object> params = new LinkedHashMap<>();
-
                     String[] fields = new String[]{
-                        "Sample Lab Classification"
+
+                      //Common fields
+                        "Activity Number","Activity Description","Activity Date Time",
+                        "Expected Availability Date","Sample Availability Date",
+                        "Problem Area Flag","Problem Area Description","PAC","PAC Description",
+                        "Remarks",
+
+                      //Exam specific fields
+                        "Suspected Counterfeit Reason","Lab Classification Code","Lab Classification","Summary",
+
+                      //Sample specific fields
+                        "Sample Tracking Number	LAB CLASSIFICATION","LAB CLASSIFICATION DESCRIPTION","LAB CONCLUSION"
+
                     };
 
                     for (String field : fields){
-                        String val = row.getCell(header.get(field)).getStringCellValue();
+                        try{
+                            String val = row.getCell(header.get(field)).getStringCellValue();
 
-                        String colName = field;
-                        while (colName.contains("  ")) colName = colName.replace("  ", " ");
-                        colName = colName.toLowerCase().replace(" ", "_");
-                        colName = colName.trim().toLowerCase();
+                            String colName = field;
+                            while (colName.contains("  ")) colName = colName.replace("  ", " ");
+                            colName = colName.toLowerCase().replace(" ", "_");
+                            colName = colName.trim().toLowerCase();
 
-                        params.put(colName, val);
-
+                            params.put(colName, val);
+                        }
+                        catch(Exception e){
+                        }
                     }
 
 
@@ -2391,13 +2119,13 @@ public class ImportsV2 {
         if(!duplicatesLog.exists()) {
             duplicatesLog.create();
         }
-        
+
         LinkedHashMap<Integer, String> hashish = new LinkedHashMap<>();
         int totalRows = 0;
         try(java.io.BufferedWriter bWriter = duplicatesLog.getBufferedWriter("UTF-8")) {
-            
+
             System.out.println("\n\nCounting unique entries... \n");
-     
+
             for(javaxt.io.File file: files) {
                 bWriter.write("\nProcessing file: "+file.getName()+",\n");bWriter.flush();
                 try(java.io.InputStream is = file.getInputStream()) {
@@ -2406,7 +2134,7 @@ public class ImportsV2 {
                         .rowCacheSize(10)
                         .bufferSize(4096)
                         .open(is);
-                
+
                     LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
                     int rowID = 0;
                     int totalRecords = 0;
@@ -2414,7 +2142,7 @@ public class ImportsV2 {
                     if(sheet == null) continue;
 
                     for (Row row : sheet) {
-                    
+
                         if (rowID==0){
                         //Parse header
                             int idx = 0;
@@ -2422,7 +2150,7 @@ public class ImportsV2 {
                                 header.put(cell.getStringCellValue(), idx);
                                 idx++;
                             }
-                
+
                         } else {
                             totalRows++;
                             Cell cell = row.getCell(header.get("Entry/DOC/Line"));
@@ -2452,7 +2180,7 @@ public class ImportsV2 {
 
     }
 
-    
+
     public static void findMissingRows(javaxt.io.File[] files, Neo4J database) {
         Integer missingKeys = 0;
         HashSet fromServer = new HashSet();
@@ -2461,9 +2189,9 @@ public class ImportsV2 {
         if(!missingLog.exists()) {
             missingLog.create();
         }
-        
+
         try(java.io.BufferedWriter mWriter = missingLog.getBufferedWriter("UTF-8")) {
-        
+
             try (Session session = database.getSession()) {
                 List<org.neo4j.driver.Record> uniqueKeys = session.run("MATCH (n:import_line) return n.unique_key").list();
                 System.out.println("unique keys: " + uniqueKeys.size());
@@ -2473,7 +2201,7 @@ public class ImportsV2 {
                     //System.out.println("key: " + key);
                 }
             }
-            
+
             for(javaxt.io.File file: files) {
                 System.out.println("\n\n Comparing file: "+ file.getName()+" \n");
                 mWriter.write("\n\n Comparing file: "+ file.getName()+", \n");
@@ -2483,14 +2211,14 @@ public class ImportsV2 {
                         .rowCacheSize(10)
                         .bufferSize(4096)
                         .open(is);
-                
+
                     LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
                     int rowID = 0;
                     Sheet sheet = workbook.getSheet("Entry Report");
                     if(sheet == null) continue;
                     JSONArray jsonArray = new JSONArray();
                     for (Row row : sheet) {
-                    
+
                         if (rowID==0){
                         //Parse header
                             int idx = 0;
@@ -2498,7 +2226,7 @@ public class ImportsV2 {
                                 header.put(cell.getStringCellValue(), idx);
                                 idx++;
                             }
-                
+
                         } else {
                             Cell cell = row.getCell(header.get("Entry/DOC/Line"));
                             if(cell == null) continue;
@@ -2528,4 +2256,24 @@ public class ImportsV2 {
     }
 
 
+
+    private static String getShortDate(String date){
+        date = date.trim();
+        String[] d = date.split("/");
+        String year = d[2];
+        String month = d[0];
+        String day = d[1];
+        if (month.length()==1) month = "0"+month;
+        if (day.length()==1) day = "0"+day;
+        return year + "-" + month + "-" + day;
+    }
+
+
+    private static String getKey(String field){
+        String colName = field;
+        while (colName.contains("  ")) colName = colName.replace("  ", " ");
+        colName = colName.toLowerCase().replace(" ", "_");
+        colName = colName.trim().toLowerCase();
+        return colName;
+    }
 }
