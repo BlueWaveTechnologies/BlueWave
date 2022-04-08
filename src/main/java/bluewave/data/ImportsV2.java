@@ -404,14 +404,11 @@ public class ImportsV2 {
                   //Get date
                     String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
                     if (date!=null) date = date.trim();
-                    if (date.isEmpty()) date = row.getCell(header.get("Submission Date")).getStringCellValue();
-                    String[]d = date.split("/");
-                    String year = d[2];
-                    String month = d[0];
-                    String day = d[1];
-                    if (month.length()==1) month = "0"+month;
-                    if (day.length()==1) day = "0"+day;
-                    date = year + "-" + month + "-" + day;
+                    if (date==null || date.isEmpty()){ 
+                        date = row.getCell(header.get("Submission Date")).getStringCellValue();
+                        if (date!=null) date = date.trim();
+                    }
+                    date = getShortDate(date);
                     json.set("date",date);
 
 
@@ -1518,12 +1515,13 @@ public class ImportsV2 {
               //Parse/update activity date
                 javaxt.utils.Date activityDate = null;
                 try{
-                    activityDate = new javaxt.utils.Date(params.get("Activity Date Time").toString());
-                    params.put("Activity Date Time", activityDate.toISOString());
+                    String key = getKey("Activity Date Time");
+                    activityDate = new javaxt.utils.Date(params.get(key).toString());
+                    params.put(key, activityDate.toISOString());
                 }
                 catch(Exception e){}
                 if (activityDate==null){
-                    console.log("Missing Activity Date Time " + entry+"/"+doc+"/"+line);
+                    console.log("Missing Activity Date Time for row " + entry+"/"+doc+"/"+line);
                     return;
                 }
 
@@ -1531,6 +1529,7 @@ public class ImportsV2 {
               //Parse/update other dates
                 for (String key : new String[]{"Expected Availability Date","Sample Availability Date"}){
                     try{
+                        key = getKey(key);
                         String date = getShortDate(params.get(key).toString());
                         params.put(key, date);
                     }
@@ -1673,14 +1672,18 @@ public class ImportsV2 {
                     };
 
                     for (String field : fields){
-                        String val = row.getCell(header.get(field)).getStringCellValue();
+                        try{
+                            String val = row.getCell(header.get(field)).getStringCellValue();
 
-                        String colName = field;
-                        while (colName.contains("  ")) colName = colName.replace("  ", " ");
-                        colName = colName.toLowerCase().replace(" ", "_");
-                        colName = colName.trim().toLowerCase();
+                            String colName = field;
+                            while (colName.contains("  ")) colName = colName.replace("  ", " ");
+                            colName = colName.toLowerCase().replace(" ", "_");
+                            colName = colName.trim().toLowerCase();
 
-                        params.put(colName, val);
+                            params.put(colName, val);
+                        }
+                        catch(Exception e){
+                        }
                     }
 
 
@@ -2208,5 +2211,14 @@ public class ImportsV2 {
         if (month.length()==1) month = "0"+month;
         if (day.length()==1) day = "0"+day;
         return year + "-" + month + "-" + day;
+    }
+
+
+    private static String getKey(String field){
+        String colName = field;
+        while (colName.contains("  ")) colName = colName.replace("  ", " ");
+        colName = colName.toLowerCase().replace(" ", "_");
+        colName = colName.trim().toLowerCase();
+        return colName;
     }
 }
