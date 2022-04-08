@@ -968,10 +968,12 @@ public class ImportsV2 {
   //**************************************************************************
   //** loadEstablishments
   //**************************************************************************
-    private static void _loadEstablishments(javaxt.io.File csvFile, Neo4J database, java.io.BufferedWriter errorWriter) throws Exception {
-
+    private static void _loadEstablishments(javaxt.io.File csvFile, Neo4J database, java.io.BufferedWriter errorWriter, javaxt.json.JSONObject validationStats, HashSet uniqueFEIs) throws Exception {
+        System.out.println("\n\n"+csvFile.getName()+"\n");
         System.out.println("\n\nLoading Establishments\n");
-      //Count total records in the file
+        AtomicLong processedRecords = new AtomicLong(0);
+        AtomicLong discardedRecords = new AtomicLong(0);
+        //Count total records in the file
         AtomicLong totalRecords = new AtomicLong(0);
         if (true){
             System.out.print("Analyzing File...");
@@ -1034,7 +1036,12 @@ public class ImportsV2 {
                     fei = row.get(index++).toLong();
 
                   //Discard invalid rows with 0 value for fei
-                    if(fei == null || fei == 0) return;
+                    if(fei == null || fei == 0) {
+                        discardedRecords.incrementAndGet();
+                        return;
+                    }
+
+                    uniqueFEIs.add(fei);
 
                     String name = row.get(index++).toString();
                     String address = row.get(index++).toString();
@@ -1264,6 +1271,7 @@ public class ImportsV2 {
                         jsonRowObject.set("sheet", sheetName);
                         jsonRowObject.set("row", rowBuffer);
                         pool.add(jsonRowObject);
+                        processedRecords.incrementAndGet();
                     }
                 }
             }
@@ -1279,6 +1287,14 @@ public class ImportsV2 {
         pool.done();
         pool.join();
 
+        Long currentProcessed = validationStats.get("processed").toLong();
+        validationStats.set("processed", processedRecords.get() + currentProcessed);
+        System.out.println("\n\nRows Processed: " + (processedRecords.get() + currentProcessed)+"\n\n");
+
+        Long currentDiscarded = validationStats.get("discarded").toLong();
+        validationStats.set("discarded", discardedRecords.get() + currentDiscarded);
+        System.out.println("\n\nRows Discarded: " + (discardedRecords.get() + currentDiscarded)+"\n\n");
+
         System.out.println("\nSheets Processed: " + sheetsProcessed.toString());
       //Clean up
         statusLogger.shutdown();
@@ -1287,6 +1303,11 @@ public class ImportsV2 {
     }
 
     public static void loadEstablishments(javaxt.io.File[] files, Neo4J database) {
+        HashSet uniques = new HashSet();
+        javaxt.json.JSONObject validationStats = new javaxt.json.JSONObject();
+        validationStats.set("processed", 0);
+        validationStats.set("duplicates", 0);
+        validationStats.set("discarded", 0);
         javaxt.io.File errorLog = new javaxt.io.File("loadEstablishmentsErrors.log");
         if(!errorLog.exists()) {
             errorLog.create();
@@ -1297,11 +1318,45 @@ public class ImportsV2 {
             errorWriter.write("Begin: " + date);
             errorWriter.newLine();errorWriter.newLine();
             for(javaxt.io.File file : files) {
-                _loadEstablishments(file, database, errorWriter);
+                _loadEstablishments(file, database, errorWriter, validationStats, uniques);
             }
             date = new javaxt.utils.Date();
             errorWriter.newLine();
             errorWriter.write("End: " + date);
+            errorWriter.newLine();errorWriter.newLine();
+
+            errorWriter.write("Processed Rows: " + validationStats.get("processed"));
+            errorWriter.newLine();errorWriter.newLine();
+
+            errorWriter.write("Discarded Rows: " + validationStats.get("discarded"));
+            errorWriter.newLine();errorWriter.newLine();
+
+            errorWriter.write("Unique FEIs/Rows processed: " + uniques.size()); 
+            
+            HashSet fromServer = new HashSet();
+            try (Session session = database.getSession()) {
+                List<org.neo4j.driver.Record> uniqueFEIsFromServer = session.run("MATCH (n:import_establishment) return n.fei").list();
+                errorWriter.newLine();errorWriter.newLine();
+
+                errorWriter.write("Unique FEIs/Rows in server: " + uniqueFEIsFromServer.size()); 
+                JSONArray jsonArray = new JSONArray();
+                for(org.neo4j.driver.Record keyObj : uniqueFEIsFromServer) {
+                    Long key = keyObj.get(0).asLong();
+                    fromServer.add(key);
+                    if(!uniques.contains(key)) {
+                        jsonArray.add(key);
+                    }
+                }
+
+                for(Object kLong : jsonArray) {
+                    errorWriter.newLine();errorWriter.newLine();
+                    errorWriter.write("Missing Unique FEI: " + kLong.toString()); 
+                }
+            }catch(Exception e) {
+                errorWriter.newLine();errorWriter.newLine();
+                errorWriter.write("ERROR: " + e.toString()); 
+            }
+
             errorWriter.flush();
         }catch(Exception e) {
             e.printStackTrace();
