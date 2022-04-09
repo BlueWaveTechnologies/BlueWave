@@ -1421,8 +1421,10 @@ public class ImportsV2 {
 
 
       //Generate a unique list of establishments and addresses
+        System.out.print("Parsing xlsx...");
         HashMap<Long, Map<String, Object>> establishments = new HashMap<>();
         HashMap<String, Map<String, Object>> addresses = new HashMap<>();
+        HashMap<Long, String> establishmentsWithoutAddresses = new HashMap<>();
         java.io.InputStream is = xlsx.getInputStream();
         Workbook workbook = StreamingReader.builder()
             .rowCacheSize(10)
@@ -1458,7 +1460,8 @@ public class ImportsV2 {
                         HashMap<String, String> values = new HashMap<>();
                         String[] fields = new String[]{
 
-                            "FEI Number", "Legal Name", "Name & Address",
+                            "FEI Number", "Legal Name",
+                            "Name & Address", "Name and Address",
                             "DUNS Num", "Operational Status Code",
                             "Latitude", "Longitude"
 
@@ -1491,6 +1494,7 @@ public class ImportsV2 {
                             Long fei = Long.parseLong(feiNumber);
                             if (fei>0){
 
+                              //Get establishment-specific parameters
                                 String name = (String) values.get("Legal Name");
                                 String duns = (String) values.get("DUNS Num");
                                 String status = (String) values.get("Operational Status Code");
@@ -1506,8 +1510,15 @@ public class ImportsV2 {
 
 
 
+                              //Get address-specific parameters
+                                String address = (String) values.get("Name and Address");
+                                if (address==null) address = (String) values.get("Name & Address");
+                                String latitude = (String) values.get("Latitude");
+                                String longitude = (String) values.get("Longitude");
+                                String country = null;
+
+
                               //Parse address
-                                String address = (String) values.get("Name & Address");
                                 if (address!=null){
 
                                   //Trim address string and remove extra whitespaces
@@ -1519,6 +1530,7 @@ public class ImportsV2 {
 
                                   //Split address lines
                                     ArrayList<String> arr = new ArrayList<>();
+                                    address = address.replace("\r", "\n");
                                     for (String str : address.split("\n")){
                                         str = str.trim();
                                         if (!str.isEmpty()) arr.add(str);
@@ -1537,7 +1549,6 @@ public class ImportsV2 {
 
 
                                   //Remove country code from the last line
-                                    String country = null;
                                     String countryCode = arr.get(arr.size()-1);
                                     if (countryCode.length()==2){
                                         country = countryCode;
@@ -1555,35 +1566,51 @@ public class ImportsV2 {
                                     if (address.endsWith(",")) address = address.substring(0, address.length()-1).trim();
 
 
-                                    if (!address.isEmpty()){
-
-                                      //Append country code to the end of the address as needed
-                                        if (country!=null){
-                                            if (!country.equals("US")){
-                                                if (!address.endsWith(" " + country)){
-                                                    address+= ", " + country;
-                                                }
+                                  //Append country code to the end of the address as needed
+                                    if (country!=null){
+                                        if (!country.equals("US")){
+                                            if (!address.isEmpty() && !address.endsWith(" " + country)){
+                                                address+= ", " + country;
                                             }
                                         }
+                                    }
+
+                                    if (address.isEmpty()) address = null;
+                                }
 
 
-                                      //Create address
-                                        params = new LinkedHashMap<>();
-                                        params.put("address", address);
-                                        String latitude = (String) values.get("Latitude");
-                                        String longitude = (String) values.get("Longitude");
-                                        if (latitude!=null && longitude!=null){
-                                            params.put("lat", latitude);
-                                            params.put("lon", longitude);
-                                        }
-                                        if (country!=null) params.put("country", country);
-                                        addresses.put(address, params);
+                                if (address==null){
+                                    if (latitude!=null && longitude!=null){
+                                        address = "[" + longitude + "," + latitude + "]";
+                                        //console.log(address);
+                                    }
+                                }
 
 
 
-                                      //Update establishment so we can link later
+
+                                if (address!=null){
+
+                                    params = new LinkedHashMap<>();
+                                    params.put("address", address);
+                                    if (latitude!=null && longitude!=null){
+                                        params.put("lat", latitude);
+                                        params.put("lon", longitude);
+                                    }
+                                    if (country!=null) params.put("country", country);
+                                    addresses.put(address, params);
+
+
+
+                                  //Update establishment so we can link later
+                                    String addr = (String) establishments.get(fei).get("address");
+                                    if (!address.equals(addr)){
+                                        //if (addr!=null) console.log(addr, address);
                                         establishments.get(fei).put("address", address);
                                     }
+                                }
+                                else{
+                                    establishmentsWithoutAddresses.put(fei, values.get("Name & Address"));
                                 }
 
 
@@ -1606,6 +1633,9 @@ public class ImportsV2 {
         workbook.close();
         is.close();
 
+        System.out.println("Done!");
+
+
         console.log("Found " + establishments.size() + " establishments");
         console.log("Found " + addresses.size() + " addresses");
         int numEstablishmentsWithAddresses = 0;
@@ -1619,12 +1649,25 @@ public class ImportsV2 {
             }
         }
         console.log("Found " + numEstablishmentsWithAddresses + " establishments with addresses");
+        console.log("Found " + establishmentsWithoutAddresses.size() + " establishments without addresses");
+
+
+        /*
+        i2 = establishmentsWithoutAddresses.keySet().iterator();
+        while (i2.hasNext()){
+            Long fei = i2.next();
+            String address = establishmentsWithoutAddresses.get(fei);
+            console.log(fei, address);
+        }
+        */
+
+
 
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
-        statusLogger.setTotalRecords(addresses.size()+establishments.size()+numEstablishmentsWithAddresses);
+        long totalRecords = addresses.size()+establishments.size()+numEstablishmentsWithAddresses;
+        StatusLogger statusLogger = new StatusLogger(recordCounter, new AtomicLong(totalRecords));
 
 
 
@@ -1722,7 +1765,7 @@ public class ImportsV2 {
         pool.done();
         pool.join();
 
-        console.log("Created " + addressNodes.size() + " addressNodes");
+        //console.log("Created " + addressNodes.size() + " addressNodes");
 
 
       //Create establishment nodes
@@ -1802,7 +1845,7 @@ public class ImportsV2 {
         pool.join();
 
 
-        console.log("Found " + links.size() + " relationships");
+        //console.log("Found " + links.size() + " relationships");
 
       //Create relationships
         pool = new ThreadPool(numThreads){
@@ -1811,7 +1854,8 @@ public class ImportsV2 {
                 Long establishmentID = (Long) arr[0];
                 Long addressID = (Long) arr[1];
 
-              //Create node
+
+              //Create relationship
                 try{
 
                     getSession().run("MATCH (r),(s) WHERE id(r) =" + establishmentID + " AND id(s) = " + addressID +
