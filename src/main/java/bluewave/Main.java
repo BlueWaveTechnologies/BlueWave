@@ -82,8 +82,8 @@ public class Main {
         else if (args.containsKey("-download")){
             download(args);
         }
-        else if (args.containsKey("-import")){
-            importData(args);
+        else if (args.containsKey("-load")){
+            loadData(args);
         }
         else if (args.containsKey("-delete")){
             delete(args);
@@ -252,69 +252,59 @@ public class Main {
 
 
   //**************************************************************************
-  //** importData
+  //** loadData
   //**************************************************************************
-    private static void importData(HashMap<String, String> args) throws Exception {
-        String str = args.get("-import");
+    private static void loadData(HashMap<String, String> args) throws Exception {
+        String str = args.get("-load");
         if (str.equalsIgnoreCase("Premier")){
             importPremier(args);
         }
         else if (str.equalsIgnoreCase("Imports")){
-            // Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
-            //imports.exportSummary();
-            //imports.removeDuplicateEstablishments();
-            Neo4J database = Config.getGraph(null);
-            File file = new javaxt.io.File(args.get("-path"));
-            ImportsV2 importsV2 = new ImportsV2(file);
-            ImportsV2.loadLines(file, database);
-            database.close();
-        }
-        else if (str.equalsIgnoreCase("Establishments")){
-            Neo4J database = Config.getGraph(null);
-            // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
-            // ImportsV2.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
-            javaxt.io.File[]files = {
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
-            };
 
-            ImportsV2.loadEstablishments(files, database);
-            database.close();
+            String path = args.get("-path");
+            java.io.File f = new java.io.File(path);
+            if (!f.exists()){
+                return;
+            }
+
+            ArrayList<javaxt.io.File> files = new ArrayList<>();
+            if (f.isFile()){
+                javaxt.io.File file = new javaxt.io.File(f);
+                if (file.getExtension().equalsIgnoreCase("xlsx")){
+                    files.add(file);
+                }
+            }
+            else{
+                for (javaxt.io.File file : new javaxt.io.Directory(f).getFiles("*.xlsx")){
+                    files.add(file);
+                }
+            }
+
+            if (!files.isEmpty()){
+                Neo4J database = Config.getGraph(null);
+                
+                for (javaxt.io.File file : files){
+                    ImportsV2.loadEstablishments2(file, database);
+                }
+
+                for (javaxt.io.File file : files){
+                    ImportsV2.loadLines(file, database);
+                }
+
+                for (javaxt.io.File file : files){
+                    ImportsV2.loadExams(file, database);
+                    ImportsV2.loadSamples(file, database);
+                }
+
+                database.close();
+            }
         }
         else if (str.equalsIgnoreCase("Ports")){
             Neo4J database = Config.getGraph(null);
-            // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             Ports.loadUSPortsofEntry(new javaxt.io.File(args.get("-path")), database);
             database.close();
         }
-        else if (str.equalsIgnoreCase("Exams")){
-            Neo4J database = Config.getGraph(null);
-            // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
-            ImportsV2.loadExams(new javaxt.io.File(args.get("-path")), database);
-            ImportsV2.loadSamples(new javaxt.io.File(args.get("-path")), database);
-            database.close();
-        }
-        else if (str.equalsIgnoreCase("All")){
-            String filePath = args.get("-path");
-            Neo4J database = Config.getGraph(null);
-            ImportsV2.loadEstablishments(new javaxt.io.File [] {new javaxt.io.File(filePath)}, database);
-
-            File file = new javaxt.io.File(filePath);
-            ImportsV2 importsV2 = new ImportsV2(file);
-            ImportsV2.loadLines(file, database);
-
-            ImportsV2.loadExams(new javaxt.io.File(filePath), database);
-            ImportsV2.loadSamples(new javaxt.io.File(filePath), database);
-            database.close();
-        }else if(str.equalsIgnoreCase("UniqueEntries")) {
+        else if(str.equalsIgnoreCase("UniqueEntries")) {
             javaxt.io.File[]files = {
                 new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
                 new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
@@ -361,9 +351,9 @@ public class Main {
     private static void importFile(HashMap<String, String> args) throws Exception {
 
       //Get file and extension
-        String filePath = args.get("-import");
+        String filePath = args.get("-load");
         javaxt.io.File file = new javaxt.io.File(filePath);
-        if (!file.exists()) throw new IllegalArgumentException("-import file is invalid");
+        if (!file.exists()) throw new IllegalArgumentException("-load file is invalid");
         String fileType = file.getExtension().toLowerCase();
         if (fileType.equals("gz")){
             String fileName = file.getName(false);
