@@ -80,15 +80,18 @@ public class ImportService extends WebService {
             StringBuilder str = new StringBuilder();
             str.append("MATCH (n:import_establishment)\n");
             str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
-            str.append("RETURN n.fei as fei, n.name as name, a.lat as lat, a.lon as lon");
+            str.append("RETURN n.fei as fei, n.name as name, ");
+            str.append("a.country as country, a.lat as lat, a.lon as lon");
             Result rs = session.run(str.toString());
             while (rs.hasNext()){
                 Record r = rs.next();
                 Long fei = new Value(r.get("fei").asObject()).toLong();
                 String name = new Value(r.get("name").asObject()).toString();
+                String country = new Value(r.get("country").asObject()).toString();
                 Double lat = new Value(r.get("lat").asObject()).toDouble();
                 Double lon = new Value(r.get("lon").asObject()).toDouble();
                 facilities.put(fei, name);
+                if (country!=null) firmCountries.put(fei, country);
                 try{
                     if (lat.equals(0D) && lon.equals(0D)) throw new Exception();
                     coordinates.put(fei, JTS.createPoint(lat, lon));
@@ -129,11 +132,13 @@ public class ImportService extends WebService {
                 Point point = coordinates.get(fei);
 
               //Get country code
-                String countryCode = null;
-                if (point!=null){
-                    JSONObject country = Countries.getCountry(point);
-                    if (country!=null){
-                        countryCode = country.get("code").toString();
+                String countryCode = firmCountries.get(fei);
+                if (countryCode==null){
+                    if (point!=null){
+                        JSONObject country = Countries.getCountry(point);
+                        if (country!=null){
+                            countryCode = country.get("code").toString();
+                        }
                     }
                 }
                 if (countryCode==null) countryCode = "Unknown";
