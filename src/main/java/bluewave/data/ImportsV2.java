@@ -43,10 +43,7 @@ import org.neo4j.driver.Session;
 
 public class ImportsV2 {
 
-    private javaxt.io.File file;
-    private static LinkedHashMap<String, Integer> header;
     private GeoCoder geocoder;
-    private int sheetID;
     private static String[] establishmentTypes = new String[]{
     "Manufacturer","Shipper","Importer","Consignee","DII"};
 
@@ -54,51 +51,7 @@ public class ImportsV2 {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public ImportsV2(javaxt.io.File file) throws Exception {
-        this.file = file;
-
-
-
-      //Parse file
-        java.io.InputStream is = file.getInputStream();
-        Workbook workbook = StreamingReader.builder()
-            .rowCacheSize(10)    // number of rows to keep in memory (defaults to 10)
-            .bufferSize(4096)     // buffer size to use when reading InputStream to file (defaults to 1024)
-            .open(is);            // InputStream or File for XLSX file (required)
-
-        try{
-            int numSheets = workbook.getNumberOfSheets();
-            for (int i=0; i<numSheets; i++){
-                Sheet sheet = workbook.getSheetAt(i);
-                String name = sheet.getSheetName();
-                if (!name.equals("Query Summary")){
-                    sheetID = i;
-                    header = new LinkedHashMap<>();
-
-
-                  //Parse header
-                    for (Row row : sheet){
-                        int idx = 0;
-                        for (Cell cell : row) {
-                            header.put(cell.getStringCellValue(), idx);
-                            idx++;
-
-                        }
-                        break;
-                    }
-
-
-                    break;
-                }
-            }
-        }
-        catch(Exception e){
-        }
-
-        workbook.close();
-        is.close();
-
-
+    private ImportsV2() throws Exception {
         geocoder = new GeoCoder();
     }
 
@@ -370,11 +323,21 @@ public class ImportsV2 {
             .bufferSize(4096)
             .open(is);
 
+        LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
         int rowID = 0;
         for (Row row : workbook.getSheetAt(0)){
             if(row == null) break;
+            if (rowID==0){
 
-            if (rowID>0){
+              //Parse header
+                int idx = 0;
+                for (Cell cell : row) {
+                    header.put(cell.getStringCellValue(), idx);
+                    idx++;
+                }
+
+            }
+            else{
                 try{
 
                     JSONObject json = new JSONObject();
@@ -404,7 +367,7 @@ public class ImportsV2 {
                   //Get date
                     String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
                     if (date!=null) date = date.trim();
-                    if (date==null || date.isEmpty()){ 
+                    if (date==null || date.isEmpty()){
                         date = row.getCell(header.get("Submission Date")).getStringCellValue();
                         if (date!=null) date = date.trim();
                     }
@@ -540,333 +503,12 @@ public class ImportsV2 {
 
 
   //**************************************************************************
-  //** exportSummary
-  //**************************************************************************
-  /** Used to export a csv file with select fields from the input xlsx file
-   */
-    public void exportSummary() throws Exception {
-        javaxt.io.File output = new javaxt.io.File(this.file.getDirectory(), "ImportSummary.csv");
-        java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
-
-        java.io.InputStream is = file.getInputStream();
-        Workbook workbook = StreamingReader.builder()
-            .rowCacheSize(10)
-            .bufferSize(4096)
-            .open(is);
-
-        int rowID = 0;
-        for (Row row : workbook.getSheetAt(sheetID)){
-            if (rowID==0){
-                    ArrayList<String> fields = new ArrayList<>(Arrays.asList(
-                    "Entry","DOC","Line","Date","Port of Entry","Unladed Port","Country of Origin",
-                    "Shipment Method","Product Code","Product Name","Quantity","Value"));
-                    for (String establishment : establishmentTypes){
-                        fields.add(establishment);
-                    }
-                    fields.add("Affirmations");
-                    fields.add("Final Disposition");
-                    fields.add("Predict Risk");
-                    fields.add("Predict Score");
-
-                    for (int i=0; i<fields.size(); i++){
-                        if (i>0) writer.write(",");
-                        writer.write(fields.get(i));
-                    }
-            }
-            else {
-
-                try{
-
-                    writer.write("\r\n");
-
-
-                  //Get entry
-                    String entry = "";
-                    String doc = "";
-                    String line = "";
-                    String id = row.getCell(header.get("Entry/DOC/Line")).getStringCellValue();
-                    if (id!=null){
-                        id = id.trim();
-                        if (!id.isEmpty()){
-                            String[] arr = id.split("/");
-                            if (arr.length>0) entry = arr[0];
-                            if (arr.length>1) doc = arr[1];
-                            if (arr.length>2) line = arr[2];
-                        }
-                    }
-                    writer.write(entry);
-                    writer.write(",");
-                    writer.write(doc);
-                    writer.write(",");
-                    writer.write(line);
-                    writer.write(",");
-
-
-                  //Get date
-                    String date = row.getCell(header.get("Arrival Date")).getStringCellValue();
-                    if (date!=null) date = date.trim();
-                    if (date.isEmpty()) date = row.getCell(header.get("Submission Date")).getStringCellValue();
-                    writer.write(date);
-                    writer.write(",");
-
-
-                  //Get port of entry code
-                    String port = row.getCell(header.get("Port of Entry Code & Name")).getStringCellValue();
-                    if (port!=null){
-                        port = port.trim();
-                        if (!port.isEmpty()){
-                            int idx = port.indexOf(" - ");
-                            if (idx>-1){
-                                port = port.substring(0, idx).trim();
-                            }
-                        }
-                    }
-                    writer.write(port);
-                    writer.write(",");
-
-
-                  //Unladed Thru Port Code
-                    String thruPort = row.getCell(header.get("Unladed Thru Port Code")).getStringCellValue();
-                    writer.write(thruPort);
-                    writer.write(",");
-
-
-                  //Country of Origin
-                    writer.write(row.getCell(header.get("Country Of Origin")).getStringCellValue());
-                    writer.write(",");
-
-
-                  //Carrier Type
-                    String carrierType = row.getCell(header.get("Carrier Type")).getStringCellValue();
-                    if (carrierType==null) carrierType = "";
-                    carrierType = carrierType.trim().toLowerCase();
-                    if (carrierType.contains("rail") || carrierType.contains("road") || carrierType.contains("truck")){
-                        carrierType = "land";
-                    }
-                    else if (carrierType.contains("air")){
-                        carrierType = "air";
-                    }
-                    else if (carrierType.contains("sea")){
-                        carrierType = "sea";
-                    }
-                    else{
-                        if (!carrierType.isEmpty()) carrierType = "other";
-                    }
-                    writer.write(carrierType);
-                    writer.write(",");
-
-
-                  //Product code
-                    String productCode = row.getCell(header.get("Product Code")).getStringCellValue();
-                    String industryCode = row.getCell(header.get("Industry Code")).getStringCellValue();
-                    if (productCode!=null){
-                        if (productCode.startsWith(industryCode)){
-                            productCode = productCode.substring(industryCode.length());
-                        }
-                    }
-                    writer.write(productCode);
-                    writer.write(",");
-
-
-                  //Product name
-                    String productName = row.getCell(header.get("Brand Name")).getStringCellValue();
-                    if (productName!=null){
-                        if (productName.contains(",")) productName = "\"" + productName + "\"";
-                        writer.write(productName);
-                    }
-                    writer.write(",");
-
-
-                  //Total reported quantity
-                    writer.write(row.getCell(header.get("Reported Total Quantity")).getStringCellValue());
-                    writer.write(",");
-
-
-                  //Declared value in USD
-                    String value = row.getCell(header.get("Value of Goods")).getStringCellValue();
-                    if (value!=null) value = value.replace("$", "").replace(",", "");
-                    writer.write(value);
-                    writer.write(",");
-
-
-                  //FEI
-                    for (int i=0; i<establishmentTypes.length; i++){
-                        if (i>0) writer.write(",");
-                        Integer feiField = header.get(establishmentTypes[i] + " FEI Number");
-                        String fei = row.getCell(feiField).getStringCellValue();
-                        writer.write(fei);
-                    }
-                    writer.write(",");
-
-
-
-                  //Affirmations
-                    writer.write(row.getCell(header.get("All Affirmations")).getStringCellValue());
-                    writer.write(",");
-
-                  //Final Disposition
-                    writer.write(row.getCell(header.get("Final Disposition Activity Description")).getStringCellValue());
-                    writer.write(",");
-
-
-                  //PREDICT Risk
-                    writer.write(row.getCell(header.get("PREDICT Risk Percentile")).getStringCellValue());
-                    writer.write(",");
-
-                  //PREDICT Score
-                    writer.write(row.getCell(header.get("PREDICT Total Risk Score")).getStringCellValue());
-
-
-                }
-                catch(Exception e){
-                    console.log("Failed to parse row " + rowID);
-                }
-
-            }
-            rowID++;
-        }
-
-        writer.close();
-        workbook.close();
-        is.close();
-    }
-
-
-  //**************************************************************************
-  //** exportEstablishments
-  //**************************************************************************
-  /** Used to export a csv file with a unique list of establishments found
-   *  in the input xlsx file
-   */
-    public void exportEstablishments() throws Exception {
-        HashMap<String, HashSet<String>> companies = new HashMap<>();
-
-      //Parse file and generate unique list of addresses by company type
-        java.io.InputStream is = file.getInputStream();
-        Workbook workbook = StreamingReader.builder()
-            .rowCacheSize(10)
-            .bufferSize(4096)
-            .open(is);
-
-        int rowID = 0;
-        for (Row row : workbook.getSheetAt(sheetID)){
-            if (rowID>0){
-
-                for (String type : establishmentTypes){
-                    try{
-                        Integer nameField = header.get(type + " Legal Name");
-                        Integer addressField = header.get(type + " Name & Address");
-                        Integer feiField = header.get(type + " FEI Number");
-
-                      //Special case for DII
-                        if (addressField==null) addressField = header.get(type + " Name and Address");
-
-                        if (nameField==null||addressField==null||feiField==null) continue;
-
-                        String name = row.getCell(nameField).getStringCellValue();
-                        String address = row.getCell(addressField).getStringCellValue();
-                        String fei = row.getCell(feiField).getStringCellValue();
-
-                        if (name==null) name = "";
-                        else name = name.trim();
-
-                        if (address==null) address = "";
-                        else address = address.trim();
-
-                        if (fei==null) fei = "";
-                        else fei = fei.trim();
-
-
-
-                        String addr = "";
-                        while (address.contains("  ")){
-                            address = address.replace("  ", " ");
-                        }
-                        address = address.trim();
-                        for (String str : address.split("\n")){
-                            str = str.trim();
-                            if (str.isEmpty() || str.equals(fei) || str.equals(name)) continue;
-                            if (!addr.isEmpty()) addr += " ";
-                            addr += str;
-                        }
-
-                        address = replaceLineBreaks(addr).trim();
-
-
-                        if (address.startsWith(fei + " ")){
-                            address = address.substring((fei + " ").length());
-                        }
-                        if (address.startsWith(name + " ")){
-                            address = address.substring((name + " ").length());
-                        }
-
-
-                        HashSet<String> info = companies.get(fei);
-                        if (info==null){
-                            info = new HashSet<>();
-                            companies.put(fei, info);
-                        }
-                        info.add(name + "\n" + address);
-
-                    }
-                    catch(Exception e){
-                        console.log("Failed to parse " + type + " at line " + rowID);
-                    }
-                }
-            }
-            rowID++;
-        }
-
-        workbook.close();
-        is.close();
-
-        console.log("Found " + companies.size() + " establishments");
-
-
-
-
-        javaxt.io.File output = new javaxt.io.File(this.file.getDirectory(), "Establishments.csv");
-        java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
-
-        writer.write("fei,name,address");
-
-        Iterator<String> it = companies.keySet().iterator();
-        while (it.hasNext()){
-
-            String fei = it.next();
-            HashSet<String> info = companies.get(fei);
-            if (info.size()>1) console.log(fei, info.size());
-
-            Iterator<String> i2 = info.iterator();
-            while (i2.hasNext()){
-                String[] entry = i2.next().split("\n");
-                String name = entry[0];
-                String address = entry[1];
-
-                writer.write("\r\n");
-
-                name = replaceLineBreaks(name);
-                if (name.contains(",")) name = "\""+name+"\"";
-                address = replaceLineBreaks(address);
-                if (address.contains(",")) address = "\""+address+"\"";
-                writer.write(fei+","+name+","+address);
-            }
-        }
-        writer.close();
-
-
-    }
-
-
-  //**************************************************************************
   //** geocodeEstablishments
   //**************************************************************************
   /** Used to add lat/lon coordinates to the Establishments.csv using results
    *  from a previous geocoding attempt using the geocodeCompanies() method.
    */
-    public void geocodeEstablishments() throws Exception {
-
-        javaxt.io.Directory dir = this.file.getDirectory();
+    public void geocodeEstablishments(javaxt.io.Directory dir) throws Exception {
 
 
         HashMap<String, String[]> addresses = new HashMap<>();
@@ -1328,14 +970,14 @@ public class ImportsV2 {
             errorWriter.write("Discarded Rows: " + validationStats.get("discarded"));
             errorWriter.newLine();errorWriter.newLine();
 
-            errorWriter.write("Unique FEIs/Rows processed: " + uniques.size()); 
-            
+            errorWriter.write("Unique FEIs/Rows processed: " + uniques.size());
+
             HashSet fromServer = new HashSet();
             try (Session session = database.getSession()) {
                 List<org.neo4j.driver.Record> uniqueFEIsFromServer = session.run("MATCH (n:import_establishment) return n.fei").list();
                 errorWriter.newLine();errorWriter.newLine();
 
-                errorWriter.write("Unique FEIs/Rows in server: " + uniqueFEIsFromServer.size()); 
+                errorWriter.write("Unique FEIs/Rows in server: " + uniqueFEIsFromServer.size());
                 JSONArray jsonArray = new JSONArray();
                 for(org.neo4j.driver.Record keyObj : uniqueFEIsFromServer) {
                     Long key = keyObj.get(0).asLong();
@@ -1347,11 +989,11 @@ public class ImportsV2 {
 
                 for(Object kLong : jsonArray) {
                     errorWriter.newLine();errorWriter.newLine();
-                    errorWriter.write("Missing Unique FEI: " + kLong.toString()); 
+                    errorWriter.write("Missing Unique FEI: " + kLong.toString());
                 }
             }catch(Exception e) {
                 errorWriter.newLine();errorWriter.newLine();
-                errorWriter.write("ERROR: " + e.toString()); 
+                errorWriter.write("ERROR: " + e.toString());
             }
 
             errorWriter.flush();
@@ -1773,6 +1415,449 @@ public class ImportsV2 {
     }
 
 
+
+    public static void loadEstablishments2(javaxt.io.File xlsx, Neo4J database) throws Exception {
+        int numThreads = 12;
+
+
+      //Generate a unique list of establishments and addresses
+        HashMap<Long, Map<String, Object>> establishments = new HashMap<>();
+        HashMap<String, Map<String, Object>> addresses = new HashMap<>();
+        java.io.InputStream is = xlsx.getInputStream();
+        Workbook workbook = StreamingReader.builder()
+            .rowCacheSize(10)
+            .bufferSize(4096)
+            .open(is);
+
+        for (String establishmentType : establishmentTypes){
+
+            String sheetName = establishmentType;
+            if (establishmentType.equals("Manufacturer")) sheetName = "MFR";
+            Sheet sheet = workbook.getSheet(sheetName + " Report");
+            if(sheet == null) continue;
+
+
+            int rowID = 0;
+            LinkedHashMap<String, Integer> header = new LinkedHashMap<>();
+
+            for (Row row : sheet){
+
+                if (rowID==0){
+
+                  //Parse header
+                    int idx = 0;
+                    for (Cell cell : row) {
+                        header.put(cell.getStringCellValue(), idx);
+                        idx++;
+                    }
+
+                }
+                else{
+                    try{
+
+                        HashMap<String, String> values = new HashMap<>();
+                        String[] fields = new String[]{
+
+                            "FEI Number", "Legal Name", "Name & Address",
+                            "DUNS Num", "Operational Status Code",
+                            "Latitude", "Longitude"
+
+                        };
+
+                        for (String field : fields){
+                            try{
+
+                                String colName = establishmentType + " " + field;
+                                colName = colName.replace(
+                                "Manufacturer Operational Status Code",
+                                "Manufacture Operational Status Code");
+
+                                String val = row.getCell(header.get(colName)).getStringCellValue();
+                                if (val!=null){
+                                    val = val.trim();
+                                    if (!val.isEmpty()){
+                                        values.put(field, val);
+                                    }
+                                }
+                            }
+                            catch(Exception e){
+                            }
+                        }
+
+                        String feiNumber = (String) values.get("FEI Number");
+
+
+                        if (feiNumber!=null){
+                            Long fei = Long.parseLong(feiNumber);
+                            if (fei>0){
+
+                                String name = (String) values.get("Legal Name");
+                                String duns = (String) values.get("DUNS Num");
+                                String status = (String) values.get("Operational Status Code");
+
+
+                              //Create establishment
+                                Map<String, Object> params = new LinkedHashMap<>();
+                                params.put("fei", fei);
+                                if (name!=null) params.put("name", name);
+                                if (duns!=null) params.put("duns", duns);
+                                if (status!=null) params.put("status", status);
+                                establishments.put(fei, params);
+
+
+
+                              //Parse address
+                                String address = (String) values.get("Name & Address");
+                                if (address!=null){
+
+                                  //Trim address string and remove extra whitespaces
+                                    while (address.contains("  ")){
+                                        address = address.replace("  ", " ");
+                                    }
+                                    address = address.trim();
+
+
+                                  //Split address lines
+                                    ArrayList<String> arr = new ArrayList<>();
+                                    for (String str : address.split("\n")){
+                                        str = str.trim();
+                                        if (!str.isEmpty()) arr.add(str);
+                                    }
+
+
+                                  //Remove FEI number from the first row as needed
+                                    if (arr.get(0).equals(feiNumber)){
+                                        arr.remove(0);
+                                    }
+
+                                  //Remove company name as needed
+                                    if (arr.get(0).equals(name)){
+                                        arr.remove(0);
+                                    }
+
+
+                                  //Remove country code from the last line
+                                    String country = null;
+                                    String countryCode = arr.get(arr.size()-1);
+                                    if (countryCode.length()==2){
+                                        country = countryCode;
+                                        arr.remove(arr.size()-1);
+                                    }
+
+
+                                  //Flatten address into a single line
+                                    String addr = "";
+                                    for (String str : arr){
+                                        addr += " ";
+                                        addr += str;
+                                    }
+                                    address = replaceLineBreaks(addr).trim();
+                                    if (address.endsWith(",")) address = address.substring(0, address.length()-1).trim();
+
+
+                                    if (!address.isEmpty()){
+
+                                      //Append country code to the end of the address as needed
+                                        if (country!=null){
+                                            if (!country.equals("US")){
+                                                if (!address.endsWith(" " + country)){
+                                                    address+= ", " + country;
+                                                }
+                                            }
+                                        }
+
+
+                                      //Create address
+                                        params = new LinkedHashMap<>();
+                                        params.put("address", address);
+                                        String latitude = (String) values.get("Latitude");
+                                        String longitude = (String) values.get("Longitude");
+                                        if (latitude!=null && longitude!=null){
+                                            params.put("lat", latitude);
+                                            params.put("lon", longitude);
+                                        }
+                                        if (country!=null) params.put("country", country);
+                                        addresses.put(address, params);
+
+
+
+                                      //Update establishment so we can link later
+                                        establishments.get(fei).put("address", address);
+                                    }
+                                }
+
+
+                            }
+                        }
+
+
+
+
+                    }
+                    catch(Exception e){
+                        console.log("Failed to parse row " + rowID + " in " + sheetName);
+                    }
+
+                }
+                rowID++;
+            }
+        }
+
+        workbook.close();
+        is.close();
+
+        console.log("Found " + establishments.size() + " establishments");
+        console.log("Found " + addresses.size() + " addresses");
+        int numEstablishmentsWithAddresses = 0;
+        Iterator<Long> i2 = establishments.keySet().iterator();
+        while (i2.hasNext()){
+            Long fei = i2.next();
+            Map<String, Object> params = establishments.get(fei);
+            String address = (String) params.get("address");
+            if (address!=null){
+                numEstablishmentsWithAddresses++;
+            }
+        }
+        console.log("Found " + numEstablishmentsWithAddresses + " establishments with addresses");
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+        statusLogger.setTotalRecords(addresses.size()+establishments.size()+numEstablishmentsWithAddresses);
+
+
+
+        Session session = null;
+
+        try{
+            session = database.getSession();
+
+          //Create unique key constraint
+            try{ session.run("CREATE CONSTRAINT ON (n:address) ASSERT n.address IS UNIQUE"); }
+            catch(Exception e){}
+            try{ session.run("CREATE CONSTRAINT ON (n:import_establishment) ASSERT n.fei IS UNIQUE"); }
+            catch(Exception e){}
+
+
+          //Create indexes
+            try{ session.run("CREATE INDEX idx_address IF NOT EXISTS FOR (n:address) ON (n.address)"); }
+            catch(Exception e){}
+            try{ session.run("CREATE INDEX idx_import_establishment IF NOT EXISTS FOR (n:import_establishment) ON (n.fei)"); }
+            catch(Exception e){}
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }
+
+
+
+      //Create address nodes
+        ConcurrentHashMap<String, Long> addressNodes = new ConcurrentHashMap<>();
+        ThreadPool pool = new ThreadPool(numThreads){
+            public void process(Object obj){
+                Map<String, Object> params = (Map<String, Object>) obj;
+                String nodeName = "address";
+
+                StringBuilder stmt = new StringBuilder("CREATE (a:" + nodeName + " {");
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String param = it.next();
+                    stmt.append(param);
+                    stmt.append(": $");
+                    stmt.append(param);
+                    if (it.hasNext()) stmt.append(" ,");
+                }
+                stmt.append("}) RETURN id(a)");
+
+
+              //Create node
+                try{
+                    Long nodeID;
+                    try{
+                        nodeID = getSession().run(stmt.toString(), params).single().get(0).asLong();
+                    }
+                    catch(Exception e){
+                        nodeID = getIdFromError(e);
+                    }
+
+                    synchronized(addressNodes){
+                        addressNodes.put(params.get("address").toString(), nodeID);
+                        addressNodes.notify();
+                    }
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+                recordCounter.incrementAndGet();
+            }
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+        Iterator<String> it = addresses.keySet().iterator();
+        while (it.hasNext()){
+            String address = it.next();
+            Map<String, Object> params = addresses.get(address);
+            pool.add(params);
+        }
+
+        pool.done();
+        pool.join();
+
+        console.log("Created " + addressNodes.size() + " addressNodes");
+
+
+      //Create establishment nodes
+        ConcurrentHashMap<Long, Long> links = new ConcurrentHashMap<>();
+        pool = new ThreadPool(numThreads){
+            public void process(Object obj){
+                Map<String, Object> params = (Map<String, Object>) obj;
+                String nodeName = "import_establishment";
+                String address = (String) params.remove("address");
+                Long addressID = null;
+                if (address!=null){
+                    addressID = addressNodes.get(address);
+                }
+
+
+                StringBuilder stmt = new StringBuilder("CREATE (a:" + nodeName + " {");
+                Iterator<String> it = params.keySet().iterator();
+                while (it.hasNext()){
+                    String param = it.next();
+                    stmt.append(param);
+                    stmt.append(": $");
+                    stmt.append(param);
+                    if (it.hasNext()) stmt.append(" ,");
+                }
+                stmt.append("}) RETURN id(a)");
+
+
+              //Create node
+                try{
+                    Long establishmentID;
+                    try{
+                        establishmentID = getSession().run(stmt.toString(), params).single().get(0).asLong();
+                    }
+                    catch(Exception e){
+                        establishmentID = getIdFromError(e);
+                    }
+
+                    if (addressID!=null){
+                        synchronized(links){
+                            links.put(establishmentID, addressID);
+                            links.notify();
+                        }
+                    }
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+                recordCounter.incrementAndGet();
+            }
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+        i2 = establishments.keySet().iterator();
+        while (i2.hasNext()){
+            Long fei = i2.next();
+            Map<String, Object> params = establishments.get(fei);
+            pool.add(params);
+        }
+
+        pool.done();
+        pool.join();
+
+
+        console.log("Found " + links.size() + " relationships");
+
+      //Create relationships
+        pool = new ThreadPool(numThreads){
+            public void process(Object obj){
+                Object[] arr = (Object[]) obj;
+                Long establishmentID = (Long) arr[0];
+                Long addressID = (Long) arr[1];
+
+              //Create node
+                try{
+
+                    getSession().run("MATCH (r),(s) WHERE id(r) =" + establishmentID + " AND id(s) = " + addressID +
+                    " MERGE(r)-[:has]->(s)");
+
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+                recordCounter.incrementAndGet();
+            }
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+        i2 = links.keySet().iterator();
+        while (i2.hasNext()){
+            Long establishmentID = i2.next();
+            Long addressID = links.get(establishmentID);
+            pool.add(new Object[]{establishmentID, addressID});
+        }
+
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
+    }
+
+
   //**************************************************************************
   //** getShipmentsByPortOfUnlading
   //**************************************************************************
@@ -1841,7 +1926,7 @@ public class ImportsV2 {
   //**************************************************************************
   //** geocodeCompanies
   //**************************************************************************
-    public void geocodeCompanies() throws Exception {
+    public void geocodeCompanies(javaxt.io.File file) throws Exception {
 
         HashSet<String> addresses = new HashSet<>();
         ConcurrentHashMap<String, BigDecimal[]> coords = new ConcurrentHashMap<>();
@@ -1856,6 +1941,7 @@ public class ImportsV2 {
             .open(is);
 
         int rowID = 0;
+        /*
         for (Row row : workbook.getSheetAt(sheetID)){
             if (rowID>0){
 
@@ -1904,6 +1990,7 @@ public class ImportsV2 {
             }
             rowID++;
         }
+        */
         console.log("Found " + addresses.size() + " addresses");
         workbook.close();
         is.close();
@@ -1947,7 +2034,7 @@ public class ImportsV2 {
       //Dump results to a file
         for (String type : establishmentTypes){
             rowID = 0;
-            javaxt.io.File output = new javaxt.io.File(this.file.getDirectory(), type + ".csv");
+            javaxt.io.File output = new javaxt.io.File(file.getDirectory(), type + ".csv");
             java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
             HashMap<String, String[]> info = companies.get(type);
             it = info.keySet().iterator();
@@ -1980,7 +2067,7 @@ public class ImportsV2 {
   //**************************************************************************
   //** geocodePortsOfEntry
   //**************************************************************************
-    public void geocodePortsOfEntry() throws Exception {
+    public void geocodePortsOfEntry(javaxt.io.File file) throws Exception {
 
         HashMap<String, String> addresses = new HashMap<>();
         ConcurrentHashMap<String, BigDecimal[]> coords = new ConcurrentHashMap<>();
@@ -1994,6 +2081,7 @@ public class ImportsV2 {
             .open(is);
 
         int rowID = 0;
+        /*
         for (Row row : workbook.getSheetAt(sheetID)){
             if (rowID>0){
 
@@ -2026,6 +2114,7 @@ public class ImportsV2 {
             }
             rowID++;
         }
+        */
         console.log("Found " + addresses.size() + " addresses");
         workbook.close();
         is.close();
@@ -2068,7 +2157,7 @@ public class ImportsV2 {
 
       //Dump results to a file
         rowID = 0;
-        javaxt.io.File output = new javaxt.io.File(this.file.getDirectory(), "PortsOfEntry.csv");
+        javaxt.io.File output = new javaxt.io.File(file.getDirectory(), "PortsOfEntry.csv");
         java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
         it = addresses.keySet().iterator();
         while (it.hasNext()){
@@ -2097,7 +2186,7 @@ public class ImportsV2 {
   //**************************************************************************
   //** replaceLineBreaks
   //**************************************************************************
-    private String replaceLineBreaks(String name){
+    private static String replaceLineBreaks(String name){
         if (name==null) return "";
         name = name.replace("\r\n", " ");
         name = name.replace("\r", " ");
