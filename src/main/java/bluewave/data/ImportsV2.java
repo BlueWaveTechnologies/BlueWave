@@ -64,7 +64,7 @@ public class ImportsV2 {
    *  "port_of_entry" nodes. Obviously these nodes need to be created BEFORE
    *  calling this function.
    */
-    public static void loadLines(javaxt.io.File csvFile, Neo4J database) throws Exception {
+    public static void loadLines(javaxt.io.File xlsx, Neo4J database) throws Exception {
 
         System.out.println("\n\nLoading lines\n");
 
@@ -87,36 +87,45 @@ public class ImportsV2 {
         fields.add("unique_key");
 
 
-      //Set node name
-        String node = "import_line";
 
-
-      //Compile query used to create nodes
-        StringBuilder query = new StringBuilder("CREATE (a:" + node + " {");
+      //Compile prepared statements used to create nodes
+        StringBuilder stmt = new StringBuilder("CREATE (a:import_line {");
         Iterator<String> it = fields.iterator();
         while (it.hasNext()){
             String param = it.next().replace(" ","_").toLowerCase();
-            query.append(param);
-            query.append(": $");
-            query.append(param);
-            if (it.hasNext()) query.append(" ,");
+            stmt.append(param);
+            stmt.append(": $");
+            stmt.append(param);
+            if (it.hasNext()) stmt.append(" ,");
         }
-        query.append("}) RETURN id(a)");
+        stmt.append("}) RETURN id(a)");
+        String createImportLine = stmt.toString();
+
+        stmt = new StringBuilder("CREATE (a:import_affirmation {");
+        for (String param : new String[]{"key","value","unique_key"}){
+            stmt.append(param);
+            stmt.append(": $");
+            stmt.append(param);
+            if (!param.equals("unique_key")) stmt.append(" ,");
+        }
+        stmt.append("}) RETURN id(a)");
+        String createImportAffirmation = stmt.toString();
 
 
 
-      //Create unique key constraint and index
+
+      //Create unique key constraints and indexes
         Session session = null;
         try{
             session = database.getSession();
-            try{ session.run("CREATE CONSTRAINT ON (n:" + node + ") ASSERT n.unique_key IS UNIQUE"); }
+            try{ session.run("CREATE CONSTRAINT ON (n:import_line) ASSERT n.unique_key IS UNIQUE"); }
             catch(Exception e){}
-            try{ session.run("CREATE INDEX idx_" + node + " IF NOT EXISTS FOR (n:" + node + ") ON (n.unique_key)"); }
+            try{ session.run("CREATE INDEX idx_import_line IF NOT EXISTS FOR (n:import_line) ON (n.unique_key)"); }
             catch(Exception e){}
 
-            try{ session.run("CREATE CONSTRAINT ON (n:import_affirmation) ASSERT n.pm IS UNIQUE"); }
+            try{ session.run("CREATE CONSTRAINT ON (n:import_affirmation) ASSERT n.unique_key IS UNIQUE"); }
             catch(Exception e){}
-            try{ session.run("CREATE INDEX idx_affirmation IF NOT EXISTS FOR (n:import_affirmation) ON (n.pm)"); }
+            try{ session.run("CREATE INDEX idx_import_affirmation IF NOT EXISTS FOR (n:import_affirmation) ON (n.unique_key)"); }
             catch(Exception e){}
 
             session.close();
@@ -132,12 +141,13 @@ public class ImportsV2 {
             public void process(Object obj){
                 JSONObject json = (JSONObject) obj;
 
+
+              //Create params for the import_node
                 Map<String, Object> params = new LinkedHashMap<>();
                 for (String field : fields){
                     String param = field.replace(" ","_").toLowerCase();
                     params.put(param, null);
                 }
-
 
                 String uniqueKey = json.get("entry").toString() + "_" + json.get("doc").toString() + "_" + json.get("line").toString();
                 params.put("unique_key", uniqueKey);
@@ -189,9 +199,10 @@ public class ImportsV2 {
                 }
 
 
+              //Create import_line node
                 Long nodeID;
                 try{
-                    nodeID = getSession().run(query.toString(), params).single().get(0).asLong();
+                    nodeID = getSession().run(createImportLine, params).single().get(0).asLong();
                 }
                 catch(Exception e){
                     nodeID = getIdFromError(e);
@@ -201,7 +212,7 @@ public class ImportsV2 {
 
 
 
-
+              //Link import_line to import_establishment
                 for (String establishmentType : establishmentTypes){
                     establishmentType = establishmentType.toLowerCase();
                     String fei = json.get(establishmentType).toString();
@@ -218,9 +229,9 @@ public class ImportsV2 {
                     }
                 }
 
+
+              //Link import_line to port_of_entry
                 for (String port : new String[]{"port_of_entry","unladed_port"}){
-
-
                     Integer portID = json.get(port).toInteger();
                     if (portID!=null){
                         String link = "MATCH (r), (n:port_of_entry) WHERE id(r)=" + nodeID +
@@ -230,48 +241,45 @@ public class ImportsV2 {
                             getSession().run(link);
                         }
                         catch(Exception e){
-                            console.log(e.getMessage());
+                            //console.log(e.getMessage());
                         }
                     }
                 }
 
 
-              //Affirmation params
-                params = new LinkedHashMap<>();
-                String affirmation = json.get("affirmations").toString();
-                if(affirmation != null && !affirmation.trim().isEmpty()) {
-                    String[]pairs = null;
-                    if(affirmation.contains(";")) {
-                        pairs = affirmation.trim().split(";");
-                        for(int i=0;i<pairs.length;i++) {
-                            String[]parts = pairs[i].trim().split(" ");
-                            if(parts.length == 2) params.put(parts[0].contains("#") ? parts[0].replaceAll("#","").trim().toLowerCase() : parts[0].trim().toLowerCase(), parts[1].trim());
-                        }
-                    } else if(affirmation.trim().contains(" ")) {
-                        pairs = affirmation.trim().split(" ");
-                        if(pairs != null) {
-                            if(pairs.length == 2)  params.put(pairs[0].contains("#") ? pairs[0].replaceAll("#","").trim().toLowerCase() : pairs[0].trim().toLowerCase(), pairs[1].trim());
-                        }
-                    }
+              //Create import_affirmation nodes
+                String affirmations = json.get("affirmations").toString();
+                if (affirmations!=null){
+                    for (String str : affirmations.split(";")){
+                        str = str.trim();
+                        if (str.isEmpty()) continue;
+                        while (str.contains("  ")) str = str.replace("  ", " ");
+                        String[] arr = str.split(" ");
+                        String key = arr[0].replace("#", "");
+                        String val = arr.length>1 ? arr[1] : null;
+                        uniqueKey = key;
+                        if (val!=null) uniqueKey+="_"+val;
+                        params = new LinkedHashMap<>();
+                        params.put("key", key);
+                        params.put("value", val);
+                        params.put("unique_key", uniqueKey);
 
 
-
-                    if(params.size() > 0) {
+                      //Create import_affirmation node
                         Long affirmationId;
-                        String createAffirmations = getAffirmationsQuery("import_affirmation", params);
-
                         try{
-                            affirmationId = getSession().run(createAffirmations, params).single().get(0).asLong();
+                            affirmationId = getSession().run(createImportAffirmation, params).single().get(0).asLong();
                         }
                         catch(Exception e){
                             affirmationId = getIdFromError(e);
                         }
 
-
+                      //Link import_line to import_affirmation
                         try {
                             getSession().run("MATCH (r),(s:import_affirmation) WHERE id(r) =" + nodeID + " AND id(s) = " + affirmationId +
                             " CREATE(r)-[:has]->(s)");
-                        }catch(Exception e) {
+                        }
+                        catch(Exception e) {
                             e.printStackTrace();
                         }
                     }
@@ -279,21 +287,6 @@ public class ImportsV2 {
 
 
                 recordCounter.incrementAndGet();
-            }
-
-
-            private String getAffirmationsQuery(String node, Map<String, Object> params){
-                StringBuilder query = new StringBuilder("MERGE (a:" + node + " {");
-                Iterator<String> it = params.keySet().iterator();
-                while (it.hasNext()){
-                    String param = it.next();
-                    query.append(param);
-                    query.append(": $");
-                    query.append(param);
-                    if (it.hasNext()) query.append(" ,");
-                }
-                query.append("}) RETURN id(a)");
-                return query.toString();
             }
 
 
@@ -317,7 +310,7 @@ public class ImportsV2 {
 
 
       //Parse records and add them to the pool
-        java.io.InputStream is = csvFile.getInputStream();
+        java.io.InputStream is = xlsx.getInputStream();
         Workbook workbook = StreamingReader.builder()
             .rowCacheSize(10)
             .bufferSize(4096)
@@ -1038,7 +1031,7 @@ public class ImportsV2 {
 
       //Start console logger
         AtomicLong recordCounter = new AtomicLong(0);
-        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
 
 
       //Instantiate the ThreadPool
@@ -1364,20 +1357,39 @@ public class ImportsV2 {
                         "Suspected Counterfeit Reason","Lab Classification Code","Lab Classification","Summary",
 
                       //Sample specific fields
-                        "Sample Tracking Number	LAB CLASSIFICATION","LAB CLASSIFICATION DESCRIPTION","LAB CONCLUSION"
+                        "Sample Tracking Number","LAB CLASSIFICATION","LAB CLASSIFICATION DESCRIPTION","LAB CONCLUSION"
 
                     };
 
+
                     for (String field : fields){
                         try{
+                            String key = getKey(field);
                             String val = row.getCell(header.get(field)).getStringCellValue();
 
-                            String colName = field;
-                            while (colName.contains("  ")) colName = colName.replace("  ", " ");
-                            colName = colName.toLowerCase().replace(" ", "_");
-                            colName = colName.trim().toLowerCase();
 
-                            params.put(colName, val);
+                            if (val==null){
+
+                              //Starting on 4/4/2022 some of the fields have changed names
+                                if (field.equals("Problem Area Flag")){
+                                    val = row.getCell(header.get("Exam Problem Area Flag")).getStringCellValue();
+                                    if (val==null){
+                                        val = row.getCell(header.get("Collection Problem Area Flag")).getStringCellValue();
+                                    }
+                                }
+                                if (field.equals("Problem Area Description")){
+                                    val = row.getCell(header.get("Exam Problem Area Desc")).getStringCellValue();
+                                    if (val==null){
+                                        val = row.getCell(header.get("Collection Problem Area Desc")).getStringCellValue();
+                                    }
+                                }
+                                if (field.equals("Remarks")){
+                                    val = row.getCell(header.get("Activity Remarks")).getStringCellValue();
+                                }
+                            }
+
+
+                            params.put(key, val);
                         }
                         catch(Exception e){
                         }
@@ -1418,6 +1430,8 @@ public class ImportsV2 {
 
     public static void loadEstablishments2(javaxt.io.File xlsx, Neo4J database) throws Exception {
         int numThreads = 12;
+
+        System.out.println("\n\nLoading Establishments\n");
 
 
       //Generate a unique list of establishments and addresses
