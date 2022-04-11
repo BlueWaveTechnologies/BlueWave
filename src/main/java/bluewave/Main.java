@@ -260,6 +260,26 @@ public class Main {
             importPremier(args);
         }
         else if (str.equalsIgnoreCase("Imports")){
+            String est = args.get("-est");
+            if(est != null) {
+                //:> java -jar target/bluewave-dev.jar -config config.json -load Imports -est est 
+                Neo4J database = Config.getGraph(null);
+                    javaxt.io.File[]files = {
+                        new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx")
+                        // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
+                    };
+                    ImportsV2.loadEstablishments(files, database);
+                    database.close();
+                    return;
+            }
 
             String path = args.get("-path");
             java.io.File f = new java.io.File(path);
