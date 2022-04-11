@@ -874,7 +874,7 @@ public class ImportsV2 {
 
           String sheetName = null;
           long rowNum = 0;
-        
+
           try{
                 // Iterator<String>iter = establishmentSheetNames.iterator();
                 // while(iter.hasNext()) {
@@ -903,7 +903,7 @@ public class ImportsV2 {
                     String feiHeader = null;
                     String currentCellHeader = null;
                     for (Row row : sheet){
-                        
+
                         if(!skippedHeaderRow) {
                             headerList = new ArrayList();
                             Iterator<Cell> cellIterator = row.cellIterator();
@@ -925,7 +925,7 @@ public class ImportsV2 {
                         jsonRowObject = new JSONObject();
                         jsonRowObject.set("rowNum", rowNum);
                         // rowBuffer = new JSONArray();
-                        
+
                         for(int h=0;h < headerList.size();h++) {
                         // while(headerIterator.hasNext()) {
                             // currentCellHeader = (String)headerIterator.next();
@@ -947,7 +947,7 @@ public class ImportsV2 {
                                 }
                             }
                         }
-                        
+
                         // Iterator<Cell> cellIter = row.cellIterator();
                         // while(cellIter.hasNext()) {
 
@@ -975,7 +975,7 @@ public class ImportsV2 {
                         jsonRowObject.set("sheet", sheetName);
 
                         boolean legitFeiValue = true;
-                        
+
                         try {
                             Long feiValue = jsonRowObject.get(feiHeader).toLong();
                             if(feiValue == null) {
@@ -983,7 +983,7 @@ public class ImportsV2 {
                             } else {
                                 if(!(feiValue > 0)) {
                                     legitFeiValue = false;
-                                } 
+                                }
                             }
                         }catch(Exception e) {
                             e.printStackTrace();
@@ -1061,14 +1061,14 @@ public class ImportsV2 {
             errorWriter.write("End: " + date);
             errorWriter.newLine();errorWriter.newLine();
 
-            errorWriter.write("Unique FEIs/Rows processed: " + uniques.size()); 
-            
+            errorWriter.write("Unique FEIs/Rows processed: " + uniques.size());
+
             // HashSet fromServer = new HashSet();
             // try (Session session = database.getSession()) {
             //     List<org.neo4j.driver.Record> uniqueFEIsFromServer = session.run("MATCH (n:import_establishment) return n.fei").list();
             //     errorWriter.newLine();errorWriter.newLine();
 
-            //     errorWriter.write("Unique FEIs/Rows in server: " + uniqueFEIsFromServer.size()); 
+            //     errorWriter.write("Unique FEIs/Rows in server: " + uniqueFEIsFromServer.size());
             //     JSONArray jsonArray = new JSONArray();
             //     for(org.neo4j.driver.Record keyObj : uniqueFEIsFromServer) {
             //         Long key = keyObj.get(0).asLong();
@@ -1080,11 +1080,11 @@ public class ImportsV2 {
 
             //     for(Object kLong : jsonArray) {
             //         errorWriter.newLine();errorWriter.newLine();
-            //         errorWriter.write("Missing Unique FEI: " + kLong.toString()); 
+            //         errorWriter.write("Missing Unique FEI: " + kLong.toString());
             //     }
             // }catch(Exception e) {
             //     errorWriter.newLine();errorWriter.newLine();
-            //     errorWriter.write("ERROR: " + e.toString()); 
+            //     errorWriter.write("ERROR: " + e.toString());
             // }
 
 
@@ -1598,7 +1598,7 @@ public class ImportsV2 {
                                 }
                             }
                             catch(Exception e){
-                                e.printStackTrace();
+                                //e.printStackTrace();
                             }
                         }
 
@@ -2143,7 +2143,7 @@ public class ImportsV2 {
 
       //Count address that don't have coordinates
         String query = "MATCH (n:address)\n" +
-        "WHERE a.lat is null or a.lon is null\n";
+        "WHERE n.lat is null or n.lon is null\n";
         AtomicLong totalRecords = new AtomicLong();
         Session session = null;
         try {
@@ -2158,6 +2158,8 @@ public class ImportsV2 {
         catch (Exception e) {
             if (session != null) session.close();
         }
+        if (totalRecords.get()==0) return;
+        console.log(totalRecords + " addresses missing coordinates");
 
 
       //Start console logger
@@ -2165,7 +2167,7 @@ public class ImportsV2 {
         StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
 
 
-        
+
       //Parse CSV file as needed
         ConcurrentHashMap<String, BigDecimal[]> coords = new ConcurrentHashMap<>();
         if (csvFile!=null){
@@ -2190,13 +2192,12 @@ public class ImportsV2 {
                     try{
                         columns = CSV.getColumns(row, ",");
                         String address = columns.get(addressField).toString();
-                        BigDecimal[] point = new BigDecimal[]{
-                            columns.get(latField).toBigDecimal(),
-                            columns.get(lonField).toBigDecimal()
-                        };
+                        BigDecimal lat = columns.get(latField).toBigDecimal();
+                        BigDecimal lon = columns.get(lonField).toBigDecimal();
+                        if (lat==null || lon==null) continue;
 
                         if (address.endsWith(" US")){
-                            address = address.substring(0, address.length()-3).trim();
+                            address = address.substring(0, address.length()-2).trim();
 
                           //Ensure commas have a whitespace after them
                             address = address.replace(",", ", ");
@@ -2223,9 +2224,10 @@ public class ImportsV2 {
                                 address = StringUtils.trimUSAddress(address);
                             }
                         }
-                        coords.put(address, point);
+                        coords.put(address, new BigDecimal[]{lat,lon});
                     }
                     catch(Exception e){
+                        //e.printStackTrace();
                     }
                 }
             }
@@ -2234,23 +2236,28 @@ public class ImportsV2 {
         }
 
 
+
       //Instantiate the ThreadPool
+        AtomicLong geocodingRequests = new AtomicLong(0);
         ThreadPool pool = new ThreadPool(12){
             public void process(Object obj){
                 Object[] arr = (Object[]) obj;
                 Long id = (Long) arr[0];
                 String address = (String) arr[1];
 
-                BigDecimal[] point = null;
+                BigDecimal[] point;
                 synchronized(coords){
                     point = coords.get(address);
                 }
+
                 if (point==null){
                     try{
                         point = geocoder.getCoordinates(address);
+                        if (point==null) throw new Exception("Failed to geocode address: " +address);
+                        geocodingRequests.incrementAndGet();
                     }
                     catch(Exception e){
-                        console.log(address);
+                        console.log(e.getMessage());
                     }
                 }
 
@@ -2279,7 +2286,7 @@ public class ImportsV2 {
                         getSession().run(stmt.toString(), params);
                     }
                     catch(Exception e){
-                        console.log(address);
+                        //console.log(e.getMessage());
                     }
                 }
 
@@ -2337,6 +2344,31 @@ public class ImportsV2 {
 
       //Clean up
         statusLogger.shutdown();
+
+        console.log("Executed " + geocodingRequests.get() + " geocoding requests");
+
+
+      //Output addresses and coordinates to a file
+        if (csvFile!=null){
+            javaxt.io.File output = new javaxt.io.File(csvFile.getDirectory(), csvFile.getName(false) + "-updates.csv");
+            java.io.BufferedWriter writer = output.getBufferedWriter("UTF-8");
+            writer.write("address,lat,lon");
+            Iterator<String> it = coords.keySet().iterator();
+            while (it.hasNext()){
+                String address = it.next();
+                BigDecimal[] point = coords.get(address);
+                String lat = "";
+                String lon = "";
+                if (point!=null){
+                    lat = point[0].toString();
+                    lon = point[1].toString();
+                }
+                writer.write("\r\n");
+                if (address.contains(",")) address = "\""+address+"\"";
+                writer.write(address+","+lat+","+lon);
+            }
+            writer.close();
+        }
     }
 
 
