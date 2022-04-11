@@ -965,11 +965,9 @@ public class ImportsV2 {
   //**************************************************************************
   //** loadEstablishments
   //**************************************************************************
-    private static void _loadEstablishments(javaxt.io.File csvFile, Neo4J database, java.io.BufferedWriter errorWriter, javaxt.json.JSONObject validationStats, HashSet uniqueFEIs) throws Exception {
+    private static void _loadEstablishments(javaxt.io.File csvFile, Neo4J database, java.io.BufferedWriter errorWriter, HashSet uniqueFEIs, JSONArray totalRows) throws Exception {
         System.out.println("\n\n"+csvFile.getName()+"\n");
         System.out.println("\n\nLoading Establishments\n");
-        AtomicLong processedRecords = new AtomicLong(0);
-        AtomicLong discardedRecords = new AtomicLong(0);
         //Count total records in the file
         AtomicLong totalRecords = new AtomicLong(0);
         if (true){
@@ -1034,7 +1032,6 @@ public class ImportsV2 {
 
                   //Discard invalid rows with 0 value for fei
                     if(fei == null || fei == 0) {
-                        discardedRecords.incrementAndGet();
                         return;
                     }
 
@@ -1209,6 +1206,20 @@ public class ImportsV2 {
         List<String> sheets = Arrays.asList("Entry Report", "Listing Report", "MFR Report", "Shipper Report", "Importer Report", "Consignee Report", "DII Report", "Exam Report", "Sample Report", "Joint Firm Report", "Query Summary");
         HashSet<String>establishmentSheetNames = new HashSet<>(Arrays.asList("MFR Report", "Shipper Report", "Importer Report", "Consignee Report", "DII Report"));
         // HashSet<String>establishmentSheetNames = new HashSet<>(Arrays.asList("MFR Report"));
+        List<String>estSheets = Arrays.asList("MFR Report", "Shipper Report", "Importer Report", "Consignee Report", "DII Report");
+
+        List<String>mfrHeaders = Arrays.asList("Manufacturer FEI Number", "Manufacturer Legal Name","Manufacturer Name & Address", "Manufacturer DUNS Num", "Manufacture Operational Status Code", "Manufacturer Latitude", "Manufacturer Longitude");
+        List<String>shipperHeaders = Arrays.asList("Shipper FEI Number", "Shipper Legal Name","Shipper Name & Address", "Shipper DUNS Num", "Shipper Operational Status Code", "Shipper Latitude", "Shipper Longitude");
+        List<String>importerHeaders = Arrays.asList("Importer FEI Number",	"Importer Legal Name","Importer Name & Address", "Importer DUNS Num", "Importer Operational Status Code", "Importer Latitude", "Importer Longitude");
+        List<String>consigneeHeaders = Arrays.asList("Consignee FEI Number", "Consignee Legal Name","Consignee Name & Address", "Consignee DUNS Num", "Consignee Operational Status Code", "Consignee Latitude", "Consignee Longitude");
+        List<String>diiHeaders = Arrays.asList("DII FEI Number", "DII Legal Name","DII Name & Address", "DII DUNS Num", "DII Operational Status Code");
+
+        List<List<String>> hdrs = new ArrayList();
+        hdrs.add(mfrHeaders);
+        hdrs.add(shipperHeaders);
+        hdrs.add(importerHeaders);
+        hdrs.add(consigneeHeaders);
+        hdrs.add(diiHeaders);
 
         int sheetIndex = 0;
           //Parse file
@@ -1221,60 +1232,134 @@ public class ImportsV2 {
           String sheetName = null;
           long rowNum = 0;
           try{
-                Iterator<String>iter = establishmentSheetNames.iterator();
-                while(iter.hasNext()) {
+                // Iterator<String>iter = establishmentSheetNames.iterator();
+                // while(iter.hasNext()) {
+                for(int i=0;i < estSheets.size();i++) {
+                    sheetName = String.valueOf(estSheets.get(i));
 
-                  sheetName = iter.next();
-                  Sheet sheet = workbook.getSheet(sheetName);
-                  if(sheet == null) continue;
+                   // sheetName = iter.next();
+                    Sheet sheet = workbook.getSheet(sheetName);
+                    if(sheet == null) continue;
 
                     JSONObject jsonRowObject = null;
                     JSONArray rowBuffer = null;
                     DataFormatter formatter = new DataFormatter();
                     boolean skippedHeaderRow = false;
                     rowNum = 0;
+                    // int headerIndex = estSheets.indexOf(sheetName);
+                    // if(headerIndex == -1) {
+                    //     errorWriter.write("Headers for '"+ sheetName + "' not found: " );errorWriter.newLine();errorWriter.newLine();
+                    //     continue;
+                    // }
+                    // List<String>headerList = hdrs.get(i);
+                    // Iterator headerIterator = headerSet.iterator();
+                    // String feiHeader = headerList.get(0);
+
+                    List<String>headerList = null;
+                    String feiHeader = null;
+                    String currentCellHeader = null;
                     for (Row row : sheet){
-                        rowNum++;
+                        
                         if(!skippedHeaderRow) {
+                            headerList = new ArrayList();
+                            Iterator<Cell> cellIterator = row.cellIterator();
+                            int cellNum = 0;
+                            while(cellIterator.hasNext()) {
+                                if(cellNum == 0) {
+                                    feiHeader = cellIterator.next().getStringCellValue();
+                                    headerList.add(feiHeader);
+                                }
+                                else {
+                                    headerList.add(cellIterator.next().getStringCellValue());
+                                }
+                            }
                             skippedHeaderRow = true;
                             continue;
                         }
+                        rowNum++;
                         jsonRowObject = new JSONObject();
-                        rowBuffer = new JSONArray();
-                        Iterator<Cell> cellIter = row.cellIterator();
-                        while(cellIter.hasNext()) {
-
-                            Cell cell = cellIter.next();
-                            if(cell.getCellType() == CellType.BLANK || cell.getCellType() == CellType._NONE) {
-                                rowBuffer.add(" ");
-                            }
-                            else if(cell.getCellType() == CellType.BOOLEAN) {
-                                rowBuffer.add(cell.getBooleanCellValue());
-                            }
-                            else if(cell.getCellType() == CellType.ERROR) {
-                                rowBuffer.add(" ");
-                            }
-                            else if(cell.getCellType() == CellType.FORMULA) {
-                                rowBuffer.add(" ");
-                            }
-                            else if(cell.getCellType() == CellType.NUMERIC) {
-                                rowBuffer.add(cell.getNumericCellValue());
-                            }
-                            else if(cell.getCellType() == CellType.STRING) {
-                               rowBuffer.add(cell.getStringCellValue());
+                        jsonRowObject.set("rowNum", rowNum);
+                        // rowBuffer = new JSONArray();
+                        
+                        for(int h=0;h < headerList.size();h++) {
+                        // while(headerIterator.hasNext()) {
+                            // currentCellHeader = (String)headerIterator.next();
+                            // currentCellHeader = (String)headerSet.next();
+                            currentCellHeader = headerList.get(h);
+                            Cell cell = row.getCell(h);
+                            if(cell != null) {
+                                if(cell.getCellType() == CellType.BLANK || cell.getCellType() == CellType._NONE || cell.getCellType() == CellType.FORMULA || cell.getCellType() == CellType.ERROR) {
+                                    jsonRowObject.set(currentCellHeader, " ");
+                                }
+                                else if(cell.getCellType() == CellType.BOOLEAN) {
+                                    jsonRowObject.set(currentCellHeader, cell.getBooleanCellValue());
+                                }
+                                else if(cell.getCellType() == CellType.NUMERIC) {
+                                    jsonRowObject.set(currentCellHeader, cell.getNumericCellValue());
+                                }
+                                else if(cell.getCellType() == CellType.STRING) {
+                                    jsonRowObject.set(currentCellHeader, cell.getStringCellValue());
+                                }
                             }
                         }
+                        
+                        // Iterator<Cell> cellIter = row.cellIterator();
+                        // while(cellIter.hasNext()) {
+
+                        //     Cell cell = cellIter.next();
+                        //     if(cell.getCellType() == CellType.BLANK || cell.getCellType() == CellType._NONE) {
+                        //         rowBuffer.add(" ");
+                        //     }
+                        //     else if(cell.getCellType() == CellType.BOOLEAN) {
+                        //         rowBuffer.add(cell.getBooleanCellValue());
+                        //     }
+                        //     else if(cell.getCellType() == CellType.ERROR) {
+                        //         rowBuffer.add(" ");
+                        //     }
+                        //     else if(cell.getCellType() == CellType.FORMULA) {
+                        //         rowBuffer.add(" ");
+                        //     }
+                        //     else if(cell.getCellType() == CellType.NUMERIC) {
+                        //         rowBuffer.add(cell.getNumericCellValue());
+                        //     }
+                        //     else if(cell.getCellType() == CellType.STRING) {
+                        //        rowBuffer.add(cell.getStringCellValue());
+                        //     }
+                        // }
 
                         jsonRowObject.set("sheet", sheetName);
-                        jsonRowObject.set("row", rowBuffer);
-                        pool.add(jsonRowObject);
-                        processedRecords.incrementAndGet();
+
+                        boolean legitFeiValue = true;
+                        
+                        try {
+                            Long feiValue = jsonRowObject.get(feiHeader).toLong();
+                            if(feiValue == null) {
+                                 legitFeiValue = false;
+                            } else {
+                                if(!(feiValue > 0)) {
+                                    legitFeiValue = false;
+                                } else {
+
+                                }
+                            }
+                        }catch(Exception e) {
+                            e.printStackTrace();
+                            legitFeiValue = false;
+                        }
+
+                        if(jsonRowObject.length() > 2 && legitFeiValue)
+                            totalRows.add(jsonRowObject);
+                        else {
+                            
+                        }
+
                     }
                 }
             }
           catch(Exception e){
             errorWriter.write("Sheet: " + sheetName + " row: "+rowNum+" " + e.toString());
             errorWriter.newLine();errorWriter.newLine();
+            e.printStackTrace();
           }
 
           workbook.close();
@@ -1284,13 +1369,7 @@ public class ImportsV2 {
         pool.done();
         pool.join();
 
-        Long currentProcessed = validationStats.get("processed").toLong();
-        validationStats.set("processed", processedRecords.get() + currentProcessed);
-        System.out.println("\n\nRows Processed: " + (processedRecords.get() + currentProcessed)+"\n\n");
-
-        Long currentDiscarded = validationStats.get("discarded").toLong();
-        validationStats.set("discarded", discardedRecords.get() + currentDiscarded);
-        System.out.println("\n\nRows Discarded: " + (discardedRecords.get() + currentDiscarded)+"\n\n");
+        System.out.println("\n\nTotal Rows: " + totalRows.length() +"\n\n");
 
         System.out.println("\nSheets Processed: " + sheetsProcessed.toString());
       //Clean up
@@ -1301,10 +1380,6 @@ public class ImportsV2 {
 
     public static void loadEstablishments(javaxt.io.File[] files, Neo4J database) {
         HashSet uniques = new HashSet();
-        javaxt.json.JSONObject validationStats = new javaxt.json.JSONObject();
-        validationStats.set("processed", 0);
-        validationStats.set("duplicates", 0);
-        validationStats.set("discarded", 0);
         javaxt.io.File errorLog = new javaxt.io.File("loadEstablishmentsErrors.log");
         if(!errorLog.exists()) {
             errorLog.create();
@@ -1314,45 +1389,47 @@ public class ImportsV2 {
             javaxt.utils.Date date = new javaxt.utils.Date();
             errorWriter.write("Begin: " + date);
             errorWriter.newLine();errorWriter.newLine();
+            JSONArray totalRows = new JSONArray();
             for(javaxt.io.File file : files) {
-                _loadEstablishments(file, database, errorWriter, validationStats, uniques);
+                _loadEstablishments(file, database, errorWriter, uniques, totalRows);
+                errorWriter.write(file.getName() +": Total Rows: "+totalRows.length()); errorWriter.newLine();errorWriter.newLine();
+            }
+            Iterator iter = totalRows.iterator();
+            while(iter.hasNext()) {
+                JSONObject jsonObj = (JSONObject)iter.next();
+                errorWriter.newLine();
+                errorWriter.write(jsonObj.toString());
             }
             date = new javaxt.utils.Date();
             errorWriter.newLine();
             errorWriter.write("End: " + date);
             errorWriter.newLine();errorWriter.newLine();
 
-            errorWriter.write("Processed Rows: " + validationStats.get("processed"));
-            errorWriter.newLine();errorWriter.newLine();
-
-            errorWriter.write("Discarded Rows: " + validationStats.get("discarded"));
-            errorWriter.newLine();errorWriter.newLine();
-
             errorWriter.write("Unique FEIs/Rows processed: " + uniques.size()); 
             
-            HashSet fromServer = new HashSet();
-            try (Session session = database.getSession()) {
-                List<org.neo4j.driver.Record> uniqueFEIsFromServer = session.run("MATCH (n:import_establishment) return n.fei").list();
-                errorWriter.newLine();errorWriter.newLine();
+            // HashSet fromServer = new HashSet();
+            // try (Session session = database.getSession()) {
+            //     List<org.neo4j.driver.Record> uniqueFEIsFromServer = session.run("MATCH (n:import_establishment) return n.fei").list();
+            //     errorWriter.newLine();errorWriter.newLine();
 
-                errorWriter.write("Unique FEIs/Rows in server: " + uniqueFEIsFromServer.size()); 
-                JSONArray jsonArray = new JSONArray();
-                for(org.neo4j.driver.Record keyObj : uniqueFEIsFromServer) {
-                    Long key = keyObj.get(0).asLong();
-                    fromServer.add(key);
-                    if(!uniques.contains(key)) {
-                        jsonArray.add(key);
-                    }
-                }
+            //     errorWriter.write("Unique FEIs/Rows in server: " + uniqueFEIsFromServer.size()); 
+            //     JSONArray jsonArray = new JSONArray();
+            //     for(org.neo4j.driver.Record keyObj : uniqueFEIsFromServer) {
+            //         Long key = keyObj.get(0).asLong();
+            //         fromServer.add(key);
+            //         if(!uniques.contains(key)) {
+            //             jsonArray.add(key);
+            //         }
+            //     }
 
-                for(Object kLong : jsonArray) {
-                    errorWriter.newLine();errorWriter.newLine();
-                    errorWriter.write("Missing Unique FEI: " + kLong.toString()); 
-                }
-            }catch(Exception e) {
-                errorWriter.newLine();errorWriter.newLine();
-                errorWriter.write("ERROR: " + e.toString()); 
-            }
+            //     for(Object kLong : jsonArray) {
+            //         errorWriter.newLine();errorWriter.newLine();
+            //         errorWriter.write("Missing Unique FEI: " + kLong.toString()); 
+            //     }
+            // }catch(Exception e) {
+            //     errorWriter.newLine();errorWriter.newLine();
+            //     errorWriter.write("ERROR: " + e.toString()); 
+            // }
 
             errorWriter.flush();
         }catch(Exception e) {

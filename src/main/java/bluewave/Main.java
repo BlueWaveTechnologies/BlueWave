@@ -274,16 +274,16 @@ public class Main {
             // Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             // ImportsV2.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
             javaxt.io.File[]files = {
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx"),
-                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
+                new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_1-1-20_to_1-31-22.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_07_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_14_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_21_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_02_28_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_07_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_14_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_21_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_03_28_2022.xlsx")
+                // new javaxt.io.File(new javaxt.io.Directory("./temp/ingest"), "Scheduled_Glove_Report_Weekly_04_04_2022.edited.xlsx")
             };
 
             ImportsV2.loadEstablishments(files, database);
