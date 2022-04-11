@@ -2,12 +2,12 @@ package bluewave.data;
 import bluewave.utils.GeoCoder;
 import bluewave.graph.Neo4J;
 import bluewave.utils.StatusLogger;
+import bluewave.utils.StringUtils;
 import static bluewave.graph.Utils.*;
 import static bluewave.utils.StatusLogger.*;
 
 import java.io.InputStream;
 import java.io.FileInputStream;
-import java.io.BufferedReader;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -19,9 +19,7 @@ import javaxt.express.utils.CSV;
 import static javaxt.utils.Console.console;
 
 import com.monitorjbl.xlsx.StreamingReader;
-import com.monitorjbl.xlsx.impl.StreamingRow;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Cell;
@@ -43,17 +41,26 @@ import org.neo4j.driver.Session;
 
 public class ImportsV2 {
 
-    private GeoCoder geocoder;
+    private static GeoCoder geocoder = new GeoCoder();
     private static String[] establishmentTypes = new String[]{
     "Manufacturer","Shipper","Importer","Consignee","DII"};
+    private static Map<String, String> usTerritories = java.util.Map.ofEntries(
+        java.util.Map.entry("AS", "American Samoa"),
+        java.util.Map.entry("FM", "Federated States of Micronesia"),
+        java.util.Map.entry("GU", "Guam"),
+        java.util.Map.entry("MH", "Marshall Islands"),
+        java.util.Map.entry("MP", "Northern Mariana Islands"),
+        java.util.Map.entry("PR", "Puerto Rico"),
+        java.util.Map.entry("PW", "Palau"),
+        java.util.Map.entry("VI", "U.S. Virgin Islands"),
+        java.util.Map.entry("UM", "U.S. Minor Outlying Islands")
+    );
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    private ImportsV2() throws Exception {
-        geocoder = new GeoCoder();
-    }
+    private ImportsV2(){}
 
 
   //**************************************************************************
@@ -1577,12 +1584,44 @@ public class ImportsV2 {
                                         addr += str;
                                     }
                                     address = replaceLineBreaks(addr).trim();
+
+
+                                  //Ensure commas have a whitespace after them
+                                    address = address.replace(",", ", ");
+                                    while (address.contains("  ")){
+                                        address = address.replace("  ", " ");
+                                    }
+                                    address = address.trim();
                                     if (address.endsWith(",")) address = address.substring(0, address.length()-1).trim();
 
 
-                                  //Append country code to the end of the address as needed
-                                    if (country!=null){
-                                        if (!country.equals("US")){
+                                  //Perform additional address parsing if there's a country code
+                                    if (country!=null && !address.isEmpty()){
+                                        if (country.equals("US")){
+
+
+                                          //Check if address is a US territory
+                                            String territory = null;
+                                            Iterator<String> it = usTerritories.keySet().iterator();
+                                            while (it.hasNext()){
+                                                String t = it.next();
+                                                if (address.contains(" " + t + " ") || address.endsWith(" " + t)){
+                                                    territory = t;
+                                                    break;
+                                                }
+                                            }
+
+
+                                            if (territory!=null){
+                                                country = territory;
+                                            }
+                                            else{
+                                                address = StringUtils.trimUSAddress(address);
+                                            }
+                                        }
+                                        else{
+
+                                          //If the address in not in the US, append country code
                                             if (!address.isEmpty() && !address.endsWith(" " + country)){
                                                 address+= ", " + country;
                                             }
@@ -1610,6 +1649,7 @@ public class ImportsV2 {
                                     if (latitude!=null && longitude!=null){
                                         params.put("lat", latitude);
                                         params.put("lon", longitude);
+                                        params.put("geocoder", "ORADSS");
                                     }
                                     if (country!=null) params.put("country", country);
                                     addresses.put(address, params);
@@ -1675,7 +1715,23 @@ public class ImportsV2 {
         }
         */
 
-
+//if (true){
+//    int numAddressesWithoutCoords = 0;
+//    Iterator<String> it = addresses.keySet().iterator();
+//    while (it.hasNext()){
+//        String address = it.next();
+//        Map<String, Object> params = addresses.get(address);
+//        Object lat = params.get("lat");
+//        Object lon = params.get("lon");
+//        if (lat==null || lon==null){
+//            System.out.println(address);
+//            //System.out.println("-----------------");
+//            numAddressesWithoutCoords++;
+//        }
+//    }
+//    console.log(numAddressesWithoutCoords);
+//    return;
+//}
 
 
       //Start console logger
@@ -1978,6 +2034,215 @@ public class ImportsV2 {
 
 
         }
+    }
+
+
+  //**************************************************************************
+  //** geocodeAddresses
+  //**************************************************************************
+  /** Used to add lat/lon coordinates to address nodes
+   *  @param csvFile Optional CSV file with addresses and coordinates from a
+   *  previous geocoding run.
+   */
+    public static void geocodeAddresses(Neo4J database, javaxt.io.File csvFile) throws Exception {
+
+
+      //Count address that don't have coordinates
+        String query = "MATCH (n:address)\n" +
+        "WHERE a.lat is null or a.lon is null\n";
+        AtomicLong totalRecords = new AtomicLong();
+        Session session = null;
+        try {
+            session = database.getSession();
+            Result rs = session.run(query + "RETURN count(n)");
+            if (rs.hasNext()){
+                Record record = rs.next();
+                totalRecords.set(record.get(0).asLong());
+            }
+            session.close();
+        }
+        catch (Exception e) {
+            if (session != null) session.close();
+        }
+
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, totalRecords);
+
+
+        
+      //Parse CSV file as needed
+        ConcurrentHashMap<String, BigDecimal[]> coords = new ConcurrentHashMap<>();
+        if (csvFile!=null){
+            java.io.BufferedReader br = csvFile.getBufferedReader();
+
+          //Parse header and find address, lat, and lon fields
+            Integer addressField = null;
+            Integer latField = null;
+            Integer lonField = null;
+            String row = br.readLine();
+            CSV.Columns columns = CSV.getColumns(row, ",");
+            for (int i=0; i<columns.length(); i++){
+                String fieldName = columns.get(i).toString();
+                if (fieldName.equals("lat")) latField = i;
+                if (fieldName.equals("lon")) lonField = i;
+                if (fieldName.equals("address")) addressField = i;
+            }
+
+          //Extract addresses and coords
+            if (addressField!=null && latField!=null && lonField!=null){
+                while ((row = br.readLine()) != null){
+                    try{
+                        columns = CSV.getColumns(row, ",");
+                        String address = columns.get(addressField).toString();
+                        BigDecimal[] point = new BigDecimal[]{
+                            columns.get(latField).toBigDecimal(),
+                            columns.get(lonField).toBigDecimal()
+                        };
+
+                        if (address.endsWith(" US")){
+                            address = address.substring(0, address.length()-3).trim();
+
+                          //Ensure commas have a whitespace after them
+                            address = address.replace(",", ", ");
+                            while (address.contains("  ")){
+                                address = address.replace("  ", " ");
+                            }
+                            address = address.trim();
+                            if (address.endsWith(",")) address = address.substring(0, address.length()-1).trim();
+
+
+
+                          //Check if address is a US territory
+                            String territory = null;
+                            Iterator<String> it = usTerritories.keySet().iterator();
+                            while (it.hasNext()){
+                                String t = it.next();
+                                if (address.contains(" " + t + " ") || address.endsWith(" " + t)){
+                                    territory = t;
+                                    break;
+                                }
+                            }
+
+                            if (territory==null){
+                                address = StringUtils.trimUSAddress(address);
+                            }
+                        }
+                        coords.put(address, point);
+                    }
+                    catch(Exception e){
+                    }
+                }
+            }
+            br.close();
+            console.log("Found " + coords.size() + " addresses with coords");
+        }
+
+
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(12){
+            public void process(Object obj){
+                Object[] arr = (Object[]) obj;
+                Long id = (Long) arr[0];
+                String address = (String) arr[1];
+
+                BigDecimal[] point = null;
+                synchronized(coords){
+                    point = coords.get(address);
+                }
+                if (point==null){
+                    try{
+                        point = geocoder.getCoordinates(address);
+                    }
+                    catch(Exception e){
+                        console.log(address);
+                    }
+                }
+
+                if (point!=null){
+
+                    synchronized(coords){
+                        coords.put(address, point);
+                        coords.notify();
+                    }
+
+                    try{
+
+                        StringBuilder stmt = new StringBuilder();
+                        stmt.append("MATCH (a:address) WHERE id(a)=" + id + "\n");
+                        stmt.append("SET a+= {");
+                        stmt.append("lat: $lat,");
+                        stmt.append("lon: $lon,");
+                        stmt.append("geocoder: $geocoder");
+                        stmt.append("}");
+
+                        Map<String, Object> params = new LinkedHashMap<>();
+                        params.put("lat", point[0].toString());
+                        params.put("lon", point[1].toString());
+                        params.put("geocoder", "Google");
+
+                        getSession().run(stmt.toString(), params);
+                    }
+                    catch(Exception e){
+                        console.log(address);
+                    }
+                }
+
+
+
+                recordCounter.incrementAndGet();
+            }
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+
+      //Add records to the ThreadPool
+        try{
+            session = database.getSession();
+            Result rs = session.run(query + "RETURN id(n) as id, n.address as address");
+            while (rs.hasNext()){
+                Record r = rs.next();
+                try{
+                    Long id = r.get("id").asLong();
+                    String address = r.get("address").asString();
+                    pool.add(new Object[]{id, address});
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }
+
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
     }
 
 
