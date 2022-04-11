@@ -30,9 +30,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         digitSimilarities: true,
         textSimilarities: true,
         minDigitCount: 1,
-        allowDigitSpaces: true,
-        decimalsOnly: false,
-        minDecimalPlaces: 1,
+        // allowDigitSpaces: true,
+        // decimalsOnly: false,
+        // minDecimalPlaces: 1,
         minTextWords: 1,
         minTextCharacters: 1
     };
@@ -483,37 +483,37 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             type: "text",
                             required: false
                         },
-                        {
-                            name: "allowDigitSpaces",
-                            label: "Allow Spaces Between Digits",
-                            type: "checkbox",
-                            options:[
-                                {
-                                    label: "",
-                                    value: true,
-                                    checked: false
-                                }
-                            ]
-                        },
-                        {
-                            name: "decimalsOnly",
-                            label: "Decimals Only",
-                            type: "checkbox",
-                            options:[
-                                {
-                                    label: "",
-                                    value: true,
-                                    checked: false
-                                }
-                            ]
-                        },
-                        {
+                        // {
+                        //     name: "allowDigitSpaces",
+                        //     label: "Allow Spaces Between Digits",
+                        //     type: "checkbox",
+                        //     options:[
+                        //         {
+                        //             label: "",
+                        //             value: true,
+                        //             checked: false
+                        //         }
+                        //     ]
+                        // },
+                        // {
+                        //     name: "decimalsOnly",
+                        //     label: "Decimals Only",
+                        //     type: "checkbox",
+                        //     options:[
+                        //         {
+                        //             label: "",
+                        //             value: true,
+                        //             checked: false
+                        //         }
+                        //     ]
+                        // },
+                        // {
 
-                            name: "minDecimalPlaces",
-                            label: "Min Decimal Places",
-                            type: "text",
-                            required: false
-                        }
+                        //     name: "minDecimalPlaces",
+                        //     label: "Min Decimal Places",
+                        //     type: "text",
+                        //     required: false
+                        // }
                     ]
                 },
                 {
@@ -585,23 +585,23 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var minDigitCount = comparisonConfig.minDigitCount;
         minDigitCountField.setValue(minDigitCount);
 
-    //Set initial value for allowDigitSpaces
-        var allowDigitSpacesField = form.findField("allowDigitSpaces");
-        var allowDigitSpacesFieldLabel = allowDigitSpacesField.row.getElementsByClassName("form-label noselect")[1];
-        var allowDigitSpaces = comparisonConfig.allowDigitSpaces;
-        allowDigitSpacesField.setValue(allowDigitSpaces===true ? true : false);
+    // //Set initial value for allowDigitSpaces
+    //     var allowDigitSpacesField = form.findField("allowDigitSpaces");
+    //     var allowDigitSpacesFieldLabel = allowDigitSpacesField.row.getElementsByClassName("form-label noselect")[1];
+    //     var allowDigitSpaces = comparisonConfig.allowDigitSpaces;
+    //     allowDigitSpacesField.setValue(allowDigitSpaces===true ? true : false);
 
-    //Set initial value for decimalsOnly
-        var decimalsOnlyField = form.findField("decimalsOnly");
-        var decimalsOnlyFieldLabel = decimalsOnlyField.row.getElementsByClassName("form-label noselect")[1];
-        var decimalsOnly = comparisonConfig.decimalsOnly;
-        decimalsOnlyField.setValue(decimalsOnly===true ? true : false);
+    // //Set initial value for decimalsOnly
+    //     var decimalsOnlyField = form.findField("decimalsOnly");
+    //     var decimalsOnlyFieldLabel = decimalsOnlyField.row.getElementsByClassName("form-label noselect")[1];
+    //     var decimalsOnly = comparisonConfig.decimalsOnly;
+    //     decimalsOnlyField.setValue(decimalsOnly===true ? true : false);
 
-    //Set initial value for minDecimalPlaces
-        var minDecimalPlacesField = form.findField("minDecimalPlaces");
-        var minDecimalPlacesFieldLabel = minDecimalPlacesField.row.getElementsByClassName("form-label noselect")[1];
-        var minDecimalPlaces = comparisonConfig.minDecimalPlaces;
-        minDecimalPlacesField.setValue(minDecimalPlaces);
+    // //Set initial value for minDecimalPlaces
+    //     var minDecimalPlacesField = form.findField("minDecimalPlaces");
+    //     var minDecimalPlacesFieldLabel = minDecimalPlacesField.row.getElementsByClassName("form-label noselect")[1];
+    //     var minDecimalPlaces = comparisonConfig.minDecimalPlaces;
+    //     minDecimalPlacesField.setValue(minDecimalPlaces);
 
 
 
@@ -659,9 +659,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             else if (formSettings.digitSimilarities !== comparisonConfig.digitSimilarities) return digitSimilaritiesField;
             else if (formSettings.textSimilarities !== comparisonConfig.textSimilarities) return textSimilaritiesField;
             else if (formSettings.minDigitCount !== comparisonConfig.minDigitCount) return minDigitCountField;
-            else if (formSettings.allowDigitSpaces !== comparisonConfig.allowDigitSpaces) return allowDigitSpacesField;
-            else if (formSettings.decimalsOnly !== comparisonConfig.decimalsOnly) return decimalsOnlyField;
-            else if (formSettings.minDecimalPlaces !== comparisonConfig.minDecimalPlaces) return minDecimalPlacesField;
+            // else if (formSettings.allowDigitSpaces !== comparisonConfig.allowDigitSpaces) return allowDigitSpacesField;
+            // else if (formSettings.decimalsOnly !== comparisonConfig.decimalsOnly) return decimalsOnlyField;
+            // else if (formSettings.minDecimalPlaces !== comparisonConfig.minDecimalPlaces) return minDecimalPlacesField;
             else if (formSettings.minTextWords !== comparisonConfig.minTextWords) return minTextWordsField;
             else if (formSettings.minTextCharacters !== comparisonConfig.minTextCharacters) return minTextCharactersField;
             else if (formSettings.duplicatePageSimilarities !== comparisonConfig.duplicatePageSimilarities) return duplicatePageSimilaritiesField;
@@ -674,9 +674,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 digitSimilaritiesField.setValue(comparisonConfig.digitSimilarities);
                 textSimilaritiesField.setValue(comparisonConfig.textSimilarities);
                 minDigitCountField.setValue(comparisonConfig.minDigitCount);
-                allowDigitSpacesField.setValue(comparisonConfig.allowDigitSpaces);
-                decimalsOnlyField.setValue(comparisonConfig.decimalsOnly);
-                minDecimalPlacesField.setValue(comparisonConfig.minDecimalPlaces);
+                // allowDigitSpacesField.setValue(comparisonConfig.allowDigitSpaces);
+                // decimalsOnlyField.setValue(comparisonConfig.decimalsOnly);
+                // minDecimalPlacesField.setValue(comparisonConfig.minDecimalPlaces);
                 minTextWordsField.setValue(comparisonConfig.minTextWords);
                 minTextCharactersField.setValue(comparisonConfig.minTextCharacters);
                 duplicatePageSimilaritiesField.setValue(comparisonConfig.duplicatePageSimilarities);
@@ -689,9 +689,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 comparisonConfig.digitSimilarities = formSettings.digitSimilarities;
                 comparisonConfig.textSimilarities = formSettings.textSimilarities;
                 comparisonConfig.minDigitCount = formSettings.minDigitCount;
-                comparisonConfig.allowDigitSpaces = formSettings.allowDigitSpaces;
-                comparisonConfig.decimalsOnly = formSettings.decimalsOnly;
-                comparisonConfig.minDecimalPlaces = formSettings.minDecimalPlaces;
+                // comparisonConfig.allowDigitSpaces = formSettings.allowDigitSpaces;
+                // comparisonConfig.decimalsOnly = formSettings.decimalsOnly;
+                // comparisonConfig.minDecimalPlaces = formSettings.minDecimalPlaces;
                 comparisonConfig.minTextWords = formSettings.minTextWords;
                 comparisonConfig.minTextCharacters = formSettings.minTextCharacters;
                 comparisonConfig.duplicatePageSimilarities = formSettings.duplicatePageSimilarities;
@@ -706,9 +706,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
             console.log(formSettings.minDigitCount);
-            console.log(formSettings.allowDigitSpaces);
-            console.log(formSettings.decimalsOnly);
-            console.log(formSettings.minDecimalPlaces);
+            // console.log(formSettings.allowDigitSpaces);
+            // console.log(formSettings.decimalsOnly);
+            // console.log(formSettings.minDecimalPlaces);
             console.log(formSettings.minTextWords);
             console.log(formSettings.minTextCharacters);
 
@@ -725,11 +725,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             if (formSettings.textSimilarities==="true") formSettings.textSimilarities = true;
             else formSettings.textSimilarities = false;
 
-            if (formSettings.allowDigitSpaces==="true") formSettings.allowDigitSpaces = true;
-            else formSettings.allowDigitSpaces = false;
+            // if (formSettings.allowDigitSpaces==="true") formSettings.allowDigitSpaces = true;
+            // else formSettings.allowDigitSpaces = false;
 
-            if (formSettings.decimalsOnly==="true") formSettings.decimalsOnly = true;
-            else formSettings.decimalsOnly = false;
+            // if (formSettings.decimalsOnly==="true") formSettings.decimalsOnly = true;
+            // else formSettings.decimalsOnly = false;
 
             if (formSettings.duplicatePageSimilarities==="true") formSettings.duplicatePageSimilarities = true;
             else formSettings.duplicatePageSimilarities = false;
@@ -791,12 +791,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 form.disableField("imgSimilarities");
                 form.disableField("digitSimilarities");
                 form.disableField("textSimilarities");
-                form.disableField("minDecimalPlaces");
+                // form.disableField("minDecimalPlaces");
                 form.disableField("minDigitCount");
-                form.disableField("allowDigitSpaces");
+                // form.disableField("allowDigitSpaces");
                 form.disableField("minTextCharacters");
                 form.disableField("minTextWords");
-                form.disableField("decimalsOnly");
+                // form.disableField("decimalsOnly");
                 form.disableField("duplicatePageSimilarities");
 
             // disable checkboxes
@@ -811,12 +811,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             form.enableField("imgSimilarities");
             form.enableField("digitSimilarities");
             form.enableField("textSimilarities");
-            form.enableField("minDecimalPlaces");
+            // form.enableField("minDecimalPlaces");
             form.enableField("minDigitCount");
-            form.enableField("allowDigitSpaces");
+            // form.enableField("allowDigitSpaces");
             form.enableField("minTextCharacters");
             form.enableField("minTextWords");
-            form.enableField("decimalsOnly");
+            // form.enableField("decimalsOnly");
             form.enableField("duplicatePageSimilarities");
 
         // enabled checkboxes
@@ -883,27 +883,27 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     imgCount++;
                 }
                 else if (pair.type === "Common digit sequence" && config.digitSimilarities){
-                    var skip;
+                    // var skip;
                     console.log(pair);
                     console.log(pair.string);
-                    if (pair.string.includes(" ")){
-                        console.log("this pair contains a space");
+                    // if (pair.string.includes(" ")){
+                    //     console.log("this pair contains a space");
 
-                        console.log("logging digit spaces status in config " + config.allowDigitSpaces)
-                        if (!config.allowDigitSpaces){
-                            console.log("not allowing digit spaces - break condition");
-                            continue;
-                        }
-                        else console.log("digit spaces were allowed!");
-                    }
+                    //     console.log("logging digit spaces status in config " + config.allowDigitSpaces)
+                    //     if (!config.allowDigitSpaces){
+                    //         console.log("not allowing digit spaces - break condition");
+                    //         continue;
+                    //     }
+                    //     else console.log("digit spaces were allowed!");
+                    // }
 
-                    if (config.decimalsOnly){
-                        if (!pair.string.includes(".")){
-                            console.log(pair.string);
-                            console.log("skipped pair above because it was missing a decimal");
-                            continue;
-                        };
-                    }
+                    // if (config.decimalsOnly){
+                    //     if (!pair.string.includes(".")){
+                    //         console.log(pair.string);
+                    //         console.log("skipped pair above because it was missing a decimal");
+                    //         continue;
+                    //     };
+                    // }
                     // if (pair.string.includes(".")){
                         // console.log("this string contains a decimal!")
                         // console.log(pair.string)
