@@ -16,6 +16,78 @@ public class StringUtils {
 
 
   //**************************************************************************
+  //** trimUSAddress
+  //**************************************************************************
+  /** Generally speaking, street addresses in the US should start with a
+   *  number. This function will attempt to trim a given string by removing
+   *  any text before the street address.
+   */
+    public static String trimUSAddress(String address){
+
+      //Get first character that's a number
+        int firstNumber = Integer.MAX_VALUE;
+        for (int i=0; i<10; i++){
+            int idx = address.indexOf(i+"");
+            if (idx>-1){
+                firstNumber = Math.min(idx, firstNumber);
+            }
+        }
+
+
+      //If the address doesn't start with a number, trim it as best we can
+        if (firstNumber!=0 && firstNumber<address.length()){
+            String str = address.substring(firstNumber);
+
+            boolean trim = true;
+            try{
+                Long.parseLong(str.replace("-", ""));
+                trim = false;
+            }
+            catch(Exception e){}
+
+
+            if (trim){
+                String s = address.substring(0,firstNumber);
+                if (s.contains(" ")){
+
+                    if (s.toUpperCase().equals("PO BOX ")){
+                        trim = false;
+                    }
+
+                    if (s.toUpperCase().equals("ROUTE ") ||
+                        s.toUpperCase().equals("RTE ")){
+                        trim = false;
+                    }
+
+                    if (s.toUpperCase().equals("ROOM ")){
+                        //TODO: Trim off room number
+                        trim = false;
+                    }
+
+                    if (trim){
+                        if (s.trim().endsWith("#")){
+                            trim = false;
+                        }
+                    }
+
+                    //System.out.println(s + "|" + str);
+                }
+                else{
+                    trim = false;
+                }
+
+
+                if (trim){
+                    address = str;
+                }
+            }
+
+        }
+        return address;
+    }
+
+
+  //**************************************************************************
   //** mergeCompanies
   //**************************************************************************
   /** Used to fuzzy match company names
