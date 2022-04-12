@@ -500,7 +500,8 @@ public class ImportService extends WebService {
             if (i>0) query.append(",");
             query.append(arr[i]);
         }
-        query.append("] RETURN properties(n) as line");
+        query.append("] RETURN properties(n) as line, id(n) as id");
+
 
         if (offset!=null) query.append(" SKIP " + offset);
         if (limit!=null) query.append(" LIMIT " + limit);
@@ -514,28 +515,69 @@ public class ImportService extends WebService {
 
 
             LinkedHashSet<String> header = new LinkedHashSet<>();
-            ArrayList<JSONObject> entries = new ArrayList<>();
+            LinkedHashMap<Long, JSONObject> entries = new LinkedHashMap<>();
 
+
+
+          //Get entries
             Result rs = session.run(query.toString());
             while (rs.hasNext()){
                 Record record = rs.next();
-
+                Long nodeID = record.get("id").asLong();
                 JSONObject entry = getJson(record.get("line"));
-                entries.add(entry);
+                entries.put(nodeID, entry);
                 Iterator<String> it = entry.keys();
                 while (it.hasNext()){
                     header.add(it.next());
                 }
             }
+
+
+
+          //Get affirmations
+            query = new StringBuilder();
+            query.append("MATCH (n:import_line)-[]->(x:import_affirmation) ");
+            query.append("WHERE id(n) IN [");
+            Iterator<Long> i2 = entries.keySet().iterator();
+            while (i2.hasNext()){
+                Long nodeID = i2.next();
+                query.append(nodeID);
+                if (i2.hasNext()) query.append(",");
+            }
+            query.append("] RETURN id(n) as id, x.key as key, x.value as value");
+            rs = session.run(query.toString());
+            while (rs.hasNext()){
+                Record record = rs.next();
+                Long nodeID = record.get("id").asLong();
+                JSONObject entry = entries.get(nodeID);
+                JSONArray affirmations = entry.get("affirmations").toJSONArray();
+                if (affirmations==null){
+                    affirmations = new JSONArray();
+                    entry.set("affirmations", affirmations);
+                }
+                String affirmation = record.get("key").asString();
+                String value = record.get("value").asString();
+                if (value!=null) affirmation+=": " + value;
+                affirmations.add(affirmation);
+            }
+            header.add("affirmations");
+
+
             session.close();
 
+
+          //Generate csv response
             StringBuilder str = new StringBuilder();
             Iterator<String> it = header.iterator();
             while (it.hasNext()){
                 str.append(it.next());
                 if (it.hasNext()) str.append(",");
             }
-            for (JSONObject entry : entries){
+
+            i2 = entries.keySet().iterator();
+            while (i2.hasNext()){
+                Long nodeID = i2.next();
+                JSONObject entry = entries.get(nodeID);
                 str.append("\r\n");
                 it = header.iterator();
                 while (it.hasNext()){
@@ -550,6 +592,18 @@ public class ImportService extends WebService {
                             String v = (String) value;
                             if (v.contains(",")){
                                 value = "\"" + v + "\"";
+                            }
+                        }
+                        else if (value instanceof JSONArray){
+                            if (key.equals("affirmations")){
+                                JSONArray affirmations = (JSONArray) value;
+                                value = "\"";
+                                for (int i=0; i<affirmations.length(); i++){
+                                    String affirmation = affirmations.get(i).toString();
+                                    if (i>0) value+=", ";
+                                    value += affirmation;
+                                }
+                                value += "\"";
                             }
                         }
                     }
