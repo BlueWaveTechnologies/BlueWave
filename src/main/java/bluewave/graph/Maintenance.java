@@ -1,9 +1,12 @@
 package bluewave.graph;
 
+import bluewave.utils.StatusLogger;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
+import javaxt.utils.ThreadPool;
 import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.Record;
@@ -47,7 +50,7 @@ public class Maintenance {
                 throw e;
             }
 
-            
+
             log("Successfully created user: " + username);
         }
         catch(Exception e){
@@ -180,7 +183,7 @@ public class Maintenance {
    *  @param nodeName Name of a node to delete (e.g "hospital_capacity").
    *  Accepts wildcard filters (e.g "hospital_*")
    */
-    public static void deleteNodes(String nodeName, Neo4J graph) throws Exception {
+    private static void deleteNodes2(String nodeName, Neo4J graph) throws Exception {
         Pattern regex = Pattern.compile(getRegEx(nodeName), Pattern.CASE_INSENSITIVE);
         Session session = null;
         try{
@@ -211,6 +214,240 @@ public class Maintenance {
             if (session!=null) session.close();
             throw e;
         }
+    }
+
+
+  //**************************************************************************
+  //** deleteNodes
+  //**************************************************************************
+    public static void deleteNodes(String nodeName, Neo4J database) throws Exception {
+        if (nodeName==null) throw new Exception("nodeName is null");
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+
+      //Start thread pool used to delete nodes
+        ThreadPool pool = new ThreadPool(12, 10000){
+            public void process(Object obj){
+                Long id = (Long) obj;
+                StringBuilder query;
+                try{
+
+
+                  //Delete any relationships associated with the node
+                    query = new StringBuilder();
+                    query.append("MATCH (n:" + nodeName + ")-[r]-() WHERE ");
+                    query.append("id(n)=" + id + " ");
+                    query.append("DELETE r");
+                    getSession().run(query.toString());
+
+
+                  //Delete the node
+                    query = new StringBuilder();
+                    query.append("MATCH (n:" + nodeName + ") WHERE ");
+                    query.append("id(n)=" + id + " ");
+                    query.append("DELETE n");
+                    getSession().run(query.toString());
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+
+                recordCounter.incrementAndGet();
+            }
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+
+        }.start();
+
+
+
+      //Find nodes to delete
+        Session session = null;
+        try{
+            session = database.getSession();
+            Result rs = null;
+
+            rs = session.run("MATCH (n:" + nodeName + ") return count(n) as t");
+            if (rs.hasNext()){
+                Record r = rs.next();
+                long totalRecords = r.get("t").asLong();
+                statusLogger.setTotalRecords(totalRecords);
+            }
+
+
+
+            String query = "MATCH (n:" + nodeName + ")\n" +
+            "RETURN id(n) as id";
+            rs = session.run(query);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                try{
+                    Long id = r.get("id").asLong();
+                    pool.add(id);
+
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }
+
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
+    }
+
+
+  //**************************************************************************
+  //** fixDates
+  //**************************************************************************
+  /** Used to reformat dates in a given nodes
+   */
+    public static void fixDates(String node, String field, Neo4J database) throws Exception {
+
+      //Start console logger
+        AtomicLong recordCounter = new AtomicLong(0);
+        StatusLogger statusLogger = new StatusLogger(recordCounter, null);
+
+
+      //Instantiate the ThreadPool
+        ThreadPool pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                Object[] arr = (Object[]) obj;
+                Long id = (Long) arr[0];
+                String date = (String) arr[1];
+
+
+
+                StringBuilder query = new StringBuilder();
+                query.append("MATCH (n:" + node + ") WHERE ");
+                query.append("id(n)=" + id + " ");
+                query.append("SET n+= {");
+
+
+                query.append(field);
+                query.append(": $");
+                query.append(field);
+
+                query.append("}");
+
+                try{
+                    Map<String, Object> params = new LinkedHashMap<>();
+
+                    if (date.contains("/")){
+                        String[] d = date.split("/");
+                        String year = d[2];
+                        String month = d[0];
+                        String day = d[1];
+                        if (month.length()==1) month = "0"+month;
+                        if (day.length()==1) day = "0"+day;
+                        date = year + "-" + month + "-" + day;
+
+                        params.put(field, date);
+                        getSession().run(query.toString(), params);
+
+                    }
+                }
+                catch(Exception e){
+                    console.log(e.getMessage());
+                }
+
+                recordCounter.incrementAndGet();
+            }
+
+
+            private Session getSession() throws Exception {
+                Session session = (Session) get("session");
+                if (session==null){
+                    session = database.getSession(false);
+                    set("session", session);
+                }
+                return session;
+            }
+
+            public void exit(){
+                Session session = (Session) get("session");
+                if (session!=null){
+                    session.close();
+                }
+            }
+        }.start();
+
+
+
+
+
+        int totalRecords = 0;
+        Session session = null;
+        try{
+            session = database.getSession();
+            String query = "MATCH (n:" + node + ")\n" +
+            "RETURN id(n) as id, n." + field + " as " + field;
+            Result rs = session.run(query);
+            while (rs.hasNext()){
+                Record r = rs.next();
+                try{
+                    Long id = r.get("id").asLong();
+                    String date = r.get(field).asString();
+
+                    pool.add(new Object[]{id, date});
+                    totalRecords++;
+                }
+                catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+            session.close();
+        }
+        catch(Exception e){
+            if (session!=null) session.close();
+        }
+
+
+
+      //Update statusLogger
+        statusLogger.setTotalRecords(totalRecords);
+
+
+
+
+      //Notify the pool that we have finished added records and Wait for threads to finish
+        pool.done();
+        pool.join();
+
+
+      //Clean up
+        statusLogger.shutdown();
     }
 
 
@@ -264,10 +501,11 @@ public class Maintenance {
                 StackTraceElement el = stacktrace[i];
                 String className = el.getClassName();
                 if (!el.getClassName().equals("bluewave.graph.Maintenance")){
-                    el = stacktrace[i+1];
+                    if(stacktrace.length > (i+1))   el = stacktrace[i+1];
                     if (el.getClassName().equals("bluewave.Main")){
                         print = true;
                     }
+
                     break;
                 }
             }
