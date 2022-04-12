@@ -75,4 +75,24 @@ public class Countries {
         return getCountry(JTS.createPoint(lat, lon));
     }
 
+
+  //**************************************************************************
+  //** getCountry
+  //**************************************************************************
+  /** Returns a country with a given country code
+   */
+    public static JSONObject getCountry(String countryCode){
+        Iterator<Long> it = countries.keySet().iterator();
+        while (it.hasNext()){
+            Long id = it.next();
+            JSONObject properties = countries.get(id);
+            JSONValue val = properties.get("code");
+            if (!val.isNull()){
+                if (val.toString().equals(countryCode)){
+                    return properties;
+                }
+            }
+        }
+        return null;
+    }
 }
