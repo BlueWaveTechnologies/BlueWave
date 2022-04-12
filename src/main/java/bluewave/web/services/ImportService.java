@@ -70,6 +70,7 @@ public class ImportService extends WebService {
 
         HashMap<Long, String> facilities = new HashMap<>();
         HashMap<Long, Point> coordinates = new HashMap<>();
+        HashMap<Long, String> addresses = new HashMap<>();
 
 
       //Get establishment names and coordinates
@@ -78,17 +79,24 @@ public class ImportService extends WebService {
             session = graph.getSession();
 
             StringBuilder str = new StringBuilder();
-            str.append("MATCH (n:import_establishment)\n");
-            str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
-            str.append("RETURN n.fei as fei, n.name as name, a.lat as lat, a.lon as lon");
+            str.append("MATCH (x:import_line)-[]->(n:import_establishment)-[:has]->(a:address)\n");
+            //str.append("WHERE x.manufacturer in[3013516822, 3014333762, 3014411852, 3014383488, 3004048089, 3017556735]\n");
+            str.append("RETURN distinct(n.fei) as fei,\n");
+            str.append("n.name as name, a.address as address,\n");
+            str.append("a.country as country, a.lat as lat, a.lon as lon");
+
             Result rs = session.run(str.toString());
             while (rs.hasNext()){
                 Record r = rs.next();
                 Long fei = new Value(r.get("fei").asObject()).toLong();
                 String name = new Value(r.get("name").asObject()).toString();
+                String country = new Value(r.get("country").asObject()).toString();
+                String address = new Value(r.get("address").asObject()).toString();
                 Double lat = new Value(r.get("lat").asObject()).toDouble();
                 Double lon = new Value(r.get("lon").asObject()).toDouble();
                 facilities.put(fei, name);
+                addresses.put(fei, address);
+                if (country!=null) firmCountries.put(fei, country);
                 try{
                     if (lat.equals(0D) && lon.equals(0D)) throw new Exception();
                     coordinates.put(fei, JTS.createPoint(lat, lon));
@@ -128,15 +136,38 @@ public class ImportService extends WebService {
                 Long fei = it.next();
                 Point point = coordinates.get(fei);
 
-              //Get country code
-                String countryCode = null;
-                if (point!=null){
-                    JSONObject country = Countries.getCountry(point);
-                    if (country!=null){
-                        countryCode = country.get("code").toString();
+
+              //Get country code using the spatial coordinates
+                String countryCode = firmCountries.get(fei);
+                if (countryCode==null){
+                    if (point!=null){
+                        JSONObject country = Countries.getCountry(point);
+                        if (country!=null){
+                            countryCode = country.get("code").toString();
+                        }
                     }
                 }
+
+
+              //If country code not found, parse the address
+                if (countryCode==null){
+                    String address = addresses.get(fei);
+                    if (address!=null && address.length()>4){
+                        String str = address.substring(address.length()-4);
+                        if (str.startsWith(", ")){
+                            str = str.substring(2);
+
+                            JSONObject country = Countries.getCountry(str);
+                            if (country!=null){
+                                countryCode = str;
+                            }
+                        }
+                    }
+                }
+
+
                 if (countryCode==null) countryCode = "Unknown";
+
 
 
               //Update facilitiesByCountry
@@ -218,7 +249,20 @@ public class ImportService extends WebService {
 
       //Get parameters
         String country = request.getParameter("country").toString();
-        if (country==null) return new ServiceResponse(400, "country is required");
+        HashSet<String> countryCodes = new HashSet<>();
+        if (country!=null) {
+            for (String cc : country.split(",")){
+                cc = cc.trim();
+                if (cc.isEmpty()) continue;
+                if (cc.startsWith("'") && cc.endsWith("'")){
+                    cc = cc.substring(1, cc.length()-1);
+                }
+                if (cc.length()==2){
+                    countryCodes.add(cc);
+                }
+            }
+        }
+        if (countryCodes.isEmpty()) return new ServiceResponse(400, "country is required");
 
         String establishment = request.getParameter("establishment").toString();
         if (establishment==null) establishment = "manufacturer";
@@ -229,28 +273,29 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_By_Country");
-
-
-      //Update sql with country keyword
-        if (country!=null){
-            StringBuilder str = new StringBuilder();
-            for (String cc : country.split(",")){
-                cc = cc.trim();
-                if (cc.isEmpty()) continue;
-                if (cc.startsWith("'") && cc.endsWith("'")){
-                    cc = cc.substring(1, cc.length()-1);
-                }
-                if (str.length()>0) str.append(",");
-                str.append("'" + cc + "'");
-            }
-            sql = sql.replace("{country}", str);
-        }
+        String query = bluewave.queries.Index.getQuery("Imports_Summary");
 
 
       //Update sql with additional keywords
-        sql = sql.replace("{establishment}", establishment);
-        sql = sql.replace("{threshold}", threshold+"");
+        query = query.replace("{establishment}", establishment);
+        query = query.replace("{threshold}", threshold+"");
+        {
+            StringBuilder str = new StringBuilder();
+            Iterator<Long> it = firmCountries.keySet().iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                String countryCode = firmCountries.get(fei);
+                for (String cc: countryCodes){
+                    if (cc.equals(countryCode)){
+                        if (str.length()>0) str.append(",");
+                        str.append(fei);
+                        break;
+                    }
+                }
+            }
+            query = query.replace("{fei}", str);
+        }
+
 
 
       //Get graph
@@ -258,31 +303,179 @@ public class ImportService extends WebService {
         Neo4J graph = bluewave.Config.getGraph(user);
 
 
-        String[] extraFields = new String[]{
-        "num_lines", "quantity", "value",
-        "manufacturer","shipper","importer","consignee","dii",
-        "num_exams", "num_field_exams","num_field_fails",
-        "num_label_exams","num_label_fails",
-        "num_samples","num_bad_samples","num_hi_predict"
-        };
-
-
       //Execute query and group results by firm name
         HashMap<Long,HashMap<String, Value>> entries = new HashMap<>();
         Session session = null;
         try{
             session = graph.getSession();
-            Result rs = session.run(sql);
+
+
+          //Get import lines
+            Result rs = session.run(query);
             while (rs.hasNext()){
                 Record r = rs.next();
                 Long fei = new Value(r.get("fei").asObject()).toLong();
+                if (fei==null){
+                    continue;
+                }
+
                 HashMap<String, Value> values = new HashMap<>();
-                for (String field: extraFields){
+                for (String field: r.keys()){
                     values.put(field, new Value(r.get(field).asObject()));
                 }
                 entries.put(fei, values);
             }
+
+
+
+
+          //Find associated activity
+            HashMap<Long, HashSet<String>> samples = new HashMap<>();
+            HashMap<Long, HashSet<String>> badSamples = new HashMap<>();
+            HashMap<Long, HashSet<String>> fieldExams = new HashMap<>();
+            HashMap<Long, HashSet<String>> labelExams = new HashMap<>();
+            HashMap<Long, HashSet<String>> failedFieldExams = new HashMap<>();
+            HashMap<Long, HashSet<String>> failedLabelExams = new HashMap<>();
+            StringBuilder str = new StringBuilder();
+            str.append("MATCH (n:import_line)-[]->(x:import_activity)\n");
+            str.append("WHERE n." + establishment + " IN [");
+            Iterator<Long> it = entries.keySet().iterator();
+            while (it.hasNext()){
+                str.append(it.next());
+                if (it.hasNext()) str.append(",");
+            }
+            str.append("]\n");
+            str.append("RETURN n." + establishment + " as fei, properties(x) as activity");
+            rs = session.run(str.toString());
+            while (rs.hasNext()){
+                Record r = rs.next();
+                Long fei = new Value(r.get("fei").asObject()).toLong();
+                JSONObject activity = getJson(r.get("activity"));
+
+                //"unique_key": "exam_report_WC1-7187447-0_1141_1_2021-08-17T16:36:43.000Z"
+                String activityKey = activity.get("unique_key").toString();
+                String[] arr = activityKey.split("_");
+                String entry = arr[2];
+                String doc = arr[3];
+                String line = arr[4];
+                String key = entry+"/"+doc+"/"+line;
+
+
+                Integer sampleClassification = activity.get("sample_lab_classification").toInteger();
+                if (sampleClassification!=null){
+                    HashSet<String> exams = samples.get(fei);
+                    if (exams==null){
+                        exams = new HashSet<>();
+                        samples.put(fei, exams);
+                    }
+                    exams.add(key);
+
+                    if (sampleClassification==3){
+                        exams = badSamples.get(fei);
+                        if (exams==null){
+                            exams = new HashSet<>();
+                            badSamples.put(fei, exams);
+                        }
+                        exams.add(key);
+                    }
+                }
+
+
+                Integer activityNumber = activity.get("activity_number").toInteger();
+                if (activityNumber==null) activityNumber = -1;
+
+                Integer labClassification = activity.get("lab_classification_code").toInteger();
+                if (labClassification==null) labClassification = -1;
+
+                if (activityNumber==23){
+                    HashSet<String> exams = fieldExams.get(fei);
+                    if (exams==null){
+                        exams = new HashSet<>();
+                        fieldExams.put(fei, exams);
+                    }
+                    exams.add(key);
+
+                    if (labClassification==3){
+                        exams = failedFieldExams.get(fei);
+                        if (exams==null){
+                            exams = new HashSet<>();
+                            failedFieldExams.put(fei, exams);
+                        }
+                        exams.add(key);
+                    }
+
+                }
+
+                if (activityNumber==27){
+                    HashSet<String> exams = labelExams.get(fei);
+                    if (exams==null){
+                        exams = new HashSet<>();
+                        labelExams.put(fei, exams);
+                    }
+                    exams.add(key);
+
+                    if (labClassification==3){
+                        exams = failedLabelExams.get(fei);
+                        if (exams==null){
+                            exams = new HashSet<>();
+                            failedLabelExams.put(fei, exams);
+                        }
+                        exams.add(key);
+                    }
+                }
+
+
+                //System.out.println(activity.toString(4));
+            }
             session.close();
+
+
+            //console.log("labelExams:", labelExams.entrySet().size());
+            //console.log("fieldExams:", fieldExams.entrySet().size());
+
+
+            it = entries.keySet().iterator();
+            while (it.hasNext()){
+                Long fei = it.next();
+                HashMap<String, Value> values = entries.get(fei);
+                HashSet<String> exams;
+                int totalExams = 0;
+
+                exams = samples.get(fei);
+                if (exams!=null){
+                    values.put("num_samples", new Value(exams.size()));
+                }
+
+                exams = badSamples.get(fei);
+                if (exams!=null){
+                    values.put("num_bad_samples", new Value(exams.size()));
+                }
+
+                exams = fieldExams.get(fei);
+                if (exams!=null){
+                    totalExams+=exams.size();
+                    values.put("num_field_exams", new Value(exams.size()));
+                }
+
+                exams = failedFieldExams.get(fei);
+                if (exams!=null){
+                    values.put("num_field_fails", new Value(exams.size()));
+                }
+
+                exams = labelExams.get(fei);
+                if (exams!=null){
+                    totalExams+=exams.size();
+                    values.put("num_label_exams", new Value(exams.size()));
+                }
+
+                exams = failedLabelExams.get(fei);
+                if (exams!=null){
+                    values.put("num_label_fails", new Value(exams.size()));
+                }
+
+                values.put("num_exams", new Value(totalExams));
+            }
+
         }
         catch(Exception e){
             if (session!=null) session.close();
@@ -343,6 +536,23 @@ public class ImportService extends WebService {
             for (Long fei : uniqueFacilities.get(name)){
 
                 HashMap<String, Value> values = entries.get(fei);
+
+
+              //Update values as needed to avoid NPE below
+                for (String key : new String[]{
+                "num_lines", "quantity", "value",
+                "num_exams", "num_field_exams","num_field_fails",
+                "num_label_exams","num_label_fails",
+                "num_samples","num_bad_samples",
+                "num_hi_predict"
+                }){
+                    if (!values.containsKey(key)){
+                        values.put(key, new Value(0));
+                    }
+                }
+
+
+
                 Long n = values.get("num_lines").toLong();
                 Double q = values.get("quantity").toDouble();
                 Double v = values.get("value").toDouble();
@@ -470,7 +680,9 @@ public class ImportService extends WebService {
             if (i>0) query.append(",");
             query.append(arr[i]);
         }
-        query.append("] RETURN properties(n) as line");
+        query.append("]\n");
+        query.append("RETURN properties(n) as line, id(n) as id\n");
+        query.append("ORDER BY n.date desc\n");
 
         if (offset!=null) query.append(" SKIP " + offset);
         if (limit!=null) query.append(" LIMIT " + limit);
@@ -484,28 +696,69 @@ public class ImportService extends WebService {
 
 
             LinkedHashSet<String> header = new LinkedHashSet<>();
-            ArrayList<JSONObject> entries = new ArrayList<>();
+            LinkedHashMap<Long, JSONObject> entries = new LinkedHashMap<>();
 
+
+
+          //Get entries
             Result rs = session.run(query.toString());
             while (rs.hasNext()){
                 Record record = rs.next();
-
+                Long nodeID = record.get("id").asLong();
                 JSONObject entry = getJson(record.get("line"));
-                entries.add(entry);
+                entries.put(nodeID, entry);
                 Iterator<String> it = entry.keys();
                 while (it.hasNext()){
                     header.add(it.next());
                 }
             }
+
+
+
+          //Get affirmations
+            query = new StringBuilder();
+            query.append("MATCH (n:import_line)-[]->(x:import_affirmation) ");
+            query.append("WHERE id(n) IN [");
+            Iterator<Long> i2 = entries.keySet().iterator();
+            while (i2.hasNext()){
+                Long nodeID = i2.next();
+                query.append(nodeID);
+                if (i2.hasNext()) query.append(",");
+            }
+            query.append("] RETURN id(n) as id, x.key as key, x.value as value");
+            rs = session.run(query.toString());
+            while (rs.hasNext()){
+                Record record = rs.next();
+                Long nodeID = record.get("id").asLong();
+                JSONObject entry = entries.get(nodeID);
+                JSONArray affirmations = entry.get("affirmations").toJSONArray();
+                if (affirmations==null){
+                    affirmations = new JSONArray();
+                    entry.set("affirmations", affirmations);
+                }
+                String affirmation = record.get("key").asString();
+                String value = record.get("value").asString();
+                if (value!=null) affirmation+=": " + value;
+                affirmations.add(affirmation);
+            }
+            header.add("affirmations");
+
+
             session.close();
 
+
+          //Generate csv response
             StringBuilder str = new StringBuilder();
             Iterator<String> it = header.iterator();
             while (it.hasNext()){
                 str.append(it.next());
                 if (it.hasNext()) str.append(",");
             }
-            for (JSONObject entry : entries){
+
+            i2 = entries.keySet().iterator();
+            while (i2.hasNext()){
+                Long nodeID = i2.next();
+                JSONObject entry = entries.get(nodeID);
                 str.append("\r\n");
                 it = header.iterator();
                 while (it.hasNext()){
@@ -520,6 +773,18 @@ public class ImportService extends WebService {
                             String v = (String) value;
                             if (v.contains(",")){
                                 value = "\"" + v + "\"";
+                            }
+                        }
+                        else if (value instanceof JSONArray){
+                            if (key.equals("affirmations")){
+                                JSONArray affirmations = (JSONArray) value;
+                                value = "\"";
+                                for (int i=0; i<affirmations.length(); i++){
+                                    String affirmation = affirmations.get(i).toString();
+                                    if (i>0) value+=", ";
+                                    value += affirmation;
+                                }
+                                value += "\"";
                             }
                         }
                     }
@@ -677,6 +942,7 @@ public class ImportService extends WebService {
             synchronized (firmNames){
                 for (HashMap<String, Value> record : records){
                     Long fei = record.get(extraColumn).toLong();
+                    if (fei==null) continue;
                     String name = firmNames.get(fei);
                     String productCode = record.get("product_code").toString();
 
@@ -824,12 +1090,12 @@ public class ImportService extends WebService {
         synchronized (firmLocations){
             synchronized(firmCountries){
                 for (HashMap<String, Value> record : records){
-                    str.append("\r\n");
 
                     Long port = record.get("unladed_port").toLong();
                     Long manufacturer = record.get("manufacturer").toLong();
                     Long consignee = record.get("consignee").toLong();
 
+                    if (port==null || manufacturer==null || consignee==null) continue;
 
                     Point pt = ports.get(port);
                     if (pt!=null) {
@@ -852,10 +1118,13 @@ public class ImportService extends WebService {
                         record.put("consignee_lat", new Value(pt.getY()));
                         record.put("consignee_lon", new Value(pt.getX()));
                     }
+
+
                     cc = firmCountries.get(manufacturer);
                     if (cc!=null) record.put("consignee_cc", new Value(cc));
 
 
+                    str.append("\r\n");
                     for (int i=0; i<fields.length; i++){
                         if (i>0) str.append(",");
                         Value v = record.get(fields[i]);
@@ -1564,6 +1833,7 @@ public class ImportService extends WebService {
         while (it.hasNext()){
             String name = it.next();
             ArrayList<Long> feis = uniqueFacilities.get(name);
+            if (name==null) name = "";
             str.append("\r\n");
             str.append(name.contains(",") ? "\"" + name + "\"" : name);
             str.append(",");

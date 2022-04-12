@@ -82,8 +82,8 @@ public class Main {
         else if (args.containsKey("-download")){
             download(args);
         }
-        else if (args.containsKey("-import")){
-            importData(args);
+        else if (args.containsKey("-load")){
+            loadData(args);
         }
         else if (args.containsKey("-delete")){
             delete(args);
@@ -105,6 +105,8 @@ public class Main {
                 Integer port = webConfig.get("port").toInteger();
                 addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
                 new javaxt.http.Server(addresses, 250, new WebApp(webConfig)).start();
+
+                // bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
             }
         }
     }
@@ -250,21 +252,61 @@ public class Main {
 
 
   //**************************************************************************
-  //** importData
+  //** loadData
   //**************************************************************************
-    private static void importData(HashMap<String, String> args) throws Exception {
-        String str = args.get("-import");
+    private static void loadData(HashMap<String, String> args) throws Exception {
+        String str = args.get("-load");
         if (str.equalsIgnoreCase("Premier")){
             importPremier(args);
         }
         else if (str.equalsIgnoreCase("Imports")){
-            Imports imports = new Imports(new javaxt.io.File(args.get("-path")));
-            //imports.exportSummary();
-            //imports.removeDuplicateEstablishments();
+
+            String path = args.get("-path");
+            java.io.File f = new java.io.File(path);
+            if (!f.exists()){
+                return;
+            }
+
+            ArrayList<javaxt.io.File> files = new ArrayList<>();
+            if (f.isFile()){
+                javaxt.io.File file = new javaxt.io.File(f);
+                if (file.getExtension().equalsIgnoreCase("xlsx")){
+                    files.add(file);
+                }
+            }
+            else{
+                for (javaxt.io.File file : new javaxt.io.Directory(f).getFiles("*.xlsx")){
+                    files.add(file);
+                }
+            }
+
+            if (!files.isEmpty()){
+                Neo4J database = Config.getGraph(null);
+
+                for (javaxt.io.File file : files){
+                    Imports.loadEstablishments(file, database);
+                }
+
+                for (javaxt.io.File file : files){
+                    Imports.loadLines(file, database);
+                }
+
+                for (javaxt.io.File file : files){
+                    Imports.loadExams(file, database);
+                    Imports.loadSamples(file, database);
+                }
+
+                database.close();
+            }
         }
-        else if (str.equalsIgnoreCase("Establishments")){
+        else if (str.equalsIgnoreCase("Ports")){
             Neo4J database = Config.getGraph(null);
-            Imports.loadEstablishments(new javaxt.io.File(args.get("-path")), database);
+            Ports.loadUSPortsofEntry(new javaxt.io.File(args.get("-path")), database);
+            database.close();
+        }
+        else if (str.equalsIgnoreCase("Coordinates")){
+            Neo4J database = Config.getGraph(null);
+            Imports.geocodeAddresses(database, new javaxt.io.File(args.get("-path")));
             database.close();
         }
         else{
@@ -283,9 +325,9 @@ public class Main {
     private static void importFile(HashMap<String, String> args) throws Exception {
 
       //Get file and extension
-        String filePath = args.get("-import");
+        String filePath = args.get("-load");
         javaxt.io.File file = new javaxt.io.File(filePath);
-        if (!file.exists()) throw new IllegalArgumentException("-import file is invalid");
+        if (!file.exists()) throw new IllegalArgumentException("-load file is invalid");
         String fileType = file.getExtension().toLowerCase();
         if (fileType.equals("gz")){
             String fileName = file.getName(false);
@@ -449,8 +491,22 @@ public class Main {
             Session session = null;
             try{
                 session = graph.getSession();
-                String versionString = session.readTransaction( tx -> tx.run( "RETURN 1" ).consume().server().version() );
-                System.out.println(versionString);
+
+              //Get Neo4J server version and edition
+                String versionString = null;
+                try{
+                    String q = "call dbms.components() yield name, versions, edition unwind versions as version return name, version, edition;";
+                    Result rs = session.run(q);
+                    if (rs.hasNext()){
+                        org.neo4j.driver.Record r = rs.next();
+                        versionString = r.get(0).asString() + "/" + r.get(1).asString() + " (" + r.get(2).asString() + ")";
+                    }
+                }
+                catch(Exception e){}
+                if (versionString==null) System.out.println("Unknown Neo4J version");
+                else System.out.println(versionString);
+
+
 
                 String query = args.get("-query");
                 if (query!=null){
@@ -532,6 +588,9 @@ public class Main {
 
             console.log("done! hits: " + totalHits);
         }
+        else if (test.equalsIgnoreCase("syncUsers")){
+            bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
+        }
         else{
             console.log("Unsupported test: " + test);
         }
@@ -546,6 +605,9 @@ public class Main {
         if (download.equalsIgnoreCase("Premier")){
             new bluewave.data.Premier(args.get("-username"), args.get("-password"))
                     .downloadShards(args.get("-path"));
+        }
+        else if (download.equalsIgnoreCase("Ports")){
+            new bluewave.data.Ports().downloadUSPortsofEntry(args.get("-path"));
         }
         else{
             console.log("Unsupported download: " + download);
