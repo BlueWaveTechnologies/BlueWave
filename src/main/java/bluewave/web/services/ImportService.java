@@ -70,6 +70,7 @@ public class ImportService extends WebService {
 
         HashMap<Long, String> facilities = new HashMap<>();
         HashMap<Long, Point> coordinates = new HashMap<>();
+        HashMap<Long, String> addresses = new HashMap<>();
 
 
       //Get establishment names and coordinates
@@ -78,19 +79,22 @@ public class ImportService extends WebService {
             session = graph.getSession();
 
             StringBuilder str = new StringBuilder();
-            str.append("MATCH (n:import_establishment)\n");
-            str.append("OPTIONAL MATCH (n)-[r:has]->(a:address)\n");
-            str.append("RETURN n.fei as fei, n.name as name, ");
+            str.append("MATCH (x:import_line)-[]->(n:import_establishment)-[:has]->(a:address)\n");
+            str.append("RETURN distinct(n.fei) as fei,\n");
+            str.append("n.name as name, a.address as address,\n");
             str.append("a.country as country, a.lat as lat, a.lon as lon");
+
             Result rs = session.run(str.toString());
             while (rs.hasNext()){
                 Record r = rs.next();
                 Long fei = new Value(r.get("fei").asObject()).toLong();
                 String name = new Value(r.get("name").asObject()).toString();
                 String country = new Value(r.get("country").asObject()).toString();
+                String address = new Value(r.get("address").asObject()).toString();
                 Double lat = new Value(r.get("lat").asObject()).toDouble();
                 Double lon = new Value(r.get("lon").asObject()).toDouble();
                 facilities.put(fei, name);
+                addresses.put(fei, address);
                 if (country!=null) firmCountries.put(fei, country);
                 try{
                     if (lat.equals(0D) && lon.equals(0D)) throw new Exception();
@@ -131,7 +135,8 @@ public class ImportService extends WebService {
                 Long fei = it.next();
                 Point point = coordinates.get(fei);
 
-              //Get country code
+
+              //Get country code using the spatial coordinates
                 String countryCode = firmCountries.get(fei);
                 if (countryCode==null){
                     if (point!=null){
@@ -141,7 +146,27 @@ public class ImportService extends WebService {
                         }
                     }
                 }
+
+
+              //If country code not found, parse the address
+                if (countryCode==null){
+                    String address = addresses.get(fei);
+                    if (address!=null && address.length()>4){
+                        String str = address.substring(address.length()-4);
+                        if (str.startsWith(", ")){
+                            str = str.substring(2);
+
+                            JSONObject country = Countries.getCountry(str);
+                            if (country!=null){
+                                countryCode = str;
+                            }
+                        }
+                    }
+                }
+
+
                 if (countryCode==null) countryCode = "Unknown";
+
 
 
               //Update facilitiesByCountry
@@ -682,6 +707,7 @@ public class ImportService extends WebService {
             synchronized (firmNames){
                 for (HashMap<String, Value> record : records){
                     Long fei = record.get(extraColumn).toLong();
+                    if (fei==null) continue;
                     String name = firmNames.get(fei);
                     String productCode = record.get("product_code").toString();
 
@@ -829,12 +855,12 @@ public class ImportService extends WebService {
         synchronized (firmLocations){
             synchronized(firmCountries){
                 for (HashMap<String, Value> record : records){
-                    str.append("\r\n");
 
                     Long port = record.get("unladed_port").toLong();
                     Long manufacturer = record.get("manufacturer").toLong();
                     Long consignee = record.get("consignee").toLong();
 
+                    if (port==null || manufacturer==null || consignee==null) continue;
 
                     Point pt = ports.get(port);
                     if (pt!=null) {
@@ -857,10 +883,13 @@ public class ImportService extends WebService {
                         record.put("consignee_lat", new Value(pt.getY()));
                         record.put("consignee_lon", new Value(pt.getX()));
                     }
+
+
                     cc = firmCountries.get(manufacturer);
                     if (cc!=null) record.put("consignee_cc", new Value(cc));
 
 
+                    str.append("\r\n");
                     for (int i=0; i<fields.length; i++){
                         if (i>0) str.append(",");
                         Value v = record.get(fields[i]);
