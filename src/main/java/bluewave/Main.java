@@ -564,6 +564,27 @@ public class Main {
         else if (download.equalsIgnoreCase("Ports")){
             new bluewave.data.Ports().downloadUSPortsofEntry(args.get("-path"));
         }
+        else if (download.equalsIgnoreCase("510k")){
+//            args.get("-path")
+            try(Neo4J database = Config.getGraph(null)) {
+                Result result = database.getSession().run(
+                   "MATCH (n:import_affirmation) WHERE n.key='PM' RETURN n.value");
+                List<String>kList = new ArrayList<>();
+                while (result.hasNext()){
+                    org.neo4j.driver.Record r = result.next();
+                    kList.add(r.get(0).asString());
+                }
+//                for(int y=0;y<kList.size();y++) {
+//                    console.log(String.valueOf(kList.get(y)));
+//                }
+                Config.initDatabase();
+//                List folders = Arrays.asList("K111807", "K132006");
+                bluewave.web.services.DocumentService.getFoldersForUpload(kList, database);
+                database.close();
+            }catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
         else{
             console.log("Unsupported download: " + download);
         }

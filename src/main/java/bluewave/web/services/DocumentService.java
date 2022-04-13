@@ -1,7 +1,9 @@
 package bluewave.web.services;
 import bluewave.Config;
+import bluewave.graph.Neo4J;
 import bluewave.utils.FileIndex;
 import static bluewave.utils.Python.*;
+import bluewave.utils.StatusLogger;
 
 import java.util.*;
 import java.io.IOException;
@@ -20,6 +22,7 @@ import javaxt.http.servlet.FormValue;
 import javaxt.http.websocket.WebSocketListener;
 import javaxt.utils.ThreadPool;
 import javaxt.express.*;
+import static javaxt.express.WebService.console;
 import javaxt.sql.*;
 import javaxt.json.*;
 
@@ -43,8 +46,8 @@ public class DocumentService extends WebService {
 
     private ThreadPool pool;
     private FileIndex index;
-    private ConcurrentHashMap<String, JSONObject> scripts;
-    private ConcurrentHashMap<Long, WebSocketListener> listeners;
+    private static ConcurrentHashMap<String, JSONObject> scripts;
+    private static ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
 
 
@@ -176,7 +179,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** notify
   //**************************************************************************
-    private void notify(String msg){
+    private static void notify(String msg){
         synchronized(listeners){
             Iterator<Long> it = listeners.keySet().iterator();
             while(it.hasNext()){
@@ -668,7 +671,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   /** Used to download and return a PDF document from a remote server
    */
-    private PDDocument downloadPDF(String id, javaxt.io.File file) throws Exception {
+    private static PDDocument downloadPDF(String id, javaxt.io.File file) throws Exception {
 
 
         if (!file.exists()){
@@ -699,7 +702,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   /** Returns true if the given file is a valid PDF document
    */
-    private boolean isValidPDF(javaxt.io.File file){
+    private static boolean isValidPDF(javaxt.io.File file){
         try{
             PDDocument document = PDDocument.load(file.toFile());
             float v = document.getVersion();
@@ -755,7 +758,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   //** saveFile
   //**************************************************************************
-    private void saveFile(java.io.InputStream is, javaxt.io.File tempFile) throws Exception {
+    private static void saveFile(java.io.InputStream is, javaxt.io.File tempFile) throws Exception {
 
         int bufferSize = 2048;
         FileOutputStream output = new FileOutputStream(tempFile.toFile());
@@ -1269,7 +1272,7 @@ public class DocumentService extends WebService {
   //**************************************************************************
   /** Returns a HTTP response from a remote document server (Image2000)
    */
-    private javaxt.http.Response getResponse(String url){
+    private static javaxt.http.Response getResponse(String url){
         String edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36 Edg/99.0.1150.30";
         javaxt.http.Request r = new javaxt.http.Request(url);
         r.setConnectTimeout(5000);
@@ -1295,5 +1298,173 @@ public class DocumentService extends WebService {
             }
             return response;
         }
+    }
+    
+    // folders = ["K111807", "K132006"]
+    public static void getFoldersForUpload(List<String>folders, Neo4J database){
+        AtomicLong recordCounter = new AtomicLong(0);
+       
+        //Find file in the database and discard if found
+        List<String>newFolders = new ArrayList();
+        for(int i=0;i<folders.size();i++) {
+            String folderName = folders.get(i);
+            String fileName = folderName + ".pdf";
+            try {
+                bluewave.app.File[]dbFiles =  bluewave.app.File.find("name=",fileName);
+                javaxt.io.Directory[] dirs = getUploadDir().getSubDirectories();
+                boolean hasFolderPdf = false;
+                for(javaxt.io.Directory dir: dirs) {
+                    if(dir.getName().equalsIgnoreCase(folderName)) {
+                        for(javaxt.io.File file : dir.getFiles()) {
+                            if(file.getName(true).equals(fileName)) {
+                                hasFolderPdf = true;
+                            }
+                        }
+                    }
+                }
+                if(dbFiles.length == 0 && !hasFolderPdf) {
+                    newFolders.add(folders.get(i));
+                }
+            }catch(Exception e) {}
+        }
+
+        console.log("original count: "+folders.size());
+        console.log("new count: "+newFolders.size());
+
+        StatusLogger statusLogger = new StatusLogger(recordCounter, new AtomicLong(newFolders.size()));
+             
+        ThreadPool pool = new ThreadPool(20, 1000){
+            public void process(Object obj){
+                String folder = (String) obj;
+
+                try {
+                  //TODO change from upload dir to something else
+                    javaxt.io.Directory dir = new javaxt.io.Directory(
+                        getUploadDir().toString() + folder
+                    );
+
+                    javaxt.io.File file = new javaxt.io.File(dir, folder + ".pdf");
+
+                    String url = "https://i2ksearch-mig.fda.gov/query/i2k/?version=2.2&wt=json&json.nl=arrarr" +
+                    "&q=folder_id:" + folder +
+                    "&fl=id,folder_id,r_creation_date,a_content_type" +
+                    "&start=0" +
+                    "&rows=500";
+
+                    TreeMap<Long, String> documentIDs = new TreeMap<>();
+                    javaxt.http.Response response = getResponse(url);
+                    if (response.getStatus()==200){
+                        JSONObject json = new JSONObject(response.getText());
+                        JSONArray docs = json.get("response").get("docs").toJSONArray();
+                        for (int i=0; i<docs.length(); i++){
+                            JSONObject doc = docs.get(i).toJSONObject();
+                            String id = doc.get("id").toString();
+                            String folderID = doc.get("folder_id").toString();
+                            String dt = doc.get("r_creation_date").toString();
+                            String contentType = doc.get("a_content_type").toString();
+                            if (contentType.equalsIgnoreCase("pdf")){
+                                documentIDs.put(new javaxt.utils.Date(dt).getTime(), id);
+                            }
+                        }
+                    }
+
+                    int totalSteps = documentIDs.size()+1;
+                    int step = 0;
+
+                  //Get component files
+                    ArrayList<PDDocument> documents = new ArrayList<>();
+                    ArrayList<javaxt.io.File> files = new ArrayList<>();
+                    Iterator<Long> it = documentIDs.keySet().iterator();
+                    while (it.hasNext()){
+                        String id = documentIDs.get(it.next());
+
+                        javaxt.io.File tempFile = new javaxt.io.File(dir, id);
+                        try{
+                            PDDocument document = downloadPDF(id, tempFile);
+                            documents.add(document);
+                            files.add(tempFile);
+                        }
+                        catch(Exception e){
+
+                          //Try downloading the file again
+                            try{
+                                tempFile.delete();
+                                PDDocument document = downloadPDF(id, tempFile);
+                                documents.add(document);
+                                files.add(tempFile);
+                            }
+                            catch(Exception ex){
+                                console.log("Invalid PDF", tempFile);
+                                tempFile.rename(tempFile.getName() + ".err");
+                            }
+                        }
+                        step++;
+                    }
+
+                    if (documents.isEmpty()){
+                        return;
+                    }
+
+
+                  //Merge files into a single PDF
+                    if (documents.size()==1){
+                        file = files.get(0);
+                    }
+                    else{
+
+                        PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
+                        for (PDDocument document : documents){
+
+                            try{
+
+                                PDAcroForm form = document.getDocumentCatalog().getAcroForm();
+                                if (form != null) {
+                                    document.setAllSecurityToBeRemoved(true);
+                                    try{
+                                        form.flatten();
+                                    }
+                                    catch(Exception e){
+                                        //e.printStackTrace();
+                                    }
+
+                                    if (form.hasXFA()) {
+                                        form.setXFA(null);
+                                    }
+                                }
+
+                                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                                document.save(out);
+                                java.io.InputStream is = new java.io.ByteArrayInputStream(out.toByteArray());
+                                pdfMergerUtility.addSource(is);
+
+                            }
+                            catch(Exception e){
+                                e.printStackTrace();
+                            }
+                        }
+
+                        java.io.OutputStream out = file.getOutputStream();
+                        pdfMergerUtility.setDestinationStream(out);
+                        pdfMergerUtility.mergeDocuments(null);
+                        out.close();
+                    }
+
+                    step++;
+
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+                recordCounter.incrementAndGet();
+            }
+        }.start();
+        
+        for(String folder: newFolders)
+            pool.add(folder);
+        
+        pool.done();
+        try{
+            pool.join();
+        }catch(Exception e){}
+        statusLogger.shutdown();
     }
 }
