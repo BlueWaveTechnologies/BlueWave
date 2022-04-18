@@ -3,6 +3,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 import pandas as pd
 import pickle
+import numpy as np
 # import argparse
 
 
@@ -35,35 +36,31 @@ import pickle
 
 def read_text_training_data():
 
-    def fix_and_eval(s):
-        s = ''.join(c for c in s if c.isascii())
-        s = s.strip()
-        s = s.replace("'", '')
-        s = s.replace('"', '')
-        s = "'" + s + "'"
-        return eval(s)
+    df = pd.read_csv('data/pair_output_1.csv')
+    df = df.drop_duplicates(['text'])
+    df['text'] = df['text'].fillna('')
 
-    df = pd.read_csv('data/model_training_data.csv')
-    df = pd.read_csv('data/model_training_data.txt', 
-        sep='\t', encoding="ISO-8859-1")
-    df['text'] = df['text_repr'].apply(fix_and_eval)
-
-    return list(df['text']), list(df['is_significant'])
+    return df
 
 
-def get_vectors(texts_train):
-    vectorizer = TfidfVectorizer(min_df=2)
-    X = vectorizer.fit_transform(texts_train)
-    with open('data/vectorizer.p', 'wb') as f:
-        pickle.dump(vectorizer, f)
-    print('Vectorizer saved.')
-    return X
+# def get_vectors(texts_train):
+#     vectorizer = TfidfVectorizer(min_df=3)
+#     X = vectorizer.fit_transform(texts_train)
+#     with open('data/vectorizer.p', 'wb') as f:
+#         pickle.dump(vectorizer, f)
+#     print('Vectorizer saved.')
+#     return X
 
 
 def create_and_train_classifier(X_train, y_train):
-    clf = LogisticRegression(random_state=0)
+    import compare_pdfs_util
+    from sklearn import linear_model
+    # clf = LogisticRegression(random_state=0)
     # clf = RandomForestClassifier(random_state=0)
-    clf.fit(X_train, y_train)
+    y_train_clipped = np.clip(y_train, 0.0001, 0.9999)
+    y_train_transf = compare_pdfs_util.logit(y_train_clipped)
+    clf = linear_model.LinearRegression()
+    clf.fit(X_train, y_train_transf)
     return clf
 
 
@@ -89,27 +86,29 @@ def main(filename):
     #     label_and_add_to_training(filename)
 
     # Clear classification report
-    if os.path.exists('classification_report.txt'):
-        os.rm('classification_report.txt')
+    # if os.path.exists('classification_report.txt'):
+        # os.rm('classification_report.txt')
 
-    # Text
-    texts_train_t, labels_train_t = read_text_training_data()
-    vectorizer_t = TfidfVectorizer(min_df=2)
-    X_train_t = vectorizer_t.fit_transform(texts_train_t)
-    clf_t = create_and_train_classifier(X_train_t, labels_train_t)
-    create_performance_report(X_train_t, labels_train_t)
+    # Read data
+    df = read_text_training_data()
 
-    # Digits
-    texts_train_d, labels_train_d = read_digits_training_data()
-    vectorizer_d = TfidfVectorizer(min_df=2, analyzer='char', ngram_range=(3,3))
-    X_train_d = vectorizer_d.fit_transform(texts_train_d)
-    clf_d = create_and_train_classifier(X_train_d, y_train_d)
-    create_performance_report(X_train_d, labels_train_d)
+    # X
+    vectorizer = TfidfVectorizer(min_df=3)
+    vecs = vectorizer.fit_transform(df['text']).toarray()
+    dummies = pd.get_dummies(df['type']).values
+    X_train = np.hstack((vecs, dummies))
 
-    all_my_stuff = (vectorizer_t, clf_t, vectorizer_d, clf_d)
+    # y
+    y_train = df['importance'].astype(float).fillna(0)
+
+    clf = create_and_train_classifier(X_train, y_train)
+    # create_performance_report(X_train, labels_train)
+
+    all_my_stuff = (vectorizer, clf)
     with open('data/clf.p', 'wb') as f:
-        pickle.dump(all_my_stuff, f)
+        pickle.dump(all_my_stuff, f, protocol=4)
     print('Model saved.')
+
 
 if __name__ == '__main__':
     # parser = argparse.ArgumentParser()
