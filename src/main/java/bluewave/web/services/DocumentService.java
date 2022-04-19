@@ -151,6 +151,7 @@ public class DocumentService extends WebService {
         scripts = new ConcurrentHashMap<>();
     }
 
+
   //**************************************************************************
   //** createWebSocket
   //**************************************************************************
@@ -208,7 +209,13 @@ public class DocumentService extends WebService {
                 }
             }
             else if (method.equals("POST")){
-                return uploadFile(request, user);
+                Boolean uploadEnabled = Config.get("webserver").get("uploadEnabled").toBoolean();
+                if (uploadEnabled==true){
+                    return uploadFile(request, user);
+                }
+                else{
+                    return new ServiceResponse(501, "Not implemented");
+                }
             }
             else{
                 return new ServiceResponse(501, "Not implemented");
