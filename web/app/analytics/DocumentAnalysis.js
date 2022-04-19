@@ -598,6 +598,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     {header: 'Comparison Results', width:'300', sortable: true}
                 ],
                 update: function(row, record){
+                    console.log("grid updated");
                     row.set("Document Name", record.name);
                     row.set("Comparison Results", record.similarities); //<-- Updated by compareDocuments()
                 }
@@ -643,6 +644,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             },
             update: function(panel){
                 if (!grid){
+                    console.log("grid update called here for results panel");
                     createPanel(panel.childNodes[0]);
                     grid.load(selectedDocuments);
                     if (selectedDocuments.length>1) button["run"].enable();
@@ -1019,9 +1021,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** compareDocuments
   //**************************************************************************
     var compareDocuments = function(jobs, onCompletion){
-
+        console.log("compare documents called");
         var runJob = function(){
-
+            console.log("run job called compare documents");
+            console.log(jobs);
+            console.log("logging jobs above comparsion panel");
             if (!comparisonsEnabled) jobs.splice(0,jobs.length);
 
             if (jobs.length==0){
@@ -1155,7 +1159,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     {header: 'Page Similarity', width:'120', sortable: true},
                     {header: 'Digit Similarity', width:'120', sortable: true},
                     {header: 'Text Similarity', width:'120', sortable: true},
-                    {header: 'Similarities', width:'120', sortable: true}
+                    {header: 'Total Similarities', width:'120', sortable: true}
                 ],
                 update: function(row, record){
                     if (record.suspicious_pages < 1){
@@ -1175,7 +1179,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     div.appendChild(link);
 
                     row.set("Similar Document", div);
-                    row.set("Similarities", record.suspicious_pages);
+                    row.set("Total Similarities", (record.results.textCount + record.results.digitCount + record.results.duplicatePageCount));
+                    // row.set("Similarities", record.suspicious_pages);
                     row.set("Text Similarity", record.results.textCount);
                     row.set("Digit Similarity", record.results.digitCount);
                     row.set("Page Similarity", record.results.duplicatePageCount);
