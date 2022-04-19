@@ -233,7 +233,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** getSuspiciousPages
   //**************************************************************************
     var getSuspiciousPages = function(fileIndex, results){
-
+        console.log("get suspicious pages called!");
 
         var files = results.files;
         var file = files[fileIndex];
@@ -972,6 +972,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             filteredSimilarities.digitCount = digitCount;
             filteredSimilarities.duplicatePageCount = duplicatePageCount;
 
+        console.log(filteredSimilarities.suspicious_pairs);
+        console.log("logging just the suspicious pairs above");
+        console.log(JSON.stringify(filteredSimilarities.suspicious_pairs,null,4));
+        console.log("logging the json structure before sort above");
+        filteredSimilarities.suspicious_pairs.sort((a, b) => (a.totalImportance > b.totalImportance) ? 1 : -1);
+        console.log(JSON.stringify(filteredSimilarities.suspicious_pairs,null,4));
+        console.log("logging the json structure after sort above");
+        console.log(filteredSimilarities.suspicious_pairs);
+        console.log("logged suspicious pairs above");
+
         console.log("total number ignored texts is "+ ignoredTexts);
         console.log(filteredSimilarities);
         console.log("loggign filtered similarities object above");
@@ -1216,6 +1226,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tag.onmouseover = function(){
             console.log(tag.string);
             console.log("logging string of tag to console above");
+            console.log(tag.importance);
+            console.log("logging this similarities importance value above");
+            console.log(tag.img.getTotalImportance());
+            console.log("logging total importance value for this pages similarities above");
             this.matchingD.highlight();
             this.matchingTag.hide();
             this.tooltip.innerText = this.type;
@@ -1307,13 +1321,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
       //Function used to create an image
-        var createPreview = function(file, page, parent, boxes, matchingImg){
+        var createPreview = function(file, page, parent, boxes, totalImportance, matchingImg){
+            console.log(totalImportance);
+            console.log("logging initial total importance above");
             parent.innerHTML = "";
             var i = document.createElement("i");
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
+            img.totalImportance = totalImportance;
 
             if (matchingImg){
                 img.matchingImg = matchingImg;
@@ -1353,6 +1370,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             };
 
             img.LoadOverlay = function (){
+                console.log("load overlay called");
                 img = this;
               // set original width/height for determining scaling for tag & d elements
                 var rect = javaxt.dhtml.utils.getRect(img);
@@ -1390,6 +1408,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         var tag = createSimilarityTag(box.boxes, int, img);
 
                         if (!img.isFirstDocument){
+                            console.log("running update matching img")
                             updateMatchingImg();
                         };
 
@@ -1398,7 +1417,18 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         console.log(box);
                         console.log("logging box obj above");
                         tag.string = box.string;
+                        tag.importance = box.importance;
+                        console.log(box);
+                        console.log("logging box object above ")
+                        console.log(box.importance);
+                        console.log("logging box importance above");
 
+                        img.getTotalImportance = function(){
+                            return this.totalImportance;
+                        };
+
+                        console.log(img.totalImportance);
+                        console.log("logging total importance now - above");
                         img.d.push(d);
                         img.tag.push(tag);
                         img.parentNode.appendChild(d);
@@ -1448,7 +1478,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //more than one image due to idiosyncrasies with the carousel
         var getImages = function(img){
             var arr = [];
+            console.log("the count of panels is "+ carousel.getPanels().length);
             carousel.getPanels().forEach((panel)=>{
+                console.log("getting a new panel");
                 var panels = panel.div.getElementsByClassName("doc-compare-panel");
                 for (var i=0; i<panels.length; i++){
                     var images = panels[i].getElementsByTagName("img");
@@ -1457,11 +1489,17 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             images[j].matchingImg = img.matchingImg;
                             images[j].isFirstDocument = img.isFirstDocument;
                             images[j].LoadOverlay = img.LoadOverlay;
+                            images[j].totalImportance = img.totalImportance;
                             arr.push(images[j]);
                         }
                     }
-                }
+                };
             });
+            console.log(JSON.stringify(arr,null,4));
+            console.log("logging the json structure before sort above");
+            arr.sort((a, b) => (a.totalImportance > b.totalImportance) ? 1 : -1)
+            console.log(JSON.stringify(arr,null,4));
+            console.log("logging the json structure after sort above");
             return arr;
         };
 
@@ -1469,6 +1507,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         return {
             el: el,
             update: function(pageIndex){
+                console.log("comparison update function called");
                 var files = results.files;
                 var leftFile = files[fileIndex];
                 var rightFile;
@@ -1503,7 +1542,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                             leftPage = suspiciousPage.pageNumber;
                             suspiciousPairs = suspiciousPage.suspiciousPairs;
-
+                            console.log(suspiciousPairs);
+                            console.log("logging set of suspicious pairs above");
                             return false;
                         };
                         idx++;
@@ -1515,17 +1555,20 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
               //Get boxes
                 var leftBoxes = [];
                 var rightBoxes = [];
-
+                var totalImportance = 0;
                 suspiciousPairs.forEach((suspiciousPair)=>{
                     var leftBox = null;
                     var rightBox = null;
+                    if (suspiciousPair.importance) totalImportance+=suspiciousPair.importance;
+
 
                     suspiciousPair.pages.forEach((page)=>{
                         if (page.file_index===fileIndex && page.page===leftPage){
                             leftBox = {
                                 type: suspiciousPair.type,
                                 string: suspiciousPair.string,
-                                boxes: page.bbox
+                                boxes: page.bbox,
+                                importance: suspiciousPair.importance
                             };
                             page.bbox.string = suspiciousPair.string;
                         }
@@ -1533,11 +1576,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             rightBox = {
                                 type: suspiciousPair.type,
                                 boxes: page.bbox,
-                                string: suspiciousPair.string
+                                string: suspiciousPair.string,
+                                importance: suspiciousPair.importance
                             };
                             // page.bbox.string = suspiciousPair.string;
                             console.log(suspiciousPair);
                             console.log(suspiciousPair.string);
+                            console.log(suspiciousPair.importance);
                             console.log("logging suspicious pair object above to see options");
                         };
                     });
@@ -1551,8 +1596,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
-                var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes);
-                createPreview(rightFile, rightPage, rightPanel, rightBoxes, leftSideImg);
+                var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes, totalImportance);
+                createPreview(rightFile, rightPage, rightPanel, rightBoxes, totalImportance, leftSideImg);
 
                 leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
                 rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
