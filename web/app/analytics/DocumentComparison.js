@@ -22,7 +22,21 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var totalPages = 0;
     var currPair = -1;
     var navbar;
-
+    var ratings; // to be appended to the currently selected tag
+    var settings;
+    var comparisonConfig = {
+        imgSimilarities: true,
+        duplicatePageSimilarities: true,
+        digitSimilarities: true,
+        textSimilarities: true,
+        minDigitCount: 1,
+        // allowDigitSpaces: true,
+        // decimalsOnly: false,
+        // minDecimalPlaces: 1,
+        minTextWords: 1,
+        minTextCharacters: 1
+    };
+    var settingsEditor;
 
 
   //**************************************************************************
@@ -69,6 +83,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     };
 
 
+
   //**************************************************************************
   //** getSimilarities
   //**************************************************************************
@@ -83,13 +98,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     this.clear = function(){
         results = {};
         suspiciousPages = [];
-        totalPages = 0;
         currPair = -1;
         backButton.disabled = true;
         nextButton.disabled = true;
 
         navbar.clear();
-        navbar.hide();
 
         var panels = carousel.getPanels();
         for (var i=0; i<panels.length; i++){
@@ -104,6 +117,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
+        console.log("main update function called!");
         me.clear();
 
       //Process arguments
@@ -125,31 +139,34 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             }
             else{
                 similarities = arguments[0];
-            }
-        }
+            };
+        };
 
 
       //Update the panel
         if (similarities){
             results = similarities;
-            update(results);
+
+          // modify similarity results depending on user selections in Settings menu
+            update(getFilteredSimilarities(results));
         }
         else{
             if (files){
+                console.alert("waitmask showing")
                 waitmask.show(500);
                 get("document/similarity?files="+files,{
                     success: function(json){
                         waitmask.hide();
                         results = json;
-                        update(results);
+                        update(getFilteredSimilarities(results));
                     },
                     failure: function(request){
                         alert(request);
                         waitmask.hide();
                     }
                 });
-            }
-        }
+            };
+        };
     };
 
 
@@ -159,14 +176,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   /** Used to populate the panels in the carousel control. Assumes that the
    *  carousel is cleared (see clear method)
    */
-    var update = function(){
+    var update = function(results){
+        console.log("private update function called");
         var files = results.files;
         if (files.length>2) return; //only 2 docs supported at this time
         fileIndex = 0;
-
-
+        totalPages = 0;
       //Get suspicious pages and count total number of pages to display
-        suspiciousPages = getSuspiciousPages(fileIndex);
+        suspiciousPages = getSuspiciousPages(fileIndex, getFilteredSimilarities(results));
         suspiciousPages.forEach((suspiciousPage)=>{
             var similarPages = {};
             suspiciousPage.suspiciousPairs.forEach((suspiciousPair)=>{
@@ -177,12 +194,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         var rightPage = page.page;
                         var rightFile = page.file_index;
                         similarPages[rightFile +","+ rightPage] = true;
-                    }
-                }
+                    };
+                };
             });
+            console.log(similarPages)
+            console.log("logging similar pages above!")
+            console.log("adding new pages to total pages")
+            console.log("logging keys length size of similarpages "+ Object.keys(similarPages).length);
             totalPages+=Object.keys(similarPages).length;
         });
-
+        console.log("total pages amount is "+ totalPages);
 
 
         if (totalPages>0){
@@ -194,13 +215,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         summaryPanel.update();
         panels[0].div.appendChild(summaryPanel.el);
 
-        if (totalPages===0) return;
+        if (totalPages===0){
+            console.log("total pages is detecting as 0, returning");
+            return;
+        }
 
         if (!comparisonPanel) comparisonPanel = createComparisonPanel();
         comparisonPanel.update(0);
         panels[1].div.appendChild(comparisonPanel.el);
 
-
+        console.log("got to end of update function, updating navbar.. total pages is " + totalPages);
         navbar.update();
     };
 
@@ -208,12 +232,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //**************************************************************************
   //** getSuspiciousPages
   //**************************************************************************
-    var getSuspiciousPages = function(fileIndex){
+    var getSuspiciousPages = function(fileIndex, results){
+        console.log("get suspicious pages called!");
 
         var files = results.files;
         var file = files[fileIndex];
-
         var suspiciousPages = [];
+        console.log(files);
+        console.log("logged files above, susp pages");
+        console.log("length of suspicious pairs is "+ results.suspicious_pairs.length);
         file.suspicious_pages.forEach((pageNumber)=>{
             var suspiciousPairs = [];
             results.suspicious_pairs.forEach((suspiciousPair)=>{
@@ -224,8 +251,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     if (page.file_index===fileIndex && page.page===pageNumber){
                         addPair = true;
                         break;
-                    }
-                }
+                    };
+                };
                 if (addPair) suspiciousPairs.push(suspiciousPair);
             });
 
@@ -340,6 +367,889 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
     };
 
+  //**************************************************************************
+  //** createSettings
+  //**************************************************************************
+    var createSettings = function(parent){
+        // settings cogwheel and icon that is attached to the current page of the document comparison
+        // updated & re-attached when the page changes
+
+        td = document.createElement("td");
+        settings = document.createElement("div");
+        settings.className = "doc-compare-panel-settings";
+        settings.innerHTML = '<i class="fas fa-cog"></i>';
+        td.colSpan = 2;
+        td.appendChild(settings);
+        parent.appendChild(td);
+
+        settings.onclick = function(){
+            if (!settingsEditor) {
+                settingsEditor = createSettingsContextMenu();
+            };
+            settingsEditor.show();
+        };
+
+        settings.detach = function(){
+            // if settings container div is attached somewhere within the dom, detach it
+                if (this.parentNode.parentNode ) this.parentNode.parentNode.removeChild(this.parentNode);
+        };
+
+        settings.attach = function(parent){
+            // append the settings container div to the first child of the parent element
+                parent.appendChild(this.parentNode);
+        };
+
+        settings.updateSelection = function(parent){
+            settings.detach();
+            settings.attach(parent.getElementsByClassName("doc-compare-panel-title")[0].parentNode);
+        };
+    };
+
+  //**************************************************************************
+  //** createContextMenu
+  //**************************************************************************
+    createSettingsContextMenu = function(){
+        var config = {
+            style: javaxt.dhtml.style.default
+        };
+
+        //Update form
+        editor = new javaxt.dhtml.Window(document.body, {
+            title: "Edit Settings",
+            width: 400,
+            valign: "top",
+            modal: false,
+            resizable: false,
+            style: config.style.window
+        });
+
+        var body = editor.getBody();
+        body.innerHTML = "";
+
+
+        var form = new javaxt.dhtml.Form(body, {
+            style: config.style.form,
+            items: [
+                {
+                    group: "Text",
+                    items: [
+                        {
+                            name: "textSimilarities",
+                            label: "Show",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "minTextCharacters",
+                            label: "Min Text Characters",
+                            type: "text",
+                            required: false
+                        },
+                        {
+                            name: "minTextWords",
+                            label: "Min Text Words",
+                            type: "text",
+                            required: false
+                        }
+                    ]
+                },
+                {
+                    group: "Digit",
+                    items: [
+                        {
+                            name: "digitSimilarities",
+                            label: "Show",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ],
+                        },
+                        {
+
+                            name: "minDigitCount",
+                            label: "Min Digit Count",
+                            type: "text",
+                            required: false
+                        },
+                        // {
+                        //     name: "allowDigitSpaces",
+                        //     label: "Allow Spaces Between Digits",
+                        //     type: "checkbox",
+                        //     options:[
+                        //         {
+                        //             label: "",
+                        //             value: true,
+                        //             checked: false
+                        //         }
+                        //     ]
+                        // },
+                        // {
+                        //     name: "decimalsOnly",
+                        //     label: "Decimals Only",
+                        //     type: "checkbox",
+                        //     options:[
+                        //         {
+                        //             label: "",
+                        //             value: true,
+                        //             checked: false
+                        //         }
+                        //     ]
+                        // },
+                        // {
+
+                        //     name: "minDecimalPlaces",
+                        //     label: "Min Decimal Places",
+                        //     type: "text",
+                        //     required: false
+                        // }
+                    ]
+                },
+                {
+                    group: "Other",
+                    items: [
+                        {
+                            name: "imgSimilarities",
+                            label: "Show Images",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "duplicatePageSimilarities",
+                            label: "Show Duplicate Pages",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        }
+                    ]
+                },
+
+            ]
+        });
+
+
+        // editor.onClose = function(){
+        //     console.log(editor)
+        //     console.log(editor.open)
+        //     console.log("editor closed!");
+        //     if (!isPopulated){
+        //         console.log("is not populated")
+        //         editor.showAt(rect.x - 400,rect.y);
+        //         warn("At least one comparison is required", getChangedField(formSettings));
+        //     }
+
+
+        // };
+
+
+
+    //Set initial value for imgSimilarities
+        var imgSimilaritiesField = form.findField("imgSimilarities");
+        var imgSimilarities = comparisonConfig.imgSimilarities;
+        var imgSimilaritiesFieldLabel = imgSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+        imgSimilaritiesField.setValue(imgSimilarities===true ? true : false);
+
+    //Set initial value for digitSimilarities
+        var digitSimilaritiesField = form.findField("digitSimilarities");
+        var digitSimilaritiesFieldLabel = digitSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+        var digitSimilarities = comparisonConfig.digitSimilarities;
+        digitSimilaritiesField.setValue(digitSimilarities===true ? true : false);
+
+    //Set initial value for minDigitCount
+        var minDigitCountField = form.findField("minDigitCount");
+        var minDigitCountFieldLabel = minDigitCountField.row.getElementsByClassName("form-label noselect")[1];
+        var minDigitCount = comparisonConfig.minDigitCount;
+        minDigitCountField.setValue(minDigitCount);
+
+    // //Set initial value for allowDigitSpaces
+    //     var allowDigitSpacesField = form.findField("allowDigitSpaces");
+    //     var allowDigitSpacesFieldLabel = allowDigitSpacesField.row.getElementsByClassName("form-label noselect")[1];
+    //     var allowDigitSpaces = comparisonConfig.allowDigitSpaces;
+    //     allowDigitSpacesField.setValue(allowDigitSpaces===true ? true : false);
+
+    // //Set initial value for decimalsOnly
+    //     var decimalsOnlyField = form.findField("decimalsOnly");
+    //     var decimalsOnlyFieldLabel = decimalsOnlyField.row.getElementsByClassName("form-label noselect")[1];
+    //     var decimalsOnly = comparisonConfig.decimalsOnly;
+    //     decimalsOnlyField.setValue(decimalsOnly===true ? true : false);
+
+    // //Set initial value for minDecimalPlaces
+    //     var minDecimalPlacesField = form.findField("minDecimalPlaces");
+    //     var minDecimalPlacesFieldLabel = minDecimalPlacesField.row.getElementsByClassName("form-label noselect")[1];
+    //     var minDecimalPlaces = comparisonConfig.minDecimalPlaces;
+    //     minDecimalPlacesField.setValue(minDecimalPlaces);
+
+
+
+    //Set intial value for textSimilarities
+        var textSimilaritiesField = form.findField("textSimilarities");
+        var textSimilaritiesFieldLabel = textSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+        var textSimilarities = comparisonConfig.textSimilarities;
+        textSimilaritiesField.setValue(textSimilarities===true ? true : false);
+
+    //Set initial value for minTextWords
+        var minTextWordsField = form.findField("minTextWords");
+        var minTextWordsFieldLabel = minTextWordsField.row.getElementsByClassName("form-label noselect")[1];
+        var minTextWords = comparisonConfig.minTextWords;
+        minTextWordsField.setValue(minTextWords);
+
+    //Set initial value for minTextCharacters
+        var minTextCharactersField = form.findField("minTextCharacters");
+        var minTextCharactersFieldLabel = minTextCharactersField.row.getElementsByClassName("form-label noselect")[1];
+        var minTextCharacters = comparisonConfig.minTextCharacters;
+        minTextCharactersField.setValue(minTextCharacters);
+
+    //Set initial value for duplicatePageSimilarities
+       var duplicatePageSimilaritiesField = form.findField("duplicatePageSimilarities");
+       var duplicatePageSimilaritiesFieldLabel = duplicatePageSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+       var duplicatePageSimilarities = comparisonConfig.duplicatePageSimilarities;
+       duplicatePageSimilaritiesField.setValue(duplicatePageSimilarities===true ? true : false);
+
+
+
+
+        var isPopulated = function(config){ // determine the options/availability when passing new config
+            var similarities = getFilteredSimilarities(results, config);
+
+            console.log(similarities.suspicious_pairs);
+            console.log(similarities.suspicious_pairs.length);
+            console.log("logging similarities suspicious pairs above");
+
+            if (similarities.suspicious_pairs.length < 1){
+                console.log("this results in the document comparison being empty!");
+                return false;
+            }
+            else return true;
+        };
+
+        var getChangedField = function(formSettings){
+            // returns the field that was changed in order to generate new results
+            console.log("get changed field called");
+            var fieldChanged;
+            console.log(formSettings);
+            console.log("all fields of formsettings are above");
+            console.log(comparisonConfig);
+            console.log("comparison config printed above");
+
+            if (formSettings.imgSimilarities !== comparisonConfig.imgSimilarities) return imgSimilaritiesField;
+            else if (formSettings.digitSimilarities !== comparisonConfig.digitSimilarities) return digitSimilaritiesField;
+            else if (formSettings.textSimilarities !== comparisonConfig.textSimilarities) return textSimilaritiesField;
+            else if (formSettings.minDigitCount !== comparisonConfig.minDigitCount) return minDigitCountField;
+            // else if (formSettings.allowDigitSpaces !== comparisonConfig.allowDigitSpaces) return allowDigitSpacesField;
+            // else if (formSettings.decimalsOnly !== comparisonConfig.decimalsOnly) return decimalsOnlyField;
+            // else if (formSettings.minDecimalPlaces !== comparisonConfig.minDecimalPlaces) return minDecimalPlacesField;
+            else if (formSettings.minTextWords !== comparisonConfig.minTextWords) return minTextWordsField;
+            else if (formSettings.minTextCharacters !== comparisonConfig.minTextCharacters) return minTextCharactersField;
+            else if (formSettings.duplicatePageSimilarities !== comparisonConfig.duplicatePageSimilarities) return duplicatePageSimilaritiesField;
+
+        };
+
+        var revertFormChanges = function(){
+            // Set all form values back to last saved state
+                imgSimilaritiesField.setValue(comparisonConfig.imgSimilarities);
+                digitSimilaritiesField.setValue(comparisonConfig.digitSimilarities);
+                textSimilaritiesField.setValue(comparisonConfig.textSimilarities);
+                minDigitCountField.setValue(comparisonConfig.minDigitCount);
+                // allowDigitSpacesField.setValue(comparisonConfig.allowDigitSpaces);
+                // decimalsOnlyField.setValue(comparisonConfig.decimalsOnly);
+                // minDecimalPlacesField.setValue(comparisonConfig.minDecimalPlaces);
+                minTextWordsField.setValue(comparisonConfig.minTextWords);
+                minTextCharactersField.setValue(comparisonConfig.minTextCharacters);
+                duplicatePageSimilaritiesField.setValue(comparisonConfig.duplicatePageSimilarities);
+
+        };
+
+        var updateSavedState = function(formSettings){
+            // Update the saved state of the Comparison Panel form
+                comparisonConfig.imgSimilarities = formSettings.imgSimilarities;
+                comparisonConfig.digitSimilarities = formSettings.digitSimilarities;
+                comparisonConfig.textSimilarities = formSettings.textSimilarities;
+                comparisonConfig.minDigitCount = formSettings.minDigitCount;
+                // comparisonConfig.allowDigitSpaces = formSettings.allowDigitSpaces;
+                // comparisonConfig.decimalsOnly = formSettings.decimalsOnly;
+                // comparisonConfig.minDecimalPlaces = formSettings.minDecimalPlaces;
+                comparisonConfig.minTextWords = formSettings.minTextWords;
+                comparisonConfig.minTextCharacters = formSettings.minTextCharacters;
+                comparisonConfig.duplicatePageSimilarities = formSettings.duplicatePageSimilarities;
+        };
+
+    //Process onChange events
+        form.onChange = function(){
+            var formSettings = form.getData();
+            console.log(formSettings);
+            console.log("logged formsettings above");
+
+
+
+            console.log(formSettings.minDigitCount);
+            // console.log(formSettings.allowDigitSpaces);
+            // console.log(formSettings.decimalsOnly);
+            // console.log(formSettings.minDecimalPlaces);
+            console.log(formSettings.minTextWords);
+            console.log(formSettings.minTextCharacters);
+
+
+            console.log("current minimum digit count logging above");
+
+        //Update form data
+            if (formSettings.imgSimilarities==="true") formSettings.imgSimilarities = true;
+            else formSettings.imgSimilarities = false;
+
+            if (formSettings.digitSimilarities==="true") formSettings.digitSimilarities = true;
+            else formSettings.digitSimilarities = false;
+
+            if (formSettings.textSimilarities==="true") formSettings.textSimilarities = true;
+            else formSettings.textSimilarities = false;
+
+            // if (formSettings.allowDigitSpaces==="true") formSettings.allowDigitSpaces = true;
+            // else formSettings.allowDigitSpaces = false;
+
+            // if (formSettings.decimalsOnly==="true") formSettings.decimalsOnly = true;
+            // else formSettings.decimalsOnly = false;
+
+            if (formSettings.duplicatePageSimilarities==="true") formSettings.duplicatePageSimilarities = true;
+            else formSettings.duplicatePageSimilarities = false;
+
+            console.log("got to the ispopulated check");
+            console.log(formSettings);
+
+            if( isPopulated(formSettings)) {
+                console.log("the form is acceptable in this state!");
+
+            }
+            else {
+                console.log("the form is not acceptable in this state");
+                warn("At least one comparison is required", getChangedField(formSettings));
+                revertFormChanges();
+                settingsEditor.enableThis();
+                return; // do not overwrite comparison config or process changes
+            };
+
+            console.log(getChangedField(formSettings));
+            console.log("changed field is above");
+
+        //Update comparisonConfig
+            updateSavedState(formSettings);
+
+        // reset form errors
+            for (var fieldName in formSettings){
+                if (form.findField(fieldName).resetColor) form.findField(fieldName).resetColor();
+            };
+
+            console.log(comparisonConfig.minDigitCount);
+            console.log("comparison config minimum digit is above");
+        // disable/re-enable settings menu to prevent users from changing setting during rendering
+            if (settingsEditor){
+                settingsEditor.disableThis();
+            };
+            me.update(results);
+            updateGUI(getFilteredSimilarities(results));
+        };
+
+        var updateGUI = function(similarities){
+
+            // update GUI counts
+                if (similarities.digitCount < 1)digitSimilaritiesFieldLabel.innerText = '';
+                else digitSimilaritiesFieldLabel.innerText = similarities.digitCount + " similarities";
+
+                if (similarities.textCount < 1)textSimilaritiesFieldLabel.innerText = '';
+                else textSimilaritiesFieldLabel.innerText = similarities.textCount + " similarities";
+
+                if (similarities.imgCount < 1)imgSimilaritiesFieldLabel.innerText = '';
+                else imgSimilaritiesFieldLabel.innerText = similarities.imgCount + " similarities";
+
+                if (similarities.duplicatePageCount < 1)duplicatePageSimilaritiesFieldLabel.innerText = '';
+                else duplicatePageSimilaritiesFieldLabel.innerText = similarities.duplicatePageCount + " similarities";
+        };
+
+        editor.disableThis = function(){ // used for temporarily disabling settings options while changes render
+            // modify style of fields to indicate this form is disabled
+                form.disableField("imgSimilarities");
+                form.disableField("digitSimilarities");
+                form.disableField("textSimilarities");
+                // form.disableField("minDecimalPlaces");
+                form.disableField("minDigitCount");
+                // form.disableField("allowDigitSpaces");
+                form.disableField("minTextCharacters");
+                form.disableField("minTextWords");
+                // form.disableField("decimalsOnly");
+                form.disableField("duplicatePageSimilarities");
+
+            // disable checkboxes
+                var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
+                for (i in formCheckboxes){
+                    formCheckboxes[i].disabled = true;
+                };
+        };
+
+        editor.enableThis = function(){
+        // modify style of fields to indicate this form is enabled
+            form.enableField("imgSimilarities");
+            form.enableField("digitSimilarities");
+            form.enableField("textSimilarities");
+            // form.enableField("minDecimalPlaces");
+            form.enableField("minDigitCount");
+            // form.enableField("allowDigitSpaces");
+            form.enableField("minTextCharacters");
+            form.enableField("minTextWords");
+            // form.enableField("decimalsOnly");
+            form.enableField("duplicatePageSimilarities");
+
+        // enabled checkboxes
+            var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
+            for (i in formCheckboxes){
+                formCheckboxes[i].disabled = false;
+            };
+        };
+
+    // render settings Editor to the left of cog wheel icon
+        var rect = javaxt.dhtml.utils.getRect(settings);
+        editor.showAt(rect.x - 400,rect.y);
+        form.resize();
+        updateGUI(getFilteredSimilarities(results));
+        return editor;
+    };
+
+  //**************************************************************************
+  //** this.getFilteredSimilarities
+  //**************************************************************************
+    this.getFilteredSimilarities = function(similarities){ // used by documentAnalysis for processing results information
+        return getFilteredSimilarities(similarities);
+    };
+
+  //**************************************************************************
+  //** getFilteredSimilarities
+  //**************************************************************************
+    var getFilteredSimilarities = function(similarities, config){
+        console.log(similarities);
+        console.log("logging similarities passed, above");
+
+        // create new filtered json object from the raw similarities results
+        if (!config){
+            console.log("config is not declared! assigning the main comparisonConfig");
+            var config = comparisonConfig;
+        };
+        var imgCount = 0;
+        var textCount = 0;
+        var digitCount = 0;
+        var duplicatePageCount = 0;
+        var ignoredTexts = 0;
+
+        var filteredSimilarities = {
+            // files:[],
+            num_suspicious_pairs:0,
+            suspicious_pairs:[],
+            // elapsed_time_sec:0,
+            // pages_per_second:0,
+
+            // values directly from previous obj
+            similarity_scores: similarities.similarity_scores,
+            time: similarities.time,
+            version: similarities.version,
+            files: similarities.files,
+            elapsed_time_sec: similarities.elapsed_time_sec,
+            pages_per_second: similarities.pages_per_second
+        };
+
+        // add filtered paired similarities
+            for (var i in similarities.suspicious_pairs) {
+                var pair = similarities.suspicious_pairs[i];
+                if (pair.type === "Identical image" && config.imgSimilarities) {
+                    filteredSimilarities.suspicious_pairs.push(pair);
+                    imgCount++;
+                }
+                else if (pair.type === "Common digit sequence" && config.digitSimilarities){
+                    // var skip;
+                    console.log(pair);
+                    console.log(pair.string);
+                    // if (pair.string.includes(" ")){
+                    //     console.log("this pair contains a space");
+
+                    //     console.log("logging digit spaces status in config " + config.allowDigitSpaces)
+                    //     if (!config.allowDigitSpaces){
+                    //         console.log("not allowing digit spaces - break condition");
+                    //         continue;
+                    //     }
+                    //     else console.log("digit spaces were allowed!");
+                    // }
+
+                    // if (config.decimalsOnly){
+                    //     if (!pair.string.includes(".")){
+                    //         console.log(pair.string);
+                    //         console.log("skipped pair above because it was missing a decimal");
+                    //         continue;
+                    //     };
+                    // }
+                    // if (pair.string.includes(".")){
+                        // console.log("this string contains a decimal!")
+                        // console.log(pair.string)
+                        // if (config.decimalsOnly) continue;
+                        // else console.log("decimal detected, and is allowed!")
+                    // };
+
+                    console.log(`string length is ${pair.string.length} `)
+                    if (pair.string.length < config.minDigitCount){
+                        console.log("doesn't pass minimum string length - break condition ");
+                        continue;
+                    }
+                    else console.log("passes minimum digit string length, which is "+ config.minDigitCount);
+
+
+                    console.log("logging the pair info above");
+                    filteredSimilarities.suspicious_pairs.push(pair);
+                    console.log(filteredSimilarities.suspicious_pairs);
+                    console.log("logging new filtered similiarites suspicious pairs above");
+                    digitCount++;
+                }
+                else if (pair.type === "Common text string" && config.textSimilarities){
+
+                    // count number of words
+                    function WordCount(str) {
+                        return str.split(" ").length;
+                    };
+
+
+                    if (pair.string.includes(" ")){
+                        console.log("detected multiple words, count is " + WordCount(pair.string));
+                        if (WordCount(pair.string) < config.minTextWords){
+                            console.log("skippping this string, less words than allowed");
+                            continue;
+                        };
+                    };
+
+
+                    console.log("the minimum number of characters is "+ config.minTextCharacters);
+
+
+                    if (pair.string.length < config.minTextCharacters){
+                        ignoredTexts++;
+                        continue;
+                    };
+
+                    console.log("logging character count for this string " + pair.string.length + " \n string below");
+                    console.log(pair.string)
+
+                    filteredSimilarities.suspicious_pairs.push(pair);
+                    textCount++;
+                }
+                else if (pair.type === "Duplicate page" && config.duplicatePageSimilarities) {
+                    console.log("found a duplicate page!");
+                    filteredSimilarities.suspicious_pairs.push(pair);
+                    duplicatePageCount++;
+                };
+            };
+
+        // add count of paired similarities
+            filteredSimilarities.num_suspicious_pairs = filteredSimilarities.suspicious_pairs.length;
+
+        // add count of each paired similarity type
+            filteredSimilarities.textCount = textCount;
+            filteredSimilarities.imgCount = imgCount;
+            filteredSimilarities.digitCount = digitCount;
+            filteredSimilarities.duplicatePageCount = duplicatePageCount;
+
+        console.log(filteredSimilarities.suspicious_pairs);
+        console.log("logging just the suspicious pairs above");
+        console.log(JSON.stringify(filteredSimilarities.suspicious_pairs,null,4));
+        console.log("logging the json structure before sort above");
+        filteredSimilarities.suspicious_pairs.sort((a, b) => (a.totalImportance > b.totalImportance) ? 1 : -1);
+        console.log(JSON.stringify(filteredSimilarities.suspicious_pairs,null,4));
+        console.log("logging the json structure after sort above");
+        console.log(filteredSimilarities.suspicious_pairs);
+        console.log("logged suspicious pairs above");
+
+        console.log("total number ignored texts is "+ ignoredTexts);
+        console.log(filteredSimilarities);
+        console.log("loggign filtered similarities object above");
+        return filteredSimilarities;
+    };
+
+
+  //**************************************************************************
+  //** createRatings
+  //**************************************************************************
+    var createRatings = function(){ // lazy loaded when a new img is pulled up
+        var thumbsDown, thumbsUp;
+            var div = document.createElement("div");
+            div.style.position = "absolute";
+            div.style.width = "100%"; // temporary styling - strange
+            div.style.bottom = "86%"; // temporary styling - strange
+            div.style.left = "-20%"; // temporary styling - strange
+
+
+            ratings = document.createElement("div");
+            ratings.className = "doc-compare-panel-ratings";
+            addShowHide(ratings);
+
+            div.appendChild(ratings);
+            var div = document.createElement("div");
+            div.className = "doc-compare-panel-ratings-container";
+            ratings.appendChild(div);
+
+            // create thumbs up
+                var thumbsUp = document.createElement("i");
+                thumbsUp.className = "fas fa-thumbs-up";
+
+            // create thumbs down
+                var thumbsDown = document.createElement("i");
+                thumbsDown.className = "fas fa-thumbs-down";
+
+            ratings.detach = function(){
+                // if ratings container div is attached somewhere within the dom, detach it
+                    if (this.parentNode.parentNode ) this.parentNode.parentNode.removeChild(this.parentNode);
+            };
+
+            ratings.attach = function(parent){
+                // append the ratings container div to the first child of the parent element
+                    parent.insertBefore(this.parentNode, parent.firstChild);
+            };
+
+            ratings.update = function(t){
+                if (this.tag){
+                    this.tag.clear(); // deSelect tag
+                };
+                this.detach();
+                console.log("updating with this object", t);
+                ratings.attach(t.parentNode);
+                this.tag = t;
+                this.thumbsDown.tag = t;
+                this.thumbsUp.tag = t;
+                ratings.show();
+            };
+
+
+            ratings.disApproveSimilarity = function(){ // TODO: add server event handler - passing information via URL
+                this.tag.removeSimilarity();
+                this.tag.remove();
+                this.tag.matchingTag.remove();
+
+            };
+
+            ratings.approveSimilarity = function(){ // TODO: add server event handler - passing information via URL
+                this.tag.clear();
+            };
+
+            ratings.appendChild(thumbsUp);
+            ratings.appendChild(thumbsDown);
+            ratings.thumbsUp = thumbsUp;
+            ratings.thumbsDown = thumbsDown;
+
+            thumbsUp.onclick = function(){
+                console.log("clicked the thumbsup button");
+                ratings.approveSimilarity();
+                ratings.hide();
+            };
+
+            thumbsDown.onclick = function(){
+                console.log("clicked the thumbsDown button");
+                ratings.disApproveSimilarity();
+                ratings.hide();
+            };
+
+
+
+            return ratings;
+        };
+
+
+  //**************************************************************************
+  //** createOutlineBox
+  //**************************************************************************
+    var createSimilarityOutlineBox = function(bbox, img){
+
+
+        var x = bbox[0];
+        var y = bbox[1];
+        var w = bbox[2]-x;
+        var h = bbox[3]-y;
+
+
+        var d = document.createElement("div");
+        d.className = "doc-compare-panel-similarity-d";
+        // d.style.position = "absolute"; // added to main.css
+        // d.style.border = "1px solid red";
+        d.style.left = (x*img.width)+"px";
+        d.style.top = (y*img.height)+"px";
+        d.style.width = (w*img.width)+"px";
+        d.style.height = (h*img.height)+"px";
+        d.style.zIndex = 2;
+
+        // set values used during rescaling
+            d.originalHeight = h*img.height;
+            d.originalWidth = w*img.width;
+            d.originalX = x*img.width;
+            d.originalY = y*img.height;
+
+        d.rescale = function(scaleW, scaleH){
+
+            var newHeight = this.originalHeight * scaleH;
+            var newWidth = this.originalWidth * scaleW;
+            var newX = this.originalX * scaleW;
+            var newY = this.originalY * scaleH;
+
+            this.style.height = `${newHeight}px`;
+            this.style.width = `${newWidth}px`;
+            this.style.left = `${newX}px`;
+            this.style.top = `${newY}px`;
+        };
+
+        d.clear = function(){
+            this.innerHTML = "";
+            this.style.backgroundColor = ""; // add a class to replace this, in-active class
+            this.style.opacity = ""; // add a class to replace this, in-active class
+            this.isSelected = false;
+        };
+
+        d.select = function(){
+            this.isSelected = true;
+            this.highlight();
+            this.scrollIntoView(true); // add this later for scrolling to the highlighted element in the right-hand view
+
+
+        };
+
+        d.highlight = function(){
+            this.style.backgroundColor = "red"; // add a class to replace this, active class
+            this.style.opacity = "35%"; // add a class to replace this, active class
+        };
+
+        d.removeSimilarity = function(){
+            this.remove();
+        };
+
+        d.hideSimilarity = function(){ // used with custom user options set for specific type of similarities
+            this.hide();
+        };
+
+        d.showSimilarity = function(){ // used with custom user options set for specific type of similarities
+            this.show();
+        };
+        return d;
+    };
+
+
+  //**************************************************************************
+  //** createSimilarityTag
+  //**************************************************************************
+    var createSimilarityTag = function(bbox, int, img){
+
+        var x = bbox[0];
+        var y = bbox[1];
+
+        var tag = document.createElement("div");
+        tag.className = "doc-compare-panel-similarity-tag";
+        var tagInner = document.createElement("div");
+        tagInner.innerText = int;
+        tagInner.style.textAlign = "center";
+        tag.appendChild(tagInner);
+
+        var tooltip = document.createElement("span");
+        tooltip.className = "tooltip";
+        tooltip.innerText = ""; // assigned on mouseOver
+        tag.appendChild(tooltip);
+        tag.tooltip = tooltip;
+        tag.img = img;
+
+
+        // dynamically set styles
+            tag.style.left = (x*img.width)+"px";
+            tag.style.top = (y*img.height)+"px";
+
+        // other functional styles
+            tag.style.zIndex = 3;
+
+        // set values used during rescaling
+            tag.originalX = x*img.width;
+            tag.originalY = y*img.height;
+
+        tag.rescale = function(scaleW, scaleH){
+            var newX = this.originalX * scaleW;
+            var newY = this.originalY * scaleH;
+
+            this.style.left = `${newX}px`;
+            this.style.top = `${newY}px`;
+        };
+
+
+
+        tag.onclick = function (){
+            if (!ratings) {
+                ratings = createRatings();
+                ratings.attach(this.parentNode);
+            };
+            ratings.update(this);
+            this.matchingD.select();
+            this.matchingTag.hide();
+        };
+
+        tag.removeSimilarity = function(){
+            this.matchingD.removeSimilarity();
+            this.d.removeSimilarity();
+        };
+
+        tag.hideSimilarity = function(){ // used with custom user options set for specific type of similarities
+            this.matchingD.hideSimilarity();
+            this.d.hideSimilarity();
+            this.hide();
+        };
+
+        tag.showSimilarity = function(){ // used with custom user options set for specific type of similarities
+            this.matchingD.showSimilarity();
+            this.d.showSimilarity();
+            this.show();
+        };
+
+        tag.onmouseover = function(){
+            console.log(tag.string);
+            console.log("logging string of tag to console above");
+            console.log(tag.importance);
+            console.log("logging this similarities importance value above");
+            console.log(tag.img.getTotalImportance());
+            console.log("logging total importance value for this pages similarities above");
+            this.matchingD.highlight();
+            this.matchingTag.hide();
+            this.tooltip.innerText = this.type;
+        };
+
+        tag.onmouseleave = function(){
+            // this.d.clear();
+            if (!this.matchingD.isSelected){
+                this.matchingD.clear();
+                this.matchingTag.show();
+            }
+        };
+
+        tag.clear = function(){ // called by ratings when a new tag is selected
+            this.matchingD.clear();
+            this.matchingTag.show();
+        };
+
+        return tag;
+    };
 
   //**************************************************************************
   //** createComparisonPanel
@@ -352,7 +1262,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var el = table;
         var tr, td;
 
-
       //Create title row
         tr = document.createElement("tr");
         tbody.appendChild(tr);
@@ -362,6 +1271,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         tr.appendChild(td);
         var title = td;
 
+        createSettings(tr);
 
       //Create subtitle row
         tr = document.createElement("tr");
@@ -392,6 +1302,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Right column
         td = td.cloneNode();
         tr.appendChild(td);
+        var div = document.createElement("div");
         var rightPanel = document.createElement("div");
         rightPanel.className = "doc-compare-panel";
         td.appendChild(rightPanel);
@@ -410,57 +1321,185 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
       //Function used to create an image
-        var createPreview = function(file, page, parent, boxes){
+        var createPreview = function(file, page, parent, boxes, totalImportance, matchingImg){
+            console.log(totalImportance);
+            console.log("logging initial total importance above");
             parent.innerHTML = "";
             var i = document.createElement("i");
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
-            img.onload = function(){
-                img = this;
-                setTimeout(function(){
-                    getImages(img).forEach((img)=>{
-                        boxes.forEach((box)=>{
-                            var type = box.type;
-                            box.boxes.forEach((bbox)=>{
-                                var x = bbox[0];
-                                var y = bbox[1];
-                                var w = bbox[2]-x;
-                                var h = bbox[3]-y;
-                                var d = document.createElement("div");
-                                d.style.position = "absolute";
-                                d.style.border = "1px solid red";
-                                d.style.left = (x*img.width)+"px";
-                                d.style.top = (y*img.height)+"px";
-                                d.style.width = (w*img.width)+"px";
-                                d.style.height = (h*img.height)+"px";
-                                d.style.zIndex = 2;
-                                img.parentNode.appendChild(d);
-                            });
-                        });
-                    });
-                }, 1200); //add slight delay for the carousel to finish sliding
+            img.totalImportance = totalImportance;
+
+            if (matchingImg){
+                img.matchingImg = matchingImg;
+                img.isFirstDocument = false;
+            }
+            else{
+                img.matchingImg = null;
+                img.isFirstDocument = true;
             };
+
+
+            if (!img.isFirstDocument){ // render left image first and then load this (right) image
+                img.onload = function(){
+                    img = this;
+                    setTimeout(function(){
+                        clearOverlay();
+
+                        getImages(img).forEach((rightImage)=>{
+                            getImages(rightImage.matchingImg).forEach((leftImage)=>{
+                                leftImage.matchingImg = rightImage; // add match reference
+                                leftImage.LoadOverlay();  // render left image
+                                rightImage.matchingImg = leftImage; // update matched reference
+                                rightImage.LoadOverlay(); // render right image
+
+                                settings.updateSelection(rightImage.parentNode.parentNode.parentNode.parentNode);
+                            });
+                            if (settingsEditor){
+                                setTimeout(() => {
+                                    settingsEditor.enableThis();
+
+                                }, 100);
+                            };
+                        });
+
+                    }, 1200); //add slight delay for the carousel to finish sliding
+                };
+            };
+
+            img.LoadOverlay = function (){
+                console.log("load overlay called");
+                img = this;
+              // set original width/height for determining scaling for tag & d elements
+                var rect = javaxt.dhtml.utils.getRect(img);
+                img.originalHeight = rect.height;
+                img.originalWidth = rect.width;
+
+                    var int = 0;
+                    img.d = [];
+                    img.tag = [];
+                    for ( var i=0; i<boxes.length; i++){
+                        var box = boxes[i];
+                        int++;
+
+                        var updateMatchingImg = function(){
+
+                            // update matching img object references to link to this created tag
+                                img.matchingImg.matchingImg = img; // set the matching imgs' pair to reflect this img
+                                tag.matchingTag = img.matchingImg.tag[i];
+                                tag.matchingD = img.matchingImg.d[i];
+                                if (!img.matchingImg.matchingD){
+                                        img.matchingImg.matchingD = [];
+                                };
+                                if (!img.matchingImg.matchingTag){
+                                    img.matchingImg.matchingTag = [];
+                                };
+
+                                img.matchingImg.matchingD[i] = d;
+                                img.matchingImg.matchingTag[i] = tag;
+
+                                img.matchingImg.tag[i].matchingTag = tag;
+                                img.matchingImg.tag[i].matchingD = d;
+                        };
+
+                        var d = createSimilarityOutlineBox(box.boxes, img);
+                        var tag = createSimilarityTag(box.boxes, int, img);
+
+                        if (!img.isFirstDocument){
+                            console.log("running update matching img")
+                            updateMatchingImg();
+                        };
+
+                        tag.d = d;
+                        tag.type = box.type;
+                        console.log(box);
+                        console.log("logging box obj above");
+                        tag.string = box.string;
+                        tag.importance = box.importance;
+                        console.log(box);
+                        console.log("logging box object above ")
+                        console.log(box.importance);
+                        console.log("logging box importance above");
+
+                        img.getTotalImportance = function(){
+                            return this.totalImportance;
+                        };
+
+                        console.log(img.totalImportance);
+                        console.log("logging total importance now - above");
+                        img.d.push(d);
+                        img.tag.push(tag);
+                        img.parentNode.appendChild(d);
+                        img.parentNode.appendChild(tag);
+                        addShowHide(d);
+                        addShowHide(tag);
+
+                        // set resize listeners
+                        var resizeListener = function(){
+                            var rect = javaxt.dhtml.utils.getRect(img);
+                            var scaleByH = rect.height / img.originalHeight;
+                            var scaleByW = rect.width / img.originalWidth;
+
+                            var dElements = img.d; // a list of the d elements associated with the image
+                            dElements.forEach((d)=>{
+                                d.rescale(scaleByW,scaleByH);
+                            });
+
+                            var tagElements = img.tag; // a list of tag elements associated with the image
+                            tagElements.forEach((tag)=>{
+                                tag.rescale(scaleByW,scaleByH);
+                            });
+                        };
+                        addResizeListener(img.parentNode, resizeListener);
+                    };
+            };
+
             parent.appendChild(img);
+            return img;
         };
+
+        // remove all current overlay elements assigned to DOM
+        var clearOverlay = function(){
+            var overlayTags = document.getElementsByClassName("doc-compare-panel-similarity-tag");
+            var overlayDs = document.getElementsByClassName("doc-compare-panel-similarity-d");
+            for (var i = 0; i < overlayTags.length; i++) {
+                setTimeout(node => node.remove(),0 , overlayTags[i]);
+            };
+            for (var i = 0; i < overlayDs.length; i++) {
+                setTimeout(node => node.remove(),0 , overlayDs[i]);
+            };
+        };
+
 
 
       //Function used to find images in the carousel. Note that there may be
       //more than one image due to idiosyncrasies with the carousel
         var getImages = function(img){
             var arr = [];
+            console.log("the count of panels is "+ carousel.getPanels().length);
             carousel.getPanels().forEach((panel)=>{
+                console.log("getting a new panel");
                 var panels = panel.div.getElementsByClassName("doc-compare-panel");
                 for (var i=0; i<panels.length; i++){
                     var images = panels[i].getElementsByTagName("img");
                     for (var j=0; j<images.length; j++){
                         if (images[j].src===img.src){
+                            images[j].matchingImg = img.matchingImg;
+                            images[j].isFirstDocument = img.isFirstDocument;
+                            images[j].LoadOverlay = img.LoadOverlay;
+                            images[j].totalImportance = img.totalImportance;
                             arr.push(images[j]);
                         }
                     }
-                }
+                };
             });
+            console.log(JSON.stringify(arr,null,4));
+            console.log("logging the json structure before sort above");
+            arr.sort((a, b) => (a.totalImportance > b.totalImportance) ? 1 : -1)
+            console.log(JSON.stringify(arr,null,4));
+            console.log("logging the json structure after sort above");
             return arr;
         };
 
@@ -468,7 +1507,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         return {
             el: el,
             update: function(pageIndex){
-
+                console.log("comparison update function called");
                 var files = results.files;
                 var leftFile = files[fileIndex];
                 var rightFile;
@@ -503,11 +1542,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                             leftPage = suspiciousPage.pageNumber;
                             suspiciousPairs = suspiciousPage.suspiciousPairs;
-
+                            console.log(suspiciousPairs);
+                            console.log("logging set of suspicious pairs above");
                             return false;
-                        }
+                        };
                         idx++;
-                    }
+                    };
                     return true;
                 });
 
@@ -515,24 +1555,36 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
               //Get boxes
                 var leftBoxes = [];
                 var rightBoxes = [];
+                var totalImportance = 0;
                 suspiciousPairs.forEach((suspiciousPair)=>{
-
                     var leftBox = null;
                     var rightBox = null;
+                    if (suspiciousPair.importance) totalImportance+=suspiciousPair.importance;
+
 
                     suspiciousPair.pages.forEach((page)=>{
                         if (page.file_index===fileIndex && page.page===leftPage){
                             leftBox = {
                                 type: suspiciousPair.type,
-                                boxes: page.bbox
+                                string: suspiciousPair.string,
+                                boxes: page.bbox,
+                                importance: suspiciousPair.importance
                             };
+                            page.bbox.string = suspiciousPair.string;
                         }
                         if (page.file_index===rightIndex && page.page===rightPage){
                             rightBox = {
                                 type: suspiciousPair.type,
-                                boxes: page.bbox
+                                boxes: page.bbox,
+                                string: suspiciousPair.string,
+                                importance: suspiciousPair.importance
                             };
-                        }
+                            // page.bbox.string = suspiciousPair.string;
+                            console.log(suspiciousPair);
+                            console.log(suspiciousPair.string);
+                            console.log(suspiciousPair.importance);
+                            console.log("logging suspicious pair object above to see options");
+                        };
                     });
 
                     if (leftBox && rightBox){
@@ -542,15 +1594,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 });
 
 
-
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
-
-                createPreview(leftFile, leftPage, leftPanel, leftBoxes);
-                createPreview(rightFile, rightPage, rightPanel, rightBoxes);
+                var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes, totalImportance);
+                createPreview(rightFile, rightPage, rightPanel, rightBoxes, totalImportance, leftSideImg);
 
                 leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
                 rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
+
             }
         };
     };
@@ -624,20 +1675,22 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         backButton.onclick = function(){
             currPair--;
-            if (currPair >= 0) navbar.updateSelection(currPair);
+            if (currPair >= 0) {
+                navbar.updateSelection(currPair);
+            };
             this.disabled = true;
             raisePanel(true);
         };
 
         nextButton.onclick = function(){
             currPair++;
-            if (currPair >= 0) navbar.updateSelection(currPair);
+            if (currPair >= 0) {
+                navbar.updateSelection(currPair);
+            };
             this.disabled = true;
             raisePanel(false);
         };
     };
-
-
 
 
   //**************************************************************************
@@ -660,7 +1713,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         navbar.update = function(){
             navbar.clear();
-
+            console.log("navbar update called, total pages detected as" + totalPages);
             var maxDots = 10; // declare maximum number of dots to add
             var increment = 1;
             var bestIncrement = function (n, setMax){
@@ -670,27 +1723,39 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             };
 
             // if its less than or equal to 10 increment by 1
-            if (totalPages <= 10) increment = 1;
-            // if its more than 10 and less than or equal to 50 then increment by 5
-            if (totalPages > 10 & totalPages <= 50) increment = 5;
-            // if its more than 50 and less than 100 increment by 10
-            if (totalPages > 50 & totalPages <= 100) increment = 10;
-            // if it's more than 100 then increment by whatever divides it best
-            if (totalPages > 100) increment = bestIncrement(totalPages,maxDots);
+            if (totalPages <= 10) {
+                increment = 1;
+                var numDots = Math.round(totalPages/increment);
 
+            }
+            else {
+                increment = bestIncrement(totalPages,maxDots-1);
+                var numDots = Math.round(totalPages/increment)+1;
+            };
 
 
             // set li elements with links to each page
-            var numDots = Math.round(totalPages/increment);
             var fileIndexList = [];
-            for (var i=0; i<numDots; i++){
+            for (var i=0; i < numDots; i++){
                 var li = document.createElement("li");
                 li.name = i;
-                fileIndexList.push((i * increment));
+                if (i == 0){ // if it's the first dot then index at file index 0
+                     fileIndexList.push(0);
+                     li.indexedPage = 0;
+                }
+                else if (i == numDots-1){// if its the last dot then index at last file index
+                    fileIndexList.push(totalPages-1);
+                    li.indexedPage = (totalPages-1);
+                }
+                else{
+                    fileIndexList.push(i * increment);
+                    li.indexedPage = (i * increment);
+                };
+
                 li.onclick = function(){
                   // find li index #
                     var liIndex = this.name; // determine which button this is
-
+                    var pageIndex = this.indexedPage; // determine page number associated with this button
                     var currSelection = -1;
                     for (var i=0; i<ul.childNodes.length; i++){
                         if (ul.childNodes[i].className==="active"){
@@ -700,13 +1765,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     }
                     if (currSelection===liIndex) return;
                     var diff = liIndex-currSelection;
-
                     if (diff>0){
-                        currPair = (liIndex * increment)-1; // counteract button increment
+                        currPair = pageIndex-1; // counteract button increment
                         nextButton.click();
                     }
                     else{
-                        currPair = (liIndex * increment)+1; // counteract button increment
+                        currPair = pageIndex+1; // counteract button increment
                         backButton.click();
                     }
 
@@ -715,6 +1779,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 };
                 ul.appendChild(li);
             }
+            console.log(navbar);
+            console.log("logging navbar above");
+            console.log(ul);
+            console.log("ul printed above");
             ul.childNodes[0].className = "active";
 
             navbar.getFileIndexs = function(){
@@ -746,7 +1814,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** raisePanel
   //**************************************************************************
     var raisePanel = function(slideBack){
-
 
       //Find panels in the carousel
         var currPage, nextPage;
@@ -811,7 +1878,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var round = javaxt.dhtml.utils.round;
     var get = bluewave.utils.get;
+    var addResizeListener = javaxt.dhtml.utils.addResizeListener;
+    var warn = bluewave.utils.warn;
 
+    var getStyleEditor = bluewave.chart.utils.getStyleEditor;
 
     init();
 };

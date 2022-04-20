@@ -1146,6 +1146,16 @@ li.tree-node:hover {
     padding: 5px 0 0 10px;
 }
 
+.doc-compare-panel-settings {
+    font-size: 30px;
+    padding: 5px 0 0 10px;
+    right: 30px;
+    top: 5px;
+    color: #0f6391;
+    position: absolute;
+    z-index: 5;
+}
+
 .doc-compare-panel-subtitle {
     padding: 0 10px;
     color: #777;
@@ -1191,6 +1201,144 @@ li.tree-node:hover {
 .doc-compare-panel-navbar li:hover {
     box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.46);
 }
+
+.doc-compare-panel-similarity-tag {
+    color: white;
+    width: 30px;
+    height: 20px;
+    text-align: left;
+    opacity: 80%;
+    background-color: black;
+    font-size: 15px;
+    cursor: pointer;
+    position: absolute;
+
+}
+
+.doc-compare-panel-similarity-d {
+    position: absolute;
+    border: 1px solid red;
+}
+
+.doc-compare-panel-similarity-tag:hover .tooltip {
+    visibility: visible;
+}
+
+.doc-compare-panel-similarity-tag .tooltip {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+    pointer-events: none; /* click through this element */
+    position: absolute;
+    top: -5px;
+    left: 105%;
+    z-index: 6;
+}
+
+.doc-compare-panel-ratings {
+    position: relative;
+    /* position: absolute; */
+    display: inline-block;
+    text-align: center;
+    left: 20%;
+    margin: 0;
+    padding: 0;
+    z-index: 5;
+}
+
+.doc-compare-panel-ratings-container {
+    cursor: default;
+    list-style: none;
+    display: inline-block;
+    margin: 10px;
+    padding: 0;
+}
+
+.doc-compare-panel-ratings-icon {
+    position: relative;
+    display: block;
+    float: left;
+    margin: 14px 16px 4px;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    background-color: #ff9800;
+    border-radius: 50%;
+    transition: 0.2s;
+}
+
+
+.doc-compare-panel-ratings-icon .fas.fa-thumbs-up {
+    position: relative;
+    display: block;
+    float: left;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #008809;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
+
+.doc-compare-panel-ratings  .fas.fa-thumbs-up {
+    position: relative;
+    display: block;
+    float: left;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #008809;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
+.doc-compare-panel-ratings  .fas.fa-thumbs-down {
+    position: relative;
+    display: block;
+    float: right;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #ff0000;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
+.doc-compare-panel-ratings-icon .fas.fa-thumbs-down {
+    position: relative;
+    display: block;
+    float: right;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 40px;
+    color: #f9dcdc;
+    background-color: #ff0000;
+    padding: 5px 2px 0px 2px;
+    text-align: center;
+    border-radius: 10%;
+    transition: 0.2s;
+}
+
+
+.doc-compare-panel-ratings-icon:hover {
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.46);
+}
+
 
 
 /**************************************************************************/
