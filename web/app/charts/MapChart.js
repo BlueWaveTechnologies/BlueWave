@@ -745,7 +745,7 @@ bluewave.charts.MapChart = function(parent, config) {
         var smoothing = style.smoothing;
         if (!smoothing || smoothing==="none") smoothing = "curveLinear";
 
-        var bundleLines = layer.config.bundle;
+        var bundleLines = layer.config.bundleLines;
         if (!bundleLines || bundleLines === "false") bundleLines = false;
 
 
@@ -755,29 +755,7 @@ bluewave.charts.MapChart = function(parent, config) {
         var opacity = style.opacity;
         if (!opacity) opacity = 1.0;
 
-
-        var curve = d3.line().curve(d3[smoothing]);
-
-        //Altered line for forceSimulation
-        // var line = d3.line()
-        // .curve(d3[smoothing])
-        // .x(point => point.x)
-        // .y(point => point.y);
-
-        var line = function(d){
-        
-          var curve = d3.line().curve(d3[smoothing]);
-          // var arr = [ [d.source.x, d.source.y], [d.target.x, d.target.y] ];
-          var arr = d.map(function(point){
-            return [point.x, point.y]
-          })
-        
-          // var arr = d.map(coord => projection(coord));
-          return curve(arr);
-        };
-
-        // var line = d3.line().curve(d3[smoothing]);
-
+ 
         var distance = function (source, target) {
           var dx2 = Math.pow(target[0] - source[0], 2);
           var dy2 = Math.pow(target[1] - source[1], 2);
@@ -804,17 +782,8 @@ bluewave.charts.MapChart = function(parent, config) {
             var dist = distance(p, q);
             //Actually incorrect but looks the best lol
             if (distance(path[0], path[path.length-1]) < 10 ) continue;
-            // if (dist > w/2) continue;
-            // if (dist < 100 || dist > w/2) continue;
 
-            // if (dist < 100){
-
-            //   newFeatures.push(path);
-            //   continue;
-            // } 
-
-            
-
+            //Build array of midpoints between each node
             for (var j=0; j<path.length-1; j++){
 
               var source = path[j];
@@ -824,8 +793,6 @@ bluewave.charts.MapChart = function(parent, config) {
               midPoint = me.getMidPoint([source, target], 0);
 
               if (midPoint) midPointArr.push(midPoint);
-              // if (midPoint) features[i].splice(j+1, 0, midPoint);
-
             }
 
             var newPath = [];
@@ -841,102 +808,132 @@ bluewave.charts.MapChart = function(parent, config) {
             
           };
 
-          console.log(newFeatures)
           return newFeatures;
+        };
 
-        }
+        //Build bundle object for line bundling
+        var buildBundle = function(){
 
+          var bundle = {};
+          bundle.nodes = [];
+          bundle.links = [];
+          bundle.paths = [];
 
-        var bundle = {};
-        bundle.nodes = [];
-        bundle.links = [];
-        bundle.paths = [];
+          //Segment paths into 9 nodes
+          var features = layer.features.slice();
+          for (let i=0; i<3; i++){
+            features = bisectSegments(features);
+          }
 
-        //Segment paths into 9 nodes
-        var features = layer.features.slice();
-        for (let i=0; i<3; i++){
-          features = bisectSegments(features);
-        }
-
-        //Build nodes and paths
-        features.forEach(function (nodes, i) {
-          
-          bundle.paths.push([]);
-          nodes.forEach(function (coord, j) {
-            var node = {};
-            var pCoord = projection(coord);
-            node.x = pCoord[0];
-            node.y = pCoord[1];
-
-
-            //Make source and target fixed position
-            if (j===0 || j===nodes.length-1){
-              node.fx = node.x;
-              node.fy = node.y;
-            }
-
-            bundle.nodes.push(node);
-            bundle.paths[i].push(node)
-          })
+          //Build nodes and paths
+          features.forEach(function (nodes, i) {
+            
+            bundle.paths.push([]);
+            nodes.forEach(function (coord, j) {
+              var node = {};
+              var pCoord = projection(coord);
+              node.x = pCoord[0];
+              node.y = pCoord[1];
 
 
-        });
+              //Make source and target fixed position
+              if (j===0 || j===nodes.length-1){
+                node.fx = node.x;
+                node.fy = node.y;
+              }
 
-        //Build links
-        features.forEach(function(nodes, i){
-          
-          nodes.forEach(function(coord, j){
-            var link = {};
-            var next = nodes[j+1];
-            if (next) {
+              bundle.nodes.push(node);
+              bundle.paths[i].push(node)
+            })
 
-              link.source = {};
-              link.target = {};
 
-              link.source.x = projection(coord)[0];
-              link.source.y = projection(coord)[1];
+          });
 
-              link.target.x = projection(next)[0];
-              link.target.y = projection(next)[1];
+          //Build links
+          features.forEach(function (nodes, i){
 
-              bundle.links.push(link);
-              
-            }
-          })
+            nodes.forEach(function (coord, j){
+              var link = {};
+              var next = nodes[j+1];
+              if (next) {
 
-        });
+                link.source = {};
+                link.target = {};
 
+                link.source.x = projection(coord)[0];
+                link.source.y = projection(coord)[1];
+
+                link.target.x = projection(next)[0];
+                link.target.y = projection(next)[1];
+
+                bundle.links.push(link);
+
+              }
+            })
+
+          });
+
+          return bundle;
+        };
+
+        //Force simulation
+        var createForceSim = function(strength, maxDistance){
  
+          var layout = d3.forceSimulation()
+            // settle at a layout faster
+            .alphaDecay(0.1)
+            // nearby nodes attract each other
+            .force("charge", d3.forceManyBody()
+              .strength(strength)
+              .distanceMax(maxDistance)
+            )
+            // edges want to be as short as possible
+            // prevents too much stretching
+            .force("link", d3.forceLink()
+              .strength(0.7)
+              .distance(0)
+            )
+            .on("tick", function (d) {
+              lines.attr("d", line);
+            })
+            .on("end", function (d) {
+              console.log("layout complete");
+            })
+
+          layout.nodes(bundle.nodes).force("link").links(bundle.links);
+        };
 
 
-console.log("features", features)
-console.log(bundle)
+        //Create line object and bundle
+        var line;
+        var curve = d3.line().curve(d3[smoothing]);
+        if (bundleLines === true) {
 
-        //Display nodes for testing
-        // var nodeData = bundle.nodes.slice()
-        // var circles = g.selectAll("circles")
-        // .data(nodeData)
-        // .enter()
-        // .append("circle")
-        // .attr("cx", d=>d.x)
-        // .attr("cy", d=>d.y)
-        // .attr("r", 1)
-        // .attr("fill", "red")
-        // .style("stroke", "red");
+          line = function(d){
+            var arr = d.map(function(point){
+              return [point.x, point.y]
+            })
+
+            return curve(arr);
+          };
+
+          var bundle = buildBundle();
+
+        } else {
+
+          line = function(d){
+            var arr = d.map(coord => projection(coord));
+            return curve(arr);
+          }
+
+        };
 
 
+      //Render lines
         var lines = g.selectAll("*")
-        // .data(layer.features)
-        .data(bundle.paths)
-        // .data(bundle === true ? bundle.paths : layer.features)
+        .data(bundleLines === true ? bundle.paths : layer.features)
         .enter()
         .append("path")
-        //.attr("class", config.className)
-        // .attr("d", function(d){
-        //     var curve = d3.line().curve(d3[smoothing]);
-        //     var arr = d.map(coord => projection(coord));
-        //     return curve(arr);
-        // })
         .attr("d", line)
         .attr("fill", "none")
         .attr("opacity", function(d){
@@ -955,44 +952,12 @@ console.log(bundle)
           if(lineStyle==="dotted") return "round";
         });
 
-
-      if (bundleLines === true) {
-        //Force simulation
-        var layout = d3.forceSimulation()
-          // settle at a layout faster
-          .alphaDecay(0.1)
-          // nearby nodes attract each other
-          .force("charge", d3.forceManyBody()
-            .strength(1)
-            .distanceMax(36)
-          )
-          // edges want to be as short as possible
-          // prevents too much stretching
-          .force("link", d3.forceLink()
-            .strength(0.7)
-            .distance(0)
-          )
-          .on("tick", function (d) {
-            lines.attr("d", line);
-            // circles.attr("cx", d=>d.x).attr("cy", d=>d.y)
-
-          })
-          .on("end", function (d) {
-            console.log("layout complete");
-          })
-        // .stop()
-
-        layout.nodes(bundle.nodes).force("link").links(bundle.links);
-
-        // for (var i = 0; i < 100; ++i) layout.tick();
-        //  layout.tick()
-        //  circles.attr("cx", d=>d.x).attr("cy", d=>d.y)
-        // lines.attr("d", line)
-      }
-console.log(layer.features)
-console.log(bundle)
-
-              
+        
+        if (bundleLines === true){
+          //Specific to data
+          createForceSim(1, 36);
+        }
+        
         layer.elements = lines;
     };
 
