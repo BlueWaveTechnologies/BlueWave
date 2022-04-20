@@ -745,6 +745,9 @@ bluewave.charts.MapChart = function(parent, config) {
         var smoothing = style.smoothing;
         if (!smoothing || smoothing==="none") smoothing = "curveLinear";
 
+        var bundleLines = layer.config.bundleLines;
+        if (!bundleLines || bundleLines === "false") bundleLines = false;
+
 
         var color = style.color;
         if(!color) color = "red";
@@ -752,19 +755,193 @@ bluewave.charts.MapChart = function(parent, config) {
         var opacity = style.opacity;
         if (!opacity) opacity = 1.0;
 
+ 
+        var distance = function (source, target) {
+          var dx2 = Math.pow(target[0] - source[0], 2);
+          var dy2 = Math.pow(target[1] - source[1], 2);
+        
+          return Math.sqrt(dx2 + dy2);
+        }
 
-        var lines = g.selectAll("*")
-        .data(layer.features)
-        .enter()
-        .append("path")
-        //.attr("class", config.className)
-        .attr("d", function(d){
-            var curve = d3.line().curve(d3[smoothing]);
+
+        //Add midpoints between each node
+        var bisectSegments = function(features){
+
+          var newFeatures = [];
+
+          for (var i=0; i<features.length; i++){
+
+            var path = features[i].slice();
+            var midPointArr = [];
+
+            //Skip midpoint calculation if the path is short
+            var p = projection(path[0]);
+            var q = projection(path[path.length-1]);
+            var w = parent.offsetWidth;
+            
+            var dist = distance(p, q);
+            //Actually incorrect but looks the best lol
+            if (distance(path[0], path[path.length-1]) < 10 ) continue;
+
+            //Build array of midpoints between each node
+            for (var j=0; j<path.length-1; j++){
+
+              var source = path[j];
+              var target = path[j+1];
+
+              var midPoint = null;
+              midPoint = me.getMidPoint([source, target], 0);
+
+              if (midPoint) midPointArr.push(midPoint);
+            }
+
+            var newPath = [];
+            //Zipper up path and midpoint arrays
+            while (path.length > 0) {
+              
+              newPath.push(path.shift());
+              if (midPointArr.length > 0) newPath.push(midPointArr.shift());
+
+            }
+
+            newFeatures.push(newPath)
+            
+          };
+
+          return newFeatures;
+        };
+
+        //Build bundle object for line bundling
+        var buildBundle = function(){
+
+          var bundle = {};
+          bundle.nodes = [];
+          bundle.links = [];
+          bundle.paths = [];
+
+          //Segment paths into 9 nodes
+          var features = layer.features.slice();
+          for (let i=0; i<3; i++){
+            features = bisectSegments(features);
+          }
+
+          //Build nodes and paths
+          features.forEach(function (nodes, i) {
+            
+            bundle.paths.push([]);
+            nodes.forEach(function (coord, j) {
+              var node = {};
+              var pCoord = projection(coord);
+              node.x = pCoord[0];
+              node.y = pCoord[1];
+
+
+              //Make source and target fixed position
+              if (j===0 || j===nodes.length-1){
+                node.fx = node.x;
+                node.fy = node.y;
+              }
+
+              bundle.nodes.push(node);
+              bundle.paths[i].push(node)
+            })
+
+
+          });
+
+          //Build links
+          features.forEach(function (nodes, i){
+
+            nodes.forEach(function (coord, j){
+              var link = {};
+              var next = nodes[j+1];
+              if (next) {
+
+                link.source = {};
+                link.target = {};
+
+                link.source.x = projection(coord)[0];
+                link.source.y = projection(coord)[1];
+
+                link.target.x = projection(next)[0];
+                link.target.y = projection(next)[1];
+
+                bundle.links.push(link);
+
+              }
+            })
+
+          });
+
+          return bundle;
+        };
+
+        //Force simulation
+        var createForceSim = function(strength, maxDistance){
+ 
+          var layout = d3.forceSimulation()
+            // settle at a layout faster
+            .alphaDecay(0.1)
+            // nearby nodes attract each other
+            .force("charge", d3.forceManyBody()
+              .strength(strength)
+              .distanceMax(maxDistance)
+            )
+            // edges want to be as short as possible
+            // prevents too much stretching
+            .force("link", d3.forceLink()
+              .strength(0.7)
+              .distance(0)
+            )
+            .on("tick", function (d) {
+              lines.attr("d", line);
+            })
+            .on("end", function (d) {
+              console.log("layout complete");
+            })
+
+          layout.nodes(bundle.nodes).force("link").links(bundle.links);
+        };
+
+
+        //Create line object and bundle
+        var line;
+        var curve = d3.line().curve(d3[smoothing]);
+        if (bundleLines === true) {
+
+          line = function(d){
+            var arr = d.map(function(point){
+              return [point.x, point.y]
+            })
+
+            return curve(arr);
+          };
+
+          var bundle = buildBundle();
+
+        } else {
+
+          line = function(d){
             var arr = d.map(coord => projection(coord));
             return curve(arr);
-        })
+          }
+
+        };
+
+
+      //Render lines
+        var lines = g.selectAll("*")
+        .data(bundleLines === true ? bundle.paths : layer.features)
+        .enter()
+        .append("path")
+        .attr("d", line)
         .attr("fill", "none")
-        .attr("opacity", opacity)
+        .attr("opacity", function(d){
+          if (typeof style.opacity === 'function') {
+              return style.opacity(d);
+          }
+          else return opacity;
+        })
         .style("stroke", color)
         .style("stroke-width", width)
         .attr("stroke-dasharray", function(d){
@@ -775,6 +952,12 @@ bluewave.charts.MapChart = function(parent, config) {
           if(lineStyle==="dotted") return "round";
         });
 
+        
+        if (bundleLines === true){
+          //Specific to data
+          createForceSim(1, 36);
+        }
+        
         layer.elements = lines;
     };
 
@@ -1013,6 +1196,22 @@ bluewave.charts.MapChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** createTooltip
+  //**************************************************************************
+    var createTooltip = function(){
+        var tooltip = bluewave.charts.MapChart.Tooltip;
+        if (!tooltip){
+            tooltip = bluewave.charts.MapChart.Tooltip =
+            d3.select(document.body)
+            .append("div")
+            .style("opacity", 0)
+            .attr("class", "tooltip");
+        }
+        return tooltip;
+    };
+
+
+  //**************************************************************************
   //** getCoordinates
   //**************************************************************************
     var getCoordinates = function(d){
@@ -1035,7 +1234,6 @@ bluewave.charts.MapChart = function(parent, config) {
     var isArray = javaxt.dhtml.utils.isArray;
     var onRender = javaxt.dhtml.utils.onRender;
     var initChart = bluewave.chart.utils.initChart;
-    var createTooltip = bluewave.chart.utils.createTooltip;
 
     init();
 };
