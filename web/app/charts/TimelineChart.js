@@ -20,10 +20,8 @@ bluewave.charts.TimelineChart = function(parent, config) {
 
         }
     };
-    var titleDiv, body;
-    var mainDiv;
-    var tbody;
 
+    var tbody;
     var events = [];
 
 
@@ -39,7 +37,6 @@ bluewave.charts.TimelineChart = function(parent, config) {
         div.style.overflowY = "auto";
         parent.appendChild(div);
         me.el = div;
-
 
 
         var timeLineContainer = document.createElement("div");
@@ -144,11 +141,7 @@ bluewave.charts.TimelineChart = function(parent, config) {
         var d = document.createElement("div");
         d.className = "timeline-date";
 
-        // var dateText = document.createElement("h4");
-        // dateText.textContent = timeFormat(date);
-        // d.appendChild(dateText);
 
-        // li.append(content, point, d);
         li.append(content, point, d);
 
         tbody.appendChild(li);
