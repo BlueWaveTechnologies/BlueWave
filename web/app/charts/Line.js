@@ -124,6 +124,9 @@ bluewave.chart.Line = function(config) {
             case "kde":
                 smoothing = "kde";
                 break;
+            case "curvenatural":
+                smoothing = "curveNatural";
+                break;
             default:
                 smoothing = "none";
                 break;

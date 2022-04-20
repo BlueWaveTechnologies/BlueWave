@@ -21,6 +21,7 @@ bluewave.charts.BarChart = function(parent, config) {
     var svg, chart, plotArea;
     var x, y;
     var xAxis, yAxis;
+    var layers = [];
 
 
   //**************************************************************************
@@ -95,6 +96,19 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
   //**************************************************************************
+  //** addLine
+  //**************************************************************************
+    this.addLine = function(line, data, xAxis, yAxis){
+        layers.push({
+            line: line,
+            data: data,
+            xAxis: xAxis + "",
+            yAxis: yAxis + ""
+        });
+    };
+
+
+  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(chartConfig, data){
@@ -160,6 +174,35 @@ bluewave.charts.BarChart = function(parent, config) {
                     return parseFloat(g[yKey]);
                 });
             }).entries(mergedData);
+
+
+        //To ensure max is found in line data - probably phenomenally inefficient
+        if (layers.length > 0) {
+
+            let max = d3.max(maxData, d => parseFloat(d.value));
+
+            layers.forEach(function(l){
+                let lineData = l.data;
+                let xKey = l.xAxis;
+                let yKey = l.yAxis;
+                let lineMax = d3.max(lineData, d=>parseFloat(d[yKey]));
+
+                if (lineMax > max){
+
+                    maxData = d3.nest()
+                        .key(function (d) { return d[xKey]; })
+                        .rollup(function (d) {
+                            return d3.sum(d, function (g) {
+                                return parseFloat(g[yKey]);
+                            });
+                        }).entries(lineData);
+
+                }
+
+            });
+
+        }
+        
         //Get sum of tallest bar
         //TODO: axis being set by first dataset - set with largest data
 
@@ -642,27 +685,48 @@ bluewave.charts.BarChart = function(parent, config) {
 
       //Set bar transitions
         var animationSteps = chartConfig.animationSteps;
-        if (stackValues) animationSteps = 0;
         if (!isNaN(animationSteps) && animationSteps>50){
-            var max = d3.max(maxData, d => parseFloat(d.value));
+        
+            //Persist original position/dimension attributes
+            bars
+                .attr("yInitial", function () {
+                    return this.getAttribute("y")
+                })
+                .attr("heightInitial", function () {
+                    return this.getAttribute("height")
+                })
+                .attr("widthInitial", function () {
+                    return this.getAttribute("width")
+                });
+
+
             if (layout === "vertical"){
 
-                var heightRatio = max / height;
+                //Set bar height to 0 and position to x-axis
                 bars.attr("y", height).attr("height", 0);
 
                 bars.transition().duration(animationSteps)
-                    .attr("y", function (d) { return height - d.value / heightRatio; })
-                    .attr("height", function (d) { return d.value / heightRatio; });
+                    .attr("y", function () {
+                        return parseFloat(this.getAttribute("yInitial")) ;
+                    })
+                    .attr("height", function () {
+                        return parseFloat(this.getAttribute("heightInitial")) ;
+                    });
+ 
+                    
             }else if(layout === "horizontal"){
 
-                var widthRatio = max/width;
+                //Set bar width to 0 and position to y-axis
                 bars.attr("x", 0).attr("width", 0);
 
                 bars.transition().duration(animationSteps)
-                    .attr("width", function (d) { return d.value / widthRatio; });
+                    .attr("width", function () { 
+                        return parseFloat(this.getAttribute("widthInitial")); 
+                    });
 
             }
-        }
+
+        };
 
 
         var tooltip;
@@ -695,12 +759,18 @@ bluewave.charts.BarChart = function(parent, config) {
 
 
         //Create d3 event listeners for bars
-        bars.on("mouseover", mouseover);
-        bars.on("mousemove", mousemove);
-        bars.on("mouseleave", mouseleave);
+        var addMouseEvents = function(){
 
+            if (!animationSteps) animationSteps = 0;
+            setTimeout(function(){
 
+                bars.on("mouseover", mouseover);
+                bars.on("mousemove", mousemove);
+                bars.on("mouseleave", mouseleave);
 
+            }, animationSteps)
+        };
+        
 
         var getSiblings = function(bar){
             var arr = [];
@@ -721,10 +791,18 @@ bluewave.charts.BarChart = function(parent, config) {
         });
 
 
+        //Render lines
+        layers.forEach(function(layer){
+
+            renderLine(layer);
+        });
+
         //Draw grid lines
         if (chartConfig.xGrid || chartConfig.yGrid){
             drawGridlines(plotArea, x, y, axisHeight, axisWidth, chartConfig.xGrid, chartConfig.yGrid);
         }
+
+        addMouseEvents();
     };
 
 
@@ -757,6 +835,79 @@ bluewave.charts.BarChart = function(parent, config) {
         yAxis = plotArea
             .append("g")
             .call(d3.axisLeft(y));
+    };
+
+
+  //**************************************************************************
+  //** renderLine
+  //**************************************************************************
+    var renderLine = function(layer){
+
+        var xKey = layer.xAxis;
+        var yKey = layer.yAxis;
+
+        var lineConfig;
+        if (layer.line.getConfig) lineConfig = layer.line.getConfig();
+        if (!lineConfig) lineConfig = new bluewave.chart.Line().getConfig();
+
+        let lineColor = lineConfig.color;
+        let lineStyle = lineConfig.style;
+        let lineWidth = lineConfig.width;
+        let opacity = lineConfig.opacity;
+        let smoothing = lineConfig.smoothing;
+
+        
+        var getX = function(d){
+            var xoffset = x.bandwidth()/2;
+            
+            if(keyType==="date"){
+                return x(new Date(d.key)) + xoffset;
+            }else{
+                return x(d.key) + xoffset;
+            }
+        };
+
+        var getY = function(d){
+            var v = parseFloat(d["value"]);
+            return y(v);
+        };
+
+
+        var getLine = function(){
+            if (smoothing && smoothing !== "none"){
+                return d3.line().x(getX).y(getY).curve(d3[smoothing]);
+            }
+            return d3.line().x(getX).y(getY);
+        };
+
+
+        var sumData = d3.nest()
+            .key(function (d) { return d[xKey]; })
+            .rollup(function (d) {
+                return d3.sum(d, function (g) {
+                    return g[yKey];
+                });
+            }).entries(layer.data);
+        let keyType = getType(sumData[0].key);
+        if(keyType == "date") keyType = "string";
+  
+
+        plotArea
+            .append("path")
+            .datum(sumData)
+            .attr("fill", "none")
+            .attr("stroke", lineColor)
+            .attr("stroke-width", lineWidth)
+            .attr("opacity", opacity)
+            .attr("stroke-dasharray", function (d) {
+                if (lineStyle === "dashed") return "5, 5";
+                else if (lineStyle === "dotted") return "0, 5";
+            })
+            .attr("stroke-linecap", function (d) {
+                if (lineStyle === "dotted") return "round";
+            })
+            .attr("d", getLine());
+
     };
 
 
