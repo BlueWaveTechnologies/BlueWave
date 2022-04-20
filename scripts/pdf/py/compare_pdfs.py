@@ -130,13 +130,15 @@ def get_similarity_scores(file_data, suspicious_pairs, methods_run):
 
 def add_importance_scores(suspicious_pairs):
     import numpy as np
+    import re
+    import os
 
     datadir = compare_pdfs_util.get_datadir()
     try:
-        with open(f'{datadir}/clf.p', 'rb') as f:
+        with open(f'{datadir}{os.path.sep}clf.p', 'rb') as f:
             vectorizer, clf = pickle.load(f)
     except:
-        raise Exception('data/clf.p not found or invalid.')
+        raise Exception(f'{datadir}{os.path.sep}clf.p not found or invalid.')
 
 
     corpus = []
@@ -158,25 +160,48 @@ def add_importance_scores(suspicious_pairs):
             corpus.append('')
             dummies.append((0, 0, 0, 0))
 
-    vecs = vectorizer.transform(corpus).toarray()
-    dummies = np.array(dummies)
-    X = np.hstack((vecs, dummies))
+    if suspicious_pairs:
+        vecs = vectorizer.transform(corpus).toarray()
+        dummies = np.array(dummies)
+        X = np.hstack((vecs, dummies))
 
-    importance_pred = clf.predict(X).flatten()
-    importance_pred = compare_pdfs_util.logistic(importance_pred)
+        importance_pred = clf.predict(X).flatten()
+        importance_pred = compare_pdfs_util.logistic(importance_pred)
+    else:
+        importance_pred = []
 
-    for sus, importance in zip(suspicious_pairs, importance_pred):
+    decimal_re = re.compile(r'\d\.\d')
+    degit_newline_re = re.compile(r'(?:\d\n)|(?:\n\d)')
+    for sus, ml_importance in zip(suspicious_pairs, importance_pred):
+        # ML importance is 50% of the score
+        ml_importance_100 = 100*ml_importance
+
+        # Calculated importance is the other 50%
+        calc_importance = 0
+        txt = sus.get('block_text', sus.get('page_text', ''))
+        
+        deci_count = len(decimal_re.findall(txt)) / 2
+        calc_importance += deci_count
+
+        newline_num = len(degit_newline_re.findall(txt))
+        calc_importance += newline_num
+
+        calc_importance = min(100, calc_importance) # Cannot exceed 100
+
+        # take avg
+        importance = 0.5*(ml_importance_100 + calc_importance)
+
         # transform
-        i2 = int(round(100*importance))
+        importance = int(round(importance))
         # clip
-        i3 = min(max(i2, 0), 100)
+        importance = min(max(importance, 0), 100)
 
-        sus['importance'] = i3
+        sus['importance'] = importance
 
 
     sorted_sus_pairs = sorted(suspicious_pairs, key=lambda sus: -sus['importance'])
 
-    return suspicious_pairs
+    return sorted_sus_pairs
 
 
 def get_version():
