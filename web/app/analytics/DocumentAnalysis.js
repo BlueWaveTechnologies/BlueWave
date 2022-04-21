@@ -731,59 +731,68 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
                     timer = setTimeout(()=>{
 
-                        confirm("Found " + numRecords + " local documents. Would you like to check the server for more records?",{
-                            title: "Search Results",
-                            leftButton: {label: "Yes", value: true},
-                            rightButton: {label: "No", value: false},
-                            callback: function(yes){
-                                if (yes){
+                      // check if remote search is enabled in config, if it is then request confirmation on remote search
+                        var url = "/document/remoteSearchStatus";
+                        get(url,{
+                            success: function(status){
+                                if (status === "true"){
+                                    confirm("Found " + numRecords + " local documents. Would you like to check the server for more records?",{
+                                        title: "Search Results",
+                                        leftButton: {label: "Yes", value: true},
+                                        rightButton: {label: "No", value: false},
+                                        callback: function(yes){
+                                            if (yes){
 
-                                    remoteSearch = true;
-                                    waitmask.show(500);
+                                                remoteSearch = true;
+                                                waitmask.show(500);
 
 
 
-                                    var url = "documents?remote=true";
-                                    q.forEach((s)=>{
-                                        url+= "&q=" + encodeURIComponent(s);
-                                    });
-
-                                    get(url, {
-                                        success: function(text){
-                                            waitmask.hide();
-
-                                          //Parse response
-                                            var data = parseSearchResults(text);
-
-                                          //Prune documents that we already have in the grid
-                                            var grid = searchPanel.getDataGrid();
-                                            grid.forEachRow((row)=>{
-                                                var r = row.record;
-                                                data.every((d, i)=>{
-                                                    if (r.name===d.name){
-                                                        data.splice(i, 1);
-                                                        return false;
-                                                    }
-                                                    return true;
+                                                var url = "documents?remote=true";
+                                                q.forEach((s)=>{
+                                                    url+= "&q=" + encodeURIComponent(s);
                                                 });
-                                            });
+
+                                                get(url, {
+                                                    success: function(text){
+                                                        waitmask.hide();
+
+                                                      //Parse response
+                                                        var data = parseSearchResults(text);
+
+                                                      //Prune documents that we already have in the grid
+                                                        var grid = searchPanel.getDataGrid();
+                                                        grid.forEachRow((row)=>{
+                                                            var r = row.record;
+                                                            data.every((d, i)=>{
+                                                                if (r.name===d.name){
+                                                                    data.splice(i, 1);
+                                                                    return false;
+                                                                }
+                                                                return true;
+                                                            });
+                                                        });
 
 
-                                          //Append search results to the grid
-                                            grid.load(data, 2);
-                                            remoteSearch = false;
-                                        },
-                                        failure: function(request){
-                                            waitmask.hide();
-                                            remoteSearch = false;
+                                                      //Append search results to the grid
+                                                        grid.load(data, 2);
+                                                        remoteSearch = false;
+                                                    },
+                                                    failure: function(request){
+                                                        waitmask.hide();
+                                                        remoteSearch = false;
+                                                    }
+                                                });
+                                            }
                                         }
                                     });
-                                }
+                                };
+                            },
+                            failure: function(){
+                                console.log("this remote search failed to get checked!");
                             }
                         });
-
                     },1000);
-
                 }
 
                 updateButtons();
