@@ -204,6 +204,9 @@ public class DocumentService extends WebService {
                 if (request.hasParameter("id")){
                     return getFile(request, user);
                 }
+                else if (request.hasParameter("remoteSearch")){
+                    return getRemoteSearchStatus(request);
+                }                
                 else{
                     return getDocuments(request, database);
                 }
@@ -1302,5 +1305,11 @@ public class DocumentService extends WebService {
             }
             return response;
         }
+    }
+
+    private ServiceResponse getRemoteSearchStatus(ServiceRequest request) {
+        JSONValue result = Config.get("webserver").get("remoteSearch");
+        if(result == null) return new ServiceResponse(Boolean.FALSE.toString());
+        return new ServiceResponse(result.toBoolean().toString());
     }
 }
