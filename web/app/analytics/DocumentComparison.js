@@ -374,7 +374,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         // settings cogwheel and icon that is attached to the current page of the document comparison
         // updated & re-attached when the page changes
 
-        td = document.createElement("td");
+        var td = document.createElement("td");
         settings = document.createElement("div");
         settings.className = "doc-compare-panel-settings";
         settings.innerHTML = '<i class="fas fa-cog"></i>';
@@ -414,7 +414,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         };
 
         //Update form
-        editor = new javaxt.dhtml.Window(document.body, {
+        var editor = new javaxt.dhtml.Window(document.body, {
             title: "Edit Settings",
             width: 400,
             valign: "top",
@@ -1881,7 +1881,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var addResizeListener = javaxt.dhtml.utils.addResizeListener;
     var warn = bluewave.utils.warn;
 
-    var getStyleEditor = bluewave.chart.utils.getStyleEditor;
 
     init();
 };
