@@ -117,7 +117,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** update
   //**************************************************************************
     this.update = function(){
-        console.log("main update function called!");
         me.clear();
 
       //Process arguments
@@ -177,7 +176,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
    *  carousel is cleared (see clear method)
    */
     var update = function(results){
-        console.log("private update function called");
         var files = results.files;
         if (files.length>2) return; //only 2 docs supported at this time
         fileIndex = 0;
@@ -197,13 +195,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     };
                 };
             });
-            console.log(similarPages)
-            console.log("logging similar pages above!")
-            console.log("adding new pages to total pages")
-            console.log("logging keys length size of similarpages "+ Object.keys(similarPages).length);
             totalPages+=Object.keys(similarPages).length;
         });
-        console.log("total pages amount is "+ totalPages);
 
 
         if (totalPages>0){
@@ -216,7 +209,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         panels[0].div.appendChild(summaryPanel.el);
 
         if (totalPages===0){
-            console.log("total pages is detecting as 0, returning");
             return;
         }
 
@@ -224,7 +216,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         comparisonPanel.update(0);
         panels[1].div.appendChild(comparisonPanel.el);
 
-        console.log("got to end of update function, updating navbar.. total pages is " + totalPages);
         navbar.update();
     };
 
@@ -233,14 +224,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** getSuspiciousPages
   //**************************************************************************
     var getSuspiciousPages = function(fileIndex, results){
-        console.log("get suspicious pages called!");
-
         var files = results.files;
         var file = files[fileIndex];
         var suspiciousPages = [];
-        console.log(files);
-        console.log("logged files above, susp pages");
-        console.log("length of suspicious pairs is "+ results.suspicious_pairs.length);
         file.suspicious_pages.forEach((pageNumber)=>{
             var suspiciousPairs = [];
             results.suspicious_pairs.forEach((suspiciousPair)=>{
@@ -255,10 +241,10 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 };
                 if (addPair) suspiciousPairs.push(suspiciousPair);
             });
-
             suspiciousPages.push({
                 pageNumber: pageNumber,
-                suspiciousPairs: suspiciousPairs
+                suspiciousPairs: suspiciousPairs,
+                totalImportance: results.importancePages[pageNumber].importance
             });
         });
 
@@ -552,19 +538,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         });
 
 
-        // editor.onClose = function(){
-        //     console.log(editor)
-        //     console.log(editor.open)
-        //     console.log("editor closed!");
-        //     if (!isPopulated){
-        //         console.log("is not populated")
-        //         editor.showAt(rect.x - 400,rect.y);
-        //         warn("At least one comparison is required", getChangedField(formSettings));
-        //     }
-
-
-        // };
-
 
 
     //Set initial value for imgSimilarities
@@ -635,12 +608,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var isPopulated = function(config){ // determine the options/availability when passing new config
             var similarities = getFilteredSimilarities(results, config);
 
-            console.log(similarities.suspicious_pairs);
-            console.log(similarities.suspicious_pairs.length);
-            console.log("logging similarities suspicious pairs above");
-
             if (similarities.suspicious_pairs.length < 1){
-                console.log("this results in the document comparison being empty!");
                 return false;
             }
             else return true;
@@ -648,12 +616,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         var getChangedField = function(formSettings){
             // returns the field that was changed in order to generate new results
-            console.log("get changed field called");
-            var fieldChanged;
-            console.log(formSettings);
-            console.log("all fields of formsettings are above");
-            console.log(comparisonConfig);
-            console.log("comparison config printed above");
 
             if (formSettings.imgSimilarities !== comparisonConfig.imgSimilarities) return imgSimilaritiesField;
             else if (formSettings.digitSimilarities !== comparisonConfig.digitSimilarities) return digitSimilaritiesField;
@@ -700,20 +662,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     //Process onChange events
         form.onChange = function(){
             var formSettings = form.getData();
-            console.log(formSettings);
-            console.log("logged formsettings above");
 
 
-
-            console.log(formSettings.minDigitCount);
-            // console.log(formSettings.allowDigitSpaces);
-            // console.log(formSettings.decimalsOnly);
-            // console.log(formSettings.minDecimalPlaces);
-            console.log(formSettings.minTextWords);
-            console.log(formSettings.minTextCharacters);
-
-
-            console.log("current minimum digit count logging above");
+            //console.log(formSettings.minDigitCount);
+            // //console.log(formSettings.allowDigitSpaces);
+            // //console.log(formSettings.decimalsOnly);
+            // //console.log(formSettings.minDecimalPlaces);
+            //console.log(formSettings.minTextWords);
+            //console.log(formSettings.minTextCharacters);
 
         //Update form data
             if (formSettings.imgSimilarities==="true") formSettings.imgSimilarities = true;
@@ -734,23 +690,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             if (formSettings.duplicatePageSimilarities==="true") formSettings.duplicatePageSimilarities = true;
             else formSettings.duplicatePageSimilarities = false;
 
-            console.log("got to the ispopulated check");
-            console.log(formSettings);
-
-            if( isPopulated(formSettings)) {
-                console.log("the form is acceptable in this state!");
-
-            }
-            else {
-                console.log("the form is not acceptable in this state");
+            if( !isPopulated(formSettings)) {
                 warn("At least one comparison is required", getChangedField(formSettings));
                 revertFormChanges();
                 settingsEditor.enableThis();
                 return; // do not overwrite comparison config or process changes
             };
-
-            console.log(getChangedField(formSettings));
-            console.log("changed field is above");
 
         //Update comparisonConfig
             updateSavedState(formSettings);
@@ -760,8 +705,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 if (form.findField(fieldName).resetColor) form.findField(fieldName).resetColor();
             };
 
-            console.log(comparisonConfig.minDigitCount);
-            console.log("comparison config minimum digit is above");
         // disable/re-enable settings menu to prevent users from changing setting during rendering
             if (settingsEditor){
                 settingsEditor.disableThis();
@@ -801,7 +744,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             // disable checkboxes
                 var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
-                for (i in formCheckboxes){
+                for (var i in formCheckboxes){
                     formCheckboxes[i].disabled = true;
                 };
         };
@@ -821,7 +764,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         // enabled checkboxes
             var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
-            for (i in formCheckboxes){
+            for (var i in formCheckboxes){
                 formCheckboxes[i].disabled = false;
             };
         };
@@ -845,12 +788,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
   //** getFilteredSimilarities
   //**************************************************************************
     var getFilteredSimilarities = function(similarities, config){
-        console.log(similarities);
-        console.log("logging similarities passed, above");
 
         // create new filtered json object from the raw similarities results
         if (!config){
-            console.log("config is not declared! assigning the main comparisonConfig");
             var config = comparisonConfig;
         };
         var imgCount = 0;
@@ -858,13 +798,12 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var digitCount = 0;
         var duplicatePageCount = 0;
         var ignoredTexts = 0;
+        var importance_pages = {};
 
         var filteredSimilarities = {
-            // files:[],
             num_suspicious_pairs:0,
             suspicious_pairs:[],
-            // elapsed_time_sec:0,
-            // pages_per_second:0,
+
 
             // values directly from previous obj
             similarity_scores: similarities.similarity_scores,
@@ -872,57 +811,113 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             version: similarities.version,
             files: similarities.files,
             elapsed_time_sec: similarities.elapsed_time_sec,
-            pages_per_second: similarities.pages_per_second
+            pages_per_second: similarities.pages_per_second,
+        };
+
+      // add pages to an index used for adding up importance
+        for (var page in similarities.files[0].suspicious_pages){
+            var pageEntry = similarities.files[0].suspicious_pages[page];
+            importance_pages[pageEntry] = {page:pageEntry, importance: 0, pairs: []};
+        }
+
+      // add importance to page index - called when processing each similarity with the allowed config
+        var addImportance = function(page, amount, suspPair){
+            importance_pages[page].importance += amount;
+            importance_pages[page].pairs.push(suspPair);
+        };
+
+        var sortByImportance = function(){
+
+          // re-organize suspicious pages based on importance
+            var dict = importance_pages;
+
+            var items = Object.keys(dict).map(function(key) {
+                return [key, dict[key].importance];
+            });
+
+            items.sort(function(first, second) {
+                return second[1] - first[1];
+            });
+
+            var firstFileIndexPages = filteredSimilarities.files[0].suspicious_pages;
+            var secondFileIndexPages = filteredSimilarities.files[1].suspicious_pages;
+
+            var newarr = [];
+            for (var i in firstFileIndexPages){
+                newarr.push(firstFileIndexPages[i].toString());
+            };
+            var firstFilePages = []; // file index 0
+            var secondFilePages = []; // file index 1
+
+            for (var i in items){
+                var IndexOfCopy = newarr.indexOf(items[i][0]);
+                firstFilePages.push(firstFileIndexPages[IndexOfCopy]);
+                secondFilePages.push(secondFileIndexPages[IndexOfCopy]);
+            };
+
+          // re-organize suspicious pairs based on importance
+            var newSuspiciousPairs = [];
+            for (var i in items){
+                var page = items[i][0];
+                var suspiciousPairsList = dict[page].pairs;
+                newSuspiciousPairs = newSuspiciousPairs.concat(suspiciousPairsList);
+            };
+
+          // overwrite filteredSimilarities object
+            filteredSimilarities.files[0].suspicious_pages = firstFilePages;
+            filteredSimilarities.files[1].suspicious_pages = secondFilePages;
+            filteredSimilarities.suspicious_pairs = newSuspiciousPairs;
+
         };
 
         // add filtered paired similarities
             for (var i in similarities.suspicious_pairs) {
                 var pair = similarities.suspicious_pairs[i];
+
                 if (pair.type === "Identical image" && config.imgSimilarities) {
                     filteredSimilarities.suspicious_pairs.push(pair);
+                    addImportance(pair.pages[0].page, pair.importance, pair);
                     imgCount++;
                 }
                 else if (pair.type === "Common digit sequence" && config.digitSimilarities){
                     // var skip;
-                    console.log(pair);
-                    console.log(pair.string);
+                    //console.log(pair);
+                    //console.log(pair.string);
                     // if (pair.string.includes(" ")){
-                    //     console.log("this pair contains a space");
+                    //     //console.log("this pair contains a space");
 
-                    //     console.log("logging digit spaces status in config " + config.allowDigitSpaces)
+                    //     //console.log("logging digit spaces status in config " + config.allowDigitSpaces)
                     //     if (!config.allowDigitSpaces){
-                    //         console.log("not allowing digit spaces - break condition");
+                    //         //console.log("not allowing digit spaces - break condition");
                     //         continue;
                     //     }
-                    //     else console.log("digit spaces were allowed!");
+                    //     else //console.log("digit spaces were allowed!");
                     // }
 
                     // if (config.decimalsOnly){
                     //     if (!pair.string.includes(".")){
-                    //         console.log(pair.string);
-                    //         console.log("skipped pair above because it was missing a decimal");
+                    //         //console.log(pair.string);
+                    //         //console.log("skipped pair above because it was missing a decimal");
                     //         continue;
                     //     };
                     // }
                     // if (pair.string.includes(".")){
-                        // console.log("this string contains a decimal!")
-                        // console.log(pair.string)
+                        // //console.log("this string contains a decimal!")
+                        // //console.log(pair.string)
                         // if (config.decimalsOnly) continue;
-                        // else console.log("decimal detected, and is allowed!")
+                        // else //console.log("decimal detected, and is allowed!")
                     // };
 
-                    console.log(`string length is ${pair.string.length} `)
+                    //console.log(`string length is ${pair.string.length} `)
                     if (pair.string.length < config.minDigitCount){
-                        console.log("doesn't pass minimum string length - break condition ");
+                        //console.log("doesn't pass minimum string length - break condition ");
                         continue;
                     }
-                    else console.log("passes minimum digit string length, which is "+ config.minDigitCount);
+                    else //console.log("passes minimum digit string length, which is "+ config.minDigitCount);
 
 
-                    console.log("logging the pair info above");
                     filteredSimilarities.suspicious_pairs.push(pair);
-                    console.log(filteredSimilarities.suspicious_pairs);
-                    console.log("logging new filtered similiarites suspicious pairs above");
+                    addImportance(pair.pages[0].page, pair.importance, pair);
                     digitCount++;
                 }
                 else if (pair.type === "Common text string" && config.textSimilarities){
@@ -934,15 +929,15 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
                     if (pair.string.includes(" ")){
-                        console.log("detected multiple words, count is " + WordCount(pair.string));
+                        //console.log("detected multiple words, count is " + WordCount(pair.string));
                         if (WordCount(pair.string) < config.minTextWords){
-                            console.log("skippping this string, less words than allowed");
+                            //console.log("skippping this string, less words than allowed");
                             continue;
                         };
                     };
 
 
-                    console.log("the minimum number of characters is "+ config.minTextCharacters);
+                    //console.log("the minimum number of characters is "+ config.minTextCharacters);
 
 
                     if (pair.string.length < config.minTextCharacters){
@@ -950,15 +945,18 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         continue;
                     };
 
-                    console.log("logging character count for this string " + pair.string.length + " \n string below");
-                    console.log(pair.string)
+                    //console.log("logging character count for this string " + pair.string.length + " \n string below");
+                    //console.log(pair.string)
 
                     filteredSimilarities.suspicious_pairs.push(pair);
+                    addImportance(pair.pages[0].page, pair.importance, pair);
                     textCount++;
                 }
                 else if (pair.type === "Duplicate page" && config.duplicatePageSimilarities) {
-                    console.log("found a duplicate page!");
+                    //console.log("found a duplicate page!");
+
                     filteredSimilarities.suspicious_pairs.push(pair);
+                    addImportance(pair.pages[0].page, pair.importance, pair);
                     duplicatePageCount++;
                 };
             };
@@ -971,20 +969,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             filteredSimilarities.imgCount = imgCount;
             filteredSimilarities.digitCount = digitCount;
             filteredSimilarities.duplicatePageCount = duplicatePageCount;
+            filteredSimilarities.importancePages = importance_pages;
 
-        console.log(filteredSimilarities.suspicious_pairs);
-        console.log("logging just the suspicious pairs above");
-        console.log(JSON.stringify(filteredSimilarities.suspicious_pairs,null,4));
-        console.log("logging the json structure before sort above");
-        filteredSimilarities.suspicious_pairs.sort((a, b) => (a.totalImportance > b.totalImportance) ? 1 : -1);
-        console.log(JSON.stringify(filteredSimilarities.suspicious_pairs,null,4));
-        console.log("logging the json structure after sort above");
-        console.log(filteredSimilarities.suspicious_pairs);
-        console.log("logged suspicious pairs above");
+        //console.log("total number ignored texts is "+ ignoredTexts);
 
-        console.log("total number ignored texts is "+ ignoredTexts);
-        console.log(filteredSimilarities);
-        console.log("loggign filtered similarities object above");
+        sortByImportance();
         return filteredSimilarities;
     };
 
@@ -1033,7 +1022,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     this.tag.clear(); // deSelect tag
                 };
                 this.detach();
-                console.log("updating with this object", t);
                 ratings.attach(t.parentNode);
                 this.tag = t;
                 this.thumbsDown.tag = t;
@@ -1059,13 +1047,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             ratings.thumbsDown = thumbsDown;
 
             thumbsUp.onclick = function(){
-                console.log("clicked the thumbsup button");
+                //console.log("clicked the thumbsup button");
                 ratings.approveSimilarity();
                 ratings.hide();
             };
 
             thumbsDown.onclick = function(){
-                console.log("clicked the thumbsDown button");
+                //console.log("clicked the thumbsDown button");
                 ratings.disApproveSimilarity();
                 ratings.hide();
             };
@@ -1322,8 +1310,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
       //Function used to create an image
         var createPreview = function(file, page, parent, boxes, totalImportance, matchingImg){
-            console.log(totalImportance);
-            console.log("logging initial total importance above");
             parent.innerHTML = "";
             var i = document.createElement("i");
             i.className = "fas fa-file";
@@ -1345,9 +1331,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             if (!img.isFirstDocument){ // render left image first and then load this (right) image
                 img.onload = function(){
                     img = this;
+                    clearOverlay();
                     setTimeout(function(){
-                        clearOverlay();
-
                         getImages(img).forEach((rightImage)=>{
                             getImages(rightImage.matchingImg).forEach((leftImage)=>{
                                 leftImage.matchingImg = rightImage; // add match reference
@@ -1370,7 +1355,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             };
 
             img.LoadOverlay = function (){
-                console.log("load overlay called");
                 img = this;
               // set original width/height for determining scaling for tag & d elements
                 var rect = javaxt.dhtml.utils.getRect(img);
@@ -1408,27 +1392,18 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         var tag = createSimilarityTag(box.boxes, int, img);
 
                         if (!img.isFirstDocument){
-                            console.log("running update matching img")
                             updateMatchingImg();
                         };
 
                         tag.d = d;
                         tag.type = box.type;
-                        console.log(box);
-                        console.log("logging box obj above");
                         tag.string = box.string;
                         tag.importance = box.importance;
-                        console.log(box);
-                        console.log("logging box object above ")
-                        console.log(box.importance);
-                        console.log("logging box importance above");
 
                         img.getTotalImportance = function(){
                             return this.totalImportance;
                         };
 
-                        console.log(img.totalImportance);
-                        console.log("logging total importance now - above");
                         img.d.push(d);
                         img.tag.push(tag);
                         img.parentNode.appendChild(d);
@@ -1478,9 +1453,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //more than one image due to idiosyncrasies with the carousel
         var getImages = function(img){
             var arr = [];
-            console.log("the count of panels is "+ carousel.getPanels().length);
             carousel.getPanels().forEach((panel)=>{
-                console.log("getting a new panel");
                 var panels = panel.div.getElementsByClassName("doc-compare-panel");
                 for (var i=0; i<panels.length; i++){
                     var images = panels[i].getElementsByTagName("img");
@@ -1495,11 +1468,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     }
                 };
             });
-            console.log(JSON.stringify(arr,null,4));
-            console.log("logging the json structure before sort above");
-            arr.sort((a, b) => (a.totalImportance > b.totalImportance) ? 1 : -1)
-            console.log(JSON.stringify(arr,null,4));
-            console.log("logging the json structure after sort above");
             return arr;
         };
 
@@ -1507,7 +1475,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         return {
             el: el,
             update: function(pageIndex){
-                console.log("comparison update function called");
                 var files = results.files;
                 var leftFile = files[fileIndex];
                 var rightFile;
@@ -1542,8 +1509,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
                             leftPage = suspiciousPage.pageNumber;
                             suspiciousPairs = suspiciousPage.suspiciousPairs;
-                            console.log(suspiciousPairs);
-                            console.log("logging set of suspicious pairs above");
                             return false;
                         };
                         idx++;
@@ -1555,12 +1520,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
               //Get boxes
                 var leftBoxes = [];
                 var rightBoxes = [];
-                var totalImportance = 0;
                 suspiciousPairs.forEach((suspiciousPair)=>{
                     var leftBox = null;
                     var rightBox = null;
-                    if (suspiciousPair.importance) totalImportance+=suspiciousPair.importance;
-
 
                     suspiciousPair.pages.forEach((page)=>{
                         if (page.file_index===fileIndex && page.page===leftPage){
@@ -1579,11 +1541,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                                 string: suspiciousPair.string,
                                 importance: suspiciousPair.importance
                             };
-                            // page.bbox.string = suspiciousPair.string;
-                            console.log(suspiciousPair);
-                            console.log(suspiciousPair.string);
-                            console.log(suspiciousPair.importance);
-                            console.log("logging suspicious pair object above to see options");
                         };
                     });
 
@@ -1592,8 +1549,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         rightBoxes.push(rightBox);
                     }
                 });
-
-
+                var totalImportance = results.importancePages[leftPage].importance;
+                console.log("logging total importance object");
+                console.log(results.importancePages);
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
                 var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes, totalImportance);
@@ -1713,7 +1671,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         navbar.update = function(){
             navbar.clear();
-            console.log("navbar update called, total pages detected as" + totalPages);
             var maxDots = 10; // declare maximum number of dots to add
             var increment = 1;
             var bestIncrement = function (n, setMax){
@@ -1779,10 +1736,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 };
                 ul.appendChild(li);
             }
-            console.log(navbar);
-            console.log("logging navbar above");
-            console.log(ul);
-            console.log("ul printed above");
             ul.childNodes[0].className = "active";
 
             navbar.getFileIndexs = function(){
