@@ -584,7 +584,7 @@ bluewave.charts.BarEditor = function(parent, config) {
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var createSlider = bluewave.utils.createSlider;
     var addTextEditor = bluewave.utils.addTextEditor;
-    var getStyleEditor = bluewave.chart.utils.getStyleEditor;
+    var getStyleEditor = bluewave.utils.getStyleEditor;
 
     init();
 };

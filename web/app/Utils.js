@@ -899,6 +899,25 @@ bluewave.utils = {
 
 
   //**************************************************************************
+  //** getStyleEditor
+  //**************************************************************************
+    getStyleEditor : function(config){
+        //Create styleEditor as needed
+        if (!bluewave.utils.styleEditor){
+            bluewave.utils.styleEditor = new javaxt.dhtml.Window(document.body, {
+                title: "Edit Style",
+                width: 400,
+                valign: "top",
+                modal: false,
+                resizable: false,
+                style: config.style.window
+            });
+        }
+        return bluewave.utils.styleEditor;
+    },
+
+
+  //**************************************************************************
   //** getColorPalette
   //**************************************************************************
     getColorPalette: function(fixedColors){

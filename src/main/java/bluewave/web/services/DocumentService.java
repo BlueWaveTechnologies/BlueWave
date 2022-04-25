@@ -203,7 +203,7 @@ public class DocumentService extends WebService {
             if (method.equals("GET")){
                 if (request.hasParameter("id")){
                     return getFile(request, user);
-                }
+                }              
                 else{
                     return getDocuments(request, database);
                 }
@@ -1302,5 +1302,10 @@ public class DocumentService extends WebService {
             }
             return response;
         }
+    }
+
+    public ServiceResponse getRemoteSearchStatus(ServiceRequest request, Database database) throws ServletException {
+        Boolean remoteSearch = Config.get("webserver").get("remoteSearch").toBoolean();
+        return new ServiceResponse(remoteSearch == null ? "false" : remoteSearch +"");
     }
 }

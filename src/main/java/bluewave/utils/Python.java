@@ -47,7 +47,7 @@ public class Python {
 
 
       //Check which python is installed on the system
-        for (String python : new String[]{"python3", "python"}){
+        for (String python : new String[]{"python3.9", "python3", "python"}){
             try{
                 String[] cmdarray = new String[]{python, "--version"};
                 javaxt.io.Shell cmd = new javaxt.io.Shell(cmdarray);
