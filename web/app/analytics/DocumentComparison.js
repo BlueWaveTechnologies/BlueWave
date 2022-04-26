@@ -34,8 +34,13 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         // decimalsOnly: false,
         // minDecimalPlaces: 1,
         minTextWords: 1,
-        minTextCharacters: 1
+        minTextCharacters: 1,
+        minImportanceScoreEach: 5, // default value set to 5 (filters some out to begin with)
+        // similarityThreshholdOverall: 0
     };
+    var maxImportanceScoreEach; // set a value that can be declared in getFilteredSimilarities and value-checked in form updates
+
+
     var settingsEditor;
 
 
@@ -503,6 +508,21 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     ]
                 },
                 {
+                    group: "Similarity Score",
+                    items: [
+                        {
+                            name:"minImportanceScoreEach",
+                            label: "Min Score (per similarity)",
+                            type: "text"
+                        }
+                        // {
+                        //     name:"similarityThreshholdOverall",
+                        //     label: "Min Score (per page)",
+                        //     type: "text"
+                        // }
+                    ]
+                },
+                {
                     group: "Other",
                     items: [
                         {
@@ -536,9 +556,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             ]
         });
-
-
-
 
     //Set initial value for imgSimilarities
         var imgSimilaritiesField = form.findField("imgSimilarities");
@@ -576,8 +593,6 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     //     var minDecimalPlaces = comparisonConfig.minDecimalPlaces;
     //     minDecimalPlacesField.setValue(minDecimalPlaces);
 
-
-
     //Set intial value for textSimilarities
         var textSimilaritiesField = form.findField("textSimilarities");
         var textSimilaritiesFieldLabel = textSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
@@ -603,6 +618,24 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
        duplicatePageSimilaritiesField.setValue(duplicatePageSimilarities===true ? true : false);
 
 
+    // Use slider for minImportanceScoreEach
+        var minImportanceScoreSlider = createSlider("minImportanceScoreEach", form, "", 0, maxImportanceScoreEach, 1); // min, max, inc
+
+    //Set initial value for minImportanceScoreEach
+        var minImportanceScoreEachField = form.findField("minImportanceScoreEach");
+        var minImportanceScoreEach = comparisonConfig.minImportanceScoreEach;
+        var minImportanceScoreEachFieldLabel = minImportanceScoreEachField.row.getElementsByClassName("form-label noselect")[1];
+        minImportanceScoreEachField.setValue(minImportanceScoreEach);
+
+    // Use slider for similarityThreshholdOverall
+        // createSlider("similarityThreshholdOverall", form, "", 0, maxOverall, 5);
+
+    //Set initial value for similarityThreshholdOverall
+        // var similarityThreshholdOverallField = form.findField("similarityThreshholdOverall");
+        // var similarityThreshholdOverall = comparisonConfig.similarityThreshholdOverall;
+        // var similarityThreshholdOverallFieldLabel = similarityThreshholdOverallField.row.getElementsByClassName("form-label noselect")[1];
+        // similarityThreshholdOverallField.setValue(similarityThreshholdOverall);
+
 
 
         var isPopulated = function(config){ // determine the options/availability when passing new config
@@ -621,6 +654,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             else if (formSettings.digitSimilarities !== comparisonConfig.digitSimilarities) return digitSimilaritiesField;
             else if (formSettings.textSimilarities !== comparisonConfig.textSimilarities) return textSimilaritiesField;
             else if (formSettings.minDigitCount !== comparisonConfig.minDigitCount) return minDigitCountField;
+            else if (formSettings.minImportanceScoreEach !== comparisonConfig.minImportanceScoreEach) return minImportanceScoreEachField;
+            else if (formSettings.similarityThreshholdOverall !== comparisonConfig.similarityThreshholdOverall) return similarityThreshholdOverallField;
             // else if (formSettings.allowDigitSpaces !== comparisonConfig.allowDigitSpaces) return allowDigitSpacesField;
             // else if (formSettings.decimalsOnly !== comparisonConfig.decimalsOnly) return decimalsOnlyField;
             // else if (formSettings.minDecimalPlaces !== comparisonConfig.minDecimalPlaces) return minDecimalPlacesField;
@@ -636,6 +671,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 digitSimilaritiesField.setValue(comparisonConfig.digitSimilarities);
                 textSimilaritiesField.setValue(comparisonConfig.textSimilarities);
                 minDigitCountField.setValue(comparisonConfig.minDigitCount);
+                minImportanceScoreEachField.setValue(comparisonConfig.minImportanceScoreEach);
+                // similarityThreshholdOverallField.setValue(comparisonConfig.similarityThreshholdOverall);
                 // allowDigitSpacesField.setValue(comparisonConfig.allowDigitSpaces);
                 // decimalsOnlyField.setValue(comparisonConfig.decimalsOnly);
                 // minDecimalPlacesField.setValue(comparisonConfig.minDecimalPlaces);
@@ -651,12 +688,17 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 comparisonConfig.digitSimilarities = formSettings.digitSimilarities;
                 comparisonConfig.textSimilarities = formSettings.textSimilarities;
                 comparisonConfig.minDigitCount = formSettings.minDigitCount;
+                comparisonConfig.minImportanceScoreEach = formSettings.minImportanceScoreEach;
+                // comparisonConfig.similarityThreshholdOverall = formSettings.similarityThreshholdOverall;
                 // comparisonConfig.allowDigitSpaces = formSettings.allowDigitSpaces;
                 // comparisonConfig.decimalsOnly = formSettings.decimalsOnly;
                 // comparisonConfig.minDecimalPlaces = formSettings.minDecimalPlaces;
                 comparisonConfig.minTextWords = formSettings.minTextWords;
                 comparisonConfig.minTextCharacters = formSettings.minTextCharacters;
                 comparisonConfig.duplicatePageSimilarities = formSettings.duplicatePageSimilarities;
+
+              // reset sliders
+                minImportanceScoreSlider.setAttribute("max", maxImportanceScoreEach);
         };
 
     //Process onChange events
@@ -739,6 +781,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 // form.disableField("allowDigitSpaces");
                 form.disableField("minTextCharacters");
                 form.disableField("minTextWords");
+                form.disableField("minImportanceScoreEach");
+                // form.disableField("similarityThreshholdOverall");
                 // form.disableField("decimalsOnly");
                 form.disableField("duplicatePageSimilarities");
 
@@ -759,6 +803,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             // form.enableField("allowDigitSpaces");
             form.enableField("minTextCharacters");
             form.enableField("minTextWords");
+            form.enableField("minImportanceScoreEach");
+            // form.enableField("similarityThreshholdOverall");
             // form.enableField("decimalsOnly");
             form.enableField("duplicatePageSimilarities");
 
@@ -798,8 +844,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var digitCount = 0;
         var duplicatePageCount = 0;
         var ignoredTexts = 0;
+        maxImportanceScoreEach = 0; // global variable used in form
         var importance_pages = {};
-
         var filteredSimilarities = {
             num_suspicious_pairs:0,
             suspicious_pairs:[],
@@ -870,94 +916,109 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         };
 
+        var checkMatch = function(pair){
+            if (pair.type === "Identical image" && config.imgSimilarities) { // identical image similarity check
+                filteredSimilarities.suspicious_pairs.push(pair);
+                addImportance(pair.pages[0].page, pair.importance, pair);
+                imgCount++;
+                return true;
+            }
+            else if (pair.type === "Common digit sequence" && config.digitSimilarities){ // digit similarity check
+                // var skip;
+                //console.log(pair);
+                //console.log(pair.string);
+                // if (pair.string.includes(" ")){
+                //     //console.log("this pair contains a space");
+
+                //     //console.log("logging digit spaces status in config " + config.allowDigitSpaces)
+                //     if (!config.allowDigitSpaces){
+                //         //console.log("not allowing digit spaces - break condition");
+                //         return false;
+                //     }
+                //     else //console.log("digit spaces were allowed!");
+                // }
+
+                // if (config.decimalsOnly){
+                //     if (!pair.string.includes(".")){
+                //         //console.log(pair.string);
+                //         //console.log("skipped pair above because it was missing a decimal");
+                //         return false;
+                //     };
+                // }
+                // if (pair.string.includes(".")){
+                    // //console.log("this string contains a decimal!")
+                    // //console.log(pair.string)
+                    // if (config.decimalsOnly) return false;
+                    // else //console.log("decimal detected, and is allowed!")
+                // };
+
+                //console.log(`string length is ${pair.string.length} `)
+                if (pair.string.length < config.minDigitCount){
+                    //console.log("doesn't pass minimum string length - break condition ");
+                    return false;
+                }
+                else //console.log("passes minimum digit string length, which is "+ config.minDigitCount);
+
+
+                filteredSimilarities.suspicious_pairs.push(pair);
+                addImportance(pair.pages[0].page, pair.importance, pair);
+                digitCount++;
+                return true;
+            }
+            else if (pair.type === "Common text string" && config.textSimilarities){ // text similarity check
+
+                // count number of words
+                function WordCount(str) {
+                    return str.split(" ").length;
+                };
+
+
+                if (pair.string.includes(" ")){
+                    //console.log("detected multiple words, count is " + WordCount(pair.string));
+                    if (WordCount(pair.string) < config.minTextWords){
+                        //console.log("skippping this string, less words than allowed");
+                        return false;
+                    };
+                };
+
+
+                //console.log("the minimum number of characters is "+ config.minTextCharacters);
+
+
+                if (pair.string.length < config.minTextCharacters){
+                    ignoredTexts++;
+                    return false;
+                };
+
+                //console.log("logging character count for this string " + pair.string.length + " \n string below");
+                //console.log(pair.string)
+
+                filteredSimilarities.suspicious_pairs.push(pair);
+                addImportance(pair.pages[0].page, pair.importance, pair);
+                textCount++;
+                return true;
+
+            }
+            else if (pair.type === "Duplicate page" && config.duplicatePageSimilarities) { // duplicate page check
+
+                filteredSimilarities.suspicious_pairs.push(pair);
+                addImportance(pair.pages[0].page, pair.importance, pair);
+                duplicatePageCount++;
+                return true;
+            }
+            else return false; // this similarity did not meet the criteria
+
+        };
+
         // add filtered paired similarities
             for (var i in similarities.suspicious_pairs) {
                 var pair = similarities.suspicious_pairs[i];
 
-                if (pair.type === "Identical image" && config.imgSimilarities) {
-                    filteredSimilarities.suspicious_pairs.push(pair);
-                    addImportance(pair.pages[0].page, pair.importance, pair);
-                    imgCount++;
-                }
-                else if (pair.type === "Common digit sequence" && config.digitSimilarities){
-                    // var skip;
-                    //console.log(pair);
-                    //console.log(pair.string);
-                    // if (pair.string.includes(" ")){
-                    //     //console.log("this pair contains a space");
-
-                    //     //console.log("logging digit spaces status in config " + config.allowDigitSpaces)
-                    //     if (!config.allowDigitSpaces){
-                    //         //console.log("not allowing digit spaces - break condition");
-                    //         continue;
-                    //     }
-                    //     else //console.log("digit spaces were allowed!");
-                    // }
-
-                    // if (config.decimalsOnly){
-                    //     if (!pair.string.includes(".")){
-                    //         //console.log(pair.string);
-                    //         //console.log("skipped pair above because it was missing a decimal");
-                    //         continue;
-                    //     };
-                    // }
-                    // if (pair.string.includes(".")){
-                        // //console.log("this string contains a decimal!")
-                        // //console.log(pair.string)
-                        // if (config.decimalsOnly) continue;
-                        // else //console.log("decimal detected, and is allowed!")
-                    // };
-
-                    //console.log(`string length is ${pair.string.length} `)
-                    if (pair.string.length < config.minDigitCount){
-                        //console.log("doesn't pass minimum string length - break condition ");
-                        continue;
-                    }
-                    else //console.log("passes minimum digit string length, which is "+ config.minDigitCount);
-
-
-                    filteredSimilarities.suspicious_pairs.push(pair);
-                    addImportance(pair.pages[0].page, pair.importance, pair);
-                    digitCount++;
-                }
-                else if (pair.type === "Common text string" && config.textSimilarities){
-
-                    // count number of words
-                    function WordCount(str) {
-                        return str.split(" ").length;
+                if (pair.importance >= config.minImportanceScoreEach){ // importance score check
+                    var added = checkMatch(pair);
+                    if (added){
+                        if (pair.importance > maxImportanceScoreEach) maxImportanceScoreEach = pair.importance; // update new max similarity score for individual similarities
                     };
-
-
-                    if (pair.string.includes(" ")){
-                        //console.log("detected multiple words, count is " + WordCount(pair.string));
-                        if (WordCount(pair.string) < config.minTextWords){
-                            //console.log("skippping this string, less words than allowed");
-                            continue;
-                        };
-                    };
-
-
-                    //console.log("the minimum number of characters is "+ config.minTextCharacters);
-
-
-                    if (pair.string.length < config.minTextCharacters){
-                        ignoredTexts++;
-                        continue;
-                    };
-
-                    //console.log("logging character count for this string " + pair.string.length + " \n string below");
-                    //console.log(pair.string)
-
-                    filteredSimilarities.suspicious_pairs.push(pair);
-                    addImportance(pair.pages[0].page, pair.importance, pair);
-                    textCount++;
-                }
-                else if (pair.type === "Duplicate page" && config.duplicatePageSimilarities) {
-                    //console.log("found a duplicate page!");
-
-                    filteredSimilarities.suspicious_pairs.push(pair);
-                    addImportance(pair.pages[0].page, pair.importance, pair);
-                    duplicatePageCount++;
                 };
             };
 
@@ -975,6 +1036,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
         sortByImportance();
         return filteredSimilarities;
+
     };
 
 
@@ -1833,6 +1895,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
     var get = bluewave.utils.get;
     var addResizeListener = javaxt.dhtml.utils.addResizeListener;
     var warn = bluewave.utils.warn;
+    var createSlider = bluewave.utils.createSlider;
 
 
     init();
