@@ -7,8 +7,9 @@ import pickle
 
 import get_file_data
 import compare_pdfs_util
+import importance_score
 
-VERSION = "1.6.2"
+VERSION = "1.6.1"
 
 
 
@@ -17,7 +18,7 @@ VERSION = "1.6.2"
 # COMPARISON
 #-------------------------------------------------------------------------------
 
-import compare_pdf_text
+import compare_pdfs_text
 import pdf_duplicate_pages
 
 def compare_images(hash_info_a, hash_info_b):
@@ -128,82 +129,6 @@ def get_similarity_scores(file_data, suspicious_pairs, methods_run):
     return similarity_scores
 
 
-def add_importance_scores(suspicious_pairs):
-    import numpy as np
-    import re
-    import os
-
-    datadir = compare_pdfs_util.get_datadir()
-    try:
-        with open(f'{datadir}{os.path.sep}clf.p', 'rb') as f:
-            vectorizer, clf = pickle.load(f)
-    except:
-        raise Exception(f'{datadir}{os.path.sep}clf.p not found or invalid.')
-
-
-    corpus = []
-    dummies = [] # Alpha order: (Common digit sequence, Common text string, Duplicate page, Identical image)
-    for sus_pair in suspicious_pairs:
-        if sus_pair['type'] == ['Duplicate page']:
-            corpus.append(sus_pair['page_text'])
-            dummies.append((0, 0, 1, 0))
-        elif sus_pair['type'] == 'Common text string':
-            corpus.append(sus_pair['block_text'])
-            dummies.append((0, 1, 0, 0))
-        elif sus_pair['type'] == 'Common digit sequence':
-            corpus.append(sus_pair['block_text'])
-            dummies.append((1, 0, 0, 0))
-        elif sus_pair['type'] == ['Identical image']:
-            corpus.append('')
-            dummies.append((0, 0, 0, 1))
-        else:
-            corpus.append('')
-            dummies.append((0, 0, 0, 0))
-
-    if suspicious_pairs:
-        vecs = vectorizer.transform(corpus).toarray()
-        dummies = np.array(dummies)
-        X = np.hstack((vecs, dummies))
-
-        importance_pred = clf.predict(X).flatten()
-        importance_pred = compare_pdfs_util.logistic(importance_pred)
-    else:
-        importance_pred = []
-
-    decimal_re = re.compile(r'\d\.\d')
-    degit_newline_re = re.compile(r'(?:\d\n)|(?:\n\d)')
-    for sus, ml_importance in zip(suspicious_pairs, importance_pred):
-        # ML importance is 50% of the score
-        ml_importance_100 = 100*ml_importance
-
-        # Calculated importance is the other 50%
-        calc_importance = 0
-        txt = sus.get('block_text', sus.get('page_text', ''))
-        
-        deci_count = len(decimal_re.findall(txt)) / 2
-        calc_importance += deci_count
-
-        newline_num = len(degit_newline_re.findall(txt))
-        calc_importance += newline_num
-
-        calc_importance = min(100, calc_importance) # Cannot exceed 100
-
-        # take avg
-        importance = 0.5*(ml_importance_100 + calc_importance)
-
-        # transform
-        importance = int(round(importance))
-        # clip
-        importance = min(max(importance, 0), 100)
-
-        sus['importance'] = importance
-
-
-    sorted_sus_pairs = sorted(suspicious_pairs, key=lambda sus: -sus['importance'])
-
-    return sorted_sus_pairs
-
-
 def get_version():
     # repo = Repo()
     # ver = repo.git.describe('--always')
@@ -255,7 +180,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
             # Compare numbers
             if 'digits' in methods:
                 if verbose: print('Comparing digits...')
-                digit_results = compare_pdf_text.main(
+                digit_results = compare_pdfs_text.main(
                     data_a=a_new,
                     data_b=b_new,
                     text_suffix='digits',
@@ -267,7 +192,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
             # Compare texts
             if 'text' in methods:
                 if verbose: print('Comparing texts...')
-                text_results = compare_pdf_text.main(
+                text_results = compare_pdfs_text.main(
                     data_a=a_new,
                     data_b=b_new,
                     text_suffix='text',
@@ -317,7 +242,7 @@ def main(filenames, methods, pretty_print, verbose=False, regen_cache=False):
     # Calculate some more things for the final output
     if verbose: print('Gathering output...')
     if verbose: print('\tAdd importance scores...')
-    suspicious_pairs = add_importance_scores(suspicious_pairs)
+    suspicious_pairs = importance_score.main(suspicious_pairs)
     if verbose: print('\tGet file info...')
     file_info = get_file_info(file_data, suspicious_pairs)
     if verbose: print('\tGet total pages...')
