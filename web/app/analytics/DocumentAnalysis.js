@@ -595,10 +595,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 localSort: true,
                 columns: [
                     {header: 'Document Name', width:'100%', sortable: true},
-                    {header: 'Comparison Results', width:'300', sortable: true}
+                    {header: 'Comparison Results', width:'310', sortable: true}
                 ],
                 update: function(row, record){
-                    console.log("grid updated");
                     row.set("Document Name", record.name);
                     row.set("Comparison Results", record.similarities); //<-- Updated by compareDocuments()
                 }
@@ -644,7 +643,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             },
             update: function(panel){
                 if (!grid){
-                    console.log("grid update called here for results panel");
                     createPanel(panel.childNodes[0]);
                     grid.load(selectedDocuments);
                     if (selectedDocuments.length>1) button["run"].enable();
@@ -1030,11 +1028,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** compareDocuments
   //**************************************************************************
     var compareDocuments = function(jobs, onCompletion){
-        console.log("compare documents called");
         var runJob = function(){
-            console.log("run job called compare documents");
-            console.log(jobs);
-            console.log("logging jobs above comparsion panel");
             if (!comparisonsEnabled) jobs.splice(0,jobs.length);
 
             if (jobs.length==0){
@@ -1048,23 +1042,43 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 function(step, totalSteps, success){
                     job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
                 },
-                function(similarities){
+                function(similarities, originalSimilarities){
                     var numSimilarities = 0;
+                    var numOriginalSimilarities = 0;
+                    var totalMatches = 0;
+                    var hiddenMatches = 0;
                     similarities.forEach((similarity)=>{
+                        console.log("adding " + similarity.results.num_suspicious_pairs + " results")
+                        totalMatches += similarity.results.num_suspicious_pairs;
                         if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
+                    });
+                    originalSimilarities.forEach((similarity)=>{
+                        numOriginalSimilarities += similarity.results.num_suspicious_pairs;
                     });
                     job.row.record.similarities = similarities;
 
+                    hiddenMatches = numOriginalSimilarities - totalMatches;
 
                     var summaryIcon, summaryText;
-                    if (numSimilarities===0){
+                    if (numSimilarities === 0 && hiddenMatches === 0){
                         summaryIcon = "far fa-check-circle";
                         summaryText = "No similarities found";
                     }
+                    else if (numSimilarities === 0 && hiddenMatches > 0){
+                        summaryIcon = "far fa-check-circle";
+                        summaryText = "No similarities found (" + hiddenMatches + " hidden)";
+                    }
                     else{
+                        var documentString = "document"; // for writing over
                         summaryIcon = "fas fa-exclamation-triangle";
-                        summaryText = "Found " + numSimilarities + " matching document";
-                        if (numSimilarities>1) summaryText+="s";
+
+                        if (numSimilarities !== 0 && hiddenMatches > 0){
+                            summaryText = totalMatches + " matches in " + numSimilarities + ` ${documentString}` + " ("+hiddenMatches+" hidden)";
+                        }
+                        if (numSimilarities !==0 && hiddenMatches <= 0){
+                            summaryText = totalMatches + " matches in " + numSimilarities + ` ${documentString}`;
+                        }
+                        if (numSimilarities>1) documentString+="s";
 
                         var link = document.createElement("a");
                         link.innerText = summaryText;
@@ -1104,8 +1118,8 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** getSimilarities
   //**************************************************************************
     var getSimilarities = function(doc, otherDocs, onStep, onCompletion){
-
         var similarities = [];
+        var originalSimilarities = [];
         var steps = 0;
         var totalSteps = otherDocs.length;
 
@@ -1115,7 +1129,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             if (!comparisonsEnabled) otherDocs.splice(0,otherDocs.length);
 
             if (otherDocs.length===0){
-                if (onCompletion) onCompletion.apply(me, [similarities]);
+                if (onCompletion) onCompletion.apply(me, [similarities,originalSimilarities]);
                 return;
             }
 
@@ -1124,10 +1138,18 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
             get("document/similarity?documents="+doc+","+b,{
                 success: function(json){
+                    if (!documentSimilarities) createDocumentSimilaries();
+
                     similarities.push({
+                        id: b,
+                      // get the default, baseline filtered results from documentComparison
+                        results: documentSimilarities.getFilteredResults(json)
+                    });
+                    originalSimilarities.push({
                         id: b,
                         results: json
                     });
+
                     if (onStep) onStep.apply(me, [steps,totalSteps,true]);
                     getSimilarity(doc, otherDocs);
                 },
