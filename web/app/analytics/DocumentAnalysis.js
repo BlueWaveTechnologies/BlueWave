@@ -1168,6 +1168,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     {header: 'Page Similarity', width:'120', sortable: true},
                     {header: 'Digit Similarity', width:'120', sortable: true},
                     {header: 'Text Similarity', width:'120', sortable: true},
+                    {header: 'Image Similarity', width:'120', sortable: true},
                     {header: 'Total Similarities', width:'120', sortable: true}
                 ],
                 update: function(row, record){
@@ -1190,6 +1191,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     row.set("Similar Document", div);
                     row.set("Total Similarities", (record.results.textCount + record.results.digitCount + record.results.duplicatePageCount));
                     // row.set("Similarities", record.suspicious_pages);
+                    row.set("Image Similarity", record.results.imgCount);
                     row.set("Text Similarity", record.results.textCount);
                     row.set("Digit Similarity", record.results.digitCount);
                     row.set("Page Similarity", record.results.duplicatePageCount);
