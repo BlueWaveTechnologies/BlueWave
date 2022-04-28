@@ -328,7 +328,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 var suspiciousPairs = results.suspicious_pairs;
                 if (suspiciousPairs.length>0){
                     icon.className = "fas fa-exclamation-triangle";
-                    title.innerText = "Similarities Found!";
+                    title.innerText = "Matches Found!";
                 }
                 else{
                     icon.className = "far fa-check-circle";
@@ -508,11 +508,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                     ]
                 },
                 {
-                    group: "Similarity Score",
+                    group: "Importance Score",
                     items: [
                         {
                             name:"minImportanceScoreEach",
-                            label: "Min Score (per similarity)",
+                            label: "Min Score",
                             type: "text"
                         }
                         // {
@@ -759,16 +759,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
             // update GUI counts
                 if (similarities.digitCount < 1)digitSimilaritiesFieldLabel.innerText = '';
-                else digitSimilaritiesFieldLabel.innerText = similarities.digitCount + " similarities";
+                else digitSimilaritiesFieldLabel.innerText = similarities.digitCount + " matches";
 
                 if (similarities.textCount < 1)textSimilaritiesFieldLabel.innerText = '';
-                else textSimilaritiesFieldLabel.innerText = similarities.textCount + " similarities";
+                else textSimilaritiesFieldLabel.innerText = similarities.textCount + " matches";
 
                 if (similarities.imgCount < 1)imgSimilaritiesFieldLabel.innerText = '';
-                else imgSimilaritiesFieldLabel.innerText = similarities.imgCount + " similarities";
+                else imgSimilaritiesFieldLabel.innerText = similarities.imgCount + " matches";
 
                 if (similarities.duplicatePageCount < 1)duplicatePageSimilaritiesFieldLabel.innerText = '';
-                else duplicatePageSimilaritiesFieldLabel.innerText = similarities.duplicatePageCount + " similarities";
+                else duplicatePageSimilaritiesFieldLabel.innerText = similarities.duplicatePageCount + " matches";
         };
 
         editor.disableThis = function(){ // used for temporarily disabling settings options while changes render
@@ -1615,7 +1615,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 console.log("logging total importance object");
                 console.log(results.importancePages);
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
-                subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
+                subtitle.innerText = suspiciousPairs.length + " match" + (suspiciousPairs.length>1 ? "es" : "");
                 var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes, totalImportance);
                 createPreview(rightFile, rightPage, rightPanel, rightBoxes, totalImportance, leftSideImg);
 

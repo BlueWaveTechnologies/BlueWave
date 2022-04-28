@@ -1062,11 +1062,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     var summaryIcon, summaryText;
                     if (numSimilarities === 0 && hiddenMatches === 0){
                         summaryIcon = "far fa-check-circle";
-                        summaryText = "No similarities found";
+                        summaryText = "No matches found";
                     }
                     else if (numSimilarities === 0 && hiddenMatches > 0){
                         summaryIcon = "far fa-check-circle";
-                        summaryText = "No similarities found (" + hiddenMatches + " hidden)";
+                        summaryText = "No matches found (" + hiddenMatches + " hidden)";
                     }
                     else{
                         var documentString = "document"; // for writing over
@@ -1187,10 +1187,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 localSort: true,
                 columns: [
                     {header: 'Similar Document', width:'100%', sortable: true},
-                    {header: 'Page Similarity', width:'120', sortable: true},
-                    {header: 'Digit Similarity', width:'120', sortable: true},
-                    {header: 'Text Similarity', width:'120', sortable: true},
-                    {header: 'Total Similarities', width:'120', sortable: true}
+                    {header: 'Page Matches', width:'120', sortable: true},
+                    {header: 'Image Matches', width:'120', sortable: true},
+                    {header: 'Digit Matches', width:'120', sortable: true},
+                    {header: 'Text Matches', width:'120', sortable: true},
+                    {header: 'Total Matches', width:'120', sortable: true}
                 ],
                 update: function(row, record){
                     if (record.suspicious_pages < 1){
@@ -1210,11 +1211,12 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     div.appendChild(link);
 
                     row.set("Similar Document", div);
-                    row.set("Total Similarities", (record.results.textCount + record.results.digitCount + record.results.duplicatePageCount));
+                    row.set("Total Matches", (record.results.textCount + record.results.digitCount + record.results.duplicatePageCount));
                     // row.set("Similarities", record.suspicious_pages);
-                    row.set("Text Similarity", record.results.textCount);
-                    row.set("Digit Similarity", record.results.digitCount);
-                    row.set("Page Similarity", record.results.duplicatePageCount);
+                    row.set("Image Matches", record.results.imgCount);
+                    row.set("Text Matches", record.results.textCount);
+                    row.set("Digit Matches", record.results.digitCount);
+                    row.set("Page Matches", record.results.duplicatePageCount);
                 }
             });
 
