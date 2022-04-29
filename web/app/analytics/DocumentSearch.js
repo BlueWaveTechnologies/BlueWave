@@ -130,17 +130,17 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         };
         searchBar.getSearchTerms = function(q){
             if (!q) q = searchBar.getValue();
-            if (typeof q === 'string'){
-
-                var q = q.split(new RegExp(/(\-*'.*?'|\-*".*?"|\-*\S+)/, 'g'));
-
-                var ignoredSearches = new Set(["", " "]);
-                q = q.filter((queryParam) => {
-                    return !ignoredSearches.has(queryParam);
-                });
-                for (let value in q) q[value] = q[value].trim();
-
-            }
+//            if (typeof q === 'string'){
+//
+//                var q = q.split(new RegExp(/(\-*'.*?'|\-*".*?"|\-*\S+)/, 'g'));
+//
+//                var ignoredSearches = new Set(["", " "]);
+//                q = q.filter((queryParam) => {
+//                    return !ignoredSearches.has(queryParam);
+//                });
+//                for (let value in q) q[value] = q[value].trim();
+//
+//            }
             return q;
         };
         searchBar.onSearch = function(q){
