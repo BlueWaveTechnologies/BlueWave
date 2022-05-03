@@ -33,6 +33,7 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -112,9 +113,10 @@ public class FileIndex {
     public FileIndex(javaxt.io.Directory path) throws Exception {
         dir = FSDirectory.open(Paths.get(path.toString()));
         StandardAnalyzer standardAnalyzer = new StandardAnalyzer(getStopWords());
-        ShingleAnalyzerWrapper shingleAnalyzerWrapper = new ShingleAnalyzerWrapper(standardAnalyzer, 2, 3);
+        ShingleAnalyzerWrapper shingleAnalyzerWrapper = new ShingleAnalyzerWrapper(standardAnalyzer, 2, 4);
         Map<String,Analyzer> analyzerPerFieldMap = new HashMap<>();
-        analyzerPerFieldMap.put(FIELD_CONTENTS, shingleAnalyzerWrapper);
+//        analyzerPerFieldMap.put(FIELD_CONTENTS, shingleAnalyzerWrapper);
+        analyzerPerFieldMap.put(FIELD_CONTENTS, standardAnalyzer);
         analyzerPerFieldMap.put(FIELD_NAME, standardAnalyzer);
         perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(standardAnalyzer, analyzerPerFieldMap);
 
@@ -263,28 +265,28 @@ public class FileIndex {
         return bqBuilder.build();
     }
     
-        private BooleanQuery queryNoEscape(List<String> searchTerms, Integer limit) throws Exception {
+        private Query queryNoEscape(List<String> searchTerms, Integer limit) throws Exception {
         BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
         Query contentsQuery = null;
         for (String term : searchTerms) {
             
             console.log("term: " + term);
-            console.log("escaped term: " + QueryParser.escape(term));
 
 //            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
 //            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
 //            bqBuilder.add(wildcardBooleanClause);
-            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, term.toLowerCase()));
-            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
-            bqBuilder.add(wildcardBooleanClause);
-            
-            bqBuilder.add(new BooleanClause(new TermQuery(new Term(FIELD_NAME, term.toLowerCase())), BooleanClause.Occur.SHOULD));
+//            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, term.toLowerCase()));
+//            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
+//            bqBuilder.add(wildcardBooleanClause);
+//            
+//            bqBuilder.add(new BooleanClause(new TermQuery(new Term(FIELD_NAME, term.toLowerCase())), BooleanClause.Occur.SHOULD));
 
-            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, term.toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
+//            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, term.toLowerCase());
+//            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer()).createPhraseQuery(FIELD_CONTENTS, term.toLowerCase());
+//            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
 //
-            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(term.toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
+//            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(term.toLowerCase());
+//            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
 
 
 //            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(term.toLowerCase());
@@ -292,6 +294,10 @@ public class FileIndex {
 //
 //            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(term.toLowerCase());
 //            bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
+
+              MultiFieldQueryParser multiFieldQueryParser = new MultiFieldQueryParser(new String[]{FIELD_NAME, FIELD_CONTENTS}, perFieldAnalyzerWrapper);
+              return multiFieldQueryParser.parse(term);
+              
         }
         return bqBuilder.build();
     }
@@ -329,7 +335,7 @@ public class FileIndex {
         }
 //        BooleanQuery bbq = bqBuilder.build();
 
-        BooleanQuery bbq = queryNoEscape(searchTerms, limit);
+        Query bbq = queryNoEscape(searchTerms, limit);
 
       //Execute search
         IndexSearcher searcher = instanceOfIndexSearcher();
