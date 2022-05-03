@@ -366,7 +366,7 @@ public class FileIndex {
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
-            if (_indexWriter == null) {
+            if (_indexWriter == null || !_indexWriter.isOpen()) {
                 try {
                    IndexWriterConfig iwc = new IndexWriterConfig(perFieldAnalyzerWrapper);
                     iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
@@ -491,7 +491,7 @@ public class FileIndex {
         IndexWriter writer = instanceOfIndexWriter();
         writer.addDocument(doc);
         writer.commit();
-
+        
         // NOTE: if you want to maximize search performance,
         // you can optionally call forceMerge here. This can be
         // a terribly costly operation, so generally it's only
@@ -667,4 +667,5 @@ public class FileIndex {
 
         return substring;
     }
+    
 }

@@ -1308,4 +1308,40 @@ public class DocumentService extends WebService {
         Boolean remoteSearch = Config.get("webserver").get("remoteSearch").toBoolean();
         return new ServiceResponse(remoteSearch == null ? "false" : remoteSearch +"");
     }
+    
+    public ServiceResponse getRefreshDocumentIndex(ServiceRequest request, Database database) throws ServletException {
+        boolean filesIndexed = false;
+        try {
+           javaxt.io.Directory uploadDir = getUploadDir();
+           if(index == null) index = new FileIndex(Config.getIndexDir());
+        
+           for(Object objFile : uploadDir.getChildren(true)) {
+               javaxt.io.File file = (javaxt.io.File) objFile;
+               
+               if(file.toFile().isFile() && !index.hasFile(file)) {
+                    javaxt.io.Directory dir = file.getDirectory();
+                    bluewave.app.Path path = getOrCreatePath(dir);
+
+                    bluewave.app.File f = getOrCreateFile(file, path);
+                    bluewave.app.Document doc = getOrCreateDocument(f);
+                    String indexStatus = doc.getIndexStatus();
+                    if (indexStatus==null){
+                        try{
+                            index.addDocument(doc, file);
+                            doc.setIndexStatus("indexed");
+                            filesIndexed = true;
+                        }
+                        catch(Exception e){
+                            doc.setIndexStatus("failed");
+                        }
+                        doc.save();
+                    }
+               }
+           }
+           
+        }catch(Exception e) {
+           e.printStackTrace();
+        }
+        return new ServiceResponse(filesIndexed+"");
+    }
 }
