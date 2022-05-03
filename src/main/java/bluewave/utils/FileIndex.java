@@ -232,125 +232,55 @@ public class FileIndex {
         return searchResults;
     }
 
-    private BooleanQuery andQuery(List<String> searchTerms, Integer limit) throws Exception {
-        BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
-        Query contentsQuery = null;
-        for (String term : searchTerms) {
-            
-            console.log("term: " + term);
-            console.log("escaped term: " + QueryParser.escape(term));
-
-            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
-            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.MUST);
-            bqBuilder.add(wildcardBooleanClause);
-
-            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.MUST));
-//
-//            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, term.toLowerCase());
-//            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
-
-            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.MUST));
-
-//            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(term.toLowerCase());
-//            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
-
-            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.MUST));
-
-            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.MUST));
-        }
-        return bqBuilder.build();
-    }
-    
-        private Query queryNoEscape(List<String> searchTerms, Integer limit) throws Exception {
-        BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
-        Query contentsQuery = null;
-        for (String term : searchTerms) {
-            
-            console.log("term: " + term);
-
-//            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
-//            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
-//            bqBuilder.add(wildcardBooleanClause);
-//            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, term.toLowerCase()));
-//            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
-//            bqBuilder.add(wildcardBooleanClause);
-//            
-//            bqBuilder.add(new BooleanClause(new TermQuery(new Term(FIELD_NAME, term.toLowerCase())), BooleanClause.Occur.SHOULD));
-
-//            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, term.toLowerCase());
-//            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer()).createPhraseQuery(FIELD_CONTENTS, term.toLowerCase());
-//            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
-//
-//            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(term.toLowerCase());
-//            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
-
-
-//            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(term.toLowerCase());
-//            bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.SHOULD));
-//
-//            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(term.toLowerCase());
-//            bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
-
-              MultiFieldQueryParser multiFieldQueryParser = new MultiFieldQueryParser(new String[]{FIELD_NAME, FIELD_CONTENTS}, perFieldAnalyzerWrapper);
-              return multiFieldQueryParser.parse(term);
-              
-        }
-        return bqBuilder.build();
-    }
-
   //**************************************************************************
   //** getTopDocs
   //**************************************************************************
     private List<ResultWrapper> getTopDocs(List<String> searchTerms, Integer limit) throws Exception {
         List<ResultWrapper> results = new ArrayList<>();
-
-
+        
+        String searchTerm = searchTerms.get(0);
       //Compile query
-        BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
-        Query contentsQuery = null;
-        for (String term : searchTerms) {
-            
-            console.log("term: " + term);
-            console.log("escaped term: " + QueryParser.escape(term));
-
-            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
-            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
-            bqBuilder.add(wildcardBooleanClause);
-
-            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
-
-            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
-
-            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.SHOULD));
-
-            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
-        }
+//        BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
+//        Query contentsQuery = null;
+//        for (String term : searchTerms) {
+//            
+//            console.log("term: " + term);
+//            console.log("escaped term: " + QueryParser.escape(term));
+//
+//            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
+//            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
+//            bqBuilder.add(wildcardBooleanClause);
+//
+//            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
+//
+//            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
+//
+//            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.SHOULD));
+//
+//            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
+//        }
 //        BooleanQuery bbq = bqBuilder.build();
 
-        Query bbq = queryNoEscape(searchTerms, limit);
+        Query query = new MultiFieldQueryParser(new String[]{FIELD_NAME, FIELD_CONTENTS, FIELD_KEYWORDS, FIELD_SUBJECT}, perFieldAnalyzerWrapper).parse(searchTerm);
 
       //Execute search
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher==null) return results;
         if (limit==null || limit<1) limit = 10;
-        TopDocs hits = searcher.search(bbq, limit);
-        console.log("Hits: " + hits.totalHits.value + " search term: ", searchTerms);
+        TopDocs hits = searcher.search(query, limit);
+        console.log("Hits: " + hits.totalHits.value + " -- search_term: ", searchTerms);
 
 
       //Create highlighter
-        QueryScorer scorer = new QueryScorer(bbq);
+        QueryScorer scorer = new QueryScorer(query);
         Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter(), scorer);
         highlighter.setTextFragmenter(new SimpleFragmenter( FRAGMENT_CHAR_SIZE));
 
-        QueryScorer phraseScorer = new QueryScorer(bbq);
+        QueryScorer phraseScorer = new QueryScorer(query);
         phraseScorer.setExpandMultiTermQuery(false);
         Highlighter phraseHighlighter = new Highlighter(new SimpleHTMLFormatter(), phraseScorer);
         phraseHighlighter.setTextFragmenter(new SimpleSpanFragmenter(phraseScorer, FRAGMENT_CHAR_SIZE));
@@ -361,7 +291,7 @@ public class FileIndex {
             resultWrapper.scoreDoc = scoreDoc;
             int docid = scoreDoc.doc;
             Document doc = searcher.doc(docid);
-            Explanation ex = searcher.explain(bbq, docid);
+            Explanation ex = searcher.explain(query, docid);
             JSONArray explainDetails = new JSONArray();
             for(Explanation explanation : ex.getDetails()) {
                 JSONArray explains = parse(explanation);
@@ -378,7 +308,7 @@ public class FileIndex {
                 IndexableField field = doc.getField(FIELD_CONTENTS);
                 String fragment = getHighlights(field, doc, phraseHighlighter);
                 if(fragment == null) {
-                    fragment = getVectorHighlight(contentsQuery, searcher.getIndexReader(), docid, FIELD_CONTENTS, term);
+                    fragment = getVectorHighlight(query, searcher.getIndexReader(), docid, FIELD_CONTENTS, term);
                 }
                 resultWrapper.highlightFragment = fragment;
 
