@@ -824,6 +824,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var addImportance = function(page, amount, suspPair){
             importance_pages[page].importance += amount;
             importance_pages[page].pairs.push(suspPair);
+          // get average importance
+            importance_pages[page].averageImportance = Math.round(importance_pages[page].importance/importance_pages[page].pairs.length);
         };
 
         var sortByImportance = function(){
@@ -832,7 +834,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             var dict = importance_pages;
 
             var items = Object.keys(dict).map(function(key) {
-                return [key, dict[key].importance];
+                return [key, dict[key].averageImportance];
             });
 
             items.sort(function(first, second) {
@@ -1216,8 +1218,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             console.log("logging string of tag to console above");
             console.log(tag.importance);
             console.log("logging this similarities importance value above");
-            console.log(tag.img.getTotalImportance());
-            console.log("logging total importance value for this pages similarities above");
+            console.log(tag.img.getAverageImportance());
+            console.log("logging average importance value for this pages similarities above");
             this.matchingD.highlight();
             this.matchingTag.hide();
             this.tooltip.innerText = this.type;
@@ -1309,14 +1311,14 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
 
 
       //Function used to create an image
-        var createPreview = function(file, page, parent, boxes, totalImportance, matchingImg){
+        var createPreview = function(file, page, parent, boxes, averageImportance, matchingImg){
             parent.innerHTML = "";
             var i = document.createElement("i");
             i.className = "fas fa-file";
             parent.appendChild(i);
             var img = document.createElement("img");
             img.src = "document/thumbnail?documentID="+file.document_id+"&page="+page;
-            img.totalImportance = totalImportance;
+            img.averageImportance = averageImportance;
 
             if (matchingImg){
                 img.matchingImg = matchingImg;
@@ -1400,8 +1402,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         tag.string = box.string;
                         tag.importance = box.importance;
 
-                        img.getTotalImportance = function(){
-                            return this.totalImportance;
+                        img.getAverageImportance = function(){
+                            return this.averageImportance;
                         };
 
                         img.d.push(d);
@@ -1462,7 +1464,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                             images[j].matchingImg = img.matchingImg;
                             images[j].isFirstDocument = img.isFirstDocument;
                             images[j].LoadOverlay = img.LoadOverlay;
-                            images[j].totalImportance = img.totalImportance;
+                            images[j].averageImportance = img.averageImportance;
                             arr.push(images[j]);
                         }
                     }
@@ -1549,13 +1551,11 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                         rightBoxes.push(rightBox);
                     }
                 });
-                var totalImportance = results.importancePages[leftPage].importance;
-                console.log("logging total importance object");
-                console.log(results.importancePages);
+                var averageImportance = results.importancePages[leftPage].averageImportance;
                 title.innerText = "Page " + (pageIndex+1) + " of " + totalPages;
                 subtitle.innerText = suspiciousPairs.length + " similarit" + (suspiciousPairs.length>1 ? "ies" : "y");
-                var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes, totalImportance);
-                createPreview(rightFile, rightPage, rightPanel, rightBoxes, totalImportance, leftSideImg);
+                var leftSideImg = createPreview(leftFile, leftPage, leftPanel, leftBoxes, averageImportance);
+                createPreview(rightFile, rightPage, rightPanel, rightBoxes, averageImportance, leftSideImg);
 
                 leftFooter.innerText = "Page " + leftPage + " of " + leftFile.n_pages + " " + leftFile.filename;
                 rightFooter.innerText = "Page " + rightPage + " of " + rightFile.n_pages + " " + rightFile.filename;
