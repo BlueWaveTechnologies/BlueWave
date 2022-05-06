@@ -1,4 +1,5 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.admin) bluewave.admin={};
 
 //******************************************************************************
 //**  ComparisonAdmin
@@ -8,12 +9,18 @@ if(!bluewave) var bluewave={};
  *
  ******************************************************************************/
 
-bluewave.ComparisonAdmin = function(parent, config) {
+bluewave.admin.ComparisonAdmin = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
 
     };
+
+    var messageDiv;
+    var cacheInfo;
+    var waitmask;
+
+
 
   //**************************************************************************
   //** Constructor
@@ -23,7 +30,8 @@ bluewave.ComparisonAdmin = function(parent, config) {
       //Parse config
         config = merge(config, defaultConfig);
         if (!config.style) config.style = javaxt.dhtml.style.default;
-
+        if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
+        waitmask = config.waitmask;
 
       //Create main table
         var table = createTable();
@@ -62,6 +70,8 @@ bluewave.ComparisonAdmin = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
+        cacheInfo.clear();
+        messageDiv.innerHTML = "";
     };
 
 
@@ -70,6 +80,29 @@ bluewave.ComparisonAdmin = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         me.clear();
+
+
+
+//        get("document/count", {
+//            success: function(numDocuments){
+                var numDocuments = 0;
+                cacheInfo.addRow("Index", numDocuments, function(el){
+
+                    if (waitmask) waitmask.show();
+
+                    get("/document/RefreshDocumentIndex", {
+                        success: function(status){
+                          showMessage(true, JSON.parse(status));
+                        },
+                        failure: function(){
+                          showMessage(false);
+                        }
+                    });
+
+                });
+//            }
+//        });
+
     };
 
 
@@ -82,13 +115,16 @@ bluewave.ComparisonAdmin = function(parent, config) {
         parent.appendChild(div);
 
         var icon = document.createElement("div");
-        icon.className = "fas fa-file-import noselect";
+        icon.className = "fas fa-not-equal noselect";
         div.appendChild(icon);
 
         var title = document.createElement("div");
         title.innerHTML = "Document Comparison Settings";
         div.appendChild(title);
 
+
+        messageDiv = document.createElement("div");
+        div.appendChild(messageDiv);
     };
 
 
@@ -96,98 +132,89 @@ bluewave.ComparisonAdmin = function(parent, config) {
   //** createPanels
   //**************************************************************************
     var createPanels = function(parent){
-        createButtonPanel(parent);
-    };
-
-  //**************************************************************************
-  //** createButtonPanel
-  //**************************************************************************
-    var createButtonPanel = function(parent){
-        var refreshButton;
-
-        var buttonsDiv = document.createElement("div");
-        buttonsDiv.className = "document-analysis-button-bar";
-        buttonsDiv.style.bottom = "10px";
-        parent.appendChild(buttonsDiv);
-
-        var leftSideButtons = document.createElement("div");
-        leftSideButtons.style.left = "0px";
-        leftSideButtons.style.position = "absolute";
-
-        buttonsDiv.appendChild(leftSideButtons);
-        var messageDiv = document.createElement("div");
-
-        var showMessage = function(success, status){
-          messageDiv.innerHTML = "";
-
-          var div = messageDiv;
-          if (success){
-              div.style.color = "green";
-              var divInnerMsg = "Success!";
-              if (status){
-                  divInnerMsg = divInnerMsg + " Added new documents.";
-              }
-              else {
-                  divInnerMsg = divInnerMsg + " Documents up-to-date.";
-              };
-
-          }
-          else {
-              div.style.color = "red";
-              divInnerMsg = "Failed to update index";
-          }
-          div.innerText = divInnerMsg;
-          leftSideButtons.appendChild(messageDiv);
-          refreshButton.enable();
-
-      };
-
-  //Add refresh document index button
-      refreshButton = createButton("Refresh Document Index", leftSideButtons);
-      refreshButton.style.width = "200px";
-      refreshButton.enable();
-      refreshButton.onclick = function(){
-          this.disable();
-         // hit the API endpoint, and show the respective message
-          get("/document/RefreshDocumentIndex", {
-              success: function(status){
-                showMessage(true, JSON.parse(status));
-              },
-              failure: function(){
-                showMessage(false);
-              }
-          });
-      };
+        createCacheInfo(parent);
     };
 
 
+  //**************************************************************************
+  //** createCacheInfo
+  //**************************************************************************
+    var createCacheInfo = function(parent){
+        cacheInfo = createDashboardItem(parent, {
+            width: 360,
+            height: 230,
+            title: "Document Cache"
+        });
 
-  //**************************************************************************
-  //** createButton
-  //**************************************************************************
-    var createButton = function(label, parent){
-        var input = document.createElement('input');
-        input.className = "form-button";
-        input.type = "button";
-        input.name = label;
-        input.value = label;
-        input.disabled = true;
-        input.disable = function(){
-            this.disabled = true;
+
+        cacheInfo.innerDiv.style.verticalAlign = "top";
+        cacheInfo.innerDiv.style.padding = "10px 0 0 0";
+
+
+        var table = createTable();
+        //table.style.width = "";
+        table.style.height = "";
+        var tbody = table.firstChild;
+        var tr, td;
+        cacheInfo.innerDiv.appendChild(table);
+
+        cacheInfo.addRow = function(label, value, callback){
+            tr = document.createElement("tr");
+            tbody.appendChild(tr);
+
+            td = document.createElement("td");
+            td.className = "form-label noselect";
+            td.style.paddingRight = "10px";
+            td.innerHTML = label + ":";
+            tr.appendChild(td);
+
+            td = document.createElement("td");
+            td.className = "form-label";
+            td.style.width = "100%";
+            td.innerHTML = value;
+            tr.appendChild(td);
+            var v = td;
+
+
+            td = document.createElement("td");
+            td.innerHTML = '<i class="fas fa-sync"></i>';
+            td.onclick = function(){
+                if (callback) callback.apply(me, [v]);
+            };
+            tr.appendChild(td);
         };
-        input.enable = function(){
-            this.disabled = false;
+
+
+        cacheInfo.clear = function(){
+            tbody.innerHTML = "";
         };
-        input.setText = function(label){
-            this.name = label;
-            this.value = label;
-        };
-        input.getText = function(){
-            return this.value;
-        };
-        parent.appendChild(input);
-        return input;
+
     };
+
+
+    var showMessage = function(success, status){
+        if (waitmask) waitmask.show();
+        messageDiv.innerHTML = "";
+
+        var div = messageDiv;
+        if (success){
+            div.style.color = "green";
+            var divInnerMsg = "Success!";
+            if (status){
+                divInnerMsg = divInnerMsg + " Added new documents.";
+            }
+            else {
+                divInnerMsg = divInnerMsg + " Documents up-to-date.";
+            };
+
+        }
+        else {
+            div.style.color = "red";
+            divInnerMsg = "Failed to update index";
+        }
+        div.innerText = divInnerMsg;
+    };
+
 
 
   //**************************************************************************
@@ -197,5 +224,8 @@ bluewave.ComparisonAdmin = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var createDashboardItem = bluewave.utils.createDashboardItem;
+
+
     init();
 };
