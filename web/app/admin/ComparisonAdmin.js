@@ -125,6 +125,8 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
 
         messageDiv = document.createElement("div");
         div.appendChild(messageDiv);
+        parent.style.paddingBottom = "5px"; // add padding to keep the message out from behind the dashboard item
+
     };
 
 
@@ -213,6 +215,7 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
             divInnerMsg = "Failed to update index";
         }
         div.innerText = divInnerMsg;
+        if (waitmask) waitmask.hide();
     };
 
 
