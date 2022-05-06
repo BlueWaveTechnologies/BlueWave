@@ -1220,6 +1220,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             console.log("logging total importance value for this pages similarities above");
             this.matchingD.highlight();
             this.matchingTag.hide();
+            this.d.highlight();
+            this.hide();
             this.tooltip.innerText = this.type;
         };
 
@@ -1228,6 +1230,8 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
             if (!this.matchingD.isSelected){
                 this.matchingD.clear();
                 this.matchingTag.show();
+                this.show();
+                this.d.clear();
             }
         };
 
