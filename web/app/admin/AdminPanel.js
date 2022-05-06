@@ -93,6 +93,7 @@ bluewave.AdminPanel = function(parent, config) {
             }
         });
         createPanel("Graph", "fas fa-share-alt", bluewave.GraphAdmin, config);
+        createPanel("Comparison", "fas fa-file-import", bluewave.ComparisonAdmin, config);
         createPanel("Config", "fas fa-sliders-h", bluewave.ConfigAdmin, config);
         //createPanel("Base Map", "fas fa-baseMap", bluewave.MapAdmin, config);
 
