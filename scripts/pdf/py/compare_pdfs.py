@@ -9,7 +9,7 @@ import get_file_data
 import compare_pdfs_util
 import importance_score
 
-VERSION = "1.6.3"
+VERSION = "1.6.4"
 
 
 

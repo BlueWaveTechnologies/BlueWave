@@ -6,6 +6,7 @@ def main(suspicious_pairs):
     import numpy as np
     import re
     import os
+    import scipy.sparse
 
     datadir = compare_pdfs_util.get_datadir()
     try:
@@ -64,6 +65,11 @@ def main(suspicious_pairs):
 
         # take avg
         importance = 0.5*(ml_importance_100 + calc_importance)
+
+        # Special rule for tables with lots of zeros
+        n_zeros = txt.count('0')
+        if n_zeros / (n_zeros + deci_count + 1) > 0.90:
+            importance = importance - 45
 
         # to int
         importance = int(round(importance))
