@@ -94,51 +94,8 @@ public class DocumentService extends WebService {
             @Override
             public void run() {
                 try{
-
-                  //Instantiate index
                     index = new FileIndex(Config.getIndexDir());
-
-
-                  //Remove any docs that might have been moved or deleted from the upload directory
-                    for (bluewave.app.Document doc : bluewave.app.Document.find()){
-                        bluewave.app.File f = doc.getFile();
-                        javaxt.io.Directory dir = new javaxt.io.Directory(f.getPath().getDir());
-                        javaxt.io.File file = new javaxt.io.File(dir, f.getName());
-                        if (!file.exists()){
-
-
-                          //Remove any document comparisons associated with the file
-                            Long docId = doc.getID();
-                            Map<String, Long> constraints = new HashMap<>();
-                            constraints.put("a_id=", docId);
-                            constraints.put("b_id=", docId);
-                            for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find(constraints)){
-                                dc.delete();
-                            }
-
-
-                          //Remove document from the database
-                            doc.delete();
-
-
-                          //Remove from index
-                            index.removeFile(file);
-                        }
-                    }
-
-
-                  //Add new documents to the index
-                    HashMap<javaxt.io.Directory, bluewave.app.Path> paths = new HashMap<>();
-                    for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
-                        javaxt.io.Directory dir = file.getDirectory();
-                        bluewave.app.Path path = paths.get(dir);
-                        if (path==null) path = getOrCreatePath(dir);
-                        if (path!=null){
-                            paths.put(dir, path);
-                            pool.add(new Object[]{file, path});
-                        }
-                    }
-
+                    updateIndex();
                 }
                 catch(Exception e){
                     e.printStackTrace();
@@ -203,7 +160,7 @@ public class DocumentService extends WebService {
             if (method.equals("GET")){
                 if (request.hasParameter("id")){
                     return getFile(request, user);
-                }              
+                }
                 else{
                     return getDocuments(request, database);
                 }
@@ -224,6 +181,16 @@ public class DocumentService extends WebService {
         else{
             return super.getServiceResponse(request, database);
         }
+    }
+
+
+  //**************************************************************************
+  //** getCount
+  //**************************************************************************
+  /** Returns the total number of documents in the index
+   */
+    public ServiceResponse getCount(ServiceRequest request, Database database) throws ServletException {
+        return new ServiceResponse(index.getSize()+"");
     }
 
 
@@ -1304,45 +1271,78 @@ public class DocumentService extends WebService {
         }
     }
 
+
+  //**************************************************************************
+  //** getRemoteSearchStatus
+  //**************************************************************************
     public ServiceResponse getRemoteSearchStatus(ServiceRequest request, Database database) throws ServletException {
         Boolean remoteSearch = Config.get("webserver").get("remoteSearch").toBoolean();
         return new ServiceResponse(remoteSearch == null ? "false" : remoteSearch +"");
     }
-    
-    public ServiceResponse getRefreshDocumentIndex(ServiceRequest request, Database database) throws ServletException {
-        boolean filesIndexed = false;
-        try {
-           javaxt.io.Directory uploadDir = getUploadDir();
-           if(index == null) index = new FileIndex(Config.getIndexDir());
-        
-           for(Object objFile : uploadDir.getChildren(true)) {
-               if(objFile instanceof javaxt.io.File) {
-                    javaxt.io.File file = (javaxt.io.File) objFile;
-                    if(!index.hasFile(file)) {
-                         javaxt.io.Directory dir = file.getDirectory();
-                         bluewave.app.Path path = getOrCreatePath(dir);
 
-                         bluewave.app.File f = getOrCreateFile(file, path);
-                         bluewave.app.Document doc = getOrCreateDocument(f);
-                         String indexStatus = doc.getIndexStatus();
-                         if (indexStatus==null){
-                             try{
-                                 index.addDocument(doc, file);
-                                 doc.setIndexStatus("indexed");
-                                 filesIndexed = true;
-                             }
-                             catch(Exception e){
-                                 doc.setIndexStatus("failed");
-                             }
-                             doc.save();
-                         }
-                    }
-               }
-           }
-           
-        }catch(Exception e) {
-           e.printStackTrace();
+
+  //**************************************************************************
+  //** getRefreshDocumentIndex
+  //**************************************************************************
+    public ServiceResponse getRefreshDocumentIndex(ServiceRequest request, Database database) throws ServletException {
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(401, "Not Authorized");
+        try {
+           updateIndex();
+           return new ServiceResponse(200);
         }
-        return new ServiceResponse(filesIndexed+"");
+        catch(Exception e) {
+           return new ServiceResponse(e);
+        }
+    }
+
+
+  //**************************************************************************
+  //** updateIndex
+  //**************************************************************************
+  /** Used to add/remove items from the index
+   */
+    private void updateIndex() throws Exception {
+
+      //Remove any docs that might have been moved or deleted from the upload directory
+        for (bluewave.app.Document doc : bluewave.app.Document.find()){
+            bluewave.app.File f = doc.getFile();
+            javaxt.io.Directory dir = new javaxt.io.Directory(f.getPath().getDir());
+            javaxt.io.File file = new javaxt.io.File(dir, f.getName());
+            if (!file.exists()){
+
+
+              //Remove any document comparisons associated with the file
+                Long docId = doc.getID();
+                Map<String, Long> constraints = new HashMap<>();
+                constraints.put("a_id=", docId);
+                constraints.put("b_id=", docId);
+                for (bluewave.app.DocumentComparison dc : bluewave.app.DocumentComparison.find(constraints)){
+                    dc.delete();
+                }
+
+
+              //Remove document from the database
+                doc.delete();
+
+
+              //Remove from index
+                index.removeFile(file);
+            }
+        }
+
+
+      //Add new documents to the index
+        HashMap<javaxt.io.Directory, bluewave.app.Path> paths = new HashMap<>();
+        for (javaxt.io.File file : getUploadDir().getFiles("*.pdf", true)){
+            javaxt.io.Directory dir = file.getDirectory();
+            bluewave.app.Path path = paths.get(dir);
+            if (path==null) path = getOrCreatePath(dir);
+            if (path!=null){
+                paths.put(dir, path);
+                pool.add(new Object[]{file, path});
+            }
+        }
+
     }
 }
