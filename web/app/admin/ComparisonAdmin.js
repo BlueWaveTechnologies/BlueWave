@@ -12,13 +12,11 @@ if(!bluewave.admin) bluewave.admin={};
 bluewave.admin.ComparisonAdmin = function(parent, config) {
 
     var me = this;
-    var defaultConfig = {
-
-    };
-
+    var defaultConfig = {};
     var messageDiv;
     var cacheInfo;
     var waitmask;
+    var ws;
 
 
 
@@ -72,6 +70,11 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
     this.clear = function(){
         cacheInfo.clear();
         messageDiv.hide();
+
+        if (ws){
+            ws.stop();
+            ws = null;
+        }
     };
 
 
@@ -81,6 +84,21 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
     this.update = function(){
         me.clear();
         cacheInfo.update();
+
+
+      //Create web socket listener and watch for status updates
+        if (!ws) ws = new javaxt.dhtml.WebSocket({
+            url: "document",
+            onMessage: function(msg){
+                var arr = msg.split(",");
+                var op = arr[0];
+                if (op==="indexUpdate"){
+                    cacheInfo.setCount(parseInt(arr[1]));
+                    cacheInfo.setSize(parseInt(arr[2]));
+                }
+            }
+        });
+
     };
 
 
@@ -197,15 +215,25 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
             infoRow.childNodes[1].innerHTML = "";
         };
 
+        cacheInfo.setCount = function(count){
+            indexRow.childNodes[1].innerHTML = formatNumber(count);
+        };
+
+        cacheInfo.setSize = function(size){
+            if (size<1024) size = "1 KB";
+            else{
+                size = formatNumber(Math.round(size/1024)) + " KB";
+            }
+            infoRow.childNodes[1].innerHTML = size;
+        };
 
         cacheInfo.update = function(){
 
             get("/document/index", {
                 success: function(index){
 
-                    indexRow.childNodes[1].innerHTML = formatNumber(index.count);
-
-
+                    cacheInfo.setSize(index.size);
+                    cacheInfo.setCount(index.count);
 
                     var path = index.path;
                     path = path.replaceAll("\\", "/");
@@ -215,14 +243,6 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
                     var arr = path.split("/");
                     var str = arr[0] + "/... " + "/" + arr[arr.length-2] + "/" + arr[arr.length-1];
                     pathRow.childNodes[1].innerHTML = str;
-
-
-                    var size = index.size;
-                    if (size<1024) size = "1 KB";
-                    else{
-                        size = formatNumber(Math.round(size/1024)) + " KB";
-                    }
-                    infoRow.childNodes[1].innerHTML = size;
                 }
             });
 
