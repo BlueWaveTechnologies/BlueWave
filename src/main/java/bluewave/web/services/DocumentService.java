@@ -56,6 +56,7 @@ public class DocumentService extends WebService {
       //Websocket stuff
         webSocketID = new AtomicLong(0);
         listeners = new ConcurrentHashMap<>();
+        DocumentService me = this;
 
 
       //Start thread pool used to index files
@@ -74,11 +75,13 @@ public class DocumentService extends WebService {
                     if (indexStatus==null && index!=null){
                         try{
                             index.addDocument(doc, file);
-                            doc.setIndexStatus("indexed");
+                            indexStatus = "indexed";
+                            me.notify("indexUpdate," + index.getSize() + "," + Config.getIndexDir().getSize());
                         }
                         catch(Exception e){
-                            doc.setIndexStatus("failed");
+                            indexStatus = "failed";
                         }
+                        doc.setIndexStatus(indexStatus);
                         doc.save();
                     }
                 }
@@ -1335,6 +1338,7 @@ public class DocumentService extends WebService {
 
               //Remove from index
                 index.removeFile(file);
+                notify("indexUpdate," + index.getSize() + "," + Config.getIndexDir().getSize());
             }
         }
 
