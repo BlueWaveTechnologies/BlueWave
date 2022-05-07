@@ -129,12 +129,29 @@ public class FileIndex {
         if(!path.isEmpty()) {
             removeOrphanDocs();
         }
+
+        console.log("Index has " + getSize() + " total docs.");
     }
 
-    public void removeOrphanDocs() {
+
+  //**************************************************************************
+  //** getSize
+  //**************************************************************************
+  /** Return the number of documents in the index
+   */
+    public int getSize() {
+        return instanceOfIndexSearcher().getIndexReader().numDocs();
+    }
+
+
+  //**************************************************************************
+  //** removeOrphanDocs
+  //**************************************************************************
+  /** Used to remove any docs that might have been moved or deleted
+   */
+    private void removeOrphanDocs() {
         //Remove any docs that might have been moved or deleted
         IndexReader reader = instanceOfIndexSearcher().getIndexReader();
-        console.log("Index has " + reader.numDocs() + " total docs.");
         for (int i=0; i<reader.maxDoc(); i++) {
             try {
                 Document doc = reader.document(i);
@@ -491,7 +508,7 @@ public class FileIndex {
         IndexWriter writer = instanceOfIndexWriter();
         writer.addDocument(doc);
         writer.commit();
-        
+
         // NOTE: if you want to maximize search performance,
         // you can optionally call forceMerge here. This can be
         // a terribly costly operation, so generally it's only
@@ -667,5 +684,5 @@ public class FileIndex {
 
         return substring;
     }
-    
+
 }
