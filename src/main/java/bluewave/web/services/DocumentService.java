@@ -185,12 +185,19 @@ public class DocumentService extends WebService {
 
 
   //**************************************************************************
-  //** getCount
+  //** getIndex
   //**************************************************************************
-  /** Returns the total number of documents in the index
+  /** Returns index metadata
    */
-    public ServiceResponse getCount(ServiceRequest request, Database database) throws ServletException {
-        return new ServiceResponse(index.getSize()+"");
+    public ServiceResponse getIndex(ServiceRequest request, Database database) throws ServletException {
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
+        if (user.getAccessLevel()<5) return new ServiceResponse(401, "Not Authorized");
+        javaxt.io.Directory dir = Config.getIndexDir();
+        JSONObject json = new JSONObject();
+        json.set("path", dir.toString());
+        json.set("size", dir.getSize());
+        json.set("count", index.getSize());
+        return new ServiceResponse(json);
     }
 
 
