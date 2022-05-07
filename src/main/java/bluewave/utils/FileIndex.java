@@ -129,8 +129,6 @@ public class FileIndex {
         if(!path.isEmpty()) {
             removeOrphanDocs();
         }
-
-        console.log("Index has " + getSize() + " total docs.");
     }
 
 
