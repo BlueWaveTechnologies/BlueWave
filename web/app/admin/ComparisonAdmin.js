@@ -80,32 +80,7 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
   //**************************************************************************
     this.update = function(){
         me.clear();
-
-
-        get("/document/count", {
-            success: function(numDocuments){
-
-                numDocuments = formatNumber(numDocuments);
-                var tr = cacheInfo.addRow("Total Documents", numDocuments, function(){
-                    if (waitmask) waitmask.show();
-                    get("/document/RefreshDocumentIndex", {
-                        success: function(status){
-                            showMessage(true);
-
-                            get("/document/count", {
-                                success: function(numDocuments){
-                                    tr.childNodes[1].innerHTML = formatNumber(numDocuments);
-                                }
-                            });
-                        },
-                        failure: function(){
-                            showMessage(false);
-                        }
-                    });
-
-                });
-            }
-        });
+        cacheInfo.update();
     };
 
 
@@ -164,7 +139,7 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
         var tr, td;
         cacheInfo.innerDiv.appendChild(table);
 
-        cacheInfo.addRow = function(label, value, callback){
+        var addRow = function(label, value, icon, callback){
             tr = document.createElement("tr");
             tbody.appendChild(tr);
 
@@ -183,20 +158,76 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
 
 
             td = document.createElement("td");
-            td.innerHTML = '<i class="fas fa-sync"></i>';
-            td.onclick = function(){
-                if (callback) callback.apply(me, [v]);
-            };
+            if (icon){
+                td.innerHTML = '<i class="' + icon + '"></i>';
+                td.onclick = function(){
+                    if (callback) callback.apply(me, [v]);
+                };
+            }
             tr.appendChild(td);
 
             return tr;
         };
 
 
+        var indexRow = addRow("Total Documents", 0, "fas fa-sync", function(){
+            if (waitmask) waitmask.show();
+            get("/document/RefreshDocumentIndex", {
+                success: function(status){
+                    showMessage(true);
+                    cacheInfo.update();
+                },
+                failure: function(){
+                    showMessage(false);
+                }
+            });
+        });
+
+
+        var pathRow = addRow("Index Location", "", "far fa-folder", function(){
+            //TODO: folder picker
+        });
+
+        var infoRow = addRow("Index Size", "");
+
+
         cacheInfo.clear = function(){
-            tbody.innerHTML = "";
+            indexRow.childNodes[1].innerHTML = 0;
+            pathRow.childNodes[1].innerHTML = "";
+            infoRow.childNodes[1].innerHTML = "";
         };
 
+
+        cacheInfo.update = function(){
+
+            get("/document/index", {
+                success: function(index){
+
+                    indexRow.childNodes[1].innerHTML = formatNumber(index.count);
+
+
+
+                    var path = index.path;
+                    path = path.replaceAll("\\", "/");
+                    if (path.lastIndexOf("/") === path.length-1){
+                        path = path.substring(0, path.length-1);
+                    }
+                    var arr = path.split("/");
+                    var str = arr[0] + "/... " + "/" + arr[arr.length-2] + "/" + arr[arr.length-1];
+                    pathRow.childNodes[1].innerHTML = str;
+
+
+                    var size = index.size;
+                    if (size<1024) size = "1 KB";
+                    else{
+                        size = formatNumber(Math.round(size/1024)) + " KB";
+                    }
+                    infoRow.childNodes[1].innerHTML = size;
+                }
+            });
+
+
+        };
     };
 
 
