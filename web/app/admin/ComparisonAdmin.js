@@ -71,7 +71,7 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
   //**************************************************************************
     this.clear = function(){
         cacheInfo.clear();
-        messageDiv.innerHTML = "";
+        messageDiv.hide();
     };
 
 
@@ -82,27 +82,30 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
         me.clear();
 
 
+        get("/document/count", {
+            success: function(numDocuments){
 
-//        get("document/count", {
-//            success: function(numDocuments){
-                var numDocuments = 0;
-                cacheInfo.addRow("Index", numDocuments, function(el){
-
+                numDocuments = formatNumber(numDocuments);
+                var tr = cacheInfo.addRow("Total Documents", numDocuments, function(){
                     if (waitmask) waitmask.show();
-
                     get("/document/RefreshDocumentIndex", {
                         success: function(status){
-                          showMessage(true, JSON.parse(status));
+                            showMessage(true);
+
+                            get("/document/count", {
+                                success: function(numDocuments){
+                                    tr.childNodes[1].innerHTML = formatNumber(numDocuments);
+                                }
+                            });
                         },
                         failure: function(){
-                          showMessage(false);
+                            showMessage(false);
                         }
                     });
 
                 });
-//            }
-//        });
-
+            }
+        });
     };
 
 
@@ -125,8 +128,9 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
 
         messageDiv = document.createElement("div");
         div.appendChild(messageDiv);
-        parent.style.paddingBottom = "5px"; // add padding to keep the message out from behind the dashboard item
-
+        parent.style.paddingBottom = "5px";
+        addShowHide(messageDiv);
+        messageDiv.hide();
     };
 
 
@@ -145,7 +149,7 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
         cacheInfo = createDashboardItem(parent, {
             width: 360,
             height: 230,
-            title: "Document Cache"
+            title: "Document Index"
         });
 
 
@@ -184,6 +188,8 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
                 if (callback) callback.apply(me, [v]);
             };
             tr.appendChild(td);
+
+            return tr;
         };
 
 
@@ -194,28 +200,36 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
     };
 
 
+  //**************************************************************************
+  //** showMessage
+  //**************************************************************************
     var showMessage = function(success, status){
-        if (waitmask) waitmask.show();
+        if (waitmask) waitmask.hide();
         messageDiv.innerHTML = "";
 
-        var div = messageDiv;
+
+        var msg = "";
         if (success){
-            div.style.color = "green";
-            var divInnerMsg = "Success!";
+            messageDiv.style.color = "green";
+            msg = "Success!";
             if (status){
-                divInnerMsg = divInnerMsg + " Added new documents.";
+                msg += " " + status + " Added new documents.";
             }
             else {
-                divInnerMsg = divInnerMsg + " Documents up-to-date.";
-            };
-
+                msg += " Documents up-to-date.";
+            }
         }
         else {
-            div.style.color = "red";
-            divInnerMsg = "Failed to update index";
+            messageDiv.style.color = "red";
+            msg = "Failed to update index";
         }
-        div.innerText = divInnerMsg;
-        if (waitmask) waitmask.hide();
+
+
+        messageDiv.innerHTML = msg;
+        messageDiv.show();
+        setTimeout(function(){
+            messageDiv.hide();
+        }, 5000);
     };
 
 
@@ -228,7 +242,7 @@ bluewave.admin.ComparisonAdmin = function(parent, config) {
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-
+    var formatNumber = bluewave.utils.formatNumber;
 
     init();
 };
