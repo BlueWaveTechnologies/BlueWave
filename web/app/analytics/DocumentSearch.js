@@ -130,21 +130,23 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
         };
         searchBar.getSearchTerms = function(q){
             if (!q) q = searchBar.getValue();
-            if (typeof q === 'string'){
-
-                var q = q.split(/"|'/);
-
-                var ignoredSearches = new Set(["", " "]);
-                q = q.filter((queryParam) => {
-                    return !ignoredSearches.has(queryParam);
-                });
-                for (let value in q) q[value] = q[value].trim();
-
-            }
+//            if (typeof q === 'string'){
+//
+//                var q = q.split(new RegExp(/(\-*'.*?'|\-*".*?"|\-*\S+)/, 'g'));
+//
+//                var ignoredSearches = new Set(["", " "]);
+//                q = q.filter((queryParam) => {
+//                    return !ignoredSearches.has(queryParam);
+//                });
+//                for (let value in q) q[value] = q[value].trim();
+//
+//            }
             return q;
         };
         searchBar.onSearch = function(q){
             q = searchBar.getSearchTerms(q);
+            console.log("logging result of regular expression parsing below");
+            console.log(q);
             grid.update(q);
         };
         searchBar.onClear = function(){
@@ -267,7 +269,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                 else{
                     row.set("Name", record.name);
                 }
-                
+
                 var addSpan = function(label){
                     var span = document.createElement("span");
                     span.className = "document-search-info";
@@ -291,7 +293,7 @@ bluewave.analytics.DocumentSearch = function(parent, config) {
                     size = formatNumber(Math.round(size/1024)) + " KB";
                 }
                 row.set("Size", addSpan(size));
-                
+
                 if (record.type) row.set("Type", addSpan(record.type));
             }
         });
