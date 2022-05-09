@@ -1,4 +1,5 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.admin) bluewave.admin={};
 
 //******************************************************************************
 //**  MapAdmin
@@ -8,7 +9,7 @@ if(!bluewave) var bluewave={};
  *
  ******************************************************************************/
 
-bluewave.MapAdmin = function(parent, config) {
+bluewave.admin.MapAdmin = function(parent, config) {
 
     var me = this;
     var defaultConfig = {};
