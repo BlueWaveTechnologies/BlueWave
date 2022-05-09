@@ -1022,7 +1022,7 @@ bluewave.Application = function(parent, config) {
                 backButton.hide();
                 nextButton.hide();
                 me.setTitle(label);
-                if (!adminPanel) adminPanel = new bluewave.AdminPanel(body, config);
+                if (!adminPanel) adminPanel = new bluewave.admin.AdminPanel(body, config);
                 adminPanel.update();
                 adminPanel.show();
             }));
@@ -1038,7 +1038,7 @@ bluewave.Application = function(parent, config) {
       //Show/hide menu items based on current app
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
         var isExplorerVisible = (currApp instanceof bluewave.Explorer);
-        var isAdminVisible = (currApp instanceof bluewave.AdminPanel);
+        var isAdminVisible = (currApp instanceof bluewave.admin.AdminPanel);
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
 
