@@ -133,10 +133,25 @@ public class FileIndex {
         }
     }
 
-    public void removeOrphanDocs() {
+
+  //**************************************************************************
+  //** getSize
+  //**************************************************************************
+  /** Return the number of documents in the index
+   */
+    public int getSize() {
+        return instanceOfIndexSearcher().getIndexReader().numDocs();
+    }
+
+
+  //**************************************************************************
+  //** removeOrphanDocs
+  //**************************************************************************
+  /** Used to remove any docs that might have been moved or deleted
+   */
+    private void removeOrphanDocs() {
         //Remove any docs that might have been moved or deleted
         IndexReader reader = instanceOfIndexSearcher().getIndexReader();
-        console.log("Index has " + reader.numDocs() + " total docs.");
         for (int i=0; i<reader.maxDoc(); i++) {
             try {
                 Document doc = reader.document(i);
@@ -371,7 +386,7 @@ public class FileIndex {
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
-            if (_indexWriter == null) {
+            if (_indexWriter == null || !_indexWriter.isOpen()) {
                 try {
                    IndexWriterConfig iwc = new IndexWriterConfig(perFieldAnalyzerWrapper);
                     iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
@@ -672,4 +687,5 @@ public class FileIndex {
 
         return substring;
     }
+
 }
