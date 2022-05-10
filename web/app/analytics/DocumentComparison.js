@@ -1454,6 +1454,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var getImages = function(img){
             var arr = [];
             carousel.getPanels().forEach((panel)=>{
+                if (!panel.isVisible){
+                    return;
+                }
                 var panels = panel.div.getElementsByClassName("doc-compare-panel");
                 for (var i=0; i<panels.length; i++){
                     var images = panels[i].getElementsByTagName("img");
