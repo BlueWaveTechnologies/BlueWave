@@ -61,6 +61,7 @@ public class Config {
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
         updateDir("scriptDir", webConfig, configFile, false);
+        updateDir("pluginDir", webConfig, configFile, false);
         updateFile("keystore", webConfig, configFile);
 
 
