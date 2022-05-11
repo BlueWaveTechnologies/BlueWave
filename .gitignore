@@ -7,6 +7,8 @@ web/branding/
 web/test/
 web/images/thumbnails/
 
+plugins/
+
 [Cc]onfig.json
 nb-configuration.xml
 
