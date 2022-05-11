@@ -1279,6 +1279,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Left column
         td = document.createElement("td");
         td.style.height = "100%";
+        td.style.width = "50%";
         td.style.padding = "10px 10px 5px 10px";
         td.style.textAlign = "center";
         tr.appendChild(td);
