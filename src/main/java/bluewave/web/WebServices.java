@@ -439,10 +439,61 @@ public class WebServices extends WebService {
                         NamedNodeMap attr = webservice.getAttributes();
                         String endpoint = getAttributeValue(attr, "endpoint");
                         String className = getAttributeValue(attr, "class");
-                        console.log(endpoint, className);
+                        loadJarFiles(xmlFile.getDirectory(), className, endpoint);
+                        WebService ws = this.webservices.get(endpoint.toLowerCase());
+                        if (ws==null) console.log("Failed to load plugin", endpoint, className);
                     }
                 }
             }
         }
+    }
+
+
+  //**************************************************************************
+  //** loadJarFiles
+  //**************************************************************************
+    private void loadJarFiles(javaxt.io.Directory currDir, String className, String endpoint){
+
+      //Load all the jar files found in the lib directory
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        javaxt.io.Directory libDir = new javaxt.io.Directory(currDir + "lib");
+        for (javaxt.io.File k : libDir.getFiles("*.jar")){
+            try {
+                java.net.URL url = k.toFile().toURI().toURL();
+                Method method = classLoader.getClass().getDeclaredMethod("addURL", java.net.URL.class);
+                method.setAccessible(true);
+                method.invoke(classLoader, url);
+            }
+            catch (Exception e) {
+                try{
+                    Method method = classLoader.getClass().getDeclaredMethod("appendToClassPathForInstrumentation", String.class);
+                    method.setAccessible(true);
+                    method.invoke(classLoader, k.toString());
+                }
+                catch(Exception ex){
+                    ex.toString();
+                }
+            }
+        }
+
+
+      //Load the jar file associated with the className
+        for (javaxt.io.File jarFile : currDir.getFiles("*.jar")){
+            try{
+                java.net.URLClassLoader child = new java.net.URLClassLoader(
+                new java.net.URL[]{jarFile.toFile().toURL()}, Server.class.getClassLoader());
+                WebService ws = (WebService) Class.forName(className, true, child).newInstance();
+
+                synchronized(webservices){
+                    webservices.put(endpoint.toLowerCase(), ws);
+                }
+
+                break;
+            }
+            catch(Exception e){
+
+            }
+        }
+
     }
 }
