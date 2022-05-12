@@ -591,6 +591,11 @@ public class Main {
         else if (test.equalsIgnoreCase("syncUsers")){
             bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
         }
+        else if (test.equalsIgnoreCase("knode")) {
+            Neo4J graph = Config.getGraph(null);
+            Imports.create501KNodes(graph);
+            graph.close();
+        }
         else{
             console.log("Unsupported test: " + test);
         }

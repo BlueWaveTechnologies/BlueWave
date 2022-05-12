@@ -2009,4 +2009,69 @@ public class Imports {
         colName = colName.trim().toLowerCase();
         return colName;
     }
+    
+  //**************************************************************************
+  //** Create k-document node and relation to affirmation and entry line
+  //**************************************************************************
+    
+    public static void create501KNodes(Neo4J graph) {
+        List ids = null;
+        String query = "match (n:import_affirmation{key: 'PM'}) return collect(id(n)) as ids";
+        try(Session session = graph.getSession()){
+            Result result = session.run(query);
+            while(result.hasNext()) {
+                ids = result.next().get("ids").asList();
+            }
+            console.log("affirmations=" + (ids == null ? "null" : ids.size()+""));
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+        
+        // Remove test ***************
+        ids = new ArrayList();
+        ids.add("20852");
+
+        try {
+            AtomicLong recordCounter = new AtomicLong(0);
+            StatusLogger statusLogger = new StatusLogger(recordCounter, new AtomicLong(Long.valueOf(ids.size())));
+
+            ThreadPool pool = new ThreadPool(12){
+                public void process(Object obj){
+                    String affirmationId = obj.toString();
+                    try(Session session = graph.getSession()){
+                      String query = "match(a:import_affirmation),(l:import_line) " +
+                        "where id(a)="+affirmationId+" AND (l)-[]->(a) " +
+                        "with a,l " +
+                        "merge (k:k501{value: a.value}) " +
+                        "merge (l)-[:has]->(k) " +
+                        "merge (a)-[:has]->(k) " +
+                        "return a";
+                      
+                      Result result = session.run(query);
+                    }
+                    catch(Exception e){
+                        console.log(affirmationId);
+                        e.printStackTrace();
+                    }
+                    recordCounter.incrementAndGet();
+                }
+            }.start();
+
+            Iterator iter = ids.iterator();
+            while(iter.hasNext()) 
+                pool.add(iter.next());
+
+          //Notify the pool that we have finished added records and Wait for threads to finish
+            pool.done();
+            pool.join();
+
+
+          //Clean up
+            statusLogger.shutdown();
+
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
