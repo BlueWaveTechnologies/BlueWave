@@ -1,4 +1,5 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.admin) bluewave.admin={};
 
 //******************************************************************************
 //**  AdminPanel
@@ -8,7 +9,7 @@ if(!bluewave) var bluewave={};
  *
  ******************************************************************************/
 
-bluewave.AdminPanel = function(parent, config) {
+bluewave.admin.AdminPanel = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
@@ -92,9 +93,10 @@ bluewave.AdminPanel = function(parent, config) {
                 }
             }
         });
-        createPanel("Graph", "fas fa-share-alt", bluewave.GraphAdmin, config);
-        createPanel("Config", "fas fa-sliders-h", bluewave.ConfigAdmin, config);
-        //createPanel("Base Map", "fas fa-baseMap", bluewave.MapAdmin, config);
+        createPanel("Graph", "fas fa-share-alt", bluewave.admin.GraphAdmin, config);
+        createPanel("Config", "fas fa-sliders-h", bluewave.admin.ConfigAdmin, config);
+        createPanel("Base Map", "fas fa-globe-americas", bluewave.admin.MapAdmin, config);
+        createPanel("Comparison", "fas fa-not-equal", bluewave.admin.ComparisonAdmin, config);
 
         me.el = table;
         addShowHide(me);
