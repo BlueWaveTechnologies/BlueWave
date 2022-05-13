@@ -937,6 +937,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 img.onload = function(){
                     img = this;
                     clearOverlay();
+                    if (currPair<0){
+                        carousel.getPanels().forEach((panel)=>{
+                            if (panel.isVisible){
+                                panel.div.removeChild(panel.div.firstChild);
+                                panel.div.appendChild(summaryPanel.el);
+                                navbar.hide();
+                                return;
+                            };
+                        });
+                    };
                     setTimeout(function(){
                         getImages(img).forEach((rightImage)=>{
                             getImages(rightImage.matchingImg).forEach((leftImage)=>{
