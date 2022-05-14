@@ -103,8 +103,29 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(inputs, layout){
+    this.update = function(node){
         me.clear();
+
+
+      //Get data
+        var inputs = {};
+        for (var inputID in node.inputs) {
+            if (node.inputs.hasOwnProperty(inputID)){
+                var inputNode = node.inputs[inputID];
+                inputs[inputID] = {
+                    title: inputNode.config.chartTitle,
+                    image: inputNode.preview,
+                    type: inputNode.type
+                };
+            }
+        }
+
+
+      //Get config
+        var chartConfig = {};
+        merge(chartConfig, node.config);
+        var layout = chartConfig;
+
 
 
         mainDiv.style.height = "";
@@ -590,6 +611,7 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var merge = javaxt.dhtml.utils.merge;
     var round = javaxt.dhtml.utils.round;
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
