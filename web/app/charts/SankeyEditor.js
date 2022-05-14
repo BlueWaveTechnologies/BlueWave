@@ -181,10 +181,13 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(sankeyConfig, inputs){
+    this.update = function(node){
         me.clear();
+        
+      //Get chart config
+        var sankeyConfig = {};
+        merge(sankeyConfig, node.config);
 
-        if (!sankeyConfig) sankeyConfig = {};
 
       //Clone the config so we don't modify the original config object
         sankeyConfig = JSON.parse(JSON.stringify(sankeyConfig));
@@ -204,32 +207,15 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
 
       //Special case when inputs are present (e.g. from SupplyChain editor)
-        if (inputs && inputs.length){
+        if (node.config.nodes && node.config.quantities){
+            
+            
+            nodes = node.config.nodes;
+            quantities = node.config.quantities;
+            
            
           //Hide the toggle button
             toggleButton.hide();
-            
-            
-          //Generate data to mimic what we need to generate a sankey using drawflow 
-            var input = inputs[0];
-            for (var nodeID in input.nodes) {
-                if (input.nodes.hasOwnProperty(nodeID)){
-                    var node = input.nodes[nodeID];
-                    node.inputs = {};
-                    nodes[nodeID] = node;
-                }
-            }
-            for (var linkID in input.links) {
-                if (input.links.hasOwnProperty(linkID)){
-                    var link = input.links[linkID];
-                    quantities[linkID] = link.quantity;
-                    
-                    var arr = linkID.split("->");
-                    var sourceID = arr[0];
-                    var targetID = arr[1];
-                    nodes[targetID].inputs[sourceID] = {};
-                }
-            }
             
             
             
@@ -540,6 +526,20 @@ bluewave.charts.SankeyEditor = function(parent, config) {
     this.getChart = function(){
         if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
+    };
+    
+
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+  /** Used to render a sankey chart in a given dom element using the current
+   *  chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.SankeyChart(parent, config.sankey);
+        var data = me.getSankeyData();
+        chart.update(config.sankey.style, data);
+        return chart;
     };
     
     
