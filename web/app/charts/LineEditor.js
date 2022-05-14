@@ -10,7 +10,17 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.LineEditor = function(parent, config) {
+    
     var me = this;
+    var defaultConfig = {
+        panel: {
+
+        },
+        chart: {
+
+        }
+    };
+    
     var panel;
     var inputData = [];
     var previewArea;
@@ -105,18 +115,27 @@ bluewave.charts.LineEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(config, inputs){
+    this.update = function(node){
         me.clear();
 
-        for (var i=0; i<inputs.length; i++){
-            var input = inputs[i];
-            if (input!=null) inputs[i] = d3.csvParse(input);
+      //Get chart config
+        chartConfig = merge(node.config, config.chart);
+        
+        
+      //Get input data
+        inputData = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if (typeof csv === "string"){
+                    inputData.push(d3.csvParse(csv));
+                }
+            }
         }
-        inputData = inputs;
 
 
-        if (config) chartConfig = config;
 
+      //Create layers
         var addLayer = function(){
             chartConfig.layers.push({
                 line: {fill:{}, point:{}}
@@ -125,20 +144,21 @@ bluewave.charts.LineEditor = function(parent, config) {
 
         if (!chartConfig.layers){
             chartConfig.layers = [];
-            for (var i=0; i<inputs.length; i++){
+            for (var i=0; i<inputData.length; i++){
                 addLayer();
             }
         }
         else{
-            if (chartConfig.layers.length<inputs.length){
-                var start = inputs.length-chartConfig.layers.length;
-                for (var i=start; i<inputs.length; i++){
+            if (chartConfig.layers.length<inputData.length){
+                var start = inputData.length-chartConfig.layers.length;
+                for (var i=start; i<inputData.length; i++){
                     addLayer();
                 }
             }
         }
+        
 
-
+      //Set title
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
@@ -184,8 +204,21 @@ bluewave.charts.LineEditor = function(parent, config) {
     this.getChart = function(){
         return previewArea;
     };
+    
 
-
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+  /** Used to render a line chart in a given dom element using the current
+   *  chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.LineChart(parent, {});
+        createLinePreview(chart);
+        return chart;
+    };
+    
+    
   //**************************************************************************
   //** createOptions
   //**************************************************************************
@@ -225,7 +258,7 @@ bluewave.charts.LineEditor = function(parent, config) {
             }
         }
 
-        createLinePreview();
+        createLinePreview(lineChart);
     };
 
 
@@ -346,7 +379,7 @@ bluewave.charts.LineEditor = function(parent, config) {
             }
 
 
-            createLinePreview();
+            createLinePreview(lineChart);
         };
     };
 
@@ -389,7 +422,7 @@ bluewave.charts.LineEditor = function(parent, config) {
   //**************************************************************************
   //** createLinePreview
   //**************************************************************************
-    var createLinePreview = function(){
+    var createLinePreview = function(lineChart){
 
         lineChart.clear();
         lineChart.setConfig(chartConfig);
@@ -685,7 +718,7 @@ bluewave.charts.LineEditor = function(parent, config) {
             if (chartConfig.xLabel) chartConfig.xLabel = chartConfig.layers[0].xAxis;
             if (chartConfig.yLabel) chartConfig.yLabel = chartConfig.layers[0].yAxis;
             chartConfig.xTicks = settings.xTicks;
-            createLinePreview();
+            createLinePreview(lineChart);
         };
 
 

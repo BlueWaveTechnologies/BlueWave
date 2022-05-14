@@ -10,7 +10,18 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.HistogramEditor = function(parent, config) {
+    
     var me = this;
+    var defaultConfig = {
+        panel: {
+
+        },
+        chart: {
+
+        }
+    };
+    
+    
     var panel;
     var inputData = [];
     var svg;
@@ -26,6 +37,10 @@ bluewave.charts.HistogramEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
+        
+        if (!config) config = {};
+        config = merge(config, defaultConfig);
+        chartConfig = config.chart;
 
 
         let table = createTable();
@@ -102,19 +117,28 @@ bluewave.charts.HistogramEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(config, inputs){
+    this.update = function(node){
         me.clear();
 
-        for (var i=0; i<inputs.length; i++){
-            var input = inputs[i];
-            if (input!=null) inputs[i] = d3.csvParse(input);
-        }
-        inputData = inputs;
 
-
-        if (config) chartConfig = config;
+      //Get chart config
+        chartConfig = merge(node.config, config.chart);
         chartConfig.barType = "histogram";
+        
+        
+      //Get input data
+        inputData = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if (typeof csv === "string"){
+                    inputData.push(d3.csvParse(csv));
+                }
+            }
+        }
 
+
+      //Set title
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
@@ -161,6 +185,19 @@ bluewave.charts.HistogramEditor = function(parent, config) {
         return previewArea;
     };
 
+
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+  /** Used to render a bar chart in a given dom element using the current
+   *  chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.BarChart(parent, {});
+        chart.update(chartConfig, inputData);
+        return chart;
+    };
+    
 
   //**************************************************************************
   //** createOptions

@@ -5,7 +5,7 @@ if(!bluewave.charts) bluewave.charts={};
 //**  TreeMapEditor
 //******************************************************************************
 /**
- *   Panel used to edit treeMap chart
+ *   Panel used to create/edit treeMap charts
  *
  ******************************************************************************/
 
@@ -15,6 +15,9 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
         panel: {
 
         },
+        chart: {
+            
+        }
     };
 
     var panel;
@@ -87,22 +90,26 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(treeMapConfig, inputs){
+    this.update = function(node){
         me.clear();
-        for (var i=0; i<inputs.length; i++){
-            var input = inputs[i];
-            if (typeof input !== 'object' && input!=null) {
-                inputs[i] = d3.csvParse(input);
+        
+      //Get chart config
+        chartConfig = merge(node.config, config.chart);
+        
+        
+      //Get input data
+        inputData = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if (typeof csv === "string"){
+                    inputData.push(d3.csvParse(csv));
+                }
             }
         }
-        inputData = inputs;
 
 
-
-
-        chartConfig = merge(treeMapConfig, config.chart);
-
-
+      //Set title
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
@@ -141,6 +148,19 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
   //**************************************************************************
     this.getChart = function(){
         return previewArea;
+    };
+    
+    
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+  /** Used to render a bar treemap chart in a given dom element using the 
+   *  current chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.TreeMapChart(parent, {});
+        chart.update(chartConfig, inputData[0]);
+        return chart;
     };
 
 

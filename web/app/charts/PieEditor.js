@@ -104,19 +104,60 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(pieConfig, inputs){
+    this.update = function(node){
         me.clear();
+        
+      //Get chart config
+        chartConfig = merge(node.config, config.chart);
+        
 
-        for (var i=0; i<inputs.length; i++){
-            var input = inputs[i];
-            if (typeof input !== 'object' && input!=null) {
-                inputs[i] = d3.csvParse(input);
+      //Get input data
+        inputData = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var input = node.inputs[key];
+                var csv = input.csv;
+                if (csv === undefined){
+
+                  //Special case for supply chain data
+                    var inputConfig = input.config;
+                    if (inputConfig) inputData.push(inputConfig);
+                }
+                else {
+                    if (typeof csv === "string"){
+                        inputData.push(csv);
+                    }
+                }
             }
         }
-        inputData = inputs;
+        
+        
+        
+      //TODO: get handle on links and update inputData
+        var data = inputData[0];
+        if (data.hasOwnProperty("links")) {
+            data = linksAndQuantity.slice();
+            data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
 
+            if(chartConfig.pieDirection === "Inbound") {
+                data = data.filter(entry => entry.receiveType.endsWith(chartConfig.pieKey));
+            }
+            else {
+                data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
+            }
+            let scData = [];
+            data.forEach(function(entry, index) {
+                let scEntry = {};
+                if (entry.key.includes(chartConfig.pieKey)) {
+                    scEntry[chartConfig.pieKey] = entry.key;
+                    scEntry[chartConfig.pieValue] = entry.value;
+                }
+                scData.push(scEntry);
+            });
+            inputData = [scData];
+        }
+        
 
-        chartConfig = merge(pieConfig, config.chart);
 
 
 
@@ -157,6 +198,19 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
     this.getChart = function(){
         return previewArea;
+    };
+
+
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+  /** Used to render a pie chart in a given dom element using the current
+   *  chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.PieChart(parent, {});
+        chart.update(chartConfig, inputData);
+        return chart;
     };
 
 
@@ -332,36 +386,8 @@ bluewave.charts.PieEditor = function(parent, config) {
   //** createPreview
   //**************************************************************************
     var createPreview = function(){
-        if (chartConfig.pieKey==null || chartConfig.pieValue==null) return;
-
-
         onRender(previewArea, function(){
-            var data = inputData[0];
-
-
-            if (data.hasOwnProperty("links")) {
-                data = linksAndQuantity.slice();
-                data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
-
-                if(chartConfig.pieDirection === "Inbound") {
-                    data = data.filter(entry => entry.receiveType.endsWith(chartConfig.pieKey));
-                }
-                else {
-                    data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
-                }
-                let scData = [];
-                data.forEach(function(entry, index) {
-                    let scEntry = {};
-                    if (entry.key.includes(chartConfig.pieKey)) {
-                        scEntry[chartConfig.pieKey] = entry.key;
-                        scEntry[chartConfig.pieValue] = entry.value;
-                    }
-                    scData.push(scEntry);
-                });
-                data = scData;
-            }
-
-            pieChart.update(chartConfig, data);
+            pieChart.update(chartConfig, inputData);
         });
     };
 
