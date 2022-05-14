@@ -109,7 +109,7 @@ bluewave.charts.PieEditor = function(parent, config) {
         
       //Get chart config
         chartConfig = merge(node.config, config.chart);
-        
+
 
       //Get input data
         inputData = [];
@@ -125,7 +125,7 @@ bluewave.charts.PieEditor = function(parent, config) {
                 }
                 else {
                     if (typeof csv === "string"){
-                        inputData.push(csv);
+                        inputData.push(d3.csvParse(csv));
                     }
                 }
             }

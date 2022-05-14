@@ -166,7 +166,7 @@ if(!bluewave.charts) bluewave.charts={};
                 }
                 else {
                     if (typeof csv === "string"){
-                        inputData.push(csv);
+                        inputData.push(d3.csvParse(csv));
                     }
                 }
             }
