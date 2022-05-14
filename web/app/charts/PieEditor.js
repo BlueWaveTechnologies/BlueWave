@@ -32,7 +32,7 @@ bluewave.charts.PieEditor = function(parent, config) {
 
     var panel;
     var inputData = [];
-    var linksAndQuantity = [];
+
     var previewArea;
     var pieChart;
     var optionsDiv;
@@ -106,7 +106,7 @@ bluewave.charts.PieEditor = function(parent, config) {
   //**************************************************************************
     this.update = function(node){
         me.clear();
-        
+
       //Get chart config
         chartConfig = merge(node.config, config.chart);
 
@@ -130,12 +130,60 @@ bluewave.charts.PieEditor = function(parent, config) {
                 }
             }
         }
-        
-        
-        
-      //TODO: get handle on links and update inputData
+
+
+      //Special case for sankey data
         var data = inputData[0];
+        var linksAndQuantity = [];
         if (data.hasOwnProperty("links")) {
+            data = Object.values(data.links);
+
+            var nodeAndType = [];
+            for (var node in inputData[0].nodes) {
+                var nodeType = inputData[0].nodes[node].type;
+                var nodeName = inputData[0].nodes[node].name;
+
+                var nodeAndTypeEntry = {};
+                nodeAndTypeEntry.id = node;
+                nodeAndTypeEntry.type = nodeType;
+                nodeAndTypeEntry.name = nodeName;
+                nodeAndType.push(nodeAndTypeEntry);
+            }
+
+            for (var link in inputData[0].links) {
+                var linkStartType = "";
+                var linkEndType = "";
+                var linkEndName = "";
+                var linkQuantity = inputData[0].links[link].quantity;
+
+                for (var entry of nodeAndType) {
+                    if (link.startsWith(entry.id)) {
+                        linkStartType = entry.type;
+                    }
+                    if (link.endsWith(entry.id)) {
+                        linkEndType = entry.type;
+                        linkEndName = entry.name;
+                    }
+                }
+
+                var linkFullType = linkStartType + " to " + linkEndName;
+                var linksAndQuantityEntry = {};
+                linksAndQuantityEntry.key = linkFullType;
+                linksAndQuantityEntry.value = linkQuantity;
+                linksAndQuantityEntry.sendType = linkStartType;
+                linksAndQuantityEntry.receiveType = linkEndType;
+
+                var previousEntryIndex = linksAndQuantity.findIndex(entry => entry.key === linkFullType);
+
+                if (previousEntryIndex !== -1) {
+                    linksAndQuantity[previousEntryIndex].value = linksAndQuantity[previousEntryIndex].value + linkQuantity;
+                }
+                else {
+                    linksAndQuantity.push(linksAndQuantityEntry);
+                }
+            }
+
+
             data = linksAndQuantity.slice();
             data = data.filter(entry => entry.key.includes(chartConfig.pieKey));
 
@@ -145,6 +193,8 @@ bluewave.charts.PieEditor = function(parent, config) {
             else {
                 data = data.filter(entry => entry.sendType.startsWith(chartConfig.pieKey));
             }
+
+
             let scData = [];
             data.forEach(function(entry, index) {
                 let scEntry = {};
@@ -156,11 +206,11 @@ bluewave.charts.PieEditor = function(parent, config) {
             });
             inputData = [scData];
         }
-        
 
 
 
 
+      //Set title
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
@@ -222,62 +272,18 @@ bluewave.charts.PieEditor = function(parent, config) {
 
 
         var hasLinks = data.hasOwnProperty("links");
+
+
         var dataOptions;
-
-
         if (hasLinks) {
-            data = Object.values(inputData[0].links);
-
+            data = Object.values(data.links);
             var nodeTypeList = [];
-            var nodeAndType = [];
-            for (var node in inputData[0].nodes) {
-                var nodeType =inputData[0].nodes[node].type;
-                var nodeName = inputData[0].nodes[node].name;
+            for (var node in data.nodes) {
+                var nodeType = data.nodes[node].type;
                 if (nodeTypeList.indexOf(nodeType) === -1) {
-                nodeTypeList.push(nodeType);
-                }
-                var nodeAndTypeEntry = {};
-                nodeAndTypeEntry.id = node;
-                nodeAndTypeEntry.type = nodeType;
-                nodeAndTypeEntry.name = nodeName;
-                nodeAndType.push(nodeAndTypeEntry);
-            }
-
-            for (var link in inputData[0].links) {
-                var linkStartType = "";
-                var linkEndType = "";
-                var linkStartName = "";
-                var linkEndName = "";
-                var linkQuantity = inputData[0].links[link].quantity;
-
-                for (var entry of nodeAndType) {
-                    if (link.startsWith(entry.id)) {
-                        linkStartType = entry.type;
-                        linkStartName = entry.name;
-                    }
-                    if (link.endsWith(entry.id)) {
-                        linkEndType = entry.type;
-                        linkEndName = entry.name;
-                    }
-
-                }
-
-                var linkFullType = linkStartType + " to " + linkEndName;
-                var linksAndQuantityEntry = {};
-                linksAndQuantityEntry.key = linkFullType;
-                linksAndQuantityEntry.value = linkQuantity;
-                linksAndQuantityEntry.sendType = linkStartType;
-                linksAndQuantityEntry.receiveType = linkEndType;
-
-                var previousEntryIndex = linksAndQuantity.findIndex(entry => entry.key === linkFullType);
-
-                if (previousEntryIndex !== -1) {
-                    linksAndQuantity[previousEntryIndex].value = linksAndQuantity[previousEntryIndex].value + linkQuantity;
-                } else {
-                    linksAndQuantity.push(linksAndQuantityEntry);
+                    nodeTypeList.push(nodeType);
                 }
             }
-
             dataOptions = nodeTypeList;
         }
         else{
