@@ -626,6 +626,7 @@ bluewave.charts.HistogramEditor = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
     var createDashboardItem = bluewave.utils.createDashboardItem;

@@ -1020,6 +1020,7 @@ bluewave.charts.LineEditor = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createTable = javaxt.dhtml.utils.createTable;
     var createDashboardItem = bluewave.utils.createDashboardItem;
