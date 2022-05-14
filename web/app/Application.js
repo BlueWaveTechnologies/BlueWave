@@ -949,6 +949,24 @@ bluewave.Application = function(parent, config) {
                 me.setTitle(label);
                 var app = raisePanel(bluewave.Explorer);
                 if (!explorerPanel) explorerPanel = app;
+
+                explorerPanel.addExtensions([
+                    {
+                        type: "editor",
+                        config: {
+                            title: "Supply Chain",
+                            type: "supplyChain", 
+                            icon: "fas fa-link",
+                            editor: {
+                                width: 1680,
+                                height: 920,
+                                resizable: true,
+                                class: bluewave.charts.SupplyChainEditor
+                            }
+                        }
+                    }
+                ]);
+                
                 explorerPanel.show();
                 explorerPanel.update();
                 setTimeout(function(){ //update title again in case slider move
