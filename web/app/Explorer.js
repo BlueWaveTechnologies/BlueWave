@@ -243,6 +243,10 @@ bluewave.Explorer = function(parent, config) {
         else config = merge(chartConfig, defaultConfig);
     };
     
+    
+  //**************************************************************************
+  //** addExtensions
+  //**************************************************************************
     this.addExtensions = function(extensions){
         if (extensions) extensions.forEach(function(extension){
             addExtension(extension);
@@ -531,89 +535,102 @@ bluewave.Explorer = function(parent, config) {
   //** updateButtons
   //**************************************************************************
     var updateButtons = function(){
+        
+      //Hide arrow
         arrow.hide();
 
+
+      //Disable all buttons
         for (var key in button) {
             if (button.hasOwnProperty(key)){
                 button[key].disable();
             }
         }
 
-        if (!me.isReadOnly()){
 
-          //Enable addDate node
-            if (button.addData) button.addData.enable();
-            
-            
-          //Generate a list of unique visible node types
-            var showArrow = true;
-            var visibleNodes = {};
-            for (var key in nodes) {
-                if (nodes.hasOwnProperty(key)){
-                    var node = nodes[key];
-                    visibleNodes[node.type] = true;
-                    showArrow = false;
-                }
-            }
-            if (showArrow){ 
-                if (button.layout) button.layout.disable();
-                arrow.show();
-            }
-            
-            
-            
-          //Enable other buttons
-            config.nodes.forEach(function(n){
-                var inputNodes = n.inputNodes;
-                if (inputNodes){
-                    inputNodes.every(function(t){
-                        
-                        var hasValidNode = false;
-                        var required = true;
-                        if (typeof t === "string"){
-                            hasValidNode = visibleNodes[t];
-                        }
-                        else{
-                            hasValidNode = visibleNodes[t.inputNode];
-                            required = t.required;
-                        }
-                        
-                        
-                        if (hasValidNode){
-                            button[n.type].enable();
-                            return false;
-                        }
-                        else{
-                            if (!required) button[n.type].enable();
-                        }
-                        
-                        
-                        return true;
-                    });
-                } 
-                else{
-                    button[n.type].enable();
-                }
-            });
+      //Return early as needed
+        if (me.isReadOnly()) return;
+        
+
+      //Enable addDate node
+        if (button.addData) button.addData.enable();
 
 
-            
-
-
-          //Update toolbar
-            if (isNaN(id)){
-                button["save"].disable();
-                button["edit"].disable();
-                button["delete"].disable();
-                button["users"].disable();
-            }
-            else{
-                button["save"].enable();
-                button["edit"].enable();
-                button["delete"].enable();
-                button["users"].enable();
+      //Generate a unique list of visible node types
+        var showArrow = true;
+        var visibleNodes = {};
+        for (var key in nodes) {
+            if (nodes.hasOwnProperty(key)){
+                var node = nodes[key];
+                visibleNodes[node.type] = true;
+                showArrow = false;
             }
         }
+        
+        
+      //Show arrow if there are no nodes in the canvas
+        if (showArrow) arrow.show();
+
+
+
+      //Enable buttons based on what nodes are in the canvas
+        config.nodes.forEach(function(n){
+            var menuButton = button[n.type];
+            if (!menuButton) return;
+            
+            var inputNodes = n.inputNodes;
+            if (inputNodes){
+                inputNodes.every(function(t){
+
+                    var hasValidNode = false;
+                    var required = true;
+                    if (typeof t === "string"){
+                        hasValidNode = visibleNodes[t];
+                    }
+                    else{
+                        hasValidNode = visibleNodes[t.inputNode];
+                        required = t.required;
+                    }
+
+                    
+                    if (hasValidNode){
+                        menuButton.enable();
+                        return false;
+                    }
+                    else{
+                        if (!required) menuButton.enable();
+                    }
+
+
+                    return true;
+                });
+            } 
+            else{
+                menuButton.enable();
+            }
+        });
+
+
+        if (showArrow){ 
+            if (button.layout) button.layout.disable();
+        }
+
+
+
+      //Update toolbar
+        if (isNaN(id)){
+            button["save"].disable();
+            button["edit"].disable();
+            button["delete"].disable();
+            button["users"].disable();
+        }
+        else{
+            button["save"].enable();
+            button["edit"].enable();
+            button["delete"].enable();
+            button["users"].enable();
+        }
+        
     };
 
 
@@ -1127,9 +1144,9 @@ bluewave.Explorer = function(parent, config) {
         div.appendChild(menubar);
         createMenuButton("addData", "fas fa-database", "Data", menubar);
         config.nodes.forEach(function(node){
-            createMenuButton(node.type, node.icon, node.title, menubar);
+            addEditor(node);
         });
-
+        
 
       //Create little arrow/hint for the toolbar
         arrow = document.createElement("div");
@@ -1396,85 +1413,24 @@ bluewave.Explorer = function(parent, config) {
             button["delete"].enable();
         }
 
+        var inputs = 1;
+        var outputs = 1;
+        
+        if (nodeType==="addData") inputs = 0;
+        if (nodeType==="layout") outputs = 0;
 
       //Create node
-        switch (nodeType) {
+        var node = createNode({
+            name: title,
+            type: nodeType,
+            icon: icon,
+            content: i,
+            position: [pos_x, pos_y],
+            inputs: inputs,
+            outputs: outputs
+        });
 
-          //Nodes with output only
-            case "addData":
-            case "csv":
-            case "pdf":
-
-                if (file){
-                    var content = document.createElement("div");
-                    content.style.position = "relative";
-                    content.style.overflow = "hidden";
-                    var label = document.createElement("div");
-                    label.className = "filename noselect";
-                    label.innerText = file.name;
-                    content.appendChild(label);
-                    content.appendChild(i);
-                    i = content;
-                }
-
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 0,
-                    outputs: 1
-                });
-
-                if (file){
-                    node.config.fileName = file.name;
-                }
-
-                addEventListeners(node);
-
-                if (nodeType==="pdf"){
-                    button["compareDocs"].enable();
-                }
-                else{
-                    node.ondblclick();
-                }
-
-                break;
-
-          //Nodes with input only
-            case "layout":
-            case "compareDocs":
-
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 0
-                });
-
-                addEventListeners(node);
-
-                break;
-
-          //Nodes with both inputs and outputs
-            default:
-
-                var node = createNode({
-                    name: title,
-                    type: nodeType,
-                    icon: icon,
-                    content: i,
-                    position: [pos_x, pos_y],
-                    inputs: 1,
-                    outputs: 1
-                });
-
-                addEventListeners(node);
-        }
+        addEventListeners(node);
     };
 
 
@@ -1748,6 +1704,8 @@ bluewave.Explorer = function(parent, config) {
             _node.editor = editor;
 
             var save = function(){
+                if (me.isReadOnly()) return;
+                
                 var chartConfig = editor.getConfig();
                 var node = editor.getNode();
                 node.config = chartConfig;
@@ -1763,6 +1721,7 @@ bluewave.Explorer = function(parent, config) {
             };
 
             editor.onChange = function(){
+                if (isNaN(id)) return;
                 save();
             };
 
@@ -1792,7 +1751,8 @@ bluewave.Explorer = function(parent, config) {
             width: 1060,
             height: 600,
             resizable: false,
-            beforeClose: null
+            beforeClose: null,
+            style: config.style
         });
 
 
@@ -1870,7 +1830,7 @@ bluewave.Explorer = function(parent, config) {
 
 
         if (conf.class){
-            var editor = new conf.class(win.getBody(), config);
+            var editor = new conf.class(win.getBody(), conf);
 
             editor.show = function(){
                 win.show();
@@ -2734,7 +2694,18 @@ bluewave.Explorer = function(parent, config) {
         });
         
         if (!hasNode){
-            config.nodes.push(node);
+            if (node.editor.class){
+                config.nodes.push(node);
+                
+            }
+            else{
+                console.log("Failed to load " + node.title);
+                return;
+            }
+        }
+        
+        
+        if (!button[node.type]){
             createMenuButton(node.type, node.icon, node.title);
         }
     };
