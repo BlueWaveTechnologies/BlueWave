@@ -1,5 +1,5 @@
 package bluewave;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import javaxt.express.utils.DbUtils;
 import static javaxt.utils.Console.console;
@@ -331,6 +331,21 @@ public class Config {
             throw new IllegalArgumentException("Invalid \"jobDir\" defined in the \"webserver\" section of the config file");
         }
         return indexDir;
+    }
+
+    
+  //**************************************************************************
+  //** getPlugins
+  //**************************************************************************
+    public static ArrayList<Plugin> getPlugins(){
+        ArrayList<Plugin> plugins = new ArrayList<>();
+        javaxt.io.Directory pluginDir = getDirectory("webserver", "pluginDir");
+        if (pluginDir!=null){
+            for (javaxt.io.File xmlFile : pluginDir.getFiles("plugin.xml", true)){
+                plugins.add(new Plugin(xmlFile));
+            }
+        }
+        return plugins;
     }
 
 
