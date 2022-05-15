@@ -1,5 +1,6 @@
 package bluewave.web;
 import bluewave.Config;
+import bluewave.Plugin;
 import bluewave.graph.Neo4J;
 import bluewave.web.services.*;
 import bluewave.utils.SQLEditor;
@@ -429,21 +430,15 @@ public class WebServices extends WebService {
   //** loadPlugins
   //**************************************************************************
     private void loadPlugins(){
-        String path = Config.get("webserver").get("pluginDir").toString();
-        if (path!=null){
-            javaxt.io.Directory pluginDir = new javaxt.io.Directory(path);
-            for (javaxt.io.File xmlFile : pluginDir.getFiles("plugin.xml", true)){
-                org.w3c.dom.Document xml = xmlFile.getXML();
-                for (Node webservices : getElementsByTagName("webservices", xml)){
-                    for (Node webservice : getElementsByTagName("service", webservices)){
-                        NamedNodeMap attr = webservice.getAttributes();
-                        String endpoint = getAttributeValue(attr, "endpoint");
-                        String className = getAttributeValue(attr, "class");
-                        loadJarFiles(xmlFile.getDirectory(), className, endpoint);
-                        WebService ws = this.webservices.get(endpoint.toLowerCase());
-                        if (ws==null) console.log("Failed to load plugin", endpoint, className);
-                    }
-                }
+        for (Plugin plugin : Config.getPlugins()){
+            HashMap<String, String> webservices = plugin.getWebServices();
+            Iterator<String> it = webservices.keySet().iterator();
+            while (it.hasNext()){
+                String endpoint = it.next();
+                String className = webservices.get(endpoint);
+                loadJarFiles(plugin.getDirectory(), className, endpoint);
+                WebService ws = this.webservices.get(endpoint.toLowerCase());
+                if (ws==null) console.log("Failed to load plugin", endpoint, className);
             }
         }
     }
