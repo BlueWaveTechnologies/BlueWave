@@ -103,7 +103,7 @@ public class Plugin {
                 String type = getAttributeValue(node, "type");
                 json.set("type", type);
                 for (Node n : getNodes(node.getChildNodes())){
-                    json.set(node.getNodeName(), getJson(n));
+                    json.set(n.getNodeName(), getJson(n));
                 }
 
                 extension.add(json);
