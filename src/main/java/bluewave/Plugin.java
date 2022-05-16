@@ -25,16 +25,16 @@ public class Plugin {
             name = getAttributeValue(attr, "name");
         }
     }
-    
-    
+
+
   //**************************************************************************
   //** getName
   //**************************************************************************
     public String getName(){
         return name;
     }
-    
-    
+
+
   //**************************************************************************
   //** getDirectory
   //**************************************************************************
@@ -42,7 +42,7 @@ public class Plugin {
         return dir;
     }
 
-    
+
   //**************************************************************************
   //** getWebServices
   //**************************************************************************
@@ -58,17 +58,34 @@ public class Plugin {
         }
         return webservices;
     }
-    
-    
+
+
+  //**************************************************************************
+  //** getIncludes
+  //**************************************************************************
+    public ArrayList<Node> getIncludes(){
+        ArrayList<Node> includes = new ArrayList<>();
+        for (Node n : getElementsByTagName("includes", xml)){
+            for (Node node : getNodes(n.getChildNodes())){
+                String nodeName = node.getNodeName();
+                if (nodeName.equals("script") || nodeName.equals("link")){
+                    includes.add(node);
+                }
+            }
+        }
+        return includes;
+    }
+
+
   //**************************************************************************
   //** getExtensions
   //**************************************************************************
-  /** Returns a json object representing all the web extension 
+  /** Returns a json object representing all the web extension
    */
     public JSONObject getExtensions(){
 
         JSONObject extensions = new JSONObject();
-        
+
         for (Node ext : getElementsByTagName("extensions", xml)){
             for (Node node : getNodes(ext.getChildNodes())){
 
@@ -79,35 +96,35 @@ public class Plugin {
                     extension = new JSONArray();
                     extensions.set(component, extension);
                 }
-                
-                
+
+
               //Get config
                 JSONObject json = new JSONObject();
                 String type = getAttributeValue(node, "type");
                 json.set("type", type);
                 for (Node n : getNodes(node.getChildNodes())){
-                    json.set("config", getJson(n));
+                    json.set(node.getNodeName(), getJson(n));
                 }
 
                 extension.add(json);
             }
         }
-        
+
         return extensions;
     }
-    
-    
+
+
     private JSONObject getJson(Node node){
         JSONObject json = new JSONObject();
-        
+
         NamedNodeMap attributes = node.getAttributes();
         for (int i=0; i<attributes.getLength(); i++){
             Node attr = attributes.item(i);
             json.set(attr.getNodeName(), attr.getNodeValue());
         }
-        
+
         for (Node n : getNodes(node.getChildNodes())){
-            //if (n.getNodeType()!=1) continue; 
+            //if (n.getNodeType()!=1) continue;
             String nodeName = n.getNodeName();
             json.set(nodeName, getJson(n));
         }
