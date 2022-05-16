@@ -23,18 +23,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 
-//XML parser for plugins
-import static javaxt.xml.DOM.*;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-
-
 
 public class WebServices extends WebService {
 
     private Database database;
     private ConcurrentHashMap<String, WebService> webservices;
-    private DashboardService dashboardService;
 
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
@@ -71,19 +64,15 @@ public class WebServices extends WebService {
 
 
       //Instantiate web services
-        dashboardService = new DashboardService(this, web, database);
         webservices = new ConcurrentHashMap<>();
+        webservices.put("dashboard", new DashboardService(this, web));
         webservices.put("admin", new AdminService(database, webConfig));
         webservices.put("map", new MapService());
         webservices.put("report", new ReportService());
         webservices.put("data", new DataService(new javaxt.io.Directory(web + "data")));
         webservices.put("query", new QueryService(webConfig));
+        webservices.put("document", new DocumentService());
 
-
-      //Special case for the document service
-        DocumentService documentService = new DocumentService();
-        webservices.put("document", documentService);
-        webservices.put("documents", documentService);
 
 
       //Instantiate additional webservices
@@ -233,23 +222,27 @@ public class WebServices extends WebService {
 
       //Find a webservice associated with the request
         WebService ws = webservices.get(service);
+        if (ws==null) ws = webservices.get(service + "s");
         ServiceRequest serviceRequest = null;
-        if (ws==null){
-
+        
+        
+      //Special case for dashboard/thumbnail requests
+        if (service.startsWith("dashboard")){
+            ws = webservices.get("dashboard");
             serviceRequest = new ServiceRequest(request);
-            ws = this;
-
-          //Special case for dashboard/thumbnail requests
-            if (service.startsWith("dashboard")){
-                ws = dashboardService;
-                String p = serviceRequest.getPath(1).toString();
-                if (p!=null){
-                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups") ||
-                        p.equalsIgnoreCase("group") || p.equalsIgnoreCase("permissions")){
-                        serviceRequest = new ServiceRequest(service, request);
-                    }
+            String p = serviceRequest.getPath(1).toString();
+            if (p!=null){
+                if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups") ||
+                    p.equalsIgnoreCase("group") || p.equalsIgnoreCase("permissions")){
+                    serviceRequest = new ServiceRequest(service, request);
                 }
             }
+        }
+        
+        
+        if (ws==null){
+            serviceRequest = new ServiceRequest(request);
+            ws = this;
         }
 
 
