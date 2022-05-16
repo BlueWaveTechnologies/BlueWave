@@ -43,7 +43,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Line Chart",
-                type: "lineChart", 
+                type: "lineChart",
                 icon: "fas fa-chart-line",
                 editor: {
                     width: 1060,
@@ -57,7 +57,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Histogram Chart",
-                type: "histogramChart", 
+                type: "histogramChart",
                 icon: "fas fa-chart-area",
                 editor: {
                     width: 1060,
@@ -71,7 +71,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Scatter Chart",
-                type: "scatterChart", 
+                type: "scatterChart",
                 icon: "fas fa-braille",
                 editor: {
                     width: 1060,
@@ -85,7 +85,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Map",
-                type: "mapChart", 
+                type: "mapChart",
                 icon: "fas fa-globe-americas",
                 editor: {
                     width: 1180,
@@ -99,7 +99,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Treemap Chart",
-                type: "treeMapChart", 
+                type: "treeMapChart",
                 icon: "fas fa-border-all",
                 editor: {
                     width: 1060,
@@ -113,7 +113,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Calendar Chart",
-                type: "calendarChart", 
+                type: "calendarChart",
                 icon: "fas fa-calendar-alt",
                 editor: {
                     width: 1060,
@@ -127,7 +127,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Sankey Chart",
-                type: "sankeyChart", 
+                type: "sankeyChart",
                 icon: "fas fa-random",
                 editor: {
                     width: 1680,
@@ -144,7 +144,7 @@ bluewave.Explorer = function(parent, config) {
             },
             {
                 title: "Layout",
-                type: "layout", 
+                type: "layout",
                 icon: "far fa-object-ungroup",
                 editor: {
                     width: 1425, //Up to 4 dashboard items at 250px width
@@ -155,7 +155,7 @@ bluewave.Explorer = function(parent, config) {
             }
         ]
     };
-    
+
     var dashboardPanel, editPanel, toggleButton, mask, waitmask; //primary components
     var id, name, thumbnail; //dashboard attributes
     var menubar, button = {};
@@ -242,8 +242,8 @@ bluewave.Explorer = function(parent, config) {
         if (!chartConfig) config = defaultConfig;
         else config = merge(chartConfig, defaultConfig);
     };
-    
-    
+
+
   //**************************************************************************
   //** addExtensions
   //**************************************************************************
@@ -252,7 +252,7 @@ bluewave.Explorer = function(parent, config) {
             addExtension(extension);
         });
     };
-    
+
 
   //**************************************************************************
   //** getDashboardID
@@ -535,7 +535,7 @@ bluewave.Explorer = function(parent, config) {
   //** updateButtons
   //**************************************************************************
     var updateButtons = function(){
-        
+
       //Hide arrow
         arrow.hide();
 
@@ -550,7 +550,7 @@ bluewave.Explorer = function(parent, config) {
 
       //Return early as needed
         if (me.isReadOnly()) return;
-        
+
 
       //Enable addDate node
         if (button.addData) button.addData.enable();
@@ -566,8 +566,8 @@ bluewave.Explorer = function(parent, config) {
                 showArrow = false;
             }
         }
-        
-        
+
+
       //Show arrow if there are no nodes in the canvas
         if (showArrow) arrow.show();
 
@@ -577,7 +577,7 @@ bluewave.Explorer = function(parent, config) {
         config.nodes.forEach(function(n){
             var menuButton = button[n.type];
             if (!menuButton) return;
-            
+
             var inputNodes = n.inputNodes;
             if (inputNodes){
                 inputNodes.every(function(t){
@@ -592,7 +592,7 @@ bluewave.Explorer = function(parent, config) {
                         required = t.required;
                     }
 
-                    
+
                     if (hasValidNode){
                         menuButton.enable();
                         return false;
@@ -604,14 +604,14 @@ bluewave.Explorer = function(parent, config) {
 
                     return true;
                 });
-            } 
+            }
             else{
                 menuButton.enable();
             }
         });
 
 
-        if (showArrow){ 
+        if (showArrow){
             if (button.layout) button.layout.disable();
         }
 
@@ -630,7 +630,7 @@ bluewave.Explorer = function(parent, config) {
             button["delete"].enable();
             button["users"].enable();
         }
-        
+
     };
 
 
@@ -1055,7 +1055,7 @@ bluewave.Explorer = function(parent, config) {
             config.nodes.every(function(n){
                 if (n.type===node.type){
                     var inputNodes = n.inputNodes;
-                    if (inputNodes){ 
+                    if (inputNodes){
                         inputNodes.forEach(function(t){
                             if (typeof t === "string"){
                                 if (inputNode.type === t){
@@ -1076,8 +1076,8 @@ bluewave.Explorer = function(parent, config) {
                 }
                 return true;
             });
-            
-            
+
+
             if (acceptConnection){
                 node.inputs[outputID] = inputNode;
                 node.ondblclick();
@@ -1146,7 +1146,7 @@ bluewave.Explorer = function(parent, config) {
         config.nodes.forEach(function(node){
             addEditor(node);
         });
-        
+
 
       //Create little arrow/hint for the toolbar
         arrow = document.createElement("div");
@@ -1415,7 +1415,7 @@ bluewave.Explorer = function(parent, config) {
 
         var inputs = 1;
         var outputs = 1;
-        
+
         if (nodeType==="addData") inputs = 0;
         if (nodeType==="layout") outputs = 0;
 
@@ -1439,7 +1439,7 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var addEventListeners = function(node){
         if (node.type==="addData") {
-            
+
             node.ondblclick = function(){
                 showQuery(this.config.query, function(){
                     var grid = dbView.getComponents().grid;
@@ -1507,15 +1507,15 @@ bluewave.Explorer = function(parent, config) {
                     }
                 }, this);
             };
-            
+
         }
         else{
 
             node.ondblclick = function(){
                 var editor = getNodeEditor(node);
-                if (editor){ 
+                if (editor){
                     editor.show();
-                    
+
                     if (node.type==="layout"){
                         toggleButton.show();
                     }
@@ -1567,8 +1567,8 @@ bluewave.Explorer = function(parent, config) {
         nodes[nodeID+""] = div;
         return div;
     };
-    
-    
+
+
   //**************************************************************************
   //** showQuery
   //**************************************************************************
@@ -1655,7 +1655,7 @@ bluewave.Explorer = function(parent, config) {
                 win.show();
                 waitmask.show(500);
                 getNodes(dbView.getComponents().tree);
-                
+
                 if (!timer){
                     timer = setInterval(function(){
                         if (win.isOpen()){
@@ -1677,14 +1677,14 @@ bluewave.Explorer = function(parent, config) {
         dbView.setQuery(query);
         dbView.show();
     };
-    
-    
+
+
   //**************************************************************************
   //** getNodeEditor
   //**************************************************************************
     var getNodeEditor = function(node){
-        
-        
+
+
       //Find config associated with the node editor
         var _node;
         config.nodes.every(function(n){
@@ -1705,7 +1705,7 @@ bluewave.Explorer = function(parent, config) {
 
             var save = function(){
                 if (me.isReadOnly()) return;
-                
+
                 var chartConfig = editor.getConfig();
                 var node = editor.getNode();
                 node.config = chartConfig;
@@ -1728,7 +1728,7 @@ bluewave.Explorer = function(parent, config) {
         }
 
 
-      //Add custom getNode 
+      //Add custom getNode
         editor.getNode = function(){
             return node;
         };
@@ -1736,7 +1736,7 @@ bluewave.Explorer = function(parent, config) {
 
       //Update editor
         editor.update(node);
-        
+
         return editor;
     };
 
@@ -1830,6 +1830,10 @@ bluewave.Explorer = function(parent, config) {
 
 
         if (conf.class){
+            if (typeof conf.class === "string"){
+                conf.class = eval(conf.class);
+            }
+
             var editor = new conf.class(win.getBody(), conf);
 
             editor.show = function(){
@@ -1843,7 +1847,7 @@ bluewave.Explorer = function(parent, config) {
             win.onResize = function(){
                 if (editor.resize) editor.resize();
             };
-            
+
             win.editor = editor;
 
             return editor;
@@ -2593,7 +2597,7 @@ bluewave.Explorer = function(parent, config) {
                         }
                     }
                     else{
-                       
+
                         var editor = getNodeEditor(node);
                         if (editor){
                             if (editor.renderChart){
@@ -2675,36 +2679,36 @@ bluewave.Explorer = function(parent, config) {
   //** addExtension
   //**************************************************************************
     var addExtension = function(extension){
-        if (extension.type==="editor" && extension.config){
-            addEditor(extension.config);
+        if (extension.type==="editor" && extension.node){
+            addEditor(extension.node);
         }
     };
-    
-    
+
+
   //**************************************************************************
   //** addEditor
   //**************************************************************************
     var addEditor = function(node){
-        
+
         var hasNode = false;
         config.nodes.forEach(function(n){
             if (n.type===node.type){
                 hasNode = true;
             }
         });
-        
+
         if (!hasNode){
             if (node.editor.class){
                 config.nodes.push(node);
-                
+
             }
             else{
                 console.log("Failed to load " + node.title);
                 return;
             }
         }
-        
-        
+
+
         if (!button[node.type]){
             createMenuButton(node.type, node.icon, node.title);
         }
