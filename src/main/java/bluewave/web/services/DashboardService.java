@@ -31,50 +31,11 @@ public class DashboardService extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public DashboardService(bluewave.web.WebServices ws, javaxt.io.Directory web, Database database) throws Exception {
+    public DashboardService(bluewave.web.WebServices ws, javaxt.io.Directory web) throws Exception {
         this.ws = ws;
-
-
         super.addClass(bluewave.app.Dashboard.class);
         super.addClass(bluewave.app.DashboardUser.class);
         //super.addClass(bluewave.app.DashboardGroup.class);
-
-
-        Connection conn = null;
-        try{
-
-          //Find dashboards in the database
-            HashSet<String> dashboards = new HashSet<>();
-            conn = database.getConnection();
-            Recordset rs = new Recordset();
-            String tableName = Model.getTableName(new Dashboard());
-            rs.open("select class_name from " + tableName, conn);
-            while (rs.hasNext()){
-                String className = rs.getValue(0).toString();
-                dashboards.add(className);
-                rs.moveNext();
-            }
-            rs.close();
-            conn.close();
-
-
-          //Add dashboards as needed
-            javaxt.io.Directory dir = new javaxt.io.Directory(web + "app/dashboards/");
-            for (javaxt.io.File file : dir.getFiles("*.js")){
-                String fileName = file.getName(false);
-                String className = "bluewave.dashboards." + fileName;
-                if (!dashboards.contains(className)){
-                    Dashboard dashboard = new Dashboard();
-                    dashboard.setName(fileName);
-                    dashboard.setClassName(className);
-                    dashboard.save();
-                }
-            }
-        }
-        catch(Exception e){
-            if (conn!=null) conn.close();
-            throw e;
-        }
     }
 
 
