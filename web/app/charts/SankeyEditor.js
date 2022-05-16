@@ -149,8 +149,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** onChange
   //**************************************************************************
     this.onChange = function(){};
-    
-    
+
+
   //**************************************************************************
   //** onContextMenu
   //**************************************************************************
@@ -183,9 +183,24 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
     this.update = function(node){
         me.clear();
-        
+
+
       //Get chart config
-        var sankeyConfig = {};
+        var sankeyConfig = null;
+        var showPreview = false;
+        if (node.inputs){
+            for (var nodeID in node.inputs) {
+                if (node.inputs.hasOwnProperty(nodeID)){
+                    var n = node.inputs[nodeID];
+                    if (n.config.nodes || n.config.links){
+                        sankeyConfig = n.config;
+                        showPreview = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!sankeyConfig) sankeyConfig = {};
         merge(sankeyConfig, node.config);
 
 
@@ -206,30 +221,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         toggleButton.setValue("Edit");
 
 
-      //Special case when inputs are present (e.g. from SupplyChain editor)
-        if (node.config.nodes && node.config.quantities){
-            
-            
-            nodes = node.config.nodes;
-            quantities = node.config.quantities;
-            
-           
-          //Hide the toggle button
-            toggleButton.hide();
-            
-            
-            
-          //Switch view and return early
-            toggleButton.setValue("Preview");            
-            return;
-        }
-
 
 
       //Show/hide toggle button
-        if (config.hidePreview===true) toggleButton.hide(); 
+        if (config.hidePreview===true) toggleButton.hide();
         else toggleButton.show();
-        
+
 
       //Set module
         currModule = "sankey_" + new Date().getTime();
@@ -258,7 +255,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-                
+
               //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
@@ -338,6 +335,20 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         }
 
         setZoom(sankeyConfig.zoom);
+
+
+
+      //Special case when inputs are present (e.g. from SupplyChain editor)
+        if (showPreview){
+
+          //Hide the toggle button
+            toggleButton.hide();
+
+          //Switch view and return early
+            toggleButton.setValue("Preview");
+        }
+
+
     };
 
 
@@ -527,7 +538,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
     };
-    
+
 
   //**************************************************************************
   //** renderChart
@@ -541,16 +552,16 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         chart.update(config.sankey.style, data);
         return chart;
     };
-    
-    
+
+
   //**************************************************************************
   //** getEditor
-  //**************************************************************************  
+  //**************************************************************************
     this.getEditor = function(){
         if (previewPanel.isVisible()) toggleButton.setValue("Edit");
         return editPanel;
     };
-    
+
 
   //**************************************************************************
   //** setTitle
@@ -1083,14 +1094,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             editNode(this);
         };
     };
-    
+
 
   //**************************************************************************
   //** createDrawflowNode
   //**************************************************************************
     var createDrawflowNode = function(node){
         var div = document.createElement("div");
-        
+
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
@@ -1109,7 +1120,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         div.appendChild(body);
         return div;
     };
-    
+
 
   //**************************************************************************
   //** createNode
@@ -1520,7 +1531,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
   //**************************************************************************
   //** getSankeyData
-  //**************************************************************************  
+  //**************************************************************************
     this.getSankeyData = function(){
         var data = {
             nodes: [],
