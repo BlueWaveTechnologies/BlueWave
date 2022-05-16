@@ -266,6 +266,16 @@ public class WebApp extends HttpServlet {
             response.setContentType("application/json");
             response.write("{\"name\":\"" + appName + "\"}");
         }
+        else if (service.equals("extensions")){
+
+            JSONArray extensions = new JSONArray();
+            for (bluewave.Plugin plugin : Config.getPlugins()){
+                extensions.add(plugin.getExtensions());
+            }
+
+            response.setContentType("application/json");
+            response.write(extensions.toString());
+        }
         else if (service.equals("data")){
             ws.processRequest(service, request, response);
         }
