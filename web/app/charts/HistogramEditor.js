@@ -10,7 +10,7 @@ if(!bluewave.charts) bluewave.charts={};
  ******************************************************************************/
 
 bluewave.charts.HistogramEditor = function(parent, config) {
-    
+
     var me = this;
     var defaultConfig = {
         panel: {
@@ -20,8 +20,8 @@ bluewave.charts.HistogramEditor = function(parent, config) {
 
         }
     };
-    
-    
+
+
     var panel;
     var inputData = [];
     var svg;
@@ -37,7 +37,7 @@ bluewave.charts.HistogramEditor = function(parent, config) {
   //** Constructor
   //**************************************************************************
     var init = function(){
-        
+
         if (!config) config = {};
         config = merge(config, defaultConfig);
         chartConfig = config.chart;
@@ -122,10 +122,17 @@ bluewave.charts.HistogramEditor = function(parent, config) {
 
 
       //Get chart config
-        chartConfig = merge(node.config, config.chart);
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        chartConfig = clone;
         chartConfig.barType = "histogram";
-        
-        
+
+
       //Get input data
         inputData = [];
         for (var key in node.inputs) {
@@ -197,7 +204,7 @@ bluewave.charts.HistogramEditor = function(parent, config) {
         chart.update(chartConfig, inputData);
         return chart;
     };
-    
+
 
   //**************************************************************************
   //** createOptions

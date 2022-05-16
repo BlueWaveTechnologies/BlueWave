@@ -54,7 +54,7 @@ if(!bluewave.charts) bluewave.charts={};
         if (!config) config = {};
         config = merge(config, defaultConfig);
         chartConfig = config.chart;
-        
+
 
         let table = createTable();
         let tbody = table.firstChild;
@@ -146,12 +146,19 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
     this.update = function(node){
         me.clear();
+
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        chartConfig = clone;
         
 
-      //Get chart config
-        chartConfig = merge(node.config, config.chart);
-        
-        
+
       //Get input data
         inputData = [];
         for (var key in node.inputs) {
@@ -179,8 +186,8 @@ if(!bluewave.charts) bluewave.charts={};
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
-        
-        
+
+
         chartConfig.mapLevel = getMapLevel(chartConfig);
 
 

@@ -16,7 +16,7 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
 
         },
         chart: {
-            
+
         }
     };
 
@@ -92,11 +92,17 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
   //**************************************************************************
     this.update = function(node){
         me.clear();
-        
-      //Get chart config
-        chartConfig = merge(node.config, config.chart);
-        
-        
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        chartConfig = clone;
+
+
       //Get input data
         inputData = [];
         for (var key in node.inputs) {
@@ -149,12 +155,12 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
     this.getChart = function(){
         return previewArea;
     };
-    
-    
+
+
   //**************************************************************************
   //** renderChart
   //**************************************************************************
-  /** Used to render a bar treemap chart in a given dom element using the 
+  /** Used to render a bar treemap chart in a given dom element using the
    *  current chart config and data
    */
     this.renderChart = function(parent){
@@ -365,7 +371,7 @@ bluewave.charts.TreeMapEditor = function(parent, config) {
         var keyLabelField = form.findField("keyLabel");
         var keyLabel = chartConfig.keyLabel;
         keyLabelField.setValue(keyLabel===true ? true : false);
-      
+
       //Set initial value for value label
         var valueLabelField = form.findField("valueLabel");
         var valueLabel = chartConfig.valueLabel;

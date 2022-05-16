@@ -30,6 +30,10 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        if (!config) config = {};
+        config = merge(config, defaultConfig);
+
+
         var div = document.createElement("div");
         div.style.height = "100%";
         parent.appendChild(div);
@@ -121,10 +125,15 @@ bluewave.charts.Layout = function(parent, config) {
         }
 
 
-      //Get config
-        var chartConfig = {};
-        merge(chartConfig, node.config);
-        var layout = chartConfig;
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        var layout = clone;
 
 
 

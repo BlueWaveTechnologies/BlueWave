@@ -104,10 +104,16 @@ bluewave.charts.ScatterEditor = function(parent, config) {
     this.update = function(node){
         me.clear();
 
-      //Get chart config
-        chartConfig = merge(node.config, config.chart);
-        
-        
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        chartConfig = clone;
+
+
       //Get input data
         inputData = [];
         for (var key in node.inputs) {
@@ -173,8 +179,8 @@ bluewave.charts.ScatterEditor = function(parent, config) {
         chart.update(chartConfig, inputData);
         return chart;
     };
-    
-    
+
+
   //**************************************************************************
   //** createOptions
   //**************************************************************************
