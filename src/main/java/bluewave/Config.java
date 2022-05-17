@@ -337,7 +337,7 @@ public class Config {
   //**************************************************************************
   //** getPlugins
   //**************************************************************************
-    public static ArrayList<Plugin> getPlugins(){
+    public static ArrayList<Plugin> getPlugins(){       
         ArrayList<Plugin> plugins = new ArrayList<>();
         try{
             javaxt.io.Directory pluginDir = getDirectory("webserver", "pluginDir");
@@ -364,6 +364,7 @@ public class Config {
             for (String key : keys){
                 if (config==null) config = Config.get(key);
                 else config = config.get(key);
+                if (config==null) return null;
             }
 
             String dir = config.toString().trim();

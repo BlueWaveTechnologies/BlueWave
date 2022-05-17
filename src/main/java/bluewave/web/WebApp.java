@@ -401,6 +401,8 @@ public class WebApp extends HttpServlet {
     private void sendMain(String path, HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
 
+      //Get file
+        javaxt.io.File htmlFile = new javaxt.io.File(web, "main.html");
 
 
       //Get all the includes associated with the plugins
@@ -414,13 +416,9 @@ public class WebApp extends HttpServlet {
 
 
         if (includes.isEmpty()){
-            sendFile(path, request, response);
+            fileManager.sendFile(htmlFile, request, response);
         }
         else{
-
-          //fileManager
-            javaxt.io.File htmlFile = new javaxt.io.File(web, "main.html");
-
 
 
           //Convert html to xml. Assumes the html file is xhtml. Note that the
