@@ -9,6 +9,8 @@ import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
 import com.google.gson.JsonObject;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 
 import javaxt.sql.*;
@@ -71,21 +73,56 @@ public class Main {
 
 
 
-      //Process command line args via plugins
+      //Check if any of the plugins wants to process the command line args
         for (Plugin plugin : Config.getPlugins()){
-        }
+            javaxt.io.File file = plugin.getJarFile();
+            if (file==null) continue;
 
-/*
-        String str = args.get("-load");
-        for (Plugin plugin : Config.getPlugins()){
-            if (str.equalsIgnoreCase("Imports")){
+            JSONArray methods = plugin.getMainMethods();
 
-                return;
+            for (int i=0; i<methods.length(); i++){
+                JSONObject json = methods.get(i).toJSONObject();
+                String s = json.get("switch").toString();
+                String str = args.get("-" + s);
+                if (str!=null){
+                    String arg = json.get("arg").toString();
+                    if (str.equalsIgnoreCase(arg)){
+
+                        String className = json.get("class").toString();
+                        String method = json.get("method").toString();
+
+                        plugin.loadLibraries();
+                        try{
+                            java.net.URLClassLoader child = new java.net.URLClassLoader(
+                            new java.net.URL[]{file.toFile().toURL()}, Main.class.getClassLoader());
+                            Class cls = Class.forName(className, true, child);
+                            for (Method m : cls.getDeclaredMethods()){
+                                int modifiers = m.getModifiers();
+                                if (Modifier.isPrivate(modifiers)) continue;
+                                if (!Modifier.isStatic(modifiers)) continue;
+                                if (m.getName().equalsIgnoreCase(method)){
+                                    Class<?>[] params = m.getParameterTypes();
+                                    if (params.length==1){
+                                        Object[] inputs = new Object[]{args};
+                                        try{
+                                            m.invoke(null, inputs);
+                                        }
+                                        catch(Exception e){
+                                            e.printStackTrace();
+                                        }
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                        catch(Exception e){
+                            //e.printStackTrace();
+                        }
+                    }
+                }
             }
         }
-        */
 
-if (true) return;
 
 
       //Process command line args
