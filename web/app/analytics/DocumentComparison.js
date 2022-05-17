@@ -883,6 +883,7 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
       //Left column
         td = document.createElement("td");
         td.style.height = "100%";
+        td.style.width = "50%";
         td.style.padding = "10px 10px 5px 10px";
         td.style.textAlign = "center";
         tr.appendChild(td);
@@ -936,6 +937,16 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
                 img.onload = function(){
                     img = this;
                     clearOverlay();
+                    if (currPair<0){
+                        carousel.getPanels().forEach((panel)=>{
+                            if (panel.isVisible){
+                                panel.div.removeChild(panel.div.firstChild);
+                                panel.div.appendChild(summaryPanel.el);
+                                navbar.hide();
+                                return;
+                            };
+                        });
+                    };
                     setTimeout(function(){
                         getImages(img).forEach((rightImage)=>{
                             getImages(rightImage.matchingImg).forEach((leftImage)=>{
@@ -1051,6 +1062,9 @@ bluewave.analytics.DocumentComparison = function(parent, config) {
         var getImages = function(img){
             var arr = [];
             carousel.getPanels().forEach((panel)=>{
+                if (!panel.isVisible){
+                    return;
+                }
                 var panels = panel.div.getElementsByClassName("doc-compare-panel");
                 for (var i=0; i<panels.length; i++){
                     var images = panels[i].getElementsByTagName("img");
