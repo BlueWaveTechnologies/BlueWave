@@ -680,7 +680,6 @@ public class DashboardService extends WebService {
                 dashboards.put(className, dashboard);
             }
         }
-        if (dashboards.isEmpty()) return;
 
 
         Connection conn = null;
