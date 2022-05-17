@@ -515,50 +515,7 @@ li.tree-node:hover {
 }
 
 
-/**************************************************************************/
-/** ICU Map
-/**************************************************************************/
 
-.icu-map-panel {
-    border-top:1px solid #dcdcdc;
-}
-
-.icu-map-list {
-    border-top:1px solid #dcdcdc;
-    border-right:1px solid #dcdcdc;
-}
-
-.icu-map-list .table-col,
-.icu-map-list .table-header-col{
-    font-size: 11px;
-    line-height: 14px;
-    white-space: normal;
-    padding-top: 3px;
-}
-
-.icu-map-legend {
-    position: absolute;
-    top: 7px;
-    right: 7px;
-    height: 45px;
-    width:  200px;
-    background-color: #fff;
-    padding: 7px;
-    border-radius: 3px;
-}
-
-.icu-map-legend-title {
-    font-weight: bold;
-    font-size: 12px;
-    margin: 0 0 3px 0;
-    text-align: center;
-}
-
-.icu-map-legend-label {
-    position: absolute;
-    right: 17px;
-    font-size: 11px;
-}
 
 
 /**************************************************************************/
@@ -1788,49 +1745,9 @@ svg text {
     font-size: 13px;
 }
 
-.chart-axis-label{
-    fill: #000;
-    font-size: 14px;
-    font-weight: bold;
-}
-
 .tick {
     font-size: 10px;
 }
-
-.countries {
-    fill: #f9f9f9;
-    stroke: #e0e0e0;
-    stroke-width: 0.5px;
-}
-
-.state-lines {
-  fill: #f5f5f5;
-  stroke: #000;
-  stroke-width: 0.5px;
-}
-
-
-.sankey-node rect {
-    fill-opacity: 0.9;
-    shape-rendering: crispEdges;
-}
-
-.sankey-node text {
-    pointer-events: none;
-    text-shadow: 0 1px 0 #fff;
-}
-
-.sankey-link {
-    fill: none;
-    stroke: #000;
-    stroke-opacity: 0.2;
-}
-
-.sankey-link:hover {
-    stroke-opacity: 0.5;
-}
-
 
 .graph-node circle {
   stroke: #fff;
