@@ -2,70 +2,47 @@ package bluewave.queries;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Index {
-    private static ConcurrentHashMap<String, String> queries = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String, Query> queries = new ConcurrentHashMap<>();
 
   //**************************************************************************
   //** getQuery
   //**************************************************************************
-    public static String getQuery(String file){
-        return getQuery(file, null);
-    }
-
-  //**************************************************************************
-  //** getQuery
-  //**************************************************************************
-  /** Returns a sql statement/script found in this directory
-   *  @param file Name of the sql script, excluding the file extension
-   *  @param dialect Query dialect (e.g. sql or cypher)
+  /** Returns a query found in this directory
+   *  @param fileName Name of the sql script, excluding the file extension
    */
-    public static String getQuery(String file, String dialect){
+    public static Query getQuery(String fileName){
+        
+        Query query = null;
         synchronized(queries){
             if (queries.isEmpty()){
                 for (javaxt.io.Jar.Entry entry : new javaxt.io.Jar(Index.class).getEntries()){
                     String relpath = entry.getName();
                     if (relpath.endsWith(".sql")){
                         String name = relpath.substring(relpath.lastIndexOf("/")+1);
-                        name = name.substring(0, name.indexOf("."));
-                        String sql = entry.getText();
-                        queries.put(name, sql);
+                        name = name.substring(0, name.indexOf(".")).toLowerCase();
+                        queries.put(name, new Query(entry.getText()));
                     }
                 }
             }
 
-
-            String sql = queries.get(file);
-            if (dialect==null) return sql;
-            else dialect = dialect.toLowerCase();
-
-            if (dialect.equals("cypher") || dialect.equals("sql")){
-                for (String str : sql.split(";")){
-                    str = removeComments(str);
-                    String u = str.toUpperCase();
-                    if (u.startsWith("MATCH") && dialect.equals("cypher")){
-                        return str;
-                    }
-                    if (u.startsWith("SELECT") && dialect.equals("sql")){
-                        return str;
-                    }
-                }
-            }
-
-            return sql;
+            return queries.get(fileName.toLowerCase());
         }
     }
-
-
+    
+    
   //**************************************************************************
-  //** removeComments
+  //** getQuery
   //**************************************************************************
-    private static String removeComments(String sql){
-        StringBuilder str = new StringBuilder();
-        for (String s : sql.split("\n")){
-            String t = s.trim();
-            if (t.length()==0 || t.startsWith("--")) continue;
-            str.append(s);
-            str.append("\n");
+  /** Returns a sql or cypher statement found in this directory
+   *  @param fileName Name of the sql script, excluding the file extension
+   *  @param dialect Query dialect (e.g. sql or cypher)
+   */
+    public static String getQuery(String fileName, String dialect){
+        Query query = getQuery(fileName);
+        if (query!=null) {
+            if (dialect.equals("cypher")) return query.getCypher();
+            if (dialect.equals("sql")) return query.getSQL();
         }
-        return str.toString().trim();
+        return null;
     }
 }
