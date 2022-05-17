@@ -273,7 +273,7 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String query = bluewave.queries.Index.getQuery("Imports_Summary");
+        String query = bluewave.queries.Index.getQuery("Imports_Summary", "cypher");
 
 
       //Update sql with additional keywords
@@ -825,7 +825,7 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_By_Product");
+        String sql = bluewave.queries.Index.getQuery("Imports_By_Product", "cypher");
 
 
       //Update sql with additional keywords
@@ -893,7 +893,7 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_By_ProductCode");
+        String sql = bluewave.queries.Index.getQuery("Imports_By_ProductCode", "cypher");
         if (!extraColumn.isEmpty()){
             sql += ", n." + extraColumn + " as " + extraColumn;
         }
@@ -1007,7 +1007,7 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_Network");
+        String sql = bluewave.queries.Index.getQuery("Imports_Network", "cypher");
 
 
       //Get graph
@@ -1150,7 +1150,7 @@ public class ImportService extends WebService {
 
 
       //Get query
-        String query = bluewave.queries.Index.getQuery("Imports_Network");
+        String query = bluewave.queries.Index.getQuery("Imports_Network", "cypher");
 
       //Remove ports
         query = query.replace("n.unladed_port as unladed_port", "").trim();
@@ -1418,7 +1418,7 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_By_Port_Of_Entry");
+        String sql = bluewave.queries.Index.getQuery("Imports_By_Port_Of_Entry", "cypher");
 
 
       //Update sql with additional keywords
@@ -1481,7 +1481,7 @@ public class ImportService extends WebService {
 
 
       //Get sql
-        String sql = bluewave.queries.Index.getQuery("Imports_Exams");
+        String sql = bluewave.queries.Index.getQuery("Imports_Exams", "cypher");
 
 
       //Update sql with additional keywords
@@ -1570,13 +1570,13 @@ public class ImportService extends WebService {
       //Get sql
         String sql;
         if (groupBy!=null && groupBy.equals("country")){
-            sql = bluewave.queries.Index.getQuery("Imports_Per_Day_Country");
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day_Country", "cypher");
             groupBy = null; //there's code below that's expecting an establishment type for the groupBy
         }
         else{
             if (country==null) return new ServiceResponse(400, "country is required");
 
-            sql = bluewave.queries.Index.getQuery("Imports_Per_Day");
+            sql = bluewave.queries.Index.getQuery("Imports_Per_Day", "cypher");
             sql = sql.replace("{country}", addQuotes(country));
             sql = sql.replace("{threshold}", threshold+"");
             if (groupBy!=null) sql += ",n."+ groupBy + " as " + groupBy;
