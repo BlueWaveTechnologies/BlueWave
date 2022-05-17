@@ -858,7 +858,7 @@ bluewave.Application = function(parent, config) {
         var dashboard = dashboardItem.dashboard;
 
 
-        if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
+        if (dashboard.className && dashboard.className.indexOf("bluewave.Explorer")===-1){
             if (!dashboard.app){
                 dashboard.app = raisePanel(eval(dashboard.className), slideBack);
             }
