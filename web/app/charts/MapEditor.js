@@ -156,7 +156,7 @@ if(!bluewave.charts) bluewave.charts={};
       //Merge clone with default config
         merge(clone, config.chart);
         chartConfig = clone;
-        
+
 
 
       //Get input data
@@ -267,7 +267,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** createInput
   //**************************************************************************
-    var createInput = function(parent,chartConfigRef,displayName,onChange,inputType){
+    var createInput = function(parent, chartConfigRef, displayName, onChange, inputType){
         if (!inputType) inputType = chartConfigRef;
 
         var row = document.createElement("div");
@@ -284,7 +284,9 @@ if(!bluewave.charts) bluewave.charts={};
         });
         input.onChange = function(name,value){
             chartConfig[chartConfigRef] = value;
-            onChange.apply(input,[inputType, name, value]);
+            var args = [];
+            if (onChange===showHideDropDowns) args = [inputType, name, value];
+            onChange.apply(input, args);
         };
 
         var show = input.show;
@@ -375,7 +377,7 @@ if(!bluewave.charts) bluewave.charts={};
         }
 
         getMapData(()=>{
-            if (!chart) chart = mapChart;
+            if (!(chart instanceof bluewave.charts.MapChart)) chart = mapChart;
             update(chart, inputData[0]);
         });
     };
