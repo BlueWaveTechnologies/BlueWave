@@ -527,9 +527,6 @@ public class Main {
             }
             graph.close();
         }
-        else if (test.equalsIgnoreCase("premier")){
-            bluewave.data.Premier.testConnect(args.get("-username"), args.get("-password"));
-        }
         else if (test.equals("company")){
 
             String name = args.get("-name");
