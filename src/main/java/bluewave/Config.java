@@ -339,12 +339,15 @@ public class Config {
   //**************************************************************************
     public static ArrayList<Plugin> getPlugins(){
         ArrayList<Plugin> plugins = new ArrayList<>();
-        javaxt.io.Directory pluginDir = getDirectory("webserver", "pluginDir");
-        if (pluginDir!=null){
-            for (javaxt.io.File xmlFile : pluginDir.getFiles("plugin.xml", true)){
-                plugins.add(new Plugin(xmlFile));
+        try{
+            javaxt.io.Directory pluginDir = getDirectory("webserver", "pluginDir");
+            if (pluginDir!=null){
+                for (javaxt.io.File xmlFile : pluginDir.getFiles("plugin.xml", true)){
+                    plugins.add(new Plugin(xmlFile));
+                }
             }
         }
+        catch(Exception e){}
         return plugins;
     }
 
