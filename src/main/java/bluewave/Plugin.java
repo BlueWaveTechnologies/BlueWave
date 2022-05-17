@@ -1,11 +1,17 @@
 package bluewave;
-import java.util.*;
-import javaxt.json.*;
 
-//XML parser for plugins
+//Java imports
+import java.util.*;
+import java.lang.reflect.Method;
+
+//JavaXT imports
+import javaxt.json.*;
 import static javaxt.xml.DOM.*;
+
+//XML imports
 import org.w3c.dom.*;
 import org.w3c.dom.Node;
+
 
 public class Plugin {
 
@@ -40,6 +46,66 @@ public class Plugin {
   //**************************************************************************
     public javaxt.io.Directory getDirectory(){
         return dir;
+    }
+
+
+  //**************************************************************************
+  //** getJarFile
+  //**************************************************************************
+    public javaxt.io.File getJarFile(){
+        for (javaxt.io.File jarFile : dir.getFiles("*.jar")){
+            return jarFile;
+        }
+        return null;
+    }
+
+
+  //**************************************************************************
+  //** loadLibraries
+  //**************************************************************************
+  /** Used to load all the jar files found in the "lib" folder
+   */
+    public void loadLibraries() {
+
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        javaxt.io.Directory libDir = new javaxt.io.Directory(dir + "lib");
+        for (javaxt.io.File k : libDir.getFiles("*.jar")){
+            try {
+                java.net.URL url = k.toFile().toURI().toURL();
+                Method method = classLoader.getClass().getDeclaredMethod("addURL", java.net.URL.class);
+                method.setAccessible(true);
+                method.invoke(classLoader, url);
+            }
+            catch (Exception e) {
+                try{
+                    Method method = classLoader.getClass().getDeclaredMethod("appendToClassPathForInstrumentation", String.class);
+                    method.setAccessible(true);
+                    method.invoke(classLoader, k.toString());
+                }
+                catch(Exception ex){
+                    ex.toString();
+                }
+            }
+        }
+    }
+
+
+  //**************************************************************************
+  //** getMainMethods
+  //**************************************************************************
+  /** Returns a json array representing all the dashboards defined in the
+   *  plugin file
+   */
+    public JSONArray getMainMethods(){
+        JSONArray arr = new JSONArray();
+        for (Node ext : getElementsByTagName("main", xml)){
+            for (Node node : getNodes(ext.getChildNodes())){
+                JSONObject json = getJson(node);
+                json.set("switch", node.getNodeName());
+                arr.add(json);
+            }
+        }
+        return arr;
     }
 
 
@@ -93,7 +159,7 @@ public class Plugin {
         return arr;
     }
 
-    
+
   //**************************************************************************
   //** getExtensions
   //**************************************************************************
