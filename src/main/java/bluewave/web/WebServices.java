@@ -78,7 +78,6 @@ public class WebServices extends WebService {
       //Instantiate additional webservices
         if (graph!=null){
             webservices.put("graph", new GraphService());
-            webservices.put("import", new ImportService());
             loadPlugins();
         }
         else{
@@ -224,8 +223,8 @@ public class WebServices extends WebService {
         WebService ws = webservices.get(service);
         if (ws==null) ws = webservices.get(service + "s");
         ServiceRequest serviceRequest = null;
-        
-        
+
+
       //Special case for dashboard/thumbnail requests
         if (service.startsWith("dashboard")){
             ws = webservices.get("dashboard");
@@ -238,8 +237,8 @@ public class WebServices extends WebService {
                 }
             }
         }
-        
-        
+
+
         if (ws==null){
             serviceRequest = new ServiceRequest(request);
             ws = this;

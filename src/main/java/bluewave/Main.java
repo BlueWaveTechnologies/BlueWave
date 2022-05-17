@@ -70,6 +70,24 @@ public class Main {
         Config.load(configFile, jar);
 
 
+
+      //Process command line args via plugins
+        for (Plugin plugin : Config.getPlugins()){
+        }
+
+/*
+        String str = args.get("-load");
+        for (Plugin plugin : Config.getPlugins()){
+            if (str.equalsIgnoreCase("Imports")){
+
+                return;
+            }
+        }
+        */
+
+if (true) return;
+
+
       //Process command line args
         if (args.containsKey("-addUser")){
             Config.initDatabase();
@@ -78,9 +96,6 @@ public class Main {
         else if (args.containsKey("-updatePassword")){
             Config.initDatabase();
             updatePassword(args);
-        }
-        else if (args.containsKey("-download")){
-            download(args);
         }
         else if (args.containsKey("-load")){
             loadData(args);
@@ -256,65 +271,10 @@ public class Main {
   //**************************************************************************
     private static void loadData(HashMap<String, String> args) throws Exception {
         String str = args.get("-load");
-        if (str.equalsIgnoreCase("Premier")){
-            importPremier(args);
-        }
-        else if (str.equalsIgnoreCase("Imports")){
-
-            String path = args.get("-path");
-            java.io.File f = new java.io.File(path);
-            if (!f.exists()){
-                return;
-            }
-
-            ArrayList<javaxt.io.File> files = new ArrayList<>();
-            if (f.isFile()){
-                javaxt.io.File file = new javaxt.io.File(f);
-                if (file.getExtension().equalsIgnoreCase("xlsx")){
-                    files.add(file);
-                }
-            }
-            else{
-                for (javaxt.io.File file : new javaxt.io.Directory(f).getFiles("*.xlsx")){
-                    files.add(file);
-                }
-            }
-
-            if (!files.isEmpty()){
-                Neo4J database = Config.getGraph(null);
-
-                for (javaxt.io.File file : files){
-                    Imports.loadEstablishments(file, database);
-                }
-
-                for (javaxt.io.File file : files){
-                    Imports.loadLines(file, database);
-                }
-
-                for (javaxt.io.File file : files){
-                    Imports.loadExams(file, database);
-                    Imports.loadSamples(file, database);
-                }
-
-                database.close();
-            }
-        }
-        else if (str.equalsIgnoreCase("Ports")){
-            Neo4J database = Config.getGraph(null);
-            Ports.loadUSPortsofEntry(new javaxt.io.File(args.get("-path")), database);
-            database.close();
-        }
-        else if (str.equalsIgnoreCase("Coordinates")){
-            Neo4J database = Config.getGraph(null);
-            Imports.geocodeAddresses(database, new javaxt.io.File(args.get("-path")));
-            database.close();
-        }
+        java.io.File f = new java.io.File(str);
+        if (f.isFile()) importFile(args);
         else{
-            java.io.File f = new java.io.File(str);
-            if (f.isFile()) importFile(args);
-            else{
-                //import directory?
-            }
+            //import directory?
         }
     }
 
@@ -368,20 +328,6 @@ public class Main {
             String target = args.get("-target");
             bluewave.graph.Import.importJSON(file, nodeType, target, graph);
         }
-        graph.close();
-    }
-
-
-  //**************************************************************************
-  //** importPremier
-  //**************************************************************************
-    private static void importPremier(HashMap<String, String> args) throws Exception {
-        String localPath = args.get("-path");
-        javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
-        if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
-
-        Neo4J graph = Config.getGraph(null);
-        Premier.importShards(dir, graph);
         graph.close();
     }
 
@@ -593,24 +539,6 @@ public class Main {
         }
         else{
             console.log("Unsupported test: " + test);
-        }
-    }
-
-  //**************************************************************************
-  //** download
-  //**************************************************************************
-    private static void download(HashMap<String, String> args) throws Exception {
-        String download = args.get("-download");
-        if (download==null) download = "";
-        if (download.equalsIgnoreCase("Premier")){
-            new bluewave.data.Premier(args.get("-username"), args.get("-password"))
-                    .downloadShards(args.get("-path"));
-        }
-        else if (download.equalsIgnoreCase("Ports")){
-            new bluewave.data.Ports().downloadUSPortsofEntry(args.get("-path"));
-        }
-        else{
-            console.log("Unsupported download: " + download);
         }
     }
 
