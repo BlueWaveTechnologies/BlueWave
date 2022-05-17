@@ -220,7 +220,18 @@ public class WebServices extends WebService {
 
       //Find a webservice associated with the request
         WebService ws = webservices.get(service);
-        if (ws==null) ws = webservices.get(service + "s");
+        if (ws==null){
+            if (service.endsWith("s")){
+                if (service.endsWith("ies")){
+                    String s = service.substring(0, service.length()-3) + "y";
+                    ws = webservices.get(s);
+                }
+                else{
+                    String s = service.substring(0, service.length()-1);
+                    ws = webservices.get(s);
+                }
+            }
+        }
         ServiceRequest serviceRequest = null;
 
 
