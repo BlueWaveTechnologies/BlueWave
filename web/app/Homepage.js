@@ -277,6 +277,7 @@ bluewave.Homepage = function(parent, config) {
             }
         }
         else{
+            var renderedDashboards = {};
             for (var i=0; i<groups.length; i++){
                 var group = groups.get(i);
                 var arr = [];
@@ -287,6 +288,7 @@ bluewave.Homepage = function(parent, config) {
                             var dashboard = dashboards.get(k);
                             if (dashboard.id===dashboardID){
                                 arr.push(dashboard);
+                                renderedDashboards[dashboard.id+""] = true;
                             }
                         }
                     }
@@ -295,6 +297,33 @@ bluewave.Homepage = function(parent, config) {
                 sort(arr);
                 for (var j=0; j<arr.length; j++){
                     add(arr[j], g);
+                }
+            }
+
+
+
+          //Check if there are any dashboards without a group
+            var arr = [];
+            for (var i=0; i<dashboards.length; i++){
+                var dashboard = dashboards.get(i);
+                if (!renderedDashboards[dashboard.id+""]) arr.push(dashboard);
+            }
+
+
+          //Add ungrouped dashboards
+            if (arr.length>0){
+
+
+                groups.add({
+                    name: "Additional Dashboards",
+                    dashboards: []
+                });
+
+                var g = createGroupBox(groups.get(groups.length-1));
+
+                sort(arr);
+                for (var i=0; i<arr.length; i++){
+                    add(arr[i], g);
                 }
             }
         }
