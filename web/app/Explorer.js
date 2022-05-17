@@ -810,7 +810,7 @@ bluewave.Explorer = function(parent, config) {
         var dashboard = {
             id: id,
             name: name,
-            className: name,
+            className: 'bluewave.Explorer',
             //thumbnail: thumbnail,
             info: {
                 layout: drawflow.export().drawflow.Home.data,
