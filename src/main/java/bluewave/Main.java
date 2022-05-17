@@ -1,26 +1,24 @@
 package bluewave;
 import bluewave.app.User;
-import bluewave.data.*;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
-import bluewave.web.services.DocumentService;
-
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
-import com.google.gson.JsonObject;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 
 import javaxt.sql.*;
 import javaxt.json.*;
-import javaxt.io.File;
 import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.*;
+
+import com.google.gson.JsonObject;
 import javaxt.express.utils.CSV;
+
 
 //******************************************************************************
 //**  Main
@@ -532,41 +530,6 @@ public class Main {
             String name = args.get("-name");
             console.log(name);
             console.log(getCompanyName(name));
-
-        }
-        else if (test.equalsIgnoreCase("document")){
-            javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
-            javaxt.io.Directory indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
-            javaxt.io.Directory searchDir = Config.getDirectory("webserver", "uploadDir");
-            if (searchDir==null) searchDir = new javaxt.io.Directory(jobDir.toString()+"uploads");
-
-            console.log("Searching:", searchDir);
-            console.log("Using Index:", indexDir);
-
-            bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(indexDir);
-            for (javaxt.io.File file : searchDir.getFiles("*.pdf", true)){
-                try{
-                    index.addFile(file);
-                }
-                catch(Exception e){
-                    //e.printStackTrace();
-                }
-            }
-
-
-            int totalHits = 0;
-            TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(args.get("-query"));
-            Iterator<Float> it = results.descendingKeySet().iterator();
-            while (it.hasNext()){
-                float score = it.next();
-                ArrayList<javaxt.io.File> files = results.get(score);
-                for (javaxt.io.File file : files){
-                    console.log(score, file);
-                    totalHits++;
-                }
-            }
-
-            console.log("done! hits: " + totalHits);
         }
         else if (test.equalsIgnoreCase("syncUsers")){
             bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));

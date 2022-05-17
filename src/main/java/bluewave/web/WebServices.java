@@ -71,7 +71,6 @@ public class WebServices extends WebService {
         webservices.put("report", new ReportService());
         webservices.put("data", new DataService(web));
         webservices.put("query", new QueryService(webConfig));
-        webservices.put("document", new DocumentService());
 
 
 
