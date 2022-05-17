@@ -18,10 +18,13 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var searchPanel, previewPanel;
     var similarityResults, documentSimilarities;
     var windows = [];
+    var settingsEditor;
+    var formTotals;
     var waitmask;
     var comparisonsEnabled = true;
     var remoteSearch = false;
     var ws;
+    var maxImportanceScoreEach = 0;
 
     var defaultConfig = {
         dateFormat: "M/D/YYYY h:mm A",
@@ -413,6 +416,58 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             td.style.background = "#f1f1f1";
             tr.appendChild(td);
 
+            var updateGridByFilteredResults = function(){
+
+                // counts, per match
+                var totalImg = 0;
+                var totalPage = 0;
+                var totalText = 0;
+                var totalDigit = 0;
+
+                maxImportanceScoreEach = 0;
+
+                grid.forEachRow((row)=>{
+                 // get the original unmodified record
+                    var recordVar = row.record;
+                    var originalSimilarities = recordVar.similarities;
+                    var newSimilarities = [];
+                    originalSimilarities.forEach((similarity)=>{
+
+                      // create modified copy (used for setting row link)
+                        var newResults = documentSimilarities.getFilteredResults(similarity.results);
+                        newSimilarities.push({ id: similarity.id, results: newResults});
+
+                      // set new max importance score
+                        if (newResults.maxImportanceScoreEach > maxImportanceScoreEach){
+                            maxImportanceScoreEach = newResults.maxImportanceScoreEach;
+                        };
+
+                      // add to total for each type of match
+                        totalDigit += newResults.digitCount;
+                        totalImg += newResults.imgCount;
+                        totalText += newResults.textCount;
+                        totalPage += newResults.duplicatePageCount;
+                    });
+
+                    // set new link for this row in the grid
+                    row.set("Comparison Results", getRowName(newSimilarities, originalSimilarities, row));
+
+                });
+
+             // update formTotals object for use by settings form
+                formTotals = {
+                    digitCount: totalDigit,
+                    imgCount: totalImg,
+                    textCount: totalText,
+                    duplicatePageCount: totalPage
+                };
+
+              // update settings form if it has been initialized
+                if(settingsEditor){
+                    settingsEditor.updateGUI();
+                };
+            };
+
 
           //Add run button
             button["run"] = createButton(td, {
@@ -424,13 +479,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 button["run"].disable();
                 button["clear"].disable();
 
-
-              //Udate grid, clear out any messages from previous run
+              //Update grid, clear out any messages from previous run
                 grid.forEachRow((row)=>{
                     row.record.similarities = null;
                     row.set("Comparison Results", "");
                 });
-
 
               //Script to run comparisons
                 var runComparison = function(){
@@ -448,8 +501,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                             });
                         }
                     });
-
-
                     jobs.forEach((job)=>{
                         grid.forEachRow((row)=>{
                             var document = row.record;
@@ -468,6 +519,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                         button["stop"].disable();
                         if (waitmask) waitmask.hide();
                         comparisonsEnabled = true;
+                        updateGridByFilteredResults();
                     });
                 };
 
@@ -483,7 +535,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     runComparison();
                 }
                 else{ //download...
-
 
                   //Create web socket listener and watch for status updates
                     if (!ws) ws = new javaxt.dhtml.WebSocket({
@@ -552,8 +603,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 }
             };
 
-
-
           //Add stop button
             button["stop"] = createButton(td, {
                 label: "Cancel",
@@ -579,7 +628,24 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 selectedDocuments.clear();
             };
 
+            createSpacer(td);
 
+          // Add settings button
+            button["settings"] = createButton(td, {
+                label: "Settings",
+                icon: "fas fa-cog"
+            });
+
+            button["settings"].onClick = function(){
+                if (!settingsEditor) {
+                    settingsEditor = createSettingsContextMenu(this);
+                    settingsEditor.updateGrid = function(){
+                        updateGridByFilteredResults();
+                    };
+                    settingsEditor.updateGUI();
+                };
+                settingsEditor.show();
+            };
 
           //Row 2
             tr = document.createElement("tr");
@@ -595,10 +661,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 localSort: true,
                 columns: [
                     {header: 'Document Name', width:'100%', sortable: true},
-                    {header: 'Comparison Results', width:'300', sortable: true}
+                    {header: 'Comparison Results', width:'310', sortable: true}
                 ],
                 update: function(row, record){
-                    console.log("grid updated");
                     row.set("Document Name", record.name);
                     row.set("Comparison Results", record.similarities); //<-- Updated by compareDocuments()
                 }
@@ -644,7 +709,6 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             },
             update: function(panel){
                 if (!grid){
-                    console.log("grid update called here for results panel");
                     createPanel(panel.childNodes[0]);
                     grid.load(selectedDocuments);
                     if (selectedDocuments.length>1) button["run"].enable();
@@ -654,6 +718,371 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         };
 
     };
+
+  //**************************************************************************
+  //** createContextMenu
+  //**************************************************************************
+    createSettingsContextMenu = function(button){
+        var config = {
+            style: javaxt.dhtml.style.default
+        };
+
+        //Update form
+        var editor = new javaxt.dhtml.Window(document.body, {
+            title: "Edit Settings",
+            width: 400,
+            valign: "top",
+            modal: false,
+            resizable: false,
+            style: config.style.window
+        });
+
+        var body = editor.getBody();
+        body.innerHTML = "";
+        if (!documentSimilarities) createDocumentSimilarities();
+        var comparisonConfig = documentSimilarities.getConfig();
+
+        var form = new javaxt.dhtml.Form(body, {
+            style: config.style.form,
+            items: [
+                {
+                    group: "Text",
+                    items: [
+                        {
+                            name: "textSimilarities",
+                            label: "Show",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "minTextCharacters",
+                            label: "Min Text Characters",
+                            type: "text",
+                            required: false
+                        },
+                        {
+                            name: "minTextWords",
+                            label: "Min Text Words",
+                            type: "text",
+                            required: false
+                        }
+                    ]
+                },
+                {
+                    group: "Digit",
+                    items: [
+                        {
+                            name: "digitSimilarities",
+                            label: "Show",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ],
+                        },
+                        {
+
+                            name: "minDigitCount",
+                            label: "Min Digit Count",
+                            type: "text",
+                            required: false
+                        },
+                        // {
+                        //     name: "allowDigitSpaces",
+                        //     label: "Allow Spaces Between Digits",
+                        //     type: "checkbox",
+                        //     options:[
+                        //         {
+                        //             label: "",
+                        //             value: true,
+                        //             checked: false
+                        //         }
+                        //     ]
+                        // },
+                        // {
+                        //     name: "decimalsOnly",
+                        //     label: "Decimals Only",
+                        //     type: "checkbox",
+                        //     options:[
+                        //         {
+                        //             label: "",
+                        //             value: true,
+                        //             checked: false
+                        //         }
+                        //     ]
+                        // },
+                        // {
+
+                        //     name: "minDecimalPlaces",
+                        //     label: "Min Decimal Places",
+                        //     type: "text",
+                        //     required: false
+                        // }
+                    ]
+                },
+                {
+                    group: "Importance Score",
+                    items: [
+                        {
+                            name:"minImportanceScoreEach",
+                            label: "Min Score",
+                            type: "text"
+                        }
+                        // {
+                        //     name:"similarityThreshholdOverall",
+                        //     label: "Min Score (per page)",
+                        //     type: "text"
+                        // }
+                    ]
+                },
+                {
+                    group: "Other",
+                    items: [
+                        {
+                            name: "imgSimilarities",
+                            label: "Show Images",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        },
+                        {
+                            name: "duplicatePageSimilarities",
+                            label: "Show Duplicate Pages",
+                            type: "checkbox",
+                            options: [
+                                {
+                                    label: "",
+                                    value: true,
+                                    checked: false
+                                }
+
+                            ]
+                        }
+                    ]
+                },
+
+            ]
+        });
+
+    //Set initial value for imgSimilarities
+        var imgSimilaritiesField = form.findField("imgSimilarities");
+        var imgSimilarities = comparisonConfig.imgSimilarities;
+        var imgSimilaritiesFieldLabel = imgSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+        imgSimilaritiesField.setValue(imgSimilarities===true ? true : false);
+
+    //Set initial value for digitSimilarities
+        var digitSimilaritiesField = form.findField("digitSimilarities");
+        var digitSimilaritiesFieldLabel = digitSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+        var digitSimilarities = comparisonConfig.digitSimilarities;
+        digitSimilaritiesField.setValue(digitSimilarities===true ? true : false);
+
+    //Set initial value for minDigitCount
+        var minDigitCountField = form.findField("minDigitCount");
+        var minDigitCount = comparisonConfig.minDigitCount;
+        minDigitCountField.setValue(minDigitCount);
+
+    // //Set initial value for allowDigitSpaces
+    //     var allowDigitSpacesField = form.findField("allowDigitSpaces");
+    //     var allowDigitSpacesFieldLabel = allowDigitSpacesField.row.getElementsByClassName("form-label noselect")[1];
+    //     var allowDigitSpaces = comparisonConfig.allowDigitSpaces;
+    //     allowDigitSpacesField.setValue(allowDigitSpaces===true ? true : false);
+
+    // //Set initial value for decimalsOnly
+    //     var decimalsOnlyField = form.findField("decimalsOnly");
+    //     var decimalsOnlyFieldLabel = decimalsOnlyField.row.getElementsByClassName("form-label noselect")[1];
+    //     var decimalsOnly = comparisonConfig.decimalsOnly;
+    //     decimalsOnlyField.setValue(decimalsOnly===true ? true : false);
+
+    // //Set initial value for minDecimalPlaces
+    //     var minDecimalPlacesField = form.findField("minDecimalPlaces");
+    //     var minDecimalPlacesFieldLabel = minDecimalPlacesField.row.getElementsByClassName("form-label noselect")[1];
+    //     var minDecimalPlaces = comparisonConfig.minDecimalPlaces;
+    //     minDecimalPlacesField.setValue(minDecimalPlaces);
+
+    //Set intial value for textSimilarities
+        var textSimilaritiesField = form.findField("textSimilarities");
+        var textSimilaritiesFieldLabel = textSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+        var textSimilarities = comparisonConfig.textSimilarities;
+        textSimilaritiesField.setValue(textSimilarities===true ? true : false);
+
+    //Set initial value for minTextWords
+        var minTextWordsField = form.findField("minTextWords");
+        var minTextWords = comparisonConfig.minTextWords;
+        minTextWordsField.setValue(minTextWords);
+
+    //Set initial value for minTextCharacters
+        var minTextCharactersField = form.findField("minTextCharacters");
+        var minTextCharacters = comparisonConfig.minTextCharacters;
+        minTextCharactersField.setValue(minTextCharacters);
+
+    //Set initial value for duplicatePageSimilarities
+    var duplicatePageSimilaritiesField = form.findField("duplicatePageSimilarities");
+    var duplicatePageSimilaritiesFieldLabel = duplicatePageSimilaritiesField.row.getElementsByClassName("form-label noselect")[1];
+    var duplicatePageSimilarities = comparisonConfig.duplicatePageSimilarities;
+    duplicatePageSimilaritiesField.setValue(duplicatePageSimilarities===true ? true : false);
+
+
+    // Use slider for minImportanceScoreEach
+        var minImportanceScoreSlider = createSlider("minImportanceScoreEach", form, "", 0, maxImportanceScoreEach, 1); // min, max, inc
+
+    //Set initial value for minImportanceScoreEach
+        var minImportanceScoreEachField = form.findField("minImportanceScoreEach");
+        var minImportanceScoreEach = comparisonConfig.minImportanceScoreEach;
+        minImportanceScoreEachField.setValue(minImportanceScoreEach);
+
+    // Use slider for similarityThreshholdOverall
+        // createSlider("similarityThreshholdOverall", form, "", 0, maxOverall, 5);
+
+    //Set initial value for similarityThreshholdOverall
+        // var similarityThreshholdOverallField = form.findField("similarityThreshholdOverall");
+        // var similarityThreshholdOverall = comparisonConfig.similarityThreshholdOverall;
+        // var similarityThreshholdOverallFieldLabel = similarityThreshholdOverallField.row.getElementsByClassName("form-label noselect")[1];
+        // similarityThreshholdOverallField.setValue(similarityThreshholdOverall);
+
+        var updateSavedState = function(formSettings){
+            // Update the saved state of the Comparison Panel form
+                comparisonConfig.imgSimilarities = formSettings.imgSimilarities;
+                comparisonConfig.digitSimilarities = formSettings.digitSimilarities;
+                comparisonConfig.textSimilarities = formSettings.textSimilarities;
+                comparisonConfig.minDigitCount = formSettings.minDigitCount;
+                comparisonConfig.minImportanceScoreEach = formSettings.minImportanceScoreEach;
+                // comparisonConfig.similarityThreshholdOverall = formSettings.similarityThreshholdOverall;
+                // comparisonConfig.allowDigitSpaces = formSettings.allowDigitSpaces;
+                // comparisonConfig.decimalsOnly = formSettings.decimalsOnly;
+                // comparisonConfig.minDecimalPlaces = formSettings.minDecimalPlaces;
+                comparisonConfig.minTextWords = formSettings.minTextWords;
+                comparisonConfig.minTextCharacters = formSettings.minTextCharacters;
+                comparisonConfig.duplicatePageSimilarities = formSettings.duplicatePageSimilarities;
+
+            // reset sliders
+                minImportanceScoreSlider.setAttribute("max", maxImportanceScoreEach);
+        };
+
+    //Process onChange events
+        form.onChange = function(){
+            var formSettings = form.getData();
+
+        //Update form data
+            if (formSettings.imgSimilarities==="true") formSettings.imgSimilarities = true;
+            else formSettings.imgSimilarities = false;
+
+            if (formSettings.digitSimilarities==="true") formSettings.digitSimilarities = true;
+            else formSettings.digitSimilarities = false;
+
+            if (formSettings.textSimilarities==="true") formSettings.textSimilarities = true;
+            else formSettings.textSimilarities = false;
+
+            // if (formSettings.allowDigitSpaces==="true") formSettings.allowDigitSpaces = true;
+            // else formSettings.allowDigitSpaces = false;
+
+            // if (formSettings.decimalsOnly==="true") formSettings.decimalsOnly = true;
+            // else formSettings.decimalsOnly = false;
+
+            if (formSettings.duplicatePageSimilarities==="true") formSettings.duplicatePageSimilarities = true;
+            else formSettings.duplicatePageSimilarities = false;
+
+        //Update comparisonConfig
+            updateSavedState(formSettings);
+
+        // reset form errors
+            for (var fieldName in formSettings){
+                if (form.findField(fieldName).resetColor) form.findField(fieldName).resetColor();
+            };
+
+        // disable/re-enable settings menu to prevent users from changing setting during rendering
+            if (settingsEditor){
+                settingsEditor.disableThis();
+            };
+            settingsEditor.updateGrid();
+            settingsEditor.enableThis();
+        };
+
+        editor.updateGUI = function(){
+            var totals = formTotals;
+
+            // update GUI counts
+                if (totals.digitCount < 1)digitSimilaritiesFieldLabel.innerText = '';
+                else digitSimilaritiesFieldLabel.innerText = totals.digitCount + " total matches";
+
+                if (totals.textCount < 1)textSimilaritiesFieldLabel.innerText = '';
+                else textSimilaritiesFieldLabel.innerText = totals.textCount + " total matches";
+
+                if (totals.imgCount < 1)imgSimilaritiesFieldLabel.innerText = '';
+                else imgSimilaritiesFieldLabel.innerText = totals.imgCount + " total matches";
+
+                if (totals.duplicatePageCount < 1)duplicatePageSimilaritiesFieldLabel.innerText = '';
+                else duplicatePageSimilaritiesFieldLabel.innerText = totals.duplicatePageCount + " total matches";
+        };
+
+        editor.disableThis = function(){ // used for temporarily disabling settings options while changes render
+            // modify style of fields to indicate this form is disabled
+                form.disableField("imgSimilarities");
+                form.disableField("digitSimilarities");
+                form.disableField("textSimilarities");
+                // form.disableField("minDecimalPlaces");
+                form.disableField("minDigitCount");
+                // form.disableField("allowDigitSpaces");
+                form.disableField("minTextCharacters");
+                form.disableField("minTextWords");
+                form.disableField("minImportanceScoreEach");
+                // form.disableField("similarityThreshholdOverall");
+                // form.disableField("decimalsOnly");
+                form.disableField("duplicatePageSimilarities");
+
+            // disable checkboxes
+                var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
+                for (var i in formCheckboxes){
+                    formCheckboxes[i].disabled = true;
+                };
+        };
+
+        editor.enableThis = function(){
+        // modify style of fields to indicate this form is enabled
+            form.enableField("imgSimilarities");
+            form.enableField("digitSimilarities");
+            form.enableField("textSimilarities");
+            // form.enableField("minDecimalPlaces");
+            form.enableField("minDigitCount");
+            // form.enableField("allowDigitSpaces");
+            form.enableField("minTextCharacters");
+            form.enableField("minTextWords");
+            form.enableField("minImportanceScoreEach");
+            // form.enableField("similarityThreshholdOverall");
+            // form.enableField("decimalsOnly");
+            form.enableField("duplicatePageSimilarities");
+
+        // enabled checkboxes
+            var formCheckboxes = form.el.getElementsByClassName("form-checkbox");
+            for (var i in formCheckboxes){
+                formCheckboxes[i].disabled = false;
+            };
+        };
+
+    // render settings Editor to the left of cog wheel icon
+        var rect = javaxt.dhtml.utils.getRect(button);
+        editor.showAt(rect.x - 400,rect.y);
+        form.resize();
+
+        return editor;
+    };
+
 
 
   //**************************************************************************
@@ -1030,11 +1459,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** compareDocuments
   //**************************************************************************
     var compareDocuments = function(jobs, onCompletion){
-        console.log("compare documents called");
         var runJob = function(){
-            console.log("run job called compare documents");
-            console.log(jobs);
-            console.log("logging jobs above comparsion panel");
             if (!comparisonsEnabled) jobs.splice(0,jobs.length);
 
             if (jobs.length==0){
@@ -1048,50 +1473,9 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 function(step, totalSteps, success){
                     job.row.set("Comparison Results", Math.round((step/totalSteps)*100) + "%");
                 },
-                function(similarities){
-                    var numSimilarities = 0;
-                    similarities.forEach((similarity)=>{
-                        if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
-                    });
-                    job.row.record.similarities = similarities;
-
-
-                    var summaryIcon, summaryText;
-                    if (numSimilarities===0){
-                        summaryIcon = "far fa-check-circle";
-                        summaryText = "No similarities found";
-                    }
-                    else{
-                        summaryIcon = "fas fa-exclamation-triangle";
-                        summaryText = "Found " + numSimilarities + " matching document";
-                        if (numSimilarities>1) summaryText+="s";
-
-                        var link = document.createElement("a");
-                        link.innerText = summaryText;
-                        link.document = job.row.record;
-                        link.onclick = function(){
-                            showSimilarityResults(this.document);
-                        };
-                        summaryText = link;
-                    }
-
-                    var summary = document.createElement("div");
-                    summary.className = "document-analysis-comparison-results";
-                    var icon = document.createElement("div");
-                    icon.className = summaryIcon;
-                    summary.appendChild(icon);
-                    var span = document.createElement("span");
-                    if (typeof summaryText === "string"){
-                        span.innerText = summaryText;
-                    }
-                    else{
-                        span.appendChild(summaryText);
-                    }
-
-                    summary.appendChild(span);
-
-
-                    job.row.set("Comparison Results", summary);
+                function(similarities, originalSimilarities){
+                    job.row.record.similarities = originalSimilarities;
+                    job.row.set("Comparison Results", getRowName(similarities, originalSimilarities, job.row));
                     runJob();
                 }
             );
@@ -1099,13 +1483,79 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
         runJob();
     };
 
+  //**************************************************************************
+  //** getRowName
+  //**************************************************************************
+    var getRowName = function(similarities, originalSimilarities, row){
+        var numSimilarities = 0;
+        var numOriginalSimilarities = 0;
+        var totalMatches = 0;
+        var hiddenMatches = 0;
+        similarities.forEach((similarity)=>{
+            totalMatches += similarity.results.num_suspicious_pairs;
+            if (similarity.results.num_suspicious_pairs>0) numSimilarities++;
+        });
+        originalSimilarities.forEach((similarity)=>{
+            numOriginalSimilarities += similarity.results.num_suspicious_pairs;
+        });
+
+        hiddenMatches = numOriginalSimilarities - totalMatches;
+
+        var summaryIcon, summaryText;
+        if (numSimilarities === 0 && hiddenMatches === 0){
+            summaryIcon = "far fa-check-circle";
+            summaryText = "No matches found";
+        }
+        else if (numSimilarities === 0 && hiddenMatches > 0){
+            summaryIcon = "far fa-check-circle";
+            summaryText = "No matches found (" + hiddenMatches + " hidden)";
+        }
+        else{
+            var documentString = "document"; // for writing over
+            summaryIcon = "fas fa-exclamation-triangle";
+            if (numSimilarities>1) documentString = documentString+"s";
+
+            if (numSimilarities !== 0 && hiddenMatches > 0){
+                summaryText = totalMatches + " matches in " + numSimilarities + ` ${documentString}` + " ("+hiddenMatches+" hidden)";
+            }
+            if (numSimilarities !==0 && hiddenMatches <= 0){
+                summaryText = totalMatches + " matches in " + numSimilarities + ` ${documentString}`;
+            }
+
+            var link = document.createElement("a");
+            link.innerText = summaryText;
+            link.document = row.record;
+            link.onclick = function(){
+                showSimilarityResults(this.document);
+            };
+            summaryText = link;
+        }
+
+        var summary = document.createElement("div");
+        summary.className = "document-analysis-comparison-results";
+        var icon = document.createElement("div");
+        icon.className = summaryIcon;
+        summary.appendChild(icon);
+        var span = document.createElement("span");
+        if (typeof summaryText === "string"){
+            span.innerText = summaryText;
+        }
+        else{
+            span.appendChild(summaryText);
+        }
+
+        summary.appendChild(span);
+
+        return summary;
+    };
+
 
   //**************************************************************************
   //** getSimilarities
   //**************************************************************************
     var getSimilarities = function(doc, otherDocs, onStep, onCompletion){
-
         var similarities = [];
+        var originalSimilarities = [];
         var steps = 0;
         var totalSteps = otherDocs.length;
 
@@ -1115,7 +1565,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
             if (!comparisonsEnabled) otherDocs.splice(0,otherDocs.length);
 
             if (otherDocs.length===0){
-                if (onCompletion) onCompletion.apply(me, [similarities]);
+                if (onCompletion) onCompletion.apply(me, [similarities,originalSimilarities]);
                 return;
             }
 
@@ -1124,10 +1574,19 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
 
             get("document/similarity?documents="+doc+","+b,{
                 success: function(json){
+                    if (!documentSimilarities) createDocumentSimilarities();
+
+
                     similarities.push({
+                        id: b,
+                      // get the default, baseline filtered results from documentComparison
+                        results: documentSimilarities.getFilteredResults(json)
+                    });
+                    originalSimilarities.push({
                         id: b,
                         results: json
                     });
+
                     if (onStep) onStep.apply(me, [steps,totalSteps,true]);
                     getSimilarity(doc, otherDocs);
                 },
@@ -1165,14 +1624,15 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 localSort: true,
                 columns: [
                     {header: 'Similar Document', width:'100%', sortable: true},
-                    {header: 'Page Similarity', width:'120', sortable: true},
-                    {header: 'Digit Similarity', width:'120', sortable: true},
-                    {header: 'Text Similarity', width:'120', sortable: true},
-                    {header: 'Image Similarity', width:'120', sortable: true},
-                    {header: 'Total Similarities', width:'120', sortable: true}
+                    {header: 'Page Matches', width:'120', sortable: true},
+                    {header: 'Image Matches', width:'120', sortable: true},
+                    {header: 'Digit Matches', width:'120', sortable: true},
+                    {header: 'Text Matches', width:'120', sortable: true},
+                    {header: 'Total Matches', width:'120', sortable: true}
                 ],
                 update: function(row, record){
-                    if (record.suspicious_pages < 1){
+                    var CombinedMatchesCount = (record.results.textCount + record.results.digitCount + record.results.duplicatePageCount + record.results.imgCount);
+                    if (record.suspicious_pages < 1 || CombinedMatchesCount < 1){
                         row.remove();
                         return;
                     }
@@ -1189,12 +1649,12 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                     div.appendChild(link);
 
                     row.set("Similar Document", div);
-                    row.set("Total Similarities", (record.results.textCount + record.results.digitCount + record.results.duplicatePageCount));
+                    row.set("Total Matches", CombinedMatchesCount);
                     // row.set("Similarities", record.suspicious_pages);
-                    row.set("Image Similarity", record.results.imgCount);
-                    row.set("Text Similarity", record.results.textCount);
-                    row.set("Digit Similarity", record.results.digitCount);
-                    row.set("Page Similarity", record.results.duplicatePageCount);
+                    row.set("Image Matches", record.results.imgCount);
+                    row.set("Text Matches", record.results.textCount);
+                    row.set("Digit Matches", record.results.digitCount);
+                    row.set("Page Matches", record.results.duplicatePageCount);
                 }
             });
 
@@ -1222,7 +1682,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                             return true;
                         });
 
-                        if (!documentSimilarities) createDocumentSimilaries();
+                        if (!documentSimilarities) createDocumentSimilarities();
 
                       //Create record
                         data.push({
@@ -1253,7 +1713,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //**************************************************************************
   //** createDocumentSimilarities
   //**************************************************************************
-    var createDocumentSimilaries = function(){
+    var createDocumentSimilarities = function(){
         if (!documentSimilarities){
 
             var win = createWindow({
@@ -1273,7 +1733,11 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
                 },
                 getFilteredResults: function(results){
                     return docCompare.getFilteredSimilarities(results);
+                },
+                getConfig: function(){
+                    return docCompare.getConfig();
                 }
+
             };
         };
     };
@@ -1283,7 +1747,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
   //** showDocumentSimilarities
   //**************************************************************************
     var showDocumentSimilarities = function(record){
-        if (!documentSimilarities) createDocumentSimilaries();
+        if (!documentSimilarities) createDocumentSimilarities();
         documentSimilarities.update(record.results);
         documentSimilarities.show();
     };
@@ -1568,6 +2032,7 @@ bluewave.analytics.DocumentAnalysis = function(parent, config) {
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createSpacer = bluewave.utils.createSpacer;
     var parseCSV = bluewave.utils.parseCSV;
+    var createSlider = bluewave.utils.createSlider;
 
     init();
 };

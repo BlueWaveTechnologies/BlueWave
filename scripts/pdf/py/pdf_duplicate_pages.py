@@ -35,7 +35,10 @@ def find_duplicate_pages(data_a, data_b):
     page_nums_a, texts_a = get_page_texts(data_a)
     page_nums_b, texts_b = get_page_texts(data_b)
 
-    vectorizer = TfidfVectorizer()
+    vectorizer = TfidfVectorizer(
+        analyzer='char',
+        ngram_range=(5,5)
+        )
     corpus = texts_a + texts_b
     X = vectorizer.fit_transform(corpus)
     

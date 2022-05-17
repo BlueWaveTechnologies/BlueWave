@@ -33,6 +33,7 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -112,9 +113,10 @@ public class FileIndex {
     public FileIndex(javaxt.io.Directory path) throws Exception {
         dir = FSDirectory.open(Paths.get(path.toString()));
         StandardAnalyzer standardAnalyzer = new StandardAnalyzer(getStopWords());
-        ShingleAnalyzerWrapper shingleAnalyzerWrapper = new ShingleAnalyzerWrapper(standardAnalyzer, 2, 3);
+        ShingleAnalyzerWrapper shingleAnalyzerWrapper = new ShingleAnalyzerWrapper(standardAnalyzer, 2, 4);
         Map<String,Analyzer> analyzerPerFieldMap = new HashMap<>();
-        analyzerPerFieldMap.put(FIELD_CONTENTS, shingleAnalyzerWrapper);
+//        analyzerPerFieldMap.put(FIELD_CONTENTS, shingleAnalyzerWrapper);
+        analyzerPerFieldMap.put(FIELD_CONTENTS, standardAnalyzer);
         analyzerPerFieldMap.put(FIELD_NAME, standardAnalyzer);
         perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(standardAnalyzer, analyzerPerFieldMap);
 
@@ -131,10 +133,25 @@ public class FileIndex {
         }
     }
 
-    public void removeOrphanDocs() {
+
+  //**************************************************************************
+  //** getSize
+  //**************************************************************************
+  /** Return the number of documents in the index
+   */
+    public int getSize() {
+        return instanceOfIndexSearcher().getIndexReader().numDocs();
+    }
+
+
+  //**************************************************************************
+  //** removeOrphanDocs
+  //**************************************************************************
+  /** Used to remove any docs that might have been moved or deleted
+   */
+    private void removeOrphanDocs() {
         //Remove any docs that might have been moved or deleted
         IndexReader reader = instanceOfIndexSearcher().getIndexReader();
-        console.log("Index has " + reader.numDocs() + " total docs.");
         for (int i=0; i<reader.maxDoc(); i++) {
             try {
                 Document doc = reader.document(i);
@@ -230,52 +247,55 @@ public class FileIndex {
         return searchResults;
     }
 
-
   //**************************************************************************
   //** getTopDocs
   //**************************************************************************
     private List<ResultWrapper> getTopDocs(List<String> searchTerms, Integer limit) throws Exception {
         List<ResultWrapper> results = new ArrayList<>();
-
-
+        
+        String searchTerm = searchTerms.get(0);
       //Compile query
-        BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
-        Query contentsQuery = null;
-        for (String term : searchTerms) {
+//        BooleanQuery.Builder bqBuilder = new BooleanQuery.Builder();
+//        Query contentsQuery = null;
+//        for (String term : searchTerms) {
+//            
+//            console.log("term: " + term);
+//            console.log("escaped term: " + QueryParser.escape(term));
+//
+//            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
+//            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
+//            bqBuilder.add(wildcardBooleanClause);
+//
+//            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
+//
+//            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
+//
+//            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.SHOULD));
+//
+//            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
+//            bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
+//        }
+//        BooleanQuery bbq = bqBuilder.build();
 
-            WildcardQuery nameQuery = new WildcardQuery(new Term(FIELD_NAME, WildcardQuery.WILDCARD_STRING + QueryParser.escape(term).toLowerCase() + WildcardQuery.WILDCARD_STRING));
-            BooleanClause wildcardBooleanClause = new BooleanClause(new BoostQuery(nameQuery, 2.0f), BooleanClause.Occur.SHOULD);
-            bqBuilder.add(wildcardBooleanClause);
-
-            Query contentsPhraseQuery = new QueryParser(FIELD_CONTENTS, new StandardAnalyzer(getStopWords())).createPhraseQuery(FIELD_CONTENTS, QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsPhraseQuery, BooleanClause.Occur.SHOULD));
-
-            contentsQuery = new QueryParser(FIELD_CONTENTS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(contentsQuery, BooleanClause.Occur.SHOULD));
-
-            Query keywordQuery = new QueryParser(FIELD_KEYWORDS, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(keywordQuery, BooleanClause.Occur.SHOULD));
-
-            Query subjectQuery = new QueryParser(FIELD_SUBJECT, perFieldAnalyzerWrapper).parse(QueryParser.escape(term).toLowerCase());
-            bqBuilder.add(new BooleanClause(subjectQuery, BooleanClause.Occur.SHOULD));
-        }
-        BooleanQuery bbq = bqBuilder.build();
-
+        Query query = new MultiFieldQueryParser(new String[]{FIELD_NAME, FIELD_CONTENTS, FIELD_KEYWORDS, FIELD_SUBJECT}, perFieldAnalyzerWrapper).parse(searchTerm);
 
       //Execute search
         IndexSearcher searcher = instanceOfIndexSearcher();
         if (searcher==null) return results;
         if (limit==null || limit<1) limit = 10;
-        TopDocs hits = searcher.search(bbq, limit);
-        console.log("Hits: " + hits.totalHits.value + " search term: ", searchTerms);
+        TopDocs hits = searcher.search(query, limit);
+        console.log("Hits: " + hits.totalHits.value + " -- search_term: ", searchTerms);
 
 
       //Create highlighter
-        QueryScorer scorer = new QueryScorer(bbq);
+        QueryScorer scorer = new QueryScorer(query);
         Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter(), scorer);
         highlighter.setTextFragmenter(new SimpleFragmenter( FRAGMENT_CHAR_SIZE));
 
-        QueryScorer phraseScorer = new QueryScorer(bbq);
+        QueryScorer phraseScorer = new QueryScorer(query);
         phraseScorer.setExpandMultiTermQuery(false);
         Highlighter phraseHighlighter = new Highlighter(new SimpleHTMLFormatter(), phraseScorer);
         phraseHighlighter.setTextFragmenter(new SimpleSpanFragmenter(phraseScorer, FRAGMENT_CHAR_SIZE));
@@ -286,7 +306,7 @@ public class FileIndex {
             resultWrapper.scoreDoc = scoreDoc;
             int docid = scoreDoc.doc;
             Document doc = searcher.doc(docid);
-            Explanation ex = searcher.explain(bbq, docid);
+            Explanation ex = searcher.explain(query, docid);
             JSONArray explainDetails = new JSONArray();
             for(Explanation explanation : ex.getDetails()) {
                 JSONArray explains = parse(explanation);
@@ -303,7 +323,7 @@ public class FileIndex {
                 IndexableField field = doc.getField(FIELD_CONTENTS);
                 String fragment = getHighlights(field, doc, phraseHighlighter);
                 if(fragment == null) {
-                    fragment = getVectorHighlight(contentsQuery, searcher.getIndexReader(), docid, FIELD_CONTENTS, term);
+                    fragment = getVectorHighlight(query, searcher.getIndexReader(), docid, FIELD_CONTENTS, term);
                 }
                 resultWrapper.highlightFragment = fragment;
 
@@ -366,7 +386,7 @@ public class FileIndex {
 
     private IndexWriter instanceOfIndexWriter() {
         synchronized (wmonitor) {
-            if (_indexWriter == null) {
+            if (_indexWriter == null || !_indexWriter.isOpen()) {
                 try {
                    IndexWriterConfig iwc = new IndexWriterConfig(perFieldAnalyzerWrapper);
                     iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
@@ -667,4 +687,5 @@ public class FileIndex {
 
         return substring;
     }
+
 }
