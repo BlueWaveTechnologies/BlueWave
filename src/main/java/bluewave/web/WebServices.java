@@ -69,7 +69,7 @@ public class WebServices extends WebService {
         webservices.put("admin", new AdminService(database, webConfig));
         webservices.put("map", new MapService());
         webservices.put("report", new ReportService());
-        webservices.put("data", new DataService(new javaxt.io.Directory(web + "data")));
+        webservices.put("data", new DataService(web));
         webservices.put("query", new QueryService(webConfig));
         webservices.put("document", new DocumentService());
 
