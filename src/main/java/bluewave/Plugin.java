@@ -78,9 +78,27 @@ public class Plugin {
 
 
   //**************************************************************************
+  //** getDashboards
+  //**************************************************************************
+  /** Returns a json array representing all the dashboards defined in the
+   *  plugin file
+   */
+    public JSONArray getDashboards(){
+        JSONArray arr = new JSONArray();
+        for (Node ext : getElementsByTagName("dashboards", xml)){
+            for (Node node : getNodes(ext.getChildNodes())){
+                arr.add(getJson(node));
+            }
+        }
+        return arr;
+    }
+
+    
+  //**************************************************************************
   //** getExtensions
   //**************************************************************************
-  /** Returns a json object representing all the web extension
+  /** Returns a json object representing all the web extensions defined in the
+   *  plugin file
    */
     public JSONObject getExtensions(){
 
