@@ -244,11 +244,11 @@ bluewave.Homepage = function(parent, config) {
             var sharedDashboards = [];
             for (var i=0; i<dashboards.length; i++){
                 var dashboard = dashboards.get(i);
-                if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
-                    sharedDashboards.push(dashboard.id);
+                if (dashboard.className && dashboard.className.indexOf("bluewave.Explorer")===0){
+                    myDashboards.push(dashboard.id);
                 }
                 else{
-                    myDashboards.push(dashboard.id);
+                    sharedDashboards.push(dashboard.id);
                 }
             }
             if (myDashboards.length>0){
@@ -263,6 +263,7 @@ bluewave.Homepage = function(parent, config) {
                 });
             }
         }
+
 
 
       //Render dashboards by group
@@ -293,10 +294,16 @@ bluewave.Homepage = function(parent, config) {
                         }
                     }
                 }
-                var g = createGroupBox(group);
-                sort(arr);
-                for (var j=0; j<arr.length; j++){
-                    add(arr[j], g);
+
+                if (isDefaultGroup(group) && arr.length===0){
+                    //don't render an empty default group
+                }
+                else{
+                    var g = createGroupBox(group);
+                    sort(arr);
+                    for (var j=0; j<arr.length; j++){
+                        add(arr[j], g);
+                    }
                 }
             }
 
@@ -315,7 +322,7 @@ bluewave.Homepage = function(parent, config) {
 
 
                 groups.add({
-                    name: "Additional Dashboards",
+                    name: "Shared Dashboards",
                     dashboards: []
                 });
 
@@ -835,11 +842,11 @@ bluewave.Homepage = function(parent, config) {
             var sharedDashboards = [];
             for (var i=0; i<dashboards.length; i++){
                 var dashboard = dashboards.get(i);
-                if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
-                    sharedDashboards.push(dashboard.id);
+                if (dashboard.className && dashboard.className.indexOf("bluewave.Explorer")===0){
+                    myDashboards.push(dashboard.id);
                 }
                 else{
-                    myDashboards.push(dashboard.id);
+                    sharedDashboards.push(dashboard.id);
                 }
             }
             if (!groups) groups = new javaxt.dhtml.DataStore();
