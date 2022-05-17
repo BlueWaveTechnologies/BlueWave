@@ -698,7 +698,9 @@ public class DashboardService extends WebService {
                     dashboards.remove(className);
                 }
                 else{
-                    if (className==null) orphans.add(rs.getValue(1).toLong());
+                    if (!className.equals("bluewave.Explorer")){
+                        orphans.add(rs.getValue(1).toLong());
+                    }
                 }
                 rs.moveNext();
             }
