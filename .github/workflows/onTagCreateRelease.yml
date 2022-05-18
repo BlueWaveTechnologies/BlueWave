@@ -97,7 +97,7 @@ jobs:
      # copy jar file to main directory
       - name: Copy jar file to main directory
         run: |
-          cp target/bluewave-1.0.0.jar bluewave-${{ env.releaseLabel }}.jar
+          cp target/bluewave-dev.jar bluewave-${{ env.releaseLabel }}.jar
           cp -r target/lib lib
 
 
