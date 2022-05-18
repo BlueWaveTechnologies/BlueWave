@@ -149,8 +149,8 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //** onChange
   //**************************************************************************
     this.onChange = function(){};
-    
-    
+
+
   //**************************************************************************
   //** onContextMenu
   //**************************************************************************
@@ -181,10 +181,28 @@ bluewave.charts.SankeyEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(sankeyConfig, inputs){
+    this.update = function(node){
         me.clear();
 
+
+      //Get chart config
+        var sankeyConfig = null;
+        var showPreview = false;
+        if (node.inputs){
+            for (var nodeID in node.inputs) {
+                if (node.inputs.hasOwnProperty(nodeID)){
+                    var n = node.inputs[nodeID];
+                    if (n.config.nodes || n.config.links){
+                        sankeyConfig = n.config;
+                        showPreview = true;
+                        break;
+                    }
+                }
+            }
+        }
         if (!sankeyConfig) sankeyConfig = {};
+        merge(sankeyConfig, node.config);
+
 
       //Clone the config so we don't modify the original config object
         sankeyConfig = JSON.parse(JSON.stringify(sankeyConfig));
@@ -203,47 +221,12 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         toggleButton.setValue("Edit");
 
 
-      //Special case when inputs are present (e.g. from SupplyChain editor)
-        if (inputs && inputs.length){
-           
-          //Hide the toggle button
-            toggleButton.hide();
-            
-            
-          //Generate data to mimic what we need to generate a sankey using drawflow 
-            var input = inputs[0];
-            for (var nodeID in input.nodes) {
-                if (input.nodes.hasOwnProperty(nodeID)){
-                    var node = input.nodes[nodeID];
-                    node.inputs = {};
-                    nodes[nodeID] = node;
-                }
-            }
-            for (var linkID in input.links) {
-                if (input.links.hasOwnProperty(linkID)){
-                    var link = input.links[linkID];
-                    quantities[linkID] = link.quantity;
-                    
-                    var arr = linkID.split("->");
-                    var sourceID = arr[0];
-                    var targetID = arr[1];
-                    nodes[targetID].inputs[sourceID] = {};
-                }
-            }
-            
-            
-            
-          //Switch view and return early
-            toggleButton.setValue("Preview");            
-            return;
-        }
-
 
 
       //Show/hide toggle button
-        if (config.hidePreview===true) toggleButton.hide(); 
+        if (config.hidePreview===true) toggleButton.hide();
         else toggleButton.show();
-        
+
 
       //Set module
         currModule = "sankey_" + new Date().getTime();
@@ -272,7 +255,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
                 var temp = document.createElement("div");
                 temp.innerHTML = drawflowNode.html;
                 var node = document.getElementById(temp.childNodes[0].id);
-                
+
               //Add props to node
                 var props = sankeyConfig.nodes[nodeID];
                 for (var key in props) {
@@ -352,6 +335,20 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         }
 
         setZoom(sankeyConfig.zoom);
+
+
+
+      //Special case when inputs are present (e.g. from SupplyChain editor)
+        if (showPreview){
+
+          //Hide the toggle button
+            toggleButton.hide();
+
+          //Switch view and return early
+            toggleButton.setValue("Preview");
+        }
+
+
     };
 
 
@@ -541,16 +538,30 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         if (!previewPanel.isVisible()) toggleButton.setValue("Preview");
         return previewPanel;
     };
-    
-    
+
+
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+  /** Used to render a sankey chart in a given dom element using the current
+   *  chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.SankeyChart(parent, config.sankey);
+        var data = me.getSankeyData();
+        chart.update(config.sankey.style, data);
+        return chart;
+    };
+
+
   //**************************************************************************
   //** getEditor
-  //**************************************************************************  
+  //**************************************************************************
     this.getEditor = function(){
         if (previewPanel.isVisible()) toggleButton.setValue("Edit");
         return editPanel;
     };
-    
+
 
   //**************************************************************************
   //** setTitle
@@ -1083,14 +1094,14 @@ bluewave.charts.SankeyEditor = function(parent, config) {
             editNode(this);
         };
     };
-    
+
 
   //**************************************************************************
   //** createDrawflowNode
   //**************************************************************************
     var createDrawflowNode = function(node){
         var div = document.createElement("div");
-        
+
         var title = document.createElement("div");
         title.className = "drawflow-node-title";
         title.innerHTML = "<i class=\"" + node.icon + "\"></i><span>" + node.name + "</span>";
@@ -1109,7 +1120,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
         div.appendChild(body);
         return div;
     };
-    
+
 
   //**************************************************************************
   //** createNode
@@ -1520,7 +1531,7 @@ bluewave.charts.SankeyEditor = function(parent, config) {
 
   //**************************************************************************
   //** getSankeyData
-  //**************************************************************************  
+  //**************************************************************************
     this.getSankeyData = function(){
         var data = {
             nodes: [],

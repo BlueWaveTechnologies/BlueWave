@@ -1,4 +1,6 @@
 package bluewave.web.services;
+import bluewave.Config;
+import bluewave.Plugin;
 import bluewave.app.Dashboard;
 import bluewave.app.DashboardUser;
 import bluewave.app.DashboardGroup;
@@ -31,50 +33,12 @@ public class DashboardService extends WebService {
   //**************************************************************************
   //** Constructor
   //**************************************************************************
-    public DashboardService(bluewave.web.WebServices ws, javaxt.io.Directory web, Database database) throws Exception {
+    public DashboardService(bluewave.web.WebServices ws, javaxt.io.Directory web) throws Exception {
         this.ws = ws;
-
-
         super.addClass(bluewave.app.Dashboard.class);
         super.addClass(bluewave.app.DashboardUser.class);
         //super.addClass(bluewave.app.DashboardGroup.class);
-
-
-        Connection conn = null;
-        try{
-
-          //Find dashboards in the database
-            HashSet<String> dashboards = new HashSet<>();
-            conn = database.getConnection();
-            Recordset rs = new Recordset();
-            String tableName = Model.getTableName(new Dashboard());
-            rs.open("select class_name from " + tableName, conn);
-            while (rs.hasNext()){
-                String className = rs.getValue(0).toString();
-                dashboards.add(className);
-                rs.moveNext();
-            }
-            rs.close();
-            conn.close();
-
-
-          //Add dashboards as needed
-            javaxt.io.Directory dir = new javaxt.io.Directory(web + "app/dashboards/");
-            for (javaxt.io.File file : dir.getFiles("*.js")){
-                String fileName = file.getName(false);
-                String className = "bluewave.dashboards." + fileName;
-                if (!dashboards.contains(className)){
-                    Dashboard dashboard = new Dashboard();
-                    dashboard.setName(fileName);
-                    dashboard.setClassName(className);
-                    dashboard.save();
-                }
-            }
-        }
-        catch(Exception e){
-            if (conn!=null) conn.close();
-            throw e;
-        }
+        loadPlugins();
     }
 
 
@@ -199,7 +163,7 @@ public class DashboardService extends WebService {
 
 
           //Apply security filters
-            if (dashboard.getClassName().startsWith("bluewave.dashboards.")){
+            if (!dashboard.getClassName().startsWith("bluewave.Explorer")){
                 return new ServiceResponse(403, "Not Authorized");
             }
             if (!isNew){
@@ -693,6 +657,84 @@ public class DashboardService extends WebService {
             rs.close();
             conn.close();
             return isAuthorized;
+        }
+        catch(Exception e){
+            if (conn!=null) conn.close();
+            throw e;
+        }
+    }
+
+
+  //**************************************************************************
+  //** loadPlugins
+  //**************************************************************************
+    private void loadPlugins() throws Exception {
+
+      //Generate list of dashboards in the plugins
+        HashMap<String, JSONObject> dashboards = new HashMap<>();
+        for (Plugin plugin : Config.getPlugins()){
+            JSONArray arr = plugin.getDashboards();
+            for (int i=0; i<arr.length(); i++){
+                JSONObject dashboard = arr.get(i).toJSONObject();
+                String className = dashboard.get("class").toString();
+                dashboards.put(className, dashboard);
+            }
+        }
+
+
+        Connection conn = null;
+        try{
+
+          //Find existing dashboards in the database
+            conn = Config.getDatabase().getConnection();
+            ArrayList<Long> orphans = new ArrayList<>();
+            Recordset rs = new Recordset();
+            String tableName = Model.getTableName(new Dashboard());
+            rs.open("select class_name, id from " + tableName, conn);
+            while (rs.hasNext()){
+                String className = rs.getValue(0).toString();
+                if (dashboards.containsKey(className)){
+                    dashboards.remove(className);
+                }
+                else{
+                    if (!className.equals("bluewave.Explorer")){
+                        orphans.add(rs.getValue(1).toLong());
+                    }
+                }
+                rs.moveNext();
+            }
+            rs.close();
+
+
+          //Delete any orphaned dashboards
+            if (!orphans.isEmpty()){
+                StringBuilder sql = new StringBuilder("delete from " + tableName +
+                " where id in (");
+                for (int i=0; i<orphans.size(); i++){
+                    if (i>0) sql.append(",");
+                    sql.append(orphans.get(i));
+                }
+                sql.append(")");
+                conn.execute(sql.toString());
+            }
+
+
+          //Close database connection
+            conn.close();
+
+
+
+
+          //Add new dashboards as needed
+            Iterator<String> it = dashboards.keySet().iterator();
+            while (it.hasNext()){
+                JSONObject d = dashboards.get(it.next());
+                Dashboard dashboard = new Dashboard();
+                dashboard.setName(d.get("name").toString());
+                dashboard.setClassName(d.get("class").toString());
+                dashboard.save();
+            }
+
         }
         catch(Exception e){
             if (conn!=null) conn.close();

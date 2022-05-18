@@ -1,5 +1,5 @@
 package bluewave;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import javaxt.express.utils.DbUtils;
 import static javaxt.utils.Console.console;
@@ -61,6 +61,7 @@ public class Config {
         updateDir("logDir", webConfig, configFile, true);
         updateDir("jobDir", webConfig, configFile, true);
         updateDir("scriptDir", webConfig, configFile, false);
+        updateDir("pluginDir", webConfig, configFile, false);
         updateFile("keystore", webConfig, configFile);
 
 
@@ -332,6 +333,24 @@ public class Config {
         return indexDir;
     }
 
+    
+  //**************************************************************************
+  //** getPlugins
+  //**************************************************************************
+    public static ArrayList<Plugin> getPlugins(){       
+        ArrayList<Plugin> plugins = new ArrayList<>();
+        try{
+            javaxt.io.Directory pluginDir = getDirectory("webserver", "pluginDir");
+            if (pluginDir!=null){
+                for (javaxt.io.File xmlFile : pluginDir.getFiles("plugin.xml", true)){
+                    plugins.add(new Plugin(xmlFile));
+                }
+            }
+        }
+        catch(Exception e){}
+        return plugins;
+    }
+
 
   //**************************************************************************
   //** getDirectory
@@ -345,6 +364,7 @@ public class Config {
             for (String key : keys){
                 if (config==null) config = Config.get(key);
                 else config = config.get(key);
+                if (config==null) return null;
             }
 
             String dir = config.toString().trim();

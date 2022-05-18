@@ -101,7 +101,7 @@ public class Routing {
    */
     public static JSONObject getShippingRoute(BigDecimal[] start, BigDecimal[] end, String shippingMethod) throws Exception {
       //Get script
-        javaxt.io.File[] scripts = Python.getScriptDir().getFiles("shipment_route.py", true);
+        javaxt.io.File[] scripts = Python.getScripts("shipment_route.py");
         if (scripts.length==0) throw new Exception("Script not found");
 
 

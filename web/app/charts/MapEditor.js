@@ -13,10 +13,14 @@ if(!bluewave.charts) bluewave.charts={};
 
     var me = this;
     var defaultConfig = {
-        backgroundColor: "#fff",
-        landColor: "#dedde0"
-    };
+        panel: {
 
+        },
+        chart: {
+            backgroundColor: "#fff",
+            landColor: "#dedde0"
+        }
+    };
 
     var chartConfig = {};
 
@@ -46,6 +50,11 @@ if(!bluewave.charts) bluewave.charts={};
   //** Constructor
   //**************************************************************************
     var init = function(){
+
+        if (!config) config = {};
+        config = merge(config, defaultConfig);
+        chartConfig = config.chart;
+
 
         let table = createTable();
         let tbody = table.firstChild;
@@ -135,25 +144,50 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(mapConfig, inputs){
+    this.update = function(node){
         me.clear();
 
-      //Parse inputs
-        for (var i=0; i<inputs.length; i++){
-            var input = inputs[i];
-            if(typeof input !== 'object' && input !== null){
-                if (input!=null) inputs[i] = d3.csvParse(input);
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        chartConfig = clone;
+
+
+
+      //Get input data
+        inputData = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var input = node.inputs[key];
+                var csv = input.csv;
+                if (csv === undefined){
+
+                  //Special case for supply chain data
+                    var inputConfig = input.config;
+                    if (inputConfig) inputData.push(inputConfig);
+                }
+                else {
+                    if (typeof csv === "string"){
+                        inputData.push(d3.csvParse(csv));
+                    }
+                }
             }
         }
-        inputData = inputs;
 
 
-        if (mapConfig) chartConfig = mapConfig;
-        merge(chartConfig, defaultConfig);
 
+
+      //Set title
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
+
+
         chartConfig.mapLevel = getMapLevel(chartConfig);
 
 
@@ -233,7 +267,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** createInput
   //**************************************************************************
-    var createInput = function(parent,chartConfigRef,displayName,onChange,inputType){
+    var createInput = function(parent, chartConfigRef, displayName, onChange, inputType){
         if (!inputType) inputType = chartConfigRef;
 
         var row = document.createElement("div");
@@ -250,7 +284,9 @@ if(!bluewave.charts) bluewave.charts={};
         });
         input.onChange = function(name,value){
             chartConfig[chartConfigRef] = value;
-            onChange.apply(input,[inputType, name, value]);
+            var args = [];
+            if (onChange===showHideDropDowns) args = [inputType, name, value];
+            onChange.apply(input, args);
         };
 
         var show = input.show;
@@ -319,7 +355,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** createMapPreview
   //**************************************************************************
-    var createMapPreview = function(){
+    var createMapPreview = function(chart){
         if (!chartConfig.mapType) return;
         if (!chartConfig.mapLevel) return;
         if (chartConfig.mapType==="Point" && chartConfig.pointData===null) return;
@@ -341,7 +377,8 @@ if(!bluewave.charts) bluewave.charts={};
         }
 
         getMapData(()=>{
-            update(inputData[0]);
+            if (!(chart instanceof bluewave.charts.MapChart)) chart = mapChart;
+            update(chart, inputData[0]);
         });
     };
 
@@ -365,22 +402,15 @@ if(!bluewave.charts) bluewave.charts={};
 
 
   //**************************************************************************
-  //** getMapData
+  //** renderChart
   //**************************************************************************
-    this.getMapData = function(node){
-        var data = [];
-        for (var key in node.inputs) {
-            if (node.inputs.hasOwnProperty(key)){
-                var csv = node.inputs[key].csv;
-                if(csv === undefined){
-                    var inputConfig = node.inputs[key].config;
-                    data.push(inputConfig);
-                }else {
-                    data.push(csv);
-                }
-            }
-        }
-        return data;
+  /** Used to render a map chart in a given dom element using the current
+   *  chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.MapChart(parent, {});
+        createMapPreview(chart);
+        return chart;
     };
 
 
@@ -840,7 +870,7 @@ if(!bluewave.charts) bluewave.charts={};
   //**************************************************************************
   //** update
   //**************************************************************************
-    var update = function(data){
+    var update = function(mapChart, data){
 
       //Clear the map
         mapChart.clear();

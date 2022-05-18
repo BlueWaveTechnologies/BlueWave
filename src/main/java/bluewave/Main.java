@@ -1,24 +1,24 @@
 package bluewave;
 import bluewave.app.User;
-import bluewave.data.*;
 import bluewave.graph.Neo4J;
 import bluewave.web.WebApp;
-import bluewave.web.services.DocumentService;
-
 import static bluewave.utils.StringUtils.*;
 
 import java.util.*;
-import com.google.gson.JsonObject;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 
 import javaxt.sql.*;
 import javaxt.json.*;
-import javaxt.io.File;
 import javaxt.io.Jar;
 import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.*;
+
+import com.google.gson.JsonObject;
 import javaxt.express.utils.CSV;
+
 
 //******************************************************************************
 //**  Main
@@ -70,6 +70,59 @@ public class Main {
         Config.load(configFile, jar);
 
 
+
+      //Check if any of the plugins wants to process the command line args
+        for (Plugin plugin : Config.getPlugins()){
+            javaxt.io.File file = plugin.getJarFile();
+            if (file==null) continue;
+
+            JSONArray methods = plugin.getMainMethods();
+
+            for (int i=0; i<methods.length(); i++){
+                JSONObject json = methods.get(i).toJSONObject();
+                String s = json.get("switch").toString();
+                String str = args.get("-" + s);
+                if (str!=null){
+                    String arg = json.get("arg").toString();
+                    if (str.equalsIgnoreCase(arg)){
+
+                        String className = json.get("class").toString();
+                        String method = json.get("method").toString();
+
+                        plugin.loadLibraries();
+                        try{
+                            java.net.URLClassLoader child = new java.net.URLClassLoader(
+                            new java.net.URL[]{file.toFile().toURL()}, Main.class.getClassLoader());
+                            Class cls = Class.forName(className, true, child);
+                            for (Method m : cls.getDeclaredMethods()){
+                                int modifiers = m.getModifiers();
+                                if (Modifier.isPrivate(modifiers)) continue;
+                                if (!Modifier.isStatic(modifiers)) continue;
+                                if (m.getName().equalsIgnoreCase(method)){
+                                    Class<?>[] params = m.getParameterTypes();
+                                    if (params.length==1){
+                                        Object[] inputs = new Object[]{args};
+                                        try{
+                                            m.invoke(null, inputs);
+                                        }
+                                        catch(Exception e){
+                                            e.printStackTrace();
+                                        }
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                        catch(Exception e){
+                            //e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+
+
+
       //Process command line args
         if (args.containsKey("-addUser")){
             Config.initDatabase();
@@ -78,9 +131,6 @@ public class Main {
         else if (args.containsKey("-updatePassword")){
             Config.initDatabase();
             updatePassword(args);
-        }
-        else if (args.containsKey("-download")){
-            download(args);
         }
         else if (args.containsKey("-load")){
             loadData(args);
@@ -256,65 +306,10 @@ public class Main {
   //**************************************************************************
     private static void loadData(HashMap<String, String> args) throws Exception {
         String str = args.get("-load");
-        if (str.equalsIgnoreCase("Premier")){
-            importPremier(args);
-        }
-        else if (str.equalsIgnoreCase("Imports")){
-
-            String path = args.get("-path");
-            java.io.File f = new java.io.File(path);
-            if (!f.exists()){
-                return;
-            }
-
-            ArrayList<javaxt.io.File> files = new ArrayList<>();
-            if (f.isFile()){
-                javaxt.io.File file = new javaxt.io.File(f);
-                if (file.getExtension().equalsIgnoreCase("xlsx")){
-                    files.add(file);
-                }
-            }
-            else{
-                for (javaxt.io.File file : new javaxt.io.Directory(f).getFiles("*.xlsx")){
-                    files.add(file);
-                }
-            }
-
-            if (!files.isEmpty()){
-                Neo4J database = Config.getGraph(null);
-
-                for (javaxt.io.File file : files){
-                    Imports.loadEstablishments(file, database);
-                }
-
-                for (javaxt.io.File file : files){
-                    Imports.loadLines(file, database);
-                }
-
-                for (javaxt.io.File file : files){
-                    Imports.loadExams(file, database);
-                    Imports.loadSamples(file, database);
-                }
-
-                database.close();
-            }
-        }
-        else if (str.equalsIgnoreCase("Ports")){
-            Neo4J database = Config.getGraph(null);
-            Ports.loadUSPortsofEntry(new javaxt.io.File(args.get("-path")), database);
-            database.close();
-        }
-        else if (str.equalsIgnoreCase("Coordinates")){
-            Neo4J database = Config.getGraph(null);
-            Imports.geocodeAddresses(database, new javaxt.io.File(args.get("-path")));
-            database.close();
-        }
+        java.io.File f = new java.io.File(str);
+        if (f.isFile()) importFile(args);
         else{
-            java.io.File f = new java.io.File(str);
-            if (f.isFile()) importFile(args);
-            else{
-                //import directory?
-            }
+            //import directory?
         }
     }
 
@@ -368,20 +363,6 @@ public class Main {
             String target = args.get("-target");
             bluewave.graph.Import.importJSON(file, nodeType, target, graph);
         }
-        graph.close();
-    }
-
-
-  //**************************************************************************
-  //** importPremier
-  //**************************************************************************
-    private static void importPremier(HashMap<String, String> args) throws Exception {
-        String localPath = args.get("-path");
-        javaxt.io.Directory dir = new javaxt.io.Directory(localPath);
-        if (!dir.exists()) throw new Exception("Invalid path: " + localPath);
-
-        Neo4J graph = Config.getGraph(null);
-        Premier.importShards(dir, graph);
         graph.close();
     }
 
@@ -544,73 +525,17 @@ public class Main {
             }
             graph.close();
         }
-        else if (test.equalsIgnoreCase("premier")){
-            bluewave.data.Premier.testConnect(args.get("-username"), args.get("-password"));
-        }
         else if (test.equals("company")){
 
             String name = args.get("-name");
             console.log(name);
             console.log(getCompanyName(name));
-
-        }
-        else if (test.equalsIgnoreCase("document")){
-            javaxt.io.Directory jobDir = Config.getDirectory("webserver", "jobDir");
-            javaxt.io.Directory indexDir = new javaxt.io.Directory(jobDir.toString() + "index");
-            javaxt.io.Directory searchDir = Config.getDirectory("webserver", "uploadDir");
-            if (searchDir==null) searchDir = new javaxt.io.Directory(jobDir.toString()+"uploads");
-
-            console.log("Searching:", searchDir);
-            console.log("Using Index:", indexDir);
-
-            bluewave.utils.FileIndex index = new bluewave.utils.FileIndex(indexDir);
-            for (javaxt.io.File file : searchDir.getFiles("*.pdf", true)){
-                try{
-                    index.addFile(file);
-                }
-                catch(Exception e){
-                    //e.printStackTrace();
-                }
-            }
-
-
-            int totalHits = 0;
-            TreeMap<Float, ArrayList<javaxt.io.File>> results = index.findFiles(args.get("-query"));
-            Iterator<Float> it = results.descendingKeySet().iterator();
-            while (it.hasNext()){
-                float score = it.next();
-                ArrayList<javaxt.io.File> files = results.get(score);
-                for (javaxt.io.File file : files){
-                    console.log(score, file);
-                    totalHits++;
-                }
-            }
-
-            console.log("done! hits: " + totalHits);
         }
         else if (test.equalsIgnoreCase("syncUsers")){
             bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
         }
         else{
             console.log("Unsupported test: " + test);
-        }
-    }
-
-  //**************************************************************************
-  //** download
-  //**************************************************************************
-    private static void download(HashMap<String, String> args) throws Exception {
-        String download = args.get("-download");
-        if (download==null) download = "";
-        if (download.equalsIgnoreCase("Premier")){
-            new bluewave.data.Premier(args.get("-username"), args.get("-password"))
-                    .downloadShards(args.get("-path"));
-        }
-        else if (download.equalsIgnoreCase("Ports")){
-            new bluewave.data.Ports().downloadUSPortsofEntry(args.get("-path"));
-        }
-        else{
-            console.log("Unsupported download: " + download);
         }
     }
 

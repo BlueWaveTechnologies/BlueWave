@@ -244,11 +244,11 @@ bluewave.Homepage = function(parent, config) {
             var sharedDashboards = [];
             for (var i=0; i<dashboards.length; i++){
                 var dashboard = dashboards.get(i);
-                if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
-                    sharedDashboards.push(dashboard.id);
+                if (dashboard.className && dashboard.className.indexOf("bluewave.Explorer")===0){
+                    myDashboards.push(dashboard.id);
                 }
                 else{
-                    myDashboards.push(dashboard.id);
+                    sharedDashboards.push(dashboard.id);
                 }
             }
             if (myDashboards.length>0){
@@ -265,6 +265,7 @@ bluewave.Homepage = function(parent, config) {
         }
 
 
+
       //Render dashboards by group
         if (groups.length===0){
             var arr = [];
@@ -277,6 +278,7 @@ bluewave.Homepage = function(parent, config) {
             }
         }
         else{
+            var renderedDashboards = {};
             for (var i=0; i<groups.length; i++){
                 var group = groups.get(i);
                 var arr = [];
@@ -287,14 +289,48 @@ bluewave.Homepage = function(parent, config) {
                             var dashboard = dashboards.get(k);
                             if (dashboard.id===dashboardID){
                                 arr.push(dashboard);
+                                renderedDashboards[dashboard.id+""] = true;
                             }
                         }
                     }
                 }
-                var g = createGroupBox(group);
+
+                if (isDefaultGroup(group) && arr.length===0){
+                    //don't render an empty default group
+                }
+                else{
+                    var g = createGroupBox(group);
+                    sort(arr);
+                    for (var j=0; j<arr.length; j++){
+                        add(arr[j], g);
+                    }
+                }
+            }
+
+
+
+          //Check if there are any dashboards without a group
+            var arr = [];
+            for (var i=0; i<dashboards.length; i++){
+                var dashboard = dashboards.get(i);
+                if (!renderedDashboards[dashboard.id+""]) arr.push(dashboard);
+            }
+
+
+          //Add ungrouped dashboards
+            if (arr.length>0){
+
+
+                groups.add({
+                    name: "Shared Dashboards",
+                    dashboards: []
+                });
+
+                var g = createGroupBox(groups.get(groups.length-1));
+
                 sort(arr);
-                for (var j=0; j<arr.length; j++){
-                    add(arr[j], g);
+                for (var i=0; i<arr.length; i++){
+                    add(arr[i], g);
                 }
             }
         }
@@ -806,11 +842,11 @@ bluewave.Homepage = function(parent, config) {
             var sharedDashboards = [];
             for (var i=0; i<dashboards.length; i++){
                 var dashboard = dashboards.get(i);
-                if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
-                    sharedDashboards.push(dashboard.id);
+                if (dashboard.className && dashboard.className.indexOf("bluewave.Explorer")===0){
+                    myDashboards.push(dashboard.id);
                 }
                 else{
-                    myDashboards.push(dashboard.id);
+                    sharedDashboards.push(dashboard.id);
                 }
             }
             if (!groups) groups = new javaxt.dhtml.DataStore();

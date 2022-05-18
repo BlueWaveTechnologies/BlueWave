@@ -1,4 +1,6 @@
 package bluewave.web.services;
+import bluewave.Config;
+import bluewave.Plugin;
 import bluewave.graph.Neo4J;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,7 +33,7 @@ public class DataService extends WebService {
   /** @param dir Path to a data directory with data files (e.g. web/data)
    */
     public DataService(javaxt.io.Directory dir){
-        this.dir = dir;
+        this.dir = new javaxt.io.Directory(dir + "data");
         this.cache = new ConcurrentHashMap<>();
     }
 
@@ -43,20 +45,60 @@ public class DataService extends WebService {
    */
     public ServiceResponse getServiceResponse(ServiceRequest request, Database database) throws ServletException {
 
-        String fileName = request.getPath(0).toString();
-        String sql = bluewave.queries.Index.getQuery(fileName);
+      //Get requested query
+        String fileName = request.getPath(0).toString().toLowerCase();
+        bluewave.queries.Query query = bluewave.queries.Index.getQuery(fileName);
+        String sql = query==null ? null : query.getCypher();
+        
+        
+      //If the query is not found, check the plugin directories for any matching queries
+        ArrayList<Plugin> plugins = null;
         if (sql==null){
-            for (Object obj : dir.getChildren()){
-                if (obj instanceof javaxt.io.File){
-                    javaxt.io.File file = (javaxt.io.File) obj;
-                    if (file.getName().equalsIgnoreCase(fileName)){
-                        return new ServiceResponse(file);
+            plugins = Config.getPlugins();
+            for (Plugin plugin : plugins){
+                javaxt.io.Directory q = new javaxt.io.Directory(plugin.getDirectory() + "queries");
+                if (!q.exists()) continue;
+                for (javaxt.io.File file : q.getFiles(true)){
+                    String f = file.getName().toLowerCase();
+                    String f2 = file.getName(false).toLowerCase();
+                    if (f.equals(fileName) || f2.equals(fileName)){
+                        sql = new bluewave.queries.Query(file.getText()).getCypher();
+                        break;
                     }
                 }
-                else{
-                    //name = ((javaxt.io.Directory) obj).getName();
+            }
+            
+        }
+        
+        
+      //Finally, check the web/data directories
+        if (sql==null){
+
+            
+            ArrayList<javaxt.io.Directory> dirs = new ArrayList<>();
+            dirs.add(dir);
+            if (plugins==null) plugins = Config.getPlugins();
+            for (Plugin plugin : plugins){
+                javaxt.io.Directory d = new javaxt.io.Directory(plugin.getDirectory() + "web/data");
+                if (d.exists()) dirs.add(d);
+            }
+            
+            
+            for (javaxt.io.Directory dir : dirs){
+                for (Object obj : dir.getChildren()){
+                    if (obj instanceof javaxt.io.File){
+                        javaxt.io.File file = (javaxt.io.File) obj;
+                        if (file.getName().equalsIgnoreCase(fileName)){
+                            return new ServiceResponse(file);
+                        }
+                    }
+                    else{
+                        //name = ((javaxt.io.Directory) obj).getName();
+                    }
                 }
             }
+            
+            
             return new ServiceResponse(404);
         }
         else{
@@ -65,7 +107,7 @@ public class DataService extends WebService {
 
           //Check cache
             synchronized(cache){
-                ArrayList<HashMap<String, String>> arr = cache.get(fileName.toLowerCase());
+                ArrayList<HashMap<String, String>> arr = cache.get(fileName);
                 if (arr!=null){
                     for (HashMap<String, String> params : arr){
                         boolean foundMatch = true;
@@ -182,10 +224,10 @@ public class DataService extends WebService {
 
               //Update cache
                 synchronized(cache){
-                    ArrayList<HashMap<String, String>> arr = cache.get(fileName.toLowerCase());
+                    ArrayList<HashMap<String, String>> arr = cache.get(fileName);
                     if (arr==null){
                         arr = new ArrayList<>();
-                        cache.put(fileName.toLowerCase(), arr);
+                        cache.put(fileName, arr);
                     }
                     HashMap<String, String> params = new HashMap<>();
                     arr.add(params);

@@ -97,22 +97,33 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(calendarConfig, inputs){
+    this.update = function(node){
         me.clear();
-        for (var i=0; i<inputs.length; i++){
-            var input = inputs[i];
-            if (typeof input !== 'object' && input!=null) {
-                inputs[i] = d3.csvParse(input);
+
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        chartConfig = clone;
+
+
+      //Get input data
+        inputData = [];
+        for (var key in node.inputs) {
+            if (node.inputs.hasOwnProperty(key)){
+                var csv = node.inputs[key].csv;
+                if (typeof csv === "string"){
+                    inputData.push(d3.csvParse(csv));
+                }
             }
         }
-        inputData = inputs;
 
 
-
-
-        chartConfig = merge(calendarConfig, config.chart);
-
-
+      //Set title
         if (chartConfig.chartTitle){
             panel.title.innerHTML = chartConfig.chartTitle;
         }
@@ -151,6 +162,19 @@ bluewave.charts.CalendarEditor = function(parent, config) {
   //**************************************************************************
     this.getChart = function(){
         return previewArea;
+    };
+
+
+  //**************************************************************************
+  //** renderChart
+  //**************************************************************************
+  /** Used to render a calendar chart in a given dom element using the current
+   *  chart config and data
+   */
+    this.renderChart = function(parent){
+        var chart = new bluewave.charts.CalendarChart(parent, {});
+        chart.update(chartConfig, inputData[0]);
+        return chart;
     };
 
 

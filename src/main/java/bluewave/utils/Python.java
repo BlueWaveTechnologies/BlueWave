@@ -1,6 +1,6 @@
 package bluewave.utils;
-
 import bluewave.Config;
+import bluewave.Plugin;
 import java.util.*;
 import javaxt.json.JSONObject;
 import static javaxt.utils.Console.console;
@@ -166,7 +166,7 @@ public class Python {
   //**************************************************************************
   //** getScriptDir
   //**************************************************************************
-    public static javaxt.io.Directory getScriptDir(){
+    private static javaxt.io.Directory getScriptDir(){
         JSONObject config = Config.get("webserver").toJSONObject();
         javaxt.io.Directory scriptDir = null;
         if (config.has("scriptDir")){
@@ -184,5 +184,30 @@ public class Python {
             throw new IllegalArgumentException("Invalid \"scriptDir\" defined in the \"webserver\" section of the config file");
         }
         return scriptDir;
+    }
+
+
+  //**************************************************************************
+  //** getScriptDir
+  //**************************************************************************
+    public static javaxt.io.File[] getScripts(String scriptName){
+
+        
+      //Check main script directory
+        javaxt.io.File[] scripts = getScriptDir().getFiles(scriptName, true);
+        if (scripts.length>0) return scripts;
+
+
+      //Check plugin directories
+        ArrayList<javaxt.io.File> files = new ArrayList<>();
+        for (Plugin plugin : Config.getPlugins()){
+            javaxt.io.Directory d = new javaxt.io.Directory(plugin.getDirectory() + "scripts");
+            if (d.exists()){
+                scripts = d.getFiles(scriptName, true);
+                if (scripts.length>0) return scripts;
+            }
+        }
+
+        return new javaxt.io.File[0];
     }
 }

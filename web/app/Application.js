@@ -41,6 +41,7 @@ bluewave.Application = function(parent, config) {
   //Panels
     var dashboardPanel, adminPanel, explorerPanel;
 
+    var extensions = [];
 
 
   //**************************************************************************
@@ -370,6 +371,7 @@ bluewave.Application = function(parent, config) {
         currUser = user;
         me.setTitle("");
         currDashboardItem = null;
+        extensions = [];
 
 
       //If no user is supplied, then we are running in stand-alone mode
@@ -404,6 +406,16 @@ bluewave.Application = function(parent, config) {
 
             return;
         }
+
+
+      //Get extensions
+        get("extensions", {
+            success: function(arr){
+                extensions = arr;
+            }
+        });
+
+
 
         dashboardPanel.show();
         menuButton.show();
@@ -787,6 +799,28 @@ bluewave.Application = function(parent, config) {
         }
 
 
+      //Load extensions
+        if (obj===bluewave.Explorer){
+            if (!explorerPanel){
+                explorerPanel = app;
+                extensions.forEach(function(extension){
+                    var explorerExtensions = [];
+                    if (extension.explorer){
+                        if (isArray(extension.explorer)){
+                            extension.explorer.forEach(function(e){
+                                explorerExtensions.push(e);
+                            });
+                        }
+                        else{
+                            explorerExtensions.push(extension.explorer);
+                        }
+                    }
+                    explorerPanel.addExtensions(explorerExtensions);
+                });
+            }
+        }
+
+
 
         if (app === currApp){
             //console.log("Already in view!");
@@ -824,7 +858,7 @@ bluewave.Application = function(parent, config) {
         var dashboard = dashboardItem.dashboard;
 
 
-        if (dashboard.className && dashboard.className.indexOf("bluewave.dashboards.")===0){
+        if (dashboard.className && dashboard.className.indexOf("bluewave.Explorer")===-1){
             if (!dashboard.app){
                 dashboard.app = raisePanel(eval(dashboard.className), slideBack);
             }
@@ -949,6 +983,8 @@ bluewave.Application = function(parent, config) {
                 me.setTitle(label);
                 var app = raisePanel(bluewave.Explorer);
                 if (!explorerPanel) explorerPanel = app;
+
+
                 explorerPanel.show();
                 explorerPanel.update();
                 setTimeout(function(){ //update title again in case slider move
@@ -1236,6 +1272,7 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var isArray = javaxt.dhtml.utils.isArray;
     var onRender = javaxt.dhtml.utils.onRender;
     var destroy = javaxt.dhtml.utils.destroy;
     var get = bluewave.utils.get;

@@ -1,5 +1,6 @@
 package bluewave.web;
 import bluewave.Config;
+import bluewave.Plugin;
 import bluewave.graph.Neo4J;
 import bluewave.web.services.*;
 import bluewave.utils.SQLEditor;
@@ -18,21 +19,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+
 
 
 public class WebServices extends WebService {
 
     private Database database;
-    private AdminService adminService;
-    private DashboardService dashboardService;
-    private MapService mapService;
-    private ReportService reportService;
-    private DataService dataService;
-    private QueryService queryService;
-    private GraphService graphService;
-    private ImportService importService;
-    private DocumentService documentService;
-    private SupplyChainService supplyChainService;
+    private ConcurrentHashMap<String, WebService> webservices;
 
     private ConcurrentHashMap<Long, WebSocketListener> listeners;
     private static AtomicLong webSocketID;
@@ -68,20 +63,21 @@ public class WebServices extends WebService {
 
 
 
-      //Instantiate additional web services
-        adminService = new AdminService(database, webConfig);
-        dashboardService = new DashboardService(this, web, database);
-        mapService = new MapService();
-        reportService = new ReportService();
-        dataService = new DataService(new javaxt.io.Directory(web + "data"));
-        queryService = new QueryService(webConfig);
-        documentService = new DocumentService();
+      //Instantiate web services
+        webservices = new ConcurrentHashMap<>();
+        webservices.put("dashboard", new DashboardService(this, web));
+        webservices.put("admin", new AdminService(database, webConfig));
+        webservices.put("map", new MapService());
+        webservices.put("report", new ReportService());
+        webservices.put("data", new DataService(web));
+        webservices.put("query", new QueryService(webConfig));
 
 
+
+      //Instantiate additional webservices
         if (graph!=null){
-            graphService = new GraphService();
-            importService = new ImportService();
-            supplyChainService = new SupplyChainService();
+            webservices.put("graph", new GraphService());
+            loadPlugins();
         }
         else{
             console.log("Graph services offline");
@@ -213,6 +209,7 @@ public class WebServices extends WebService {
         throws ServletException {
 
 
+      //Authenticate user
         try{
             request.authenticate();
         }
@@ -221,51 +218,44 @@ public class WebServices extends WebService {
         }
 
 
-        WebService ws;
-        ServiceRequest serviceRequest = null;
-        if (service.equals("admin")){
-            ws = adminService;
-        }
-        else if (service.equals("map")){
-            ws = mapService;
-        }
-        else if (service.equals("report")){
-            ws = reportService;
-        }
-        else if (service.equals("data")){
-            ws = dataService;
-        }
-        else if (service.equals("query")){
-            ws = queryService;
-        }
-        else if (service.equals("graph")){
-            ws = graphService;
-        }
-        else if (service.equals("import")){
-            ws = importService;
-        }
-        else if (service.equals("document") || service.equals("documents")){
-            ws = documentService;
-        }
-        else if (service.equals("supplychain")){
-            ws = supplyChainService;
-        }
-        else{
-            serviceRequest = new ServiceRequest(request);
-            ws = this;
-
-          //Special case for dashboard/thumbnail requests
-            if (service.startsWith("dashboard")){
-                ws = dashboardService;
-                String p = serviceRequest.getPath(1).toString();
-                if (p!=null){
-                    if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups") ||
-                        p.equalsIgnoreCase("group") || p.equalsIgnoreCase("permissions")){
-                        serviceRequest = new ServiceRequest(service, request);
-                    }
+      //Find a webservice associated with the request
+        WebService ws = webservices.get(service);
+        if (ws==null){
+            if (service.endsWith("s")){
+                if (service.endsWith("ies")){
+                    String s = service.substring(0, service.length()-3) + "y";
+                    ws = webservices.get(s);
+                }
+                else{
+                    String s = service.substring(0, service.length()-1);
+                    ws = webservices.get(s);
                 }
             }
         }
+        ServiceRequest serviceRequest = null;
+
+
+      //Special case for dashboard/thumbnail requests
+        if (service.startsWith("dashboard")){
+            ws = webservices.get("dashboard");
+            serviceRequest = new ServiceRequest(request);
+            String p = serviceRequest.getPath(1).toString();
+            if (p!=null){
+                if (p.equalsIgnoreCase("thumbnail") || p.equalsIgnoreCase("groups") ||
+                    p.equalsIgnoreCase("group") || p.equalsIgnoreCase("permissions")){
+                    serviceRequest = new ServiceRequest(service, request);
+                }
+            }
+        }
+
+
+        if (ws==null){
+            serviceRequest = new ServiceRequest(request);
+            ws = this;
+        }
+
+
+      //Return response
         if (serviceRequest==null) serviceRequest = new ServiceRequest(service, request);
         return ws.getServiceResponse(serviceRequest, database);
     }
@@ -352,35 +342,50 @@ public class WebServices extends WebService {
         }
 
 
-      //Create web socket
-        if (service.equals("admin")){
-            adminService.createWebSocket(request, response);
-        }
-        else if (service.equals("report")){
-            reportService.createWebSocket(request, response);
-        }
-        else if (service.equals("query")){
-            queryService.createWebSocket(request, response);
-        }
-        else if (service.equals("document")){
-            documentService.createWebSocket(request, response);
-        }
-        else{
-            new WebSocketListener(request, response){
-                private Long id;
-                public void onConnect(){
-                    id = webSocketID.incrementAndGet();
-                    synchronized(listeners){
-                        listeners.put(id, this);
+      //Check if the webservice associated with this request has its own
+      //createWebSocket() method and invoke it
+        WebService ws = webservices.get(service);
+        if (ws!=null){
+            for (Method m : ws.getClass().getDeclaredMethods()){
+                if (Modifier.isPrivate(m.getModifiers())) continue;
+                if (m.getName().equalsIgnoreCase("createWebSocket")){
+                    Class<?>[] params = m.getParameterTypes();
+                    if (params.length==2){
+
+                        if (HttpServletRequest.class.isAssignableFrom(params[0]) &&
+                            HttpServletResponse.class.isAssignableFrom(params[1])
+                        ){
+                            try{
+                                m.setAccessible(true);
+                                m.invoke(this, new Object[]{request, response});
+                            }
+                            catch(Exception e){
+                                throw new IOException(e);
+                            }
+
+                            return;
+                        }
                     }
                 }
-                public void onDisconnect(int statusCode, String reason){
-                    synchronized(listeners){
-                        listeners.remove(id);
-                    }
-                }
-            };
+            }
         }
+
+
+      //If we're still here, create web socket for this service
+        new WebSocketListener(request, response){
+            private Long id;
+            public void onConnect(){
+                id = webSocketID.incrementAndGet();
+                synchronized(listeners){
+                    listeners.put(id, this);
+                }
+            }
+            public void onDisconnect(int statusCode, String reason){
+                synchronized(listeners){
+                    listeners.remove(id);
+                }
+            }
+        };
     }
 
 
@@ -422,4 +427,47 @@ public class WebServices extends WebService {
         }
     }
 
+
+  //**************************************************************************
+  //** loadPlugins
+  //**************************************************************************
+    private void loadPlugins(){
+        for (Plugin plugin : Config.getPlugins()){
+            HashMap<String, String> webservices = plugin.getWebServices();
+            Iterator<String> it = webservices.keySet().iterator();
+            while (it.hasNext()){
+                String endpoint = it.next();
+                String className = webservices.get(endpoint);
+                loadPlugin(plugin, className, endpoint);
+                WebService ws = this.webservices.get(endpoint.toLowerCase());
+                if (ws==null) console.log("Failed to load plugin", endpoint, className);
+            }
+        }
+    }
+
+
+  //**************************************************************************
+  //** loadJarFiles
+  //**************************************************************************
+    private void loadPlugin(Plugin plugin, String className, String endpoint){
+        try{
+
+            javaxt.io.File jarFile = plugin.getJarFile();
+            if (jarFile==null) return;
+
+            plugin.loadLibraries();
+
+            java.net.URLClassLoader child = new java.net.URLClassLoader(
+            new java.net.URL[]{jarFile.toFile().toURL()}, Server.class.getClassLoader());
+            WebService ws = (WebService) Class.forName(className, true, child).newInstance();
+
+            synchronized(webservices){
+                webservices.put(endpoint.toLowerCase(), ws);
+            }
+
+        }
+        catch(Exception e){
+
+        }
+    }
 }

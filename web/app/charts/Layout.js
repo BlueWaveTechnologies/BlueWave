@@ -30,6 +30,10 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
     var init = function(){
 
+        if (!config) config = {};
+        config = merge(config, defaultConfig);
+
+
         var div = document.createElement("div");
         div.style.height = "100%";
         parent.appendChild(div);
@@ -103,8 +107,34 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
   //** update
   //**************************************************************************
-    this.update = function(inputs, layout){
+    this.update = function(node){
         me.clear();
+
+
+      //Get data
+        var inputs = {};
+        for (var inputID in node.inputs) {
+            if (node.inputs.hasOwnProperty(inputID)){
+                var inputNode = node.inputs[inputID];
+                inputs[inputID] = {
+                    title: inputNode.config.chartTitle,
+                    image: inputNode.preview,
+                    type: inputNode.type
+                };
+            }
+        }
+
+
+
+      //Clone the config so we don't modify the original config object
+        var clone = {};
+        merge(clone, node.config);
+
+
+      //Merge clone with default config
+        merge(clone, config.chart);
+        var layout = clone;
+
 
 
         mainDiv.style.height = "";
@@ -590,6 +620,7 @@ bluewave.charts.Layout = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var merge = javaxt.dhtml.utils.merge;
     var round = javaxt.dhtml.utils.round;
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;

@@ -96,7 +96,39 @@ bluewave.admin.AdminPanel = function(parent, config) {
         createPanel("Graph", "fas fa-share-alt", bluewave.admin.GraphAdmin, config);
         createPanel("Config", "fas fa-sliders-h", bluewave.admin.ConfigAdmin, config);
         createPanel("Base Map", "fas fa-globe-americas", bluewave.admin.MapAdmin, config);
-        createPanel("Comparison", "fas fa-not-equal", bluewave.admin.ComparisonAdmin, config);
+
+
+      //Add additional panels via plugin extensions
+        get("extensions", {
+            success: function(extensions){
+                extensions.forEach(function(extension){
+                    var adminExtensions = [];
+                    if (extension.admin){
+                        if (isArray(extension.admin)){
+                            extension.admin.forEach(function(e){
+                                adminExtensions.push(e);
+                            });
+                        }
+                        else{
+                            adminExtensions.push(extension.admin);
+                        }
+                    }
+
+                    adminExtensions.forEach(function(extension){
+                        if (extension.type==="panel"){
+                            extension = extension.config;
+                            if (typeof extension.class === "string"){
+                                extension.class = eval(extension.class);
+                            }
+                            createPanel(extension.title, extension.icon, extension.class, config);
+                        }
+                    });
+
+                });
+            }
+        });
+
+        
 
         me.el = table;
         addShowHide(me);
@@ -210,6 +242,8 @@ bluewave.admin.AdminPanel = function(parent, config) {
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var isArray = javaxt.dhtml.utils.isArray;
+    var get = bluewave.utils.get;
 
     init();
 };

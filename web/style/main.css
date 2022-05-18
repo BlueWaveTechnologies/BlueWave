@@ -515,50 +515,7 @@ li.tree-node:hover {
 }
 
 
-/**************************************************************************/
-/** ICU Map
-/**************************************************************************/
 
-.icu-map-panel {
-    border-top:1px solid #dcdcdc;
-}
-
-.icu-map-list {
-    border-top:1px solid #dcdcdc;
-    border-right:1px solid #dcdcdc;
-}
-
-.icu-map-list .table-col,
-.icu-map-list .table-header-col{
-    font-size: 11px;
-    line-height: 14px;
-    white-space: normal;
-    padding-top: 3px;
-}
-
-.icu-map-legend {
-    position: absolute;
-    top: 7px;
-    right: 7px;
-    height: 45px;
-    width:  200px;
-    background-color: #fff;
-    padding: 7px;
-    border-radius: 3px;
-}
-
-.icu-map-legend-title {
-    font-weight: bold;
-    font-size: 12px;
-    margin: 0 0 3px 0;
-    text-align: center;
-}
-
-.icu-map-legend-label {
-    position: absolute;
-    right: 17px;
-    font-size: 11px;
-}
 
 
 /**************************************************************************/
@@ -1650,83 +1607,6 @@ li.tree-node:hover {
 }
 
 
-/**************************************************************************/
-/** Import Dashboards
-/**************************************************************************/
-
-.import-summary-header {
-    height: 75px;
-}
-
-.import-summary-header td {
-    padding:10px 0 10px 10px;
-}
-
-.import-summary-header-logo {
-    width: 50px;
-    height: 50px;
-    display: inline-block;
-    background-color: #0f6391;
-    color: #fff;
-    border-radius: 50%;
-    line-height: 50px;
-    text-align: center;
-    font-size: 20px;
-    border: 2px solid #3cbaff;
-}
-
-.import-summary-header-title {
-    display: inline-block;
-    font-size: 30px;
-    padding: 0 0 0 7px;
-    color: #004164;
-}
-
-.import-summary-header-stats {
-    width: 200px;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    text-align: center;
-    height: 100%;
-}
-
-.import-summary-header-stats div:first-child {
-  font-size: 30px;
-}
-
-.import-summary-header-stats div:last-child {
-  color: #686868;
-}
-
-
-.import-summary .tick,
-.global-supply-chain .tick {
-    color: #777;
-}
-
-.import-summary .chart-title,
-.global-supply-chain .chart-title {
-    font-size: 13px;
-    text-align: left;
-}
-
-.import-summary .dashboard-item,
-.global-supply-chain .dashboard-item {
-    margin: 0;
-    padding: 7px;
-}
-
-.import-summary .dashboard-item-settings,
-.global-supply-chain .dashboard-item-settings {
-    font-size: 13px;
-}
-
-
-.global-supply-chain .sankey-node text {
-    font-size: 11px;
-    fill: #777;
-}
-
 
 /**************************************************************************/
 /** D3 SVG Styles
@@ -1788,49 +1668,9 @@ svg text {
     font-size: 13px;
 }
 
-.chart-axis-label{
-    fill: #000;
-    font-size: 14px;
-    font-weight: bold;
-}
-
 .tick {
     font-size: 10px;
 }
-
-.countries {
-    fill: #f9f9f9;
-    stroke: #e0e0e0;
-    stroke-width: 0.5px;
-}
-
-.state-lines {
-  fill: #f5f5f5;
-  stroke: #000;
-  stroke-width: 0.5px;
-}
-
-
-.sankey-node rect {
-    fill-opacity: 0.9;
-    shape-rendering: crispEdges;
-}
-
-.sankey-node text {
-    pointer-events: none;
-    text-shadow: 0 1px 0 #fff;
-}
-
-.sankey-link {
-    fill: none;
-    stroke: #000;
-    stroke-opacity: 0.2;
-}
-
-.sankey-link:hover {
-    stroke-opacity: 0.5;
-}
-
 
 .graph-node circle {
   stroke: #fff;
