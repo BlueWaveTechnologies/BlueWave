@@ -406,10 +406,21 @@ public class WebApp extends HttpServlet {
 
 
       //Get all the includes associated with the plugins
-        ArrayList<Node> includes = new ArrayList<>();
+        HashMap<javaxt.io.File, ArrayList<Node>> includes = new HashMap<>();
         for (bluewave.Plugin plugin : Config.getPlugins()){
+            ArrayList<Node> arr = new ArrayList<>();
             for (Node node : plugin.getIncludes()){
-                includes.add(node);
+                arr.add(node);
+            }
+            if (!arr.isEmpty()){
+
+              //Create a phantom file reference in the web directory for the
+              //MapPath method in fileManager.updateLinks() to work correctly
+                javaxt.io.File xmlFile =
+                new javaxt.io.File(plugin.getDirectory() + "web/foo.txt");
+
+              //Update includes
+                includes.put(xmlFile, arr);
             }
         }
 
@@ -434,18 +445,24 @@ public class WebApp extends HttpServlet {
 
             try{
 
-              //Add includes
-                Node head = javaxt.xml.DOM.getElementsByTagName("head", xml)[0];
-                for (Node include : includes){
-                    Node n = xml.importNode(include, true);
-                    head.appendChild(n);
-                }
-
 
               //Update links to scripts and css files
                 long lastUpdate = fileManager.updateLinks(htmlFile, xml);
 
 
+              //Add additional includes
+                Node head = javaxt.xml.DOM.getElementsByTagName("head", xml)[0];
+                Iterator<javaxt.io.File> it = includes.keySet().iterator();
+                while (it.hasNext()){
+                    javaxt.io.File xmlFile = it.next();
+                    ArrayList<Node> arr = includes.get(xmlFile);
+                    long l = fileManager.updateLinks(xmlFile, arr);
+                    if (l>lastUpdate) lastUpdate = l;
+                    for (Node include : arr){
+                        Node n = xml.importNode(include, true);
+                        head.appendChild(n);
+                    }
+                }
 
 
               //Replace all self enclosing tags
