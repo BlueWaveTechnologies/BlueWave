@@ -264,7 +264,11 @@ public class WebApp extends HttpServlet {
         }
         else if (service.equals("appinfo")){
             response.setContentType("application/json");
-            response.write("{\"name\":\"" + appName + "\"}");
+            JSONObject appInfo = new JSONObject();
+            appInfo.set("name", appName);
+            JSONValue browsers = Config.get("webserver").get("browsers");
+            appInfo.set("supportedBrowsers", browsers);
+            response.write(appInfo.toString());
         }
         else if (service.equals("extensions")){
 
