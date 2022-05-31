@@ -12,15 +12,16 @@
 <script src="lib/javaxt/express.js" type="text/javascript"></script>
 <link href="lib/javaxt/express.css" type="text/css" rel="stylesheet" />
 <link href="style/landing.css" type="text/css" rel="stylesheet" />
+<script src="lib/bowser/bowser.js" type="text/javascript"></script>
 </head>
 <body>
+<div class="landing-page-error"></div>
 
 <script type="text/javascript">
 //<![CDATA[
 window.onload = function() {
 
     javaxt.dhtml.utils.updateDOM();
-
 
   //Create waitmask as needed
     var waitmask = document.waitmask;
@@ -45,45 +46,129 @@ window.onload = function() {
 
 
 
-  //Error handler
+  //HTTP error handler
     var onFailure = function(request){
         var status = request.status;
         if (status==400 || status==401 || status==403){
             loadPage("login.html");
         }
         else{
-            waitmask.hide();
-            //_error.removeAttr("style").show();
-            console.log("Communication Failure. Server might be down or unresponsive. Please contact your system administrator.");
-            loadPage("login.html");
+            showError("Communication Failure" ,
+            "Server might be down or unresponsive. Please contact your system administrator.");
         }
     };
 
 
+  //Error renderer
+    var showError = function(title, error){
+        waitmask.hide();
+        var el = document.getElementsByClassName("landing-page-error")[0];
+        el.innerHTML = "";
+        var h1 = document.createElement("h1");
+        h1.innerHTML = title;
+        el.appendChild(h1);
+        if (typeof error === "string"){
+            var span = document.createElement("span");
+            span.innerHTML = error;
+            el.appendChild(span);
+        }
+        else{
+            el.appendChild(error);
+        }
+        document.title = title;
+    };
 
-  //Login or redirect user
+
+
+  //Function to login or redirect user
+    var loadApp = function(appInfo){
+        javaxt.dhtml.utils.get("whoami", {
+            success: function(text, xml, url, request){
+                request.abort();
+                request = null;
+
+                javaxt.dhtml.utils.get("user?username="+text, {
+                    success: function(text, xml, url, request){
+                        var user = JSON.parse(text);
+                        request.abort();
+                        request = null;
+
+                        document.user = user;
+                        var url = "main.html";
+                        loadPage(url);
+                    },
+                    failure: onFailure
+                });
+
+            },
+            failure: onFailure
+        });
+    };
+
+
+
+  //Get app info and load
     waitmask.show();
-    javaxt.dhtml.utils.get("whoami", {
-        success: function(text, xml, url, request){
-            request.abort();
-            request = null;
+    javaxt.dhtml.utils.get("appinfo", {
+        success: function(text){
+            var appInfo = JSON.parse(text);
+            if (appInfo.supportedBrowsers && appInfo.supportedBrowsers.length>0){
 
-            javaxt.dhtml.utils.get("user?username="+text, {
-                success: function(text, xml, url, request){
-                    var user = JSON.parse(text);
-                    request.abort();
-                    request = null;
+              //Get browser name and alias
+                var browser = bowser.getParser(window.navigator.userAgent);
+                var browserName = browser.getBrowserName();
+                var browserAlias;
+                for (var browser in bowser.BROWSER_MAP) {
+                    if (bowser.BROWSER_MAP.hasOwnProperty(browser)){
+                        var name = bowser.BROWSER_MAP[browser];
+                        if (name===browserName){
+                            browserAlias = browser;
+                            break;
+                        }
+                    }
+                }
 
-                    document.user = user;
-                    var url = "main.html";
-                    loadPage(url);
-                },
-                failure: onFailure
-            });
 
+              //Check if app is configured to support the browser
+                var foundMatch = false;
+                for (var i in appInfo.supportedBrowsers){
+                    var browser = appInfo.supportedBrowsers[i];
+                    browser = browser.toLowerCase();
+                    if (browser===browserName || browser===browserAlias){
+                        foundMatch = true;
+                    }
+                };
+
+
+              //Load app or show error
+                if (foundMatch){
+                    loadApp(appInfo);
+                }
+                else{
+
+                    var div = document.createElement("div");
+                    div.innerHTML = "<p>Please switch to one of the supported web browsers</p>"
+                    var canvas = document.createElement('canvas');
+                    canvas.width = 1;
+                    canvas.height = 1;
+                    var pixel = canvas.toDataURL('image/png');
+                    for (var i in appInfo.supportedBrowsers){
+                        var browser = appInfo.supportedBrowsers[i];
+                        var img = document.createElement("img");
+                        img.src = pixel;
+                        img.className = "browser-icon " + (browser.toLowerCase().replace(" ", "-"));
+                        div.appendChild(img);
+                    };
+                    showError("Unsupported Browser", div);
+                }
+            }
+            else{
+                loadApp(appInfo);
+            }
         },
         failure: onFailure
     });
+
 
 };
 //]]>

@@ -1292,6 +1292,22 @@ bluewave.utils = {
         }
 
         return new Blob(byteArrays, {type: mime});
+    },
+    
+    
+  //**************************************************************************
+  //** getPixel
+  //**************************************************************************
+    getPixel: function(){
+        var pixel = bluewave.utils.pixel;
+        if (!pixel){
+            var canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            pixel = canvas.toDataURL('image/png');
+            bluewave.utils.pixel = pixel;
+        }
+        return pixel;
     }
 
 };
