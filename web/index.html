@@ -21,7 +21,7 @@
 //<![CDATA[
 window.onload = function() {
 
-    javaxt.dhtml.utils.updateDOM();   
+    javaxt.dhtml.utils.updateDOM();
 
 
   //Create waitmask as needed
@@ -58,8 +58,8 @@ window.onload = function() {
             "Server might be down or unresponsive. Please contact your system administrator.");
         }
     };
-    
-    
+
+
   //Error renderer
     var showError = function(title, error){
         waitmask.hide();
@@ -105,8 +105,8 @@ window.onload = function() {
             failure: onFailure
         });
     };
-    
-    
+
+
 
   //Get app info and load
     waitmask.show();
@@ -114,7 +114,7 @@ window.onload = function() {
         success: function(text){
             var appInfo = JSON.parse(text);
             if (appInfo.supportedBrowsers && appInfo.supportedBrowsers.length>0){
-                
+
               //Get browser name and alias
                 var browser = bowser.getParser(window.navigator.userAgent);
                 var browserName = browser.getBrowserName()
@@ -129,23 +129,24 @@ window.onload = function() {
                     }
                 }
 
-                
+
               //Check if app is configured to support the browser
                 var foundMatch = false;
                 appInfo.supportedBrowsers.forEach((browser)=>{
+                    browser = browser.toLowerCase();
                     if (browser===browserName || browser===browserAlias){
                         foundMatch = true;
                     }
                 });
-                
-                
+
+
               //Load app or show error
                 if (foundMatch){
                     loadApp(appInfo);
                 }
                 else{
-                   
-                    var div = document.createElement("div"); 
+
+                    var div = document.createElement("div");
                     div.innerHTML = "<p>Please switch to one of the supported web browsers</p>"
                     var canvas = document.createElement('canvas');
                     canvas.width = 1;
@@ -157,7 +158,7 @@ window.onload = function() {
                         img.className = "browser-icon " + (browser.toLowerCase().replace(" ", "-"));
                         div.appendChild(img);
                     });
-                    
+
                     showError("Unsupported Browser", div);
                 }
             }
@@ -167,8 +168,8 @@ window.onload = function() {
         },
         failure: onFailure
     });
-    
-    
+
+
 };
 //]]>
 </script>
