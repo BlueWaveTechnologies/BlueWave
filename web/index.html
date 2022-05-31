@@ -23,7 +23,6 @@ window.onload = function() {
 
     javaxt.dhtml.utils.updateDOM();
 
-
   //Create waitmask as needed
     var waitmask = document.waitmask;
     if (!waitmask) waitmask = document.waitmask = new javaxt.express.WaitMask(document.body);
@@ -117,7 +116,7 @@ window.onload = function() {
 
               //Get browser name and alias
                 var browser = bowser.getParser(window.navigator.userAgent);
-                var browserName = browser.getBrowserName()
+                var browserName = browser.getBrowserName();
                 var browserAlias;
                 for (var browser in bowser.BROWSER_MAP) {
                     if (bowser.BROWSER_MAP.hasOwnProperty(browser)){
@@ -132,12 +131,13 @@ window.onload = function() {
 
               //Check if app is configured to support the browser
                 var foundMatch = false;
-                appInfo.supportedBrowsers.forEach((browser)=>{
+                for (var i in appInfo.supportedBrowsers){
+                    var browser = appInfo.supportedBrowsers[i];
                     browser = browser.toLowerCase();
                     if (browser===browserName || browser===browserAlias){
                         foundMatch = true;
                     }
-                });
+                };
 
 
               //Load app or show error
@@ -152,13 +152,13 @@ window.onload = function() {
                     canvas.width = 1;
                     canvas.height = 1;
                     var pixel = canvas.toDataURL('image/png');
-                    appInfo.supportedBrowsers.forEach((browser)=>{
+                    for (var i in appInfo.supportedBrowsers){
+                        var browser = appInfo.supportedBrowsers[i];
                         var img = document.createElement("img");
                         img.src = pixel;
                         img.className = "browser-icon " + (browser.toLowerCase().replace(" ", "-"));
                         div.appendChild(img);
-                    });
-
+                    };
                     showError("Unsupported Browser", div);
                 }
             }
