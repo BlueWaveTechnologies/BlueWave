@@ -1094,6 +1094,11 @@ li.tree-node:hover {
     margin-right: 10px;
 }
 
+.admin-config-table {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+}
 
 .admin-config-row {
     background-color: #fff;
@@ -1102,6 +1107,9 @@ li.tree-node:hover {
     cursor: pointer;
 }
 
+.admin-config-row:last-child {
+    border: 0 none;
+} 
 
 .admin-map-table-col {
     font-size: 14px;
