@@ -57,7 +57,26 @@ var models = {
         constraints: [
             {name: 'key',       required: true,  length: 50},
             {name: 'value',     required: true},
-            {name: 'user',      required: true}
+            {name: 'user',      required: true, onDelete: 'cascade'}
+        ]
+    },
+
+
+  //**************************************************************************
+  //** UserActivity
+  //**************************************************************************
+    UserActivity: {
+        fields: [
+            {name: 'user',      type: 'User'},
+            {name: 'hour',      type: 'int'},
+            {name: 'minute',    type: 'int'},
+            {name: 'count',     type: 'int'}
+        ],
+        constraints: [
+            {name: 'user',      required: true, onDelete: 'cascade'},
+            {name: 'hour',      required: true},
+            {name: 'minute',    required: true},
+            {name: 'count',     required: true}
         ]
     },
 
