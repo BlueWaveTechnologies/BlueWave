@@ -23,7 +23,7 @@ public class UserActivity extends javaxt.sql.Model {
   //** Constructor
   //**************************************************************************
     public UserActivity(){
-        super("user_activity", java.util.Map.ofEntries(
+        super("application.user_activity", java.util.Map.ofEntries(
 
             java.util.Map.entry("user", "user_id"),
             java.util.Map.entry("hour", "hour"),
