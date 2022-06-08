@@ -138,6 +138,9 @@ public class Main {
         else if (args.containsKey("-delete")){
             delete(args);
         }
+        else if (args.containsKey("-export")){
+            export(args);
+        }
         else if (args.containsKey("-createIndex")){
             createIndex(args);
         }
@@ -437,6 +440,61 @@ public class Main {
         }
         else{
             System.out.println("Unsupported delete option: " + str);
+        }
+    }
+
+
+  //**************************************************************************
+  //** export
+  //**************************************************************************
+    private static void export(HashMap<String, String> args) throws Exception {
+        String str = args.get("-export").toLowerCase();
+        if (str.equals("table")){
+
+            String tableName = args.get("-name").toLowerCase();
+            String path = args.get("-path").toLowerCase();
+
+            javaxt.io.Directory dir = new javaxt.io.Directory(path);
+            javaxt.io.File file = new javaxt.io.File(dir, tableName + ".csv");
+            file.create();
+            java.io.BufferedWriter out = file.getBufferedWriter("UTF-8");
+
+
+            Config.initDatabase();
+
+            Connection conn = null;
+            try{
+                conn = Config.getDatabase().getConnection();
+
+                boolean addHeader = true;
+                for (Recordset rs : conn.getRecordset("select * from " + tableName)){
+                    Field[] fields = rs.getFields();
+                    if (addHeader){
+                        for (int i=0; i<fields.length; i++){
+                            if (i>0) out.write(",");
+                            out.write(fields[i].getName());
+                        }
+                        addHeader = false;
+                    }
+
+                    out.write("\n");
+                    for (int i=0; i<fields.length; i++){
+                        if (i>0) out.write(",");
+                        String val = fields[i].getValue().toString();
+                        if (val!=null){
+                            if (val.contains(",")) val = "\"" + val + "\"";
+                            out.write(val);
+                        }
+                    }
+
+                }
+                conn.close();
+                out.close();
+            }
+            catch(Exception e){
+                if (conn!=null) conn.close();
+                throw e;
+            }
         }
     }
 
