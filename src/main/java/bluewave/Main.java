@@ -566,6 +566,23 @@ public class Main {
             }
             graph.close();
         }
+        else if (test.equalsIgnoreCase("database")){
+            Config.initDatabase();
+            Database database = Config.getDatabase();
+            System.out.println(database);
+            Connection conn = null;
+            try{
+                conn = database.getConnection();
+                for (Table table : Database.getTables(conn)){
+                    System.out.println(table);
+                }
+                conn.close();
+            }
+            catch(Exception e){
+                if (conn!=null) conn.close();
+                throw e;
+            }
+        }
         else if (test.equals("company")){
 
             String name = args.get("-name");
