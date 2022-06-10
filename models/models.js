@@ -190,23 +190,6 @@ var models = {
         constraints: [
             {name: 'file',    required: true}
         ]
-    },
-
-
-  //**************************************************************************
-  //** DocumentComparison
-  //**************************************************************************
-    DocumentComparison: {
-        fields: [
-            {name: 'a',         type: 'Document'},
-            {name: 'b',         type: 'Document'},
-            {name: 'info',      type: 'json'}
-        ],
-        constraints: [
-            {name: 'a',     required: true},
-            {name: 'b',     required: true},
-            {name: 'info',  required: true}
-        ]
     }
 
 
