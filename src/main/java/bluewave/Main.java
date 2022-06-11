@@ -421,6 +421,23 @@ public class Main {
                 f.delete();
             }
         }
+        else if (str.equals("table")){
+            String name = args.get("-name");
+
+            Config.initDatabase();
+            Database database = Config.getDatabase();
+            Connection conn = null;
+            try{
+                conn = database.getConnection();
+                conn.execute("drop table " + name + " cascade");
+                conn.close();
+            }
+            catch(Exception e){
+                if (conn!=null) conn.close();
+                throw e;
+            }
+            System.out.println("Successfully dropped table");
+        }
         else{
             System.out.println("Unsupported delete option: " + str);
         }
