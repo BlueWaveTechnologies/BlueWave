@@ -465,7 +465,6 @@ bluewave.Explorer = function(parent, config) {
             me.setView(view);
             setTimeout(function(){
                 if (me.getView()!=="Dashboard"){
-
                   //Update connections
                     for (var i=0; i<connectionNodes.length; i++){
                         var inputID = connectionNodes[i];
@@ -1684,7 +1683,6 @@ bluewave.Explorer = function(parent, config) {
   //**************************************************************************
     var getNodeEditor = function(node){
 
-
       //Find config associated with the node editor
         var _node;
         config.nodes.every(function(n){
@@ -2314,9 +2312,14 @@ bluewave.Explorer = function(parent, config) {
 
 
           //Update dimensions of the svg
+            var svgParent = d3.select(svg).node().parentNode.parentNode;
+            d3.select(svgParent)
+            .style("width", "100%")
+            .style("height", "100%");
+
             d3.select(svg)
-            .attr("width",rect.width)
-            .attr("height",rect.height);
+            .attr("width",null)
+            .attr("height",null);
 
 
           //Get attributes of the second "g" element in the svg. Assumes that
@@ -2370,7 +2373,7 @@ bluewave.Explorer = function(parent, config) {
 
 
 
-          //Compute x/y offset
+          // Compute x/y offset
             var x = 0;
             var y = 0;
             if (translateX===0){ //center the chart
@@ -2386,14 +2389,6 @@ bluewave.Explorer = function(parent, config) {
             else{
                 //TODO: center chart using translateY
             }
-
-
-          //Apply transform to the first g
-            d3.select(g).attr("transform",
-                "translate(" + x + "," + y + ") " +
-                "scale(" + scale + ")"
-            );
-
         }
     };
 
