@@ -258,7 +258,38 @@ body, textarea, input, select, td, th {
 
 .dashboard-homepage .dashboard-item {
     float: none;
+    width: 285px !important;
+    height: 500px !important;
+    padding: 0;
+    border-radius: 5px;
+    box-shadow: 1px 4px 12px 1px rgb(0 0 0 / 30%);
+    margin: 15px;
+    overflow: hidden;
+    border: none;
 }
+
+.dashboard-item-image {
+    height: 255px;
+    background-repeat: no-repeat;
+}
+
+.dashboard-item-body {
+    padding: 7px;
+}
+
+.dashboard-item-title {
+    font-size: 20px;
+    padding: 7px 0;
+    color: #007cba;
+}
+
+.dashboard-item-description {
+    font-size: 12px;
+    color: #777;
+    padding: 7px 0;
+}
+
+
 
 .dashboard-homepage .dashboard-item .fas {
     color: #eaeaea;
