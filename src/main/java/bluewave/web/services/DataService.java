@@ -49,8 +49,8 @@ public class DataService extends WebService {
         String fileName = request.getPath(0).toString().toLowerCase();
         bluewave.queries.Query query = bluewave.queries.Index.getQuery(fileName);
         String sql = query==null ? null : query.getCypher();
-        
-        
+
+
       //If the query is not found, check the plugin directories for any matching queries
         ArrayList<Plugin> plugins = null;
         if (sql==null){
@@ -67,14 +67,14 @@ public class DataService extends WebService {
                     }
                 }
             }
-            
+
         }
-        
-        
+
+
       //Finally, check the web/data directories
         if (sql==null){
 
-            
+
             ArrayList<javaxt.io.Directory> dirs = new ArrayList<>();
             dirs.add(dir);
             if (plugins==null) plugins = Config.getPlugins();
@@ -82,13 +82,14 @@ public class DataService extends WebService {
                 javaxt.io.Directory d = new javaxt.io.Directory(plugin.getDirectory() + "web/data");
                 if (d.exists()) dirs.add(d);
             }
-            
-            
+
+
             for (javaxt.io.Directory dir : dirs){
                 for (Object obj : dir.getChildren()){
                     if (obj instanceof javaxt.io.File){
                         javaxt.io.File file = (javaxt.io.File) obj;
-                        if (file.getName().equalsIgnoreCase(fileName)){
+                        if (file.getName().equalsIgnoreCase(fileName) ||
+                            file.getName(false).equalsIgnoreCase(fileName)){
                             return new ServiceResponse(file);
                         }
                     }
@@ -97,8 +98,8 @@ public class DataService extends WebService {
                     }
                 }
             }
-            
-            
+
+
             return new ServiceResponse(404);
         }
         else{
@@ -214,7 +215,7 @@ public class DataService extends WebService {
                     keys.add("country");
                 }
             }
-            
+
 
           //Generate response
             try{
