@@ -88,8 +88,7 @@ public class DataService extends WebService {
                 for (Object obj : dir.getChildren()){
                     if (obj instanceof javaxt.io.File){
                         javaxt.io.File file = (javaxt.io.File) obj;
-                        if (file.getName().equalsIgnoreCase(fileName) ||
-                            file.getName(false).equalsIgnoreCase(fileName)){
+                        if (file.getName().equalsIgnoreCase(fileName)){
                             return new ServiceResponse(file);
                         }
                     }
