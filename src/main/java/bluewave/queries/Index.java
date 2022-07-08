@@ -1,4 +1,6 @@
 package bluewave.queries;
+import bluewave.Config;
+import bluewave.Plugin;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Index {
@@ -11,7 +13,7 @@ public class Index {
    *  @param fileName Name of the sql script, excluding the file extension
    */
     public static Query getQuery(String fileName){
-        
+
         Query query = null;
         synchronized(queries){
             if (queries.isEmpty()){
@@ -23,13 +25,22 @@ public class Index {
                         queries.put(name, new Query(entry.getText()));
                     }
                 }
+
+                for (Plugin plugin : Config.getPlugins()){
+                    javaxt.io.Directory q = new javaxt.io.Directory(plugin.getDirectory() + "queries");
+                    if (!q.exists()) continue;
+                    for (javaxt.io.File file : q.getFiles(true)){
+                        String name = file.getName(false).toLowerCase();
+                        queries.put(name, new Query(file.getText()));
+                    }
+                }
             }
 
             return queries.get(fileName.toLowerCase());
         }
     }
-    
-    
+
+
   //**************************************************************************
   //** getQuery
   //**************************************************************************
