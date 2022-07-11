@@ -359,7 +359,7 @@ bluewave.Homepage = function(parent, config) {
         var dashboardItem = createDashboardItem(parent, {
             width: 360,
             height: 230,
-            subtitle: title,
+            //subtitle: title,
             settings: true
         });
         dashboardItem.dashboard = dashboard;
@@ -373,8 +373,9 @@ bluewave.Homepage = function(parent, config) {
 
 
       //Update dashboardItem
-        dashboardItem.innerDiv.style.cursor = "pointer";
-        dashboardItem.innerDiv.style.textAlign = "center";
+        dashboardItem.innerDiv.style.verticalAlign = "top";
+        //dashboardItem.innerDiv.style.cursor = "pointer";
+        //dashboardItem.innerDiv.style.textAlign = "center";
         dashboardItem.innerDiv.onclick = function(){
             if (dashboardMenu) dashboardMenu.hide();
             me.onClick(dashboardItem);
@@ -440,19 +441,26 @@ bluewave.Homepage = function(parent, config) {
         };
 
 
+        var imageContainer = document.createElement("div");
+        imageContainer.className = "dashboard-item-image";
+        dashboardItem.innerDiv.appendChild(imageContainer);
+
         var icon = document.createElement("i");
         icon.className = "fas fa-camera";
-        dashboardItem.innerDiv.appendChild(icon);
+        imageContainer.appendChild(icon);
 
 
         var img = document.createElement("img");
         img.className = "noselect";
         img.style.cursor = "pointer";
+        img.style.opacity = 0;
         img.onload = function() {
-            dashboardItem.innerDiv.innerHTML = "";
-            var rect = javaxt.dhtml.utils.getRect(dashboardItem.innerDiv);
-            dashboardItem.innerDiv.appendChild(this);
-            this.style.border = "1px solid #ececec"; //this should be in the css
+            imageContainer.innerHTML = "";
+            imageContainer.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
+            if (true) return;
+
+            var rect = javaxt.dhtml.utils.getRect(imageContainer);
+            imageContainer.appendChild(this);
 
 
             var maxWidth = rect.width;
@@ -490,8 +498,8 @@ bluewave.Homepage = function(parent, config) {
                 if (width===0 || height===0) return;
 
 
-                img.width = width;
-                img.height = height;
+                //img.width = width;
+                //img.height = height;
 
                 //TODO: Insert image into a canvas and do a proper resize
                 //ctx.putImageData(img, 0, 0);
@@ -504,6 +512,33 @@ bluewave.Homepage = function(parent, config) {
 
         };
         img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
+        imageContainer.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
+
+
+        var dashboardBody = document.createElement("div");
+        dashboardBody.className = "dashboard-item-body";
+        dashboardItem.innerDiv.appendChild(dashboardBody);
+
+        var dashboardTitle = document.createElement("div");
+        dashboardTitle.className = "dashboard-item-title";
+        dashboardTitle.innerText = dashboard.name;
+        dashboardBody.appendChild(dashboardTitle);
+
+
+        if (dashboard.info){
+            var description = dashboard.info.description;
+            if (description){
+                description.split(/\n\n/).forEach((d)=>{
+                    d = d.trim();
+                    if (d.length===0) return;
+                    var dashboardDescription = document.createElement("div");
+                    dashboardDescription.className = "dashboard-item-description";
+                    dashboardDescription.innerHTML = d;
+                    dashboardBody.appendChild(dashboardDescription);
+                });
+            }
+        }
+
     };
 
 
