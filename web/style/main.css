@@ -253,7 +253,7 @@ body, textarea, input, select, td, th {
 /** Dashboard Homepage
 /**************************************************************************/
 .dashboard-homepage {
-    background-color: #ececec;
+    background-color: #f3f3f3;
 }
 
 .dashboard-homepage .dashboard-item {
@@ -266,11 +266,13 @@ body, textarea, input, select, td, th {
     margin: 15px;
     overflow: hidden;
     border: none;
+    cursor: pointer;
 }
 
 .dashboard-item-image {
     height: 255px;
     background-repeat: no-repeat;
+    overflow: hidden;
 }
 
 .dashboard-item-body {
