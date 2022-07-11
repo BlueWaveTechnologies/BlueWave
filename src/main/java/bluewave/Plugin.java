@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 //JavaXT imports
 import javaxt.json.*;
 import static javaxt.xml.DOM.*;
+import static javaxt.utils.Console.console;
 
 //XML imports
 import org.w3c.dom.*;
@@ -210,7 +211,13 @@ public class Plugin {
         for (Node n : getNodes(node.getChildNodes())){
             //if (n.getNodeType()!=1) continue;
             String nodeName = n.getNodeName();
-            json.set(nodeName, getJson(n));
+            JSONObject j = getJson(n);
+            if (j.isEmpty()){
+                json.set(nodeName, getNodeValue(n));
+            }
+            else{
+                json.set(nodeName, j);
+            }
         }
         return json;
     }
