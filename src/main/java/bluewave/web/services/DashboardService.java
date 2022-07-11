@@ -672,12 +672,14 @@ public class DashboardService extends WebService {
 
       //Generate list of dashboards in the plugins
         HashMap<String, JSONObject> dashboards = new HashMap<>();
+        HashMap<String, javaxt.io.Directory> directories = new HashMap<>();
         for (Plugin plugin : Config.getPlugins()){
             JSONArray arr = plugin.getDashboards();
             for (int i=0; i<arr.length(); i++){
                 JSONObject dashboard = arr.get(i).toJSONObject();
                 String className = dashboard.get("class").toString();
                 dashboards.put(className, dashboard);
+                directories.put(className, plugin.getDirectory());
             }
         }
 
@@ -693,12 +695,15 @@ public class DashboardService extends WebService {
             rs.open("select class_name, id from " + tableName, conn);
             while (rs.hasNext()){
                 String className = rs.getValue(0).toString();
+                Long dashboardID = rs.getValue(1).toLong();
                 if (dashboards.containsKey(className)){
-                    dashboards.remove(className);
+                    JSONObject dashboard = dashboards.get(className);
+                    dashboard.set("id", dashboard);
+                    orphans.add(dashboardID);
                 }
                 else{
                     if (!className.equals("bluewave.Explorer")){
-                        orphans.add(rs.getValue(1).toLong());
+                        orphans.add(dashboardID);
                     }
                 }
                 rs.moveNext();
@@ -730,8 +735,25 @@ public class DashboardService extends WebService {
             while (it.hasNext()){
                 JSONObject d = dashboards.get(it.next());
                 Dashboard dashboard = new Dashboard();
+                dashboard.setID(d.get("id").toLong());
                 dashboard.setName(d.get("name").toString());
                 dashboard.setClassName(d.get("class").toString());
+                dashboard.setInfo(d.get("info").toJSONObject());
+
+                JSONValue thumbnail = d.get("thumbnail");
+                if (!thumbnail.isNull()){
+                    String src = thumbnail.get("src").toString();
+                    //console.log(src);
+                    if (src!=null){
+                        javaxt.io.Directory pluginDir = directories.get(dashboard.getClassName());
+                        javaxt.io.Directory webDir = new javaxt.io.Directory(pluginDir + "web");
+                        javaxt.io.File imgFile = new javaxt.io.File(webDir + src);
+                        if (imgFile.exists()){
+                            dashboard.setThumbnail(imgFile.getBytes().toByteArray());
+                        }
+                    }
+                }
+
                 dashboard.save();
             }
 
