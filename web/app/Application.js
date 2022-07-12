@@ -391,21 +391,21 @@ bluewave.Application = function(parent, config) {
             profileButton.hide();
             dashboardPanel.show();
 
-          //Create dashboards
-            var dashboards = [
-            "SupplyChain", "ImportSummary", "EUAMap",
-            "ProductPurchases", "GlobalSupplyChain"];
-            for (var i in dashboards){
-                dashboards[i] = {
-                    id: i,
-                    name: dashboards[i],
-                    className: "bluewave.dashboards." + dashboards[i]
-                };
-            }
-
-          //Convert the dashboards array into a datastore
-            dashboards = new javaxt.dhtml.DataStore(dashboards);
-            config.dataStores["Dashboard"] = dashboards;
+//          //Create dashboards
+//            var dashboards = [
+//            "SupplyChain", "ImportSummary", "EUAMap",
+//            "ProductPurchases", "GlobalSupplyChain"];
+//            for (var i in dashboards){
+//                dashboards[i] = {
+//                    id: i,
+//                    name: dashboards[i],
+//                    className: "bluewave.dashboards." + dashboards[i]
+//                };
+//            }
+//
+//          //Convert the dashboards array into a datastore
+//            dashboards = new javaxt.dhtml.DataStore(dashboards);
+//            config.dataStores["Dashboard"] = dashboards;
 
 
           //Add homepage
@@ -466,7 +466,7 @@ bluewave.Application = function(parent, config) {
 
       //Create new panels
         if (showHomepage){
-            get("dashboards?fields=id,name,className",{
+            get("dashboards?fields=id,name,className,info",{
                 success: function(dashboards) {
 
                   //Convert the dashboards array into a datastore
