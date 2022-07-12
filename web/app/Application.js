@@ -365,6 +365,16 @@ bluewave.Application = function(parent, config) {
 
 
   //**************************************************************************
+  //** determineZoom
+  //**************************************************************************
+    var determineZoom = function(){
+        console.log("determine zoom called");
+        var browserZoomLevel = Math.round(window.devicePixelRatio * 100);
+        console.log(browserZoomLevel);
+    };
+
+
+  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(user){
@@ -372,6 +382,7 @@ bluewave.Application = function(parent, config) {
         me.setTitle("");
         currDashboardItem = null;
         extensions = [];
+        determineZoom();
 
 
       //If no user is supplied, then we are running in stand-alone mode
