@@ -698,7 +698,7 @@ public class DashboardService extends WebService {
                 Long dashboardID = rs.getValue(1).toLong();
                 if (dashboards.containsKey(className)){
                     JSONObject dashboard = dashboards.get(className);
-                    dashboard.set("id", dashboard);
+                    dashboard.set("id", dashboardID);
                     orphans.add(dashboardID);
                 }
                 else{
