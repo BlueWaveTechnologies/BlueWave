@@ -745,6 +745,42 @@ select:focus, textarea:focus, input:focus{
     border-top: 5px solid #525252;
 }
 
+/**************************************************************************/
+/** Switch
+/**************************************************************************/
+.switch-groove {
+    background-color: #dcdcdc;
+    width: 40px;
+    height: 24px;
+    border-radius: 12px;
+    position: relative;
+}
+.switch-handle {
+    width: 20px;
+    height: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    position: absolute;
+    margin: 2px;
+    box-shadow: 0px 3px 4px rgba(0, 0, 0, 0.2);
+}
+.switch-groove-active {
+    background-color: #4bd763;
+    width: 40px;
+    height: 24px;
+    border-radius: 12px;
+    position: relative;
+}
+.switch-handle-active {
+    width: 20px;
+    height: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    position: absolute;
+    margin: 2px;
+    box-shadow: 0px 3px 4px rgba(0, 0, 0, 0.2);
+}
+
 
 /**************************************************************************/
 /** Slider

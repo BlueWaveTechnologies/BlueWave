@@ -51,31 +51,15 @@ javaxt.dhtml.style.default = {
     },
 
 
-    /*
     checkbox : {
-        box:   "facet-checkbox",
-        label: "facet-checkbox-label",
-        hover: {
-            border: "1px solid rgb(" + color + ")",
-            background: color2
-        },
-        select: {
-            border: "1px solid #adadad",
-            background: medium
-        },
-        check: {
-            content: "",
-            display: "block",
-            width: "3px",
-            height: "6px",
-            border: "solid rgb(" + color + ")",
-            borderWidth: "0 2px 2px 0",
-            transform: "rotate(45deg)",
-            margin: "1px 0 0 4px"
-        }
-
+        box:   "checkbox-box",
+        label: "checkbox-label",
+        check: "checkbox-check",
+        select: "checkbox-select",
+        disable: "checkbox-disable",
+        hover: "checkbox-hover"
     },
-    */
+    
 
     toolbarButton : {
         button: "toolbar-button",
@@ -103,6 +87,13 @@ javaxt.dhtml.style.default = {
 
     tabPanel: {
 
+    },
+
+    switch: {
+        groove: "switch-groove",
+        handle: "switch-handle",
+        grooveActive: "switch-groove-active",
+        handleActive: "switch-handle-active"
     },
 
     merge : function(settings, defaults) {
