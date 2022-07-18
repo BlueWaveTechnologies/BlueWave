@@ -365,12 +365,13 @@ bluewave.Application = function(parent, config) {
 
 
   //**************************************************************************
-  //** determineZoom
+  //** verifyZoom
   //**************************************************************************
-    var determineZoom = function(){
-        console.log("determine zoom called");
+    var verifyZoom = function(){
         var browserZoomLevel = Math.round(window.devicePixelRatio * 100);
-        console.log(browserZoomLevel);
+        if (browserZoomLevel !== 100){
+            alert("We have detected an unusual pixel ratio for your device that may be due the browser zoom setting. To avoid unexpected application errors, please ensure your browser zoom is set to 100%.");
+        };
     };
 
 
@@ -382,7 +383,7 @@ bluewave.Application = function(parent, config) {
         me.setTitle("");
         currDashboardItem = null;
         extensions = [];
-        determineZoom();
+        verifyZoom();
 
 
       //If no user is supplied, then we are running in stand-alone mode
