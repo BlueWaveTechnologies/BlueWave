@@ -12,6 +12,7 @@ import java.net.InetSocketAddress;
 import javaxt.sql.*;
 import javaxt.json.*;
 import javaxt.io.Jar;
+import javaxt.express.ConfigFile;
 import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.*;
@@ -47,7 +48,7 @@ public class Main {
 
       //Get config file
         javaxt.io.File configFile = (args.containsKey("-config")) ?
-            Config.getFile(args.get("-config"), jarFile) :
+            ConfigFile.getFile(args.get("-config"), jarFile) :
             new javaxt.io.File(jar.getFile().getParentFile(), "config.json");
 
         if (!configFile.exists()) {
@@ -156,6 +157,13 @@ public class Main {
                 JSONObject webConfig = Config.get("webserver").toJSONObject();
                 ArrayList<InetSocketAddress> addresses = new ArrayList<>();
                 Integer port = webConfig.get("port").toInteger();
+
+                    if (args.containsKey("-port")){
+                        port = Integer.parseInt(args.get("-port"));
+                    }
+
+
+
                 addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
                 new javaxt.http.Server(addresses, 250, new WebApp(webConfig)).start();
 
@@ -178,7 +186,7 @@ public class Main {
 
       //Update path to the database (H2 only)
         if (dbConfig.has("path")){
-            Config.updateFile("path", dbConfig, configFile);
+            ConfigFile.updateFile("path", dbConfig, configFile);
             String path = dbConfig.get("path").toString().replace("\\", "/");
             dbConfig.set("host", path);
             dbConfig.remove("path");
@@ -495,6 +503,52 @@ public class Main {
                 if (conn!=null) conn.close();
                 throw e;
             }
+        }
+        else if (str.equals("countries")){
+            console.log("hi");
+
+
+            String path = args.get("-path").toLowerCase();
+
+            javaxt.io.Directory dir = new javaxt.io.Directory(path);
+            javaxt.io.File file = new javaxt.io.File(dir, "countries.csv");
+            file.create();
+            java.io.BufferedWriter out = file.getBufferedWriter("UTF-8");
+
+            out.write("Name,ISO_Code,Latitude,Longitude");
+            String[] keys = new String[]{"name","code","latitude","longitude"};
+
+            try{
+                javaxt.io.Directory web = bluewave.Config.getDirectory("webserver","webDir");
+                javaxt.io.File countryFile = new javaxt.io.File(web + "data/countries.js");
+                String text = countryFile.getText();
+                JSONObject json = new JSONObject(text.substring(text.indexOf("\n{")));
+                bluewave.utils.TopoJson topoJson = new bluewave.utils.TopoJson(json, "countries");
+                for (bluewave.utils.TopoJson.Entry entry : topoJson.getEntries()){
+                    JSONObject properties = entry.getProperties();
+                    //console.log(properties.toString(2));
+
+                    out.write("\r\n");
+                    for (int i=0; i<keys.length; i++){
+                        String key = keys[i];
+                        String val = properties.get(key).toString();
+                        if (val==null) val = "";
+                        if (val.contains(",")) val = "\"" + val + "\"";
+                        if (i>0) out.write(",");
+                        out.write(val);
+                    }
+
+
+
+
+
+                }
+            }
+            catch(Exception e){
+                e.printStackTrace();
+            }
+
+            out.close();
         }
     }
 
