@@ -130,7 +130,7 @@ public class Python {
         catch(Exception e){
             StringBuilder err = new StringBuilder();
             err.append("Error parsing script output");
-            StringBuffer result = new StringBuffer();
+            StringBuilder result = new StringBuilder();
             Iterator<String> i2 = output.iterator();
             while (i2.hasNext()){
                 String out = i2.next();
@@ -192,7 +192,7 @@ public class Python {
   //**************************************************************************
     public static javaxt.io.File[] getScripts(String scriptName){
 
-        
+
       //Check main script directory
         javaxt.io.File[] scripts = getScriptDir().getFiles(scriptName, true);
         if (scripts.length>0) return scripts;

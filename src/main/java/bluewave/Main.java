@@ -200,10 +200,10 @@ public class Main {
 
 
       //Split updates into individual statements
-        ArrayList<String> statements = new ArrayList<String>();
+        ArrayList<String> statements = new ArrayList<>();
         for (String s : updates.split(";")){
 
-            StringBuffer str = new StringBuffer();
+            StringBuilder str = new StringBuilder();
             for (String i : s.split("\r\n")){
                 if (!i.trim().startsWith("--") && !i.trim().startsWith("COMMENT ")){
                     str.append(i + "\r\n");
@@ -219,9 +219,7 @@ public class Main {
 
 
       //Execute statements
-        Connection conn = null;
-        try{
-            conn = database.getConnection();
+        try (Connection conn = database.getConnection()){
 
             java.sql.Statement stmt = conn.getConnection().createStatement();
             for (String cmd : statements){
@@ -235,12 +233,6 @@ public class Main {
                 }
             }
             stmt.close();
-
-            conn.close();
-        }
-        catch(Exception e){
-            if (conn!=null) conn.close();
-            throw e;
         }
     }
 
@@ -434,15 +426,8 @@ public class Main {
 
             Config.initDatabase();
             Database database = Config.getDatabase();
-            Connection conn = null;
-            try{
-                conn = database.getConnection();
+            try (Connection conn = database.getConnection()){
                 conn.execute("drop table " + name + " cascade");
-                conn.close();
-            }
-            catch(Exception e){
-                if (conn!=null) conn.close();
-                throw e;
             }
             System.out.println("Successfully dropped table");
         }
@@ -465,18 +450,18 @@ public class Main {
             javaxt.io.Directory dir = new javaxt.io.Directory(path);
             javaxt.io.File file = new javaxt.io.File(dir, tableName + ".csv");
             file.create();
-            java.io.BufferedWriter out = file.getBufferedWriter("UTF-8");
 
 
             Config.initDatabase();
 
-            Connection conn = null;
-            try{
-                conn = Config.getDatabase().getConnection();
+
+            try (java.io.BufferedWriter out = file.getBufferedWriter("UTF-8")){
 
                 boolean addHeader = true;
-                for (Recordset rs : conn.getRecordset("select * from " + tableName)){
-                    Field[] fields = rs.getFields();
+                for (javaxt.sql.Record record : Config.getDatabase().getRecords(
+                "select * from " + tableName)){
+
+                    Field[] fields = record.getFields();
                     if (addHeader){
                         for (int i=0; i<fields.length; i++){
                             if (i>0) out.write(",");
@@ -496,29 +481,23 @@ public class Main {
                     }
 
                 }
-                conn.close();
-                out.close();
             }
-            catch(Exception e){
-                if (conn!=null) conn.close();
-                throw e;
-            }
+
+
         }
         else if (str.equals("countries")){
-            console.log("hi");
-
 
             String path = args.get("-path").toLowerCase();
 
             javaxt.io.Directory dir = new javaxt.io.Directory(path);
             javaxt.io.File file = new javaxt.io.File(dir, "countries.csv");
             file.create();
-            java.io.BufferedWriter out = file.getBufferedWriter("UTF-8");
 
-            out.write("Name,ISO_Code,Latitude,Longitude");
-            String[] keys = new String[]{"name","code","latitude","longitude"};
+            try (java.io.BufferedWriter out = file.getBufferedWriter("UTF-8")){
 
-            try{
+                out.write("Name,ISO_Code,Latitude,Longitude");
+                String[] keys = new String[]{"name","code","latitude","longitude"};
+
                 javaxt.io.Directory web = bluewave.Config.getDirectory("webserver","webDir");
                 javaxt.io.File countryFile = new javaxt.io.File(web + "data/countries.js");
                 String text = countryFile.getText();
@@ -537,18 +516,8 @@ public class Main {
                         if (i>0) out.write(",");
                         out.write(val);
                     }
-
-
-
-
-
                 }
             }
-            catch(Exception e){
-                e.printStackTrace();
-            }
-
-            out.close();
         }
     }
 
@@ -641,17 +610,8 @@ public class Main {
             Config.initDatabase();
             Database database = Config.getDatabase();
             System.out.println(database);
-            Connection conn = null;
-            try{
-                conn = database.getConnection();
-                for (Table table : Database.getTables(conn)){
-                    System.out.println(table);
-                }
-                conn.close();
-            }
-            catch(Exception e){
-                if (conn!=null) conn.close();
-                throw e;
+            for (Table table : database.getTables()){
+                System.out.println(table);
             }
         }
         else if (test.equals("company")){

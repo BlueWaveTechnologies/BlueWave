@@ -125,11 +125,11 @@ public class User extends javaxt.sql.Model
     }
 
 
-    public String getName(){
+    public String getUsername(){
         return username;
     }
 
-    public String getUsername(){
+    public String getName(){
         return username;
     }
 
@@ -137,12 +137,18 @@ public class User extends javaxt.sql.Model
         this.username = username;
     }
 
+    /** Returns a BCrypt encrypted password */
+    public String getPassword(){
+        return password;
+    }
+
     public boolean authenticate(String password){
         return BCrypt.checkpw(password, this.password);
     }
 
     public void setPassword(String password){
-        this.password = BCrypt.hashpw(password, BCrypt.gensalt());
+        if (BCrypt.hasSalt(password)) this.password = password;
+        else this.password = BCrypt.hashpw(password, BCrypt.gensalt());
     }
 
     public Integer getAccessLevel(){

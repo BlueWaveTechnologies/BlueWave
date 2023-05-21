@@ -204,7 +204,7 @@ public class ReportService extends WebService {
   //** getActiveUsers
   //**************************************************************************
     public ServiceResponse getActiveUsers(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
         if (!authorized(request.getRequest())) return new ServiceResponse(403, "Not Authorized");
 
