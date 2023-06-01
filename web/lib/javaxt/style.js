@@ -52,14 +52,15 @@ javaxt.dhtml.style.default = {
 
 
     checkbox : {
-        box:   "checkbox-box",
+        panel: "checkbox-panel",
+        box: "checkbox-box",
         label: "checkbox-label",
         check: "checkbox-check",
         select: "checkbox-select",
         disable: "checkbox-disable",
         hover: "checkbox-hover"
     },
-    
+
 
     toolbarButton : {
         button: "toolbar-button",
@@ -95,6 +96,21 @@ javaxt.dhtml.style.default = {
         grooveActive: "switch-groove-active",
         handleActive: "switch-handle-active"
     },
+
+
+    datePicker: {
+        panel: "date-picker-panel",
+        header: "date-picker-header",
+        title: "date-picker-title",
+        cell: "date-picker-cell",
+        cellHeader: "date-picker-cell-header",
+        today: "date-picker-cell-today",
+        selectedRow: "date-picker-row-selected",
+        selectedCell: "date-picker-cell-selected",
+        next: "date-picker-next",
+        back: "date-picker-back"
+    },
+
 
     merge : function(settings, defaults) {
         javaxt.dhtml.utils.merge(settings, defaults);

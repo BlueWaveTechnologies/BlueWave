@@ -2,14 +2,14 @@ if(!bluewave) var bluewave={};
 if(!bluewave.dashboard) bluewave.dashboard={};
 
 //******************************************************************************
-//**  Dashboard Editor
+//**  Dashboard Properties
 //******************************************************************************
 /**
  *   Panel used to edit dashboard properties
  *
  ******************************************************************************/
 
-bluewave.dashboard.Editor = function(parent, config) {
+bluewave.dashboard.Properties = function(parent, config) {
 
     var me = this;
     var defaultConfig = {};
@@ -27,15 +27,18 @@ bluewave.dashboard.Editor = function(parent, config) {
 
         var table = createTable(parent);
         var tr = table.addRow();
-        var td;
 
-        td = tr.addColumn();
-        td.style.width = "100%";
-        td.style.paddingRight = "7px";
+
+      //Create form
+        var td = tr.addColumn({
+            width: "100%",
+            paddingRight: "7px"
+        });
         createForm(td);
 
-        td = tr.addColumn();
-        createPreview(td);
+
+      //Create preview
+        createPreview(tr.addColumn());
 
         me.el = table;
     };
@@ -79,9 +82,11 @@ bluewave.dashboard.Editor = function(parent, config) {
   //**************************************************************************
     var createForm = function(parent){
 
-        var spacer = document.createElement("div");
-        spacer.style.width = "425px";
-        parent.appendChild(spacer);
+      //Create spacer
+        createElement("div", parent, {
+            width: "425px"
+        });
+
 
         var uploadPanel = createUploadPanel();
 
@@ -125,9 +130,10 @@ bluewave.dashboard.Editor = function(parent, config) {
   //**************************************************************************
     var createUploadPanel = function(){
 
-        var div = document.createElement("div");
-        div.style.width = "100%";
-        div.style.height = "334px";
+        var div = createElement("div", {
+            width: "100%",
+            height: "334px"
+        });
 
         return {
             el: div,
@@ -146,28 +152,24 @@ bluewave.dashboard.Editor = function(parent, config) {
   //**************************************************************************
     var createPreview = function(parent){
 
-        var spacer = document.createElement("div");
+        var spacer = createElement("div", parent);
         spacer.style.width = "350px";
-        parent.appendChild(spacer);
 
 
-        var div = document.createElement("div");
+
+        var div = createElement("div");
         div.className = "dashboard-homepage";
         div.style.height = "100%";
         div.style.textAlign = "center";
         div.style.overflowY = "auto";
 
 
-
-        var innerDiv = document.createElement("div");
+        var innerDiv = createElement("div", div);
         innerDiv.style.height = "100%";
-        div.appendChild(innerDiv);
 
 
 
-
-
-        preview = new bluewave.dashboard.Preview(innerDiv);
+        preview = new bluewave.dashboard.CardView(innerDiv);
 
 
 
@@ -208,6 +210,7 @@ bluewave.dashboard.Editor = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var createElement = javaxt.dhtml.utils.createElement;
     var createTable = javaxt.dhtml.utils.createTable;
     var warn = bluewave.utils.warn;
 

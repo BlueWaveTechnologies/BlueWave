@@ -803,6 +803,7 @@ li.tree-node:hover {
     border-radius: 4px 4px 0px 0px;
     padding-left: 10px;
     overflow: hidden;
+    white-space: nowrap;
 }
 
 .drawflow-node-overlay{

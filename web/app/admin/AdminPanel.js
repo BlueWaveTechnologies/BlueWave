@@ -35,38 +35,34 @@ bluewave.admin.AdminPanel = function(parent, config) {
 
 
       //Create table
-        var table = createTable();
+        var table = createTable(parent);
         table.className = "admin-panel";
-        parent.appendChild(table);
-        var tbody = table.firstChild;
-        var tr = document.createElement("tr");
-        tbody.appendChild(tr);
+        var tr = table.addRow();
         var td;
 
 
       //Create side bar
-        td = document.createElement("td");
-        td.style.height = "100%";
-        tr.appendChild(td);
-        sidebar = document.createElement("div");
-        sidebar.className = "admin-sidebar";
+        td = tr.addColumn({
+            height: "100%"
+        });
+        sidebar = createElement("div", td, "admin-sidebar");
         sidebar.style.height = "100%";
-        td.appendChild(sidebar);
+
 
 
       //Create main panel
-        td = document.createElement("td");
-        td.style.height = "100%";
-        td.style.width = "100%";
-        tr.appendChild(td);
-        mainPanel = td;
+        mainPanel = tr.addColumn({
+            width: "100%",
+            height: "100%"
+        });
+
 
 
       //Create landing page
-        landingPage = document.createElement("div");
+        landingPage = createElement("div", mainPanel, "admin-landing-page noselect");
         landingPage.className = "admin-landing-page noselect";
         landingPage.innerHTML = '<i class="fas fa-cogs"></i>';
-        mainPanel.appendChild(landingPage);
+
         addShowHide(landingPage);
 
 
@@ -84,9 +80,9 @@ bluewave.admin.AdminPanel = function(parent, config) {
                 this.getComponents().editor.setValue(sql);
             },
             style:{
-                table: javaxt.dhtml.style.default.table,
-                toolbar: javaxt.dhtml.style.default.toolbar,
-                toolbarButton: javaxt.dhtml.style.default.toolbarButton,
+                table: config.style.table,
+                toolbar: config.style.toolbar,
+                toolbarButton: config.style.toolbarButton,
                 toolbarIcons: {
                     run: "fas fa-play",
                     cancel: "fas fa-stop"
@@ -128,7 +124,7 @@ bluewave.admin.AdminPanel = function(parent, config) {
             }
         });
 
-        
+
 
         me.el = table;
         addShowHide(me);
@@ -212,15 +208,14 @@ bluewave.admin.AdminPanel = function(parent, config) {
   //** createPanel
   //**************************************************************************
     var createPanel = function(name, icon, className, config){
-        var button = document.createElement("div");
-        button.className = icon + " noselect";
+        var button = createElement("div", sidebar, icon + " noselect");
         button.onclick = function(){
             me.raisePanel(name);
         };
-        sidebar.appendChild(button);
 
-        var body = document.createElement("div");
-        body.style.height = "100%";
+        var body = createElement("div", {
+            height: "100%"
+        });
         addShowHide(body);
         body.hide();
 
@@ -241,6 +236,7 @@ bluewave.admin.AdminPanel = function(parent, config) {
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
+    var createElement = javaxt.dhtml.utils.createElement;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var isArray = javaxt.dhtml.utils.isArray;
     var get = bluewave.utils.get;

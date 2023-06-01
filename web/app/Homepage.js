@@ -27,18 +27,15 @@ bluewave.Homepage = function(parent, config) {
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
 
-        var div = document.createElement("div");
+        var div = createElement("div", parent);
         div.className = "dashboard-homepage";
         div.style.height = "100%";
         div.style.textAlign = "center";
         div.style.overflowY = "auto";
-        parent.appendChild(div);
         me.el = div;
 
-        var innerDiv = document.createElement("div");
-        innerDiv.style.height = "100%";
-        div.appendChild(innerDiv);
-        mainDiv = innerDiv;
+        mainDiv = createElement("div", div);
+        mainDiv.style.height = "100%";
 
 
       //Add listeners to the "Dashboard" store
@@ -354,7 +351,7 @@ bluewave.Homepage = function(parent, config) {
 
 
       //Create dashboardItem
-        var preview = new bluewave.dashboard.Preview(parent);
+        var preview = new bluewave.dashboard.CardView(parent);
         preview.update(dashboard);
         var dashboardItem = preview.getDashboardItem();
         dashboardItem.dashboard = dashboard;
@@ -442,30 +439,27 @@ bluewave.Homepage = function(parent, config) {
   //**************************************************************************
     var createGroupBox = function(group){
 
-        var div = document.createElement("div");
-        div.className = "dashboard-group";
+        var div = createElement("div", "dashboard-group");
         div.style.position = "relative";
         div.addEventListener('dragover', onDragOver, false);
         div.addEventListener('drop', onDrop, false);
         div.group = group;
 
 
-        var header = document.createElement("div");
-        header.className = "dashboard-group-header noselect";
+        var header = createElement("div", div, "dashboard-group-header noselect");
         header.style.position = "absolute";
-        div.appendChild(header);
 
-        var label = document.createElement("span");
+
+        var label = createElement("span", header);
         label.innerText = group.name;
-        header.appendChild(label);
+
 
         if (!isDefaultGroup(group)){
 
-            var settings = document.createElement("div");
-            settings.className = "dashboard-group-settings";
+            var settings = createElement("div", header, "dashboard-group-settings");
             settings.innerHTML = '<i class="fas fa-cog"></i>';
             settings.style.opacity = 0;
-            header.appendChild(settings);
+
 
           //Show/hide setting wheel using the mouse over and out events
             header.onmouseover = function(){
@@ -619,8 +613,7 @@ bluewave.Homepage = function(parent, config) {
                 style: config.style.callout
             });
 
-            var div = document.createElement("div");
-            div.className = "dashboard-homepage-menu";
+            var div = createElement("div", dashboardMenu.getInnerDiv(), "dashboard-homepage-menu");
 
             var menu = {};
 
@@ -658,7 +651,6 @@ bluewave.Homepage = function(parent, config) {
 
             div.appendChild(menu.delete);
             div.appendChild(menu.move);
-            dashboardMenu.getInnerDiv().appendChild(div);
 
 
             dashboardMenu.updateMenu = function(permissions){
@@ -704,8 +696,7 @@ bluewave.Homepage = function(parent, config) {
                 style: config.style.callout
             });
 
-            var div = document.createElement("div");
-            div.className = "dashboard-homepage-menu";
+            var div = createElement("div", groupMenu.getInnerDiv(), "dashboard-homepage-menu");
 
             var menu = {};
 
@@ -733,7 +724,6 @@ bluewave.Homepage = function(parent, config) {
 
             div.appendChild(menu.edit);
             div.appendChild(menu.delete);
-            groupMenu.getInnerDiv().appendChild(div);
         }
         return groupMenu;
     };
@@ -743,8 +733,7 @@ bluewave.Homepage = function(parent, config) {
   //** createMenuOption
   //**************************************************************************
     var createMenuOption = function(label, icon, onClick){
-        var div = document.createElement("div");
-        div.className = "dashboard-homepage-menu-item noselect";
+        var div = createElement("div", "dashboard-homepage-menu-item noselect");
         if (icon && icon.length>0){
             div.innerHTML = '<i class="fas fa-' + icon + '"></i>' + label;
         }
@@ -949,20 +938,17 @@ bluewave.Homepage = function(parent, config) {
 
 
           //Create buttons
-            var buttonDiv = document.createElement("div");
-            buttonDiv.className = "button-div";
+            var buttonDiv = createElement("div", "button-div");
             win.setFooter(buttonDiv);
             var createButton = function(label, callback){
-                var input = document.createElement("input");
+                var input = createElement("input", buttonDiv, "form-button");
                 input.type = "button";
-                input.className = "form-button";
                 input.name = label;
                 input.value = label;
                 input.onclick = function(){
                     if (callback) callback();
                     else win.close();
                 };
-                buttonDiv.appendChild(input);
                 return input;
             };
             createButton("OK", function(){
@@ -1015,8 +1001,7 @@ bluewave.Homepage = function(parent, config) {
 
           //Create icon method
             var createIcon = function(){
-                var icon = document.createElement("i");
-                icon.className = "fas fa-check";
+                var icon = createElement("i", "fas fa-check");
                 icon.style.marginTop = "10px";
                 return icon;
             };
@@ -1095,7 +1080,7 @@ bluewave.Homepage = function(parent, config) {
     var get = bluewave.utils.get;
     var del = javaxt.dhtml.utils.delete;
     var post = javaxt.dhtml.utils.post;
-    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var createElement = javaxt.dhtml.utils.createElement;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var warn = bluewave.utils.warn;
 

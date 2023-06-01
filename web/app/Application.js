@@ -81,39 +81,24 @@ bluewave.Application = function(parent, config) {
 
 
       //Create main table
-        var table = createTable();
-        var tbody = table.firstChild;
-        var tr, td;
+        var table = createTable(parent);
 
 
       //Create header nav
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        createHeader(td);
-
+        createHeader(table.addRow().addColumn());
 
 
       //Create body
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        td.style.height = "100%";
-        tr.appendChild(td);
+        var td = table.addRow().addColumn({
+            height: "100%"
+        });
         createBody(td);
 
 
       //Create footer
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        createFooter(td);
+        createFooter(table.addRow().addColumn());
 
 
-
-        parent.appendChild(table);
         me.el = table;
 
         onRender(table, function(){
@@ -128,19 +113,17 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
     var createHeader = function(parent){
 
-        var div = document.createElement("div");
-        div.className = "app-header";
-        parent.appendChild(div);
+        var div = createElement("div", parent, "app-header");
 
 
-        var table = createTable();
-        var tbody = table.firstChild;
-        var tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        var td;
+        var tr = createTable(div).addRow();
 
 
-        var fn = function(){
+      //Add logo
+        var td = tr.addColumn();
+        createElement("div", td, "app-header-icon noselect");
+        td.style.cursor = "pointer";
+        td.onclick = function(){
             if (currUser){
                 if (adminPanel) adminPanel.hide();
                 dashboardPanel.show();
@@ -151,47 +134,29 @@ bluewave.Application = function(parent, config) {
             }
         };
 
-        td = document.createElement("td");
-        tr.appendChild(td);
-        var icon = document.createElement("div");
-        icon.className = "app-header-icon noselect";
-        td.appendChild(icon);
-        td.style.cursor = "pointer";
-        td.onclick = fn;
 
+      //Add spacer
+        tr.addColumn({
+            width: "100%"
+        });
 
-        td = document.createElement("td");
-        td.style.width = "100%";
-        tr.appendChild(td);
 
       //Create profile button
-        td = document.createElement("td");
-        tr.appendChild(td);
-        profileButton = document.createElement("div");
-        profileButton.className = "app-header-profile noselect";
+        profileButton = createElement("div", tr.addColumn(), "app-header-profile noselect");
         profileButton.onclick = function(e){
             if (currUser) showMenu(getProfileMenu(), this);
         };
         addShowHide(profileButton);
-        td.appendChild(profileButton);
 
 
       //Create menu button
-        td = document.createElement("td");
-        tr.appendChild(td);
-        menuButton = document.createElement("div");
-        menuButton.className = "app-header-menu noselect";
-        var icon = document.createElement("i");
-        icon.className = "fas fa-ellipsis-v";
-        menuButton.appendChild(icon);
+        menuButton = createElement("div", tr.addColumn(), "app-header-menu noselect");
+        var icon = createElement("i", menuButton, "fas fa-ellipsis-v");
         menuButton.onclick = function(e){
             if (currUser) showMenu(getMainMenu(), this);
         };
         addShowHide(menuButton);
-        td.appendChild(menuButton);
 
-
-        div.appendChild(table);
     };
 
 
@@ -209,25 +174,19 @@ bluewave.Application = function(parent, config) {
     var createBody = function(parent){
 
 
-        var table = createTable();
-        parent.appendChild(table);
-        var tbody = table.firstChild;
-        var tr, td;
+        var table = createTable(parent);
 
 
       //Create Dashboard Header
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        var div = document.createElement("div");
-        div.style.position = "relative";
-        td.appendChild(div);
+        var td = table.addRow().addColumn();
+        var div = createElement("div", td, {
+            position: "relative"
+        });
+
 
         var createButton = function(className){
-            var btn = document.createElement("div");
+            var btn = createElement("div", div);
             btn.className = className;
-            div.appendChild(btn);
             addShowHide(btn);
             return btn;
         };
@@ -272,18 +231,13 @@ bluewave.Application = function(parent, config) {
         };
         nextButton.hide();
 
-        titleDiv = document.createElement("div");
-        titleDiv.className = "dashboard-title noselect";
-        div.appendChild(titleDiv);
+        titleDiv = createElement("div", div, "dashboard-title noselect");
 
 
       //Create body
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        td.style.height = "100%";
-        tr.appendChild(td);
-        body = td;
+        body = table.addRow().addColumn({
+            height: "100%"
+        });
 
 
       //Create carousel
@@ -299,8 +253,9 @@ bluewave.Application = function(parent, config) {
 
       //Create 2 panels for the carousel
         for (var i=0; i<2; i++){
-            var panel = document.createElement("div");
-            panel.style.height = "100%";
+            var panel = createElement("div", {
+                height: "100%"
+            });
             carousel.add(panel);
         }
 
@@ -812,7 +767,7 @@ bluewave.Application = function(parent, config) {
 
 
       //Load extensions
-        if (obj===bluewave.Explorer){
+        if (obj===bluewave.dashboard.Composer){
             if (!explorerPanel){
                 explorerPanel = app;
                 extensions.forEach(function(extension){
@@ -879,7 +834,7 @@ bluewave.Application = function(parent, config) {
             }
         }
         else{
-            waitmask.show();
+            waitmask.show(500);
 
 
             get("dashboardUsers?dashboardID="+dashboard.id + "&userID=" + currUser.id + "&fields=readOnly",{
@@ -893,7 +848,7 @@ bluewave.Application = function(parent, config) {
                             success: function(d){
 
                               //Raise explorer panel
-                                var app = raisePanel(bluewave.Explorer, slideBack);
+                                var app = raisePanel(bluewave.dashboard.Composer, slideBack);
                                 if (!explorerPanel) explorerPanel = app;
                                 explorerPanel.hide();
                                 dashboard.app = app;
@@ -974,7 +929,7 @@ bluewave.Application = function(parent, config) {
     var getMainMenu = function(){
         if (!mainMenu){
 
-            var div = document.createElement("div");
+            var div = createElement("div");
             div.className = "app-menu";
 
 
@@ -993,7 +948,7 @@ bluewave.Application = function(parent, config) {
                 if (adminPanel) adminPanel.hide();
                 dashboardPanel.show();
                 me.setTitle(label);
-                var app = raisePanel(bluewave.Explorer);
+                var app = raisePanel(bluewave.dashboard.Composer);
                 if (!explorerPanel) explorerPanel = app;
 
 
@@ -1085,7 +1040,7 @@ bluewave.Application = function(parent, config) {
 
       //Show/hide menu items based on current app
         var isHomepageVisible = (currApp instanceof bluewave.Homepage);
-        var isExplorerVisible = (currApp instanceof bluewave.Explorer);
+        var isExplorerVisible = (currApp instanceof bluewave.dashboard.Composer);
         var isAdminVisible = (currApp instanceof bluewave.admin.AdminPanel);
         for (var i=0; i<mainMenu.childNodes.length; i++){
             var menuItem = mainMenu.childNodes[i];
@@ -1151,7 +1106,7 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
     var getProfileMenu = function(){
         if (!profileMenu){
-            var div = document.createElement("div");
+            var div = createElement("div");
             div.className = "app-menu";
             div.appendChild(createMenuOption("Account Settings", "edit", function(){
                 console.log("Show Accout");
@@ -1169,7 +1124,7 @@ bluewave.Application = function(parent, config) {
   //** createMenuOption
   //**************************************************************************
     var createMenuOption = function(label, icon, onClick){
-        var div = document.createElement("div");
+        var div = createElement("div");
         div.className = "app-menu-item noselect";
         if (icon && icon.length>0){
             div.innerHTML = '<i class="fas fa-' + icon + '"></i>' + label;
@@ -1282,6 +1237,7 @@ bluewave.Application = function(parent, config) {
   //**************************************************************************
   //** Utils
   //**************************************************************************
+    var createElement = javaxt.dhtml.utils.createElement;
     var createTable = javaxt.dhtml.utils.createTable;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var isArray = javaxt.dhtml.utils.isArray;

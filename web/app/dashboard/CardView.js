@@ -2,14 +2,14 @@ if(!bluewave) var bluewave={};
 if(!bluewave.dashboard) bluewave.dashboard={};
 
 //******************************************************************************
-//**  Dashboard Preview
+//**  Dashboard Card View
 //******************************************************************************
 /**
- *   Panel used render a preview of a dashboard
+ *   Panel used render a thumbnail, title, and description of a dashboard
  *
  ******************************************************************************/
 
-bluewave.dashboard.Preview = function(parent, config) {
+bluewave.dashboard.CardView = function(parent, config) {
 
     var me = this;
     var defaultConfig = {};
@@ -57,17 +57,11 @@ bluewave.dashboard.Preview = function(parent, config) {
         me.clear();
 
 
-
-        var imageContainer = document.createElement("div");
-        imageContainer.className = "dashboard-item-image";
-        dashboardItem.innerDiv.appendChild(imageContainer);
-
-        var icon = document.createElement("i");
-        icon.className = "fas fa-camera";
-        imageContainer.appendChild(icon);
+        var imageContainer = createElement("div", dashboardItem.innerDiv, "dashboard-item-image");
+        createElement("i", imageContainer, "fas fa-camera");
 
 
-        var img = document.createElement("img");
+        var img = createElement("img");
         img.className = "noselect";
         img.style.cursor = "pointer";
         img.style.opacity = 0;
@@ -133,15 +127,10 @@ bluewave.dashboard.Preview = function(parent, config) {
         imageContainer.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
 
 
-        var dashboardBody = document.createElement("div");
-        dashboardBody.className = "dashboard-item-body";
-        dashboardItem.innerDiv.appendChild(dashboardBody);
+        var dashboardBody = createElement("div", dashboardItem.innerDiv, "dashboard-item-body");
 
-        var dashboardTitle = document.createElement("div");
-        dashboardTitle.className = "dashboard-item-title";
+        var dashboardTitle = createElement("div", dashboardBody, "dashboard-item-title");
         dashboardTitle.innerText = dashboard.name;
-        dashboardBody.appendChild(dashboardTitle);
-
 
         if (dashboard.info){
             var description = dashboard.info.description;
@@ -149,24 +138,19 @@ bluewave.dashboard.Preview = function(parent, config) {
                 description.split(/\n\n/).forEach((d)=>{
                     d = d.trim();
                     if (d.length===0) return;
-                    var dashboardDescription = document.createElement("div");
-                    dashboardDescription.className = "dashboard-item-description";
+                    var dashboardDescription = createElement("div", dashboardBody, "dashboard-item-description");
                     dashboardDescription.innerHTML = d;
-                    dashboardBody.appendChild(dashboardDescription);
                 });
             }
         }
-
-
     };
-
-
 
 
   //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var createElement = javaxt.dhtml.utils.createElement;
     var createDashboardItem = bluewave.utils.createDashboardItem;
 
 

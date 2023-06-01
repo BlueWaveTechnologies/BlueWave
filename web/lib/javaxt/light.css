@@ -123,8 +123,6 @@ input, select, textarea { /* Allows overriding native style of form elements on 
 }
 
 .toolbar-button-label {
-    font-family: helvetica, arial, verdana, sans-serif;
-    font-size: 14px;
     white-space: nowrap;
     color: #272727;
 }
@@ -278,6 +276,7 @@ input, select, textarea { /* Allows overriding native style of form elements on 
 /**************************************************************************/
 /** The following classes are used to define the style for checkbox inputs
  */
+
 .form-checkbox {
     -moz-appearance: none;
     -webkit-appearance: none;
@@ -288,6 +287,7 @@ input, select, textarea { /* Allows overriding native style of form elements on 
     border: 1px solid #b9b9b9;
     background: #fff;
 }
+
 
 .form-checkbox:checked:before {
     content: '';
@@ -638,21 +638,21 @@ select:focus, textarea:focus, input:focus{
 /** Default style for grid controls
  */
 .table-header {
-    height: 36px; /*table-header-col height + border */
+    /*height: 36px; /*table-header-col height + border */
     border-bottom: 1px solid #ababab;
-    background: #eaeaea;
+    background-color: #eaeaea;
     background-image: linear-gradient(to bottom, #f9f9f9, #e4e5e7);
     /* box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 3px 10px 0 rgba(0, 0, 0, 0.19); */
 }
 
 .table-row, .table-row-selected {
-    background: #ffffff;
+    background-color: #ffffff;
     border-bottom: 1px solid #cccccc;
 }
 
 /* .table-row:nth-child(even) {background: #CCC} */
 .table-row:nth-child(odd) {
-    background: #F8F8F8;
+    background-color: #F8F8F8;
 }
 
 
@@ -709,22 +709,6 @@ select:focus, textarea:focus, input:focus{
 }
 
 
-.table-checkbox {
-    width: 13px;
-    height: 13px;
-    border: 1px solid #cccccc;
-    border-radius: 3px;
-    background: #F6F6F6;
-    cursor: pointer;
-    margin: 0px;
-    color: #2b2b2b
-}
-
-.table-checkbox {
-    border: 1px solid #9c9c9c;
-    background: #fff;
-}
-
 /* Up/down triangles that appear in the header */
 .table-icon-sort-asc, .table-icon-sort-desc {
     width: 0;
@@ -744,6 +728,170 @@ select:focus, textarea:focus, input:focus{
     border-right: 5px solid transparent;
     border-top: 5px solid #525252;
 }
+
+
+/**************************************************************************/
+/** Checkbox
+/**************************************************************************/
+
+.checkbox-panel {
+    position: relative;
+    display: inline-block;
+}
+
+.checkbox-label {
+    white-space: nowrap;
+    cursor: default;
+    padding: 1px 0 0 5px;
+}
+
+.checkbox-box {
+    padding: 0px;
+    margin: 0px;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #b9b9b9;
+    border-radius: 3px;
+    background-color: #f8f8f8;
+
+
+    transition: border 0.2s linear 0s, box-shadow 0.2s linear 0s;
+    -webkit-transition: all 0.20s ease-in-out;
+    -moz-transition: all 0.20s ease-in-out;
+    -ms-transition: all 0.20s ease-in-out;
+    -o-transition: all 0.20s ease-in-out;
+
+}
+
+.checkbox-check {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg);
+    margin: 1px 0px 0px 4px;
+}
+
+.checkbox-select {
+    background-color: #0087ff;
+    border-color: #2a79bf;
+}
+
+.checkbox-hover {}
+.checkbox-panel:hover .checkbox-box {
+    border-color: rgba(82, 168, 236, 0.8);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(82, 168, 236, 0.6);
+}
+
+
+/**************************************************************************/
+/** Checkboxes in Table
+/**************************************************************************/
+
+.table-col .checkbox-box,
+.table-header-col .checkbox-box {
+    background-color: #fff;
+    cursor: pointer;
+}
+
+.table-col .checkbox-select,
+.table-header-col .checkbox-select {
+    background-color: #0087ff;
+    border-color: #2a79bf;
+}
+
+
+/**************************************************************************/
+/** Date Picker
+/**************************************************************************/
+.date-picker-panel {
+    width: 100%
+}
+
+.date-picker-header {
+    background: #d9e7f8;
+    height: 40px;
+    line-height: 40px;
+    position: relative;
+}
+
+.date-picker-title {
+    position: absolute;
+    width: 100%;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: bold;
+    color: #555555;
+    text-align: center;
+    cursor: pointer;
+}
+
+.date-picker-cell {
+    width: inherit;
+    height: 40px;
+    line-height: 40px;
+    text-align: right;
+    padding: 2px 4px 1px 0px;
+    cursor: pointer;
+    border: 1px solid #ffffff;
+    margin: 1px;
+}
+
+.date-picker-cell-header {
+    padding-bottom: 0px;
+    padding-top: 0px;
+    border: 0px;
+    border-top: 1px solid #bbccff;
+    border-bottom: 1px solid #bbccff;
+}
+
+.date-picker-cell-today {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #FF7373;
+    top: -1px;
+    left: -1px;
+}
+
+.date-picker-cell-selected {
+    color: #000000;
+    font-weight: bold;
+    background-color: #fff4bf;
+    border: 1px solid #bfa52f;
+}
+
+.date-picker-row-selected {
+    background-color: #fff4bf;
+}
+
+.date-picker-row-selected .date-picker-cell-selected {
+    border-color: #fff4bf;
+}
+
+.date-picker-next {
+    float: right;
+    border-right: 2px solid #5e8be0;
+    border-bottom: 2px solid #5e8be0;
+    width: 11px;
+    height: 11px;
+    transform: rotate(-45deg);
+    margin: 14px 14px 0 0;
+    cursor: pointer
+}
+
+.date-picker-back {
+    float: left;
+    border-right: 2px solid #5e8be0;
+    border-bottom: 2px solid #5e8be0;
+    width: 11px;
+    height: 11px;
+    transform: rotate(135deg);
+    margin: 14px 0 0 14px;
+    cursor: pointer
+}
+
 
 /**************************************************************************/
 /** Switch
