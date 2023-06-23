@@ -20,6 +20,8 @@ import javaxt.sql.*;
 public class Config {
 
     private static javaxt.express.Config config = new javaxt.express.Config();
+    private static boolean databaseInitialized = false;
+
     private Config(){}
 
 
@@ -94,32 +96,47 @@ public class Config {
   /** Used to initialize the database
    */
     public static void initDatabase() throws Exception {
-        Database database = config.getDatabase();
+        if (databaseInitialized) return;
+
+        try{
+
+          //Get database config
+            Database database = config.getDatabase();
 
 
-      //Get database schema
-        String schema = null;
-        Object obj = config.getDatabase().getProperties().get("schema");
-        if (obj!=null){
-            javaxt.io.File schemaFile = (javaxt.io.File) obj;
-            if (schemaFile.exists()){
-                schema = schemaFile.getText();
+          //Get database schema
+            String schema = null;
+            Object obj = config.getDatabase().getProperties().get("schema");
+            if (obj!=null){
+                javaxt.io.File schemaFile = (javaxt.io.File) obj;
+                if (schemaFile.exists()){
+                    schema = schemaFile.getText();
+                }
             }
+            if (schema==null) throw new Exception("Schema not found");
+
+
+          //Initialize schema (create tables, indexes, etc)
+            DbUtils.initSchema(database, schema, null);
+
+
+          //Enable metadata caching
+            database.enableMetadataCache(true);
+
+
+          //Inititalize connection pool
+            database.initConnectionPool();
+
+
+          //Initialize models
+            javaxt.io.Jar jar = (javaxt.io.Jar) config.get("jar").toObject();
+            Model.init(jar, database.getConnectionPool());
+
+            databaseInitialized = true;
         }
-        if (schema==null) throw new Exception("Schema not found");
-
-
-      //Initialize schema (create tables, indexes, etc)
-        DbUtils.initSchema(database, schema, null);
-
-
-      //Inititalize connection pool
-        database.initConnectionPool();
-
-
-      //Initialize models
-        javaxt.io.Jar jar = (javaxt.io.Jar) config.get("jar").toObject();
-        Model.init(jar, database.getConnectionPool());
+        catch(Exception e){
+            throw e;
+        }
     }
 
 
