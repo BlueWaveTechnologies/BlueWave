@@ -17,8 +17,6 @@ import static javaxt.utils.Console.*;
 
 import org.neo4j.driver.*;
 
-import com.google.gson.JsonObject;
-import javaxt.express.utils.CSV;
 
 
 //******************************************************************************
@@ -155,12 +153,39 @@ public class Main {
             else{
                 Config.initDatabase();
                 JSONObject webConfig = Config.get("webserver").toJSONObject();
+
+
+              //Create new admin user as needed
+                boolean authEnabled = true;
+                String auth = webConfig.get("auth").toString();
+                if (auth!=null){
+                    if (auth.equalsIgnoreCase("DISABLED")) authEnabled=false;
+                }
+                if (authEnabled){
+                    User adminUser = User.get("access_level=",5,"active=",true);
+                    if (adminUser==null){
+                        System.out.println("Auth enabled but missing admin user.");
+                        String username = console.getUserName("Enter username: ");
+                        String password = getPassword(args);
+
+                        User user = new User();
+                        user.setUsername(username);
+                        user.setPassword(password);
+                        user.setActive(true);
+                        user.setAccessLevel(5);
+                        user.save();
+                        System.out.println("User created");
+
+                    }
+                }
+
+
+
                 ArrayList<InetSocketAddress> addresses = new ArrayList<>();
                 Integer port = webConfig.get("port").toInteger();
-
-                    if (args.containsKey("-port")){
-                        port = Integer.parseInt(args.get("-port"));
-                    }
+                if (args.containsKey("-port")){
+                    port = Integer.parseInt(args.get("-port"));
+                }
 
 
 
