@@ -1,5 +1,6 @@
 @import url(https://fonts.googleapis.com/css?family=Open+Sans);
 @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Display&family=Nunito&display=swap');
 
 html, body {
     height:100%;
@@ -28,21 +29,23 @@ body, textarea, input, select, td, th {
 
 
 .app-header-icon {
-    background: url(../images/logo.png) no-repeat;
-    width: 43px;
-    height: 58px;
-    margin: 7px 0 0 14px;
+    background: url(../images/blue-logo-70.png) no-repeat;
+    width: 70px;
+    height: 70px;
+    margin: 0 0 0 14px;
 }
 
 .app-header-icon:after {
     content:"BlueWave";
-    margin-left: 54px;
+    font-family: 'Nunito', sans-serif;
+    text-shadow: 0px 3px 5px rgba(9,57,88,0.42); /*matches shadow in logo*/
+    margin-left: 77px;
     display: inline-block;
     float: left;
-    font-size: 50px;
+    font-size: 46px;
     white-space: nowrap;
     color: #fff;
-    margin-top: -6px;
+    margin-top: 2px;
 }
 
 .app-header-profile,
@@ -254,6 +257,21 @@ body, textarea, input, select, td, th {
 /**************************************************************************/
 .dashboard-homepage {
     background-color: #f3f3f3;
+}
+
+.dashboard-homepage::before {
+    content: "";
+    background: #f3f3f3 url('../images/background.png') no-repeat left top;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    opacity: 0.85;
 }
 
 .dashboard-homepage .dashboard-item {
