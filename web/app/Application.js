@@ -151,7 +151,7 @@ bluewave.Application = function(parent, config) {
 
       //Create menu button
         menuButton = createElement("div", tr.addColumn(), "app-header-menu noselect");
-        var icon = createElement("i", menuButton, "fas fa-ellipsis-v");
+        createElement("i", menuButton, "fas fa-ellipsis-v");
         menuButton.onclick = function(e){
             if (currUser) showMenu(getMainMenu(), this);
         };
@@ -232,6 +232,7 @@ bluewave.Application = function(parent, config) {
         nextButton.hide();
 
         titleDiv = createElement("div", div, "dashboard-title noselect");
+        addShowHide(titleDiv);
 
 
       //Create body
@@ -320,17 +321,6 @@ bluewave.Application = function(parent, config) {
 
 
   //**************************************************************************
-  //** verifyZoom
-  //**************************************************************************
-    var verifyZoom = function(){
-        var browserZoomLevel = Math.round(window.devicePixelRatio * 100);
-        if (browserZoomLevel !== 100){
-            alert("We have detected an unusual pixel ratio for your device that may be due the browser zoom setting. To avoid unexpected application errors, please ensure your browser zoom is set to 100%.");
-        };
-    };
-
-
-  //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(user){
@@ -338,7 +328,6 @@ bluewave.Application = function(parent, config) {
         me.setTitle("");
         currDashboardItem = null;
         extensions = [];
-        verifyZoom();
 
 
       //If no user is supplied, then we are running in stand-alone mode
@@ -430,12 +419,19 @@ bluewave.Application = function(parent, config) {
                     config.dataStores["Dashboard"] = dashboards;
 
 
-                  //Add homepage
-                    var homepage = raisePanel(bluewave.Homepage);
-                    homepage.onClick = function(dashboardItem){
-                        renderDashboard(dashboardItem);
-                    };
-                    me.setTitle(homepage.getTitle());
+                  //Render homepage (or explorer panel if there are no dashboards)
+                    if (dashboards.length===0){
+                        titleDiv.hide();
+                        raisePanel(bluewave.dashboard.Composer);
+                    }
+                    else{
+                        titleDiv.show();
+                        var homepage = raisePanel(bluewave.Homepage);
+                        homepage.onClick = function(dashboardItem){
+                            renderDashboard(dashboardItem);
+                        };
+                        me.setTitle(homepage.getTitle());
+                    }
 
 
                   //Hide waitmask
@@ -698,20 +694,16 @@ bluewave.Application = function(parent, config) {
     var raisePanel = function(obj, slideBack){
 
 
-      //Find panels in the carousel
-        var currPage, nextPage;
-        var panels = carousel.getPanels();
-        for (var i=0; i<panels.length; i++){
-            var panel = panels[i];
-            var el = panel.div;
-            if (panel.isVisible){
-                currPage = el;
-            }
-            else{
-                nextPage = el;
-            }
-        }
-        if (!currPage) currPage = panels[0].div; //strange!
+      //Find "current" and "next" panels in the carousel
+        var panels = {};
+        var maxArea = 0;
+        carousel.getPanels().forEach((panel)=>{
+            maxArea = Math.max(panel.visibleArea, maxArea);
+            panels[panel.visibleArea+""] = panel;
+        });
+        var currPage = panels[maxArea+""].div;
+        delete panels[maxArea+""];
+        var nextPage = panels[Object.keys(panels)[0]].div;
 
 
       //Select panel to use
