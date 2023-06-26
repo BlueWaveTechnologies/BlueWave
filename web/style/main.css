@@ -274,6 +274,8 @@ body, textarea, input, select, td, th {
     opacity: 0.85;
 }
 
+.dashboard-homepage.nobackground::before {background: none;}
+
 .dashboard-homepage .dashboard-item {
     float: none;
     width: 285px !important;
@@ -295,6 +297,7 @@ body, textarea, input, select, td, th {
 
 .dashboard-item-body {
     padding: 7px;
+    text-align: left;
 }
 
 .dashboard-item-title {
@@ -407,6 +410,43 @@ body, textarea, input, select, td, th {
     cursor: pointer;
     float: right;
     margin-top: 3px;
+}
+
+
+/**************************************************************************/
+/** Dashboard Property Editor
+/**************************************************************************/
+
+.dashboard-upload-area {
+    border: 2px dashed #7e93a0;
+    background-color: #f2f5f7;
+    transition: 0.2s;
+}
+
+.dashboard-upload-area::before {
+    font-family: "Font Awesome 5 Free";
+    content: "\f382"; /*cloud-upload-alt*/
+    display: block;
+    vertical-align: middle;
+    font-weight: 900;
+    font-size: 42px;
+    color: #9fb1bd;
+}
+
+.dashboard-upload-area::after {
+    content: "Drag and drop image here";
+    font-size: 16px;
+    color: #8e9da7;
+    font-weight: bold;
+}
+
+.dashboard-upload-area::before,
+.dashboard-upload-area::after {
+    position: relative;
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
 }
 
 
