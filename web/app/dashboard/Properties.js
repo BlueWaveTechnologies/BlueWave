@@ -53,13 +53,23 @@ bluewave.dashboard.Properties = function(parent, config) {
     };
 
 
-
   //**************************************************************************
   //** update
   //**************************************************************************
     this.update = function(dashboard){
         me.clear();
+        if (!dashboard) dashboard = {};
+
+        
         preview.update(dashboard);
+
+
+        var nameField = form.findField("name");
+        if (nameField.resetColor) nameField.resetColor();
+
+        var name = dashboard.name;
+        if (name) form.setValue("name", name);
+
     };
 
 
@@ -152,21 +162,22 @@ bluewave.dashboard.Properties = function(parent, config) {
   //**************************************************************************
     var createPreview = function(parent){
 
-        var spacer = createElement("div", parent);
-        spacer.style.width = "350px";
+      //Create spacer
+        createElement("div", parent, {
+            width: "350px"
+        });
 
 
 
-        var div = createElement("div");
-        div.className = "dashboard-homepage";
+        var div = createElement("div", "dashboard-homepage");
         div.style.height = "100%";
         div.style.textAlign = "center";
         div.style.overflowY = "auto";
 
 
-        var innerDiv = createElement("div", div);
-        innerDiv.style.height = "100%";
-
+        var innerDiv = createElement("div", div, {
+            height: "100%"
+        });
 
 
         preview = new bluewave.dashboard.CardView(innerDiv);

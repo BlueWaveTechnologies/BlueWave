@@ -226,8 +226,8 @@ bluewave.dashboard.Composer = function(parent, config) {
     var button = {};
     var explorer;
     var dashboardPanel, editPanel, explorer, toggleButton, mask, waitmask, hint;
-
-
+    var propertyEditor, permissionsEditor;
+    var windows = [];
 
 
   //**************************************************************************
@@ -283,38 +283,45 @@ bluewave.dashboard.Composer = function(parent, config) {
         });
 
 
-      //Create dashboard panel
+      //Create dashboard preview panel
         dashboardPanel = createDashboard(innerDiv);
         dashboardPanel.setAttribute("desc", "dashboardPanel");
         dashboardPanel.hide();
 
 
-
-      //Create editor
+      //Create edit panel and instantiate explorer
         editPanel = createElement("div", innerDiv);
         editPanel.setAttribute("desc", "editPanel");
         editPanel.style.height = "100%";
         editPanel.tabIndex = -1;
         createExplorer(editPanel);
+        addShowHide(editPanel);
 
 
+      //Merge explorer buttons with the toolbar buttons
+        var explorerButtons = explorer.getButtons();
+        for (var key in explorerButtons) {
+            if (explorerButtons.hasOwnProperty(key)){
+                button[key] = explorerButtons[key];
+            }
+        }
 
 
       //Create little arrow/hint for the toolbar
-        hint = createElement("div", explorer.getToolbar());
-        hint.className = "drawflow-toolbar-hint noselect";
-        hint.style.display = "none";
+        hint = createElement("div", explorer.getToolbar(), "drawflow-toolbar-hint noselect");
         hint.show = function(){
             config.fx.fadeIn(this,"easeIn",500);
         };
-        hint.hide = function(){
-            config.fx.fadeOut(this,"easeIn",100);
+        hint.hide = function(b){
+            if (b===true){
+                this.style.opacity = 0;
+                this.style.display = "none";
+            }
+            else{
+                config.fx.fadeOut(this,"easeIn",100);
+            }
         };
-
-        console.log(hint);
-
-
-        addShowHide(editPanel);
+        hint.hide(true);
 
 
 
@@ -338,6 +345,14 @@ bluewave.dashboard.Composer = function(parent, config) {
 
 
         explorer.clear();
+
+
+
+      //Hide any popup dialogs
+        for (var i in windows){
+            windows[i].hide();
+        }
+
 
     };
 
@@ -837,29 +852,22 @@ console.log(view);
         explorer.onChange = function(event){
             //console.log(event);
 
-            if (event==='nodeCreated') hint.hide();
+            if (event==='nodeCreated'){
+                updateButtons();
+            }
             if (event==='nodeRemoved'){
-                var nodes = explorer.getNodes();
-                var numNodes = 0;
-                try{
-                    for (var key in nodes) {
-                        if (nodes.hasOwnProperty(key)){
-                            numNodes++;
-                        }
-                    }
-                }
-                catch(e){}
+//                var nodes = explorer.getNodes();
+//                try{
+//                    for (var key in nodes) {
+//                        if (nodes.hasOwnProperty(key)){
+//                            var node = nodes[key];
+//                            //if (nodeType==="layout" && !getLayoutNode()) toggleButton.hide();
+//                        }
+//                    }
+//                }
+//                catch(e){}
 
-                if (numNodes===0){
-                    hint.show();
-                }
-                else{
-
-                }
-////                if (nodeType==="layout" && !getLayoutNode()) toggleButton.hide();
-////                updateButtons();
-
-
+                updateButtons();
             }
         };
     };
@@ -911,7 +919,7 @@ console.log(view);
 
 
       //Hide arrow
-        hint.hide();
+        hint.hide(true);
 
 
       //Disable all buttons
@@ -926,39 +934,33 @@ console.log(view);
         if (me.isReadOnly()) return;
 
 
-      //Enable addDate node
-        if (button.addData) button.addData.enable();
+      //Enable editor buttons
+        if (button.query) button.query.enable();
+        if (button.sankeyChart) button.sankeyChart.enable();
 
 
-      //Generate a unique list of visible node types
-        var showArrow = true;
-        var visibleNodes = {};
-        var nodes = explorer.getNodes();
-        for (var key in nodes) {
-            if (nodes.hasOwnProperty(key)){
-                var node = nodes[key];
-                visibleNodes[node.type] = true;
-                showArrow = false;
-            }
+      //Get number of nodes in the canvas
+        var visibleNodes = Object.keys(explorer.getNodes()).length;
+
+
+      //Show arrow if there are no nodes in the canvas and update the save button
+        if (visibleNodes===0){
+            hint.show();
+            button["save"].disable();
         }
-
-
-      //Show arrow if there are no nodes in the canvas
-        if (showArrow) hint.show();
-
-
+        else{
+            button["save"].enable();
+        }
 
 
 
       //Update toolbar
         if (isNaN(explorer.getID())){
-            button["save"].disable();
             button["edit"].disable();
             button["delete"].disable();
             button["users"].disable();
         }
         else{
-            button["save"].enable();
             button["edit"].enable();
             button["delete"].enable();
             button["users"].enable();
@@ -1135,6 +1137,151 @@ console.log(view);
         return null;
     };
 
+
+
+  //**************************************************************************
+  //** getName
+  //**************************************************************************
+    var getName = function(callback){
+        var name = explorer.getName();
+        if (!name){
+            editName(null, callback);
+        }
+        else{
+            checkName(name, function(isValid){
+                if (!isValid){
+                    editName(name, callback);
+                }
+                else{
+                    callback.apply(me,[{
+                        name: name
+                    }]);
+                }
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** checkName
+  //**************************************************************************
+    var checkName = function(name, callback){
+        get("dashboards?fields=id,name",{
+            success: function(dashboards) {
+                var id = explorer.getID();
+                var isValid = true;
+                for (var i in dashboards){
+                    var dashboard = dashboards[i];
+                    if (dashboard.name.toLowerCase()===name.toLowerCase()){
+                        if (dashboard.id!==id){
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+                callback.apply(me,[isValid]);
+            },
+            failure: function(request){
+                alert(request);
+                callback.apply(me,[false]);
+            }
+        });
+    };
+
+
+  //**************************************************************************
+  //** editName
+  //**************************************************************************
+    var editName = function(name, callback){
+        if (!propertyEditor){
+            var win = createWindow({
+                title: "Save Dashboard",
+                width: 450,
+                valign: "top",
+                modal: true,
+                style: config.style.window,
+                buttons: [
+                    {
+                        name: "Cancel",
+                        onclick: function(){
+                            propertyEditor.clear();
+                            win.close();
+                        }
+                    },
+                    {
+                        name: "Submit",
+                        onclick: function(){
+
+//                            var inputs = form.getData();
+//                            var name = inputs.name;
+//                            if (name) name = name.trim();
+//                            if (name==null || name==="") {
+//                                warn("Name is required", form.findField("name"));
+//                                return;
+//                            }
+//
+//                            waitmask.show();
+//                            checkName(name, function(isValid){
+//                                waitmask.hide();
+//                                if (!isValid){
+//                                    warn("Name is not unique", form.findField("name"));
+//                                }
+//                                else{
+//                                    win.close();
+//                                    propertyEditor.onSubmit(inputs);
+//                                }
+//                            });
+                        }
+                    }
+                ]
+            });
+
+            propertyEditor = new bluewave.dashboard.Properties(win.getBody(), config);
+            propertyEditor.show = function(){
+                win.show();
+            };
+        }
+
+
+        propertyEditor.update();
+
+
+
+        propertyEditor.onSubmit = function(inputs){
+            if (callback) callback.apply(me,[inputs]);
+        };
+
+        waitmask.hide();
+        propertyEditor.show();
+    };
+
+
+  //**************************************************************************
+  //** editUsers
+  //**************************************************************************
+    var editUsers = function(){
+        if (!permissionsEditor){
+            var win = createWindow({
+                title: "Manage Access",
+                width: 650,
+                height: 500,
+                valign: "top",
+                modal: true,
+                resizable: true,
+                shrintToFit: true,
+                style: merge({body: {padding:0}}, config.style.window)
+            });
+
+            permissionsEditor = new bluewave.dashboard.Permissions(win.getBody(), config);
+
+            permissionsEditor.show = function(){
+                win.show();
+            };
+        }
+
+        permissionsEditor.update(explorer.getID());
+        permissionsEditor.show();
+    };
 
 
   //**************************************************************************
@@ -1319,7 +1466,14 @@ console.log(view);
     };
 
 
-
+  //**************************************************************************
+  //** createWindow
+  //**************************************************************************
+    var createWindow = function(config){
+        var win = new javaxt.dhtml.Window(document.body, config);
+        windows.push(win);
+        return win;
+    };
 
 
   //**************************************************************************

@@ -55,7 +55,7 @@ bluewave.dashboard.CardView = function(parent, config) {
   //**************************************************************************
     this.update = function(dashboard){
         me.clear();
-
+        if (!dashboard) dashboard = {};
 
         var imageContainer = createElement("div", dashboardItem.innerDiv, "dashboard-item-image");
         createElement("i", imageContainer, "fas fa-camera");
@@ -123,9 +123,10 @@ bluewave.dashboard.CardView = function(parent, config) {
 
         };
         var t = new Date().getTime();
-        img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
-        imageContainer.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
-
+        if (dashboard.id){
+            img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
+            imageContainer.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
+        }
 
         var dashboardBody = createElement("div", dashboardItem.innerDiv, "dashboard-item-body");
 
