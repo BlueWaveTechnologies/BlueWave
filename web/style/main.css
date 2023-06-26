@@ -22,7 +22,7 @@ body, textarea, input, select, td, th {
 /**************************************************************************/
 
 .app-header {
-    background-color: #007cba;
+    background-color: #006192; /*#007cba;*/
     height: 86px;
     color: #fff;
 }
@@ -38,7 +38,7 @@ body, textarea, input, select, td, th {
 .app-header-icon:after {
     content:"BlueWave";
     font-family: 'Nunito', sans-serif;
-    text-shadow: 0px 3px 5px rgba(9,57,88,0.42); /*matches shadow in logo*/
+    text-shadow: 0px 3px 5px rgba(9,57,88,0.72); /*matches shadow in logo*/
     margin-left: 77px;
     display: inline-block;
     float: left;
@@ -66,12 +66,12 @@ body, textarea, input, select, td, th {
 }
 
  .app-header-profile:hover {
-    background-color: #ffb576;
+    background-color: #ffac65; /*#ffb576;*/
     transition: 0.4s;
  }
 
 .app-header-menu {
-    background-color: #007cba;
+    background-color: #006192;
     margin-left: 0;
  }
 
@@ -80,7 +80,7 @@ body, textarea, input, select, td, th {
 }
 
  .app-header-menu:hover {
-     background-color: #3baaff;
+     background-color: #0e79af; /*#3baaff;*/
      transition: 0.4s;
  }
 
