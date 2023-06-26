@@ -14,7 +14,8 @@ bluewave.dashboard.CardView = function(parent, config) {
     var me = this;
     var defaultConfig = {};
     var dashboardItem;
-
+    var dashboardTitle, dashboardDescription, dashboardImage; //DOM elements
+    var placeholderImage;
 
 
   //**************************************************************************
@@ -25,12 +26,24 @@ bluewave.dashboard.CardView = function(parent, config) {
         if (!config) config = {};
         config = merge(config, defaultConfig);
 
+
+      //Create dashboard item
         dashboardItem = createDashboardItem(parent, {
-            width: 360,
-            height: 230,
+            width: 285,
+            height: 500,
             //subtitle: title,
             settings: true
         });
+        dashboardItem.innerDiv.style.verticalAlign = "top";
+
+
+      //Create DOM elements
+        dashboardImage = createElement("div", dashboardItem.innerDiv, "dashboard-item-image");
+        placeholderImage = createElement("i", dashboardImage, "fas fa-camera middle");
+        addShowHide(placeholderImage);
+        var dashboardBody = createElement("div", dashboardItem.innerDiv, "dashboard-item-body");
+        dashboardTitle = createElement("div", dashboardBody, "dashboard-item-title");
+        dashboardDescription = createElement("div", dashboardBody);
     };
 
 
@@ -46,7 +59,10 @@ bluewave.dashboard.CardView = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-        dashboardItem.innerDiv.innerHTML = "";
+        dashboardTitle.innerHTML = "";
+        dashboardDescription.innerHTML = "";
+        dashboardImage.style.backgroundImage = "none";
+        placeholderImage.show();
     };
 
 
@@ -57,93 +73,97 @@ bluewave.dashboard.CardView = function(parent, config) {
         me.clear();
         if (!dashboard) dashboard = {};
 
-        var imageContainer = createElement("div", dashboardItem.innerDiv, "dashboard-item-image");
-        createElement("i", imageContainer, "fas fa-camera");
+
+      //Set title
+        me.setTitle(dashboard.name);
 
 
-        var img = createElement("img");
-        img.className = "noselect";
-        img.style.cursor = "pointer";
-        img.style.opacity = 0;
-        img.onload = function() {
-            imageContainer.innerHTML = "";
-            imageContainer.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
-            if (true) return;
-
-            var rect = javaxt.dhtml.utils.getRect(imageContainer);
-            imageContainer.appendChild(this);
-
-
-            var maxWidth = rect.width;
-            var maxHeight = rect.height;
-            var width = 0;
-            var height = 0;
-
-            var setWidth = function(){
-                var ratio = maxWidth/width;
-                width = width*ratio;
-                height = height*ratio;
-            };
-
-            var setHeight = function(){
-                var ratio = maxHeight/height;
-                width = width*ratio;
-                height = height*ratio;
-            };
-
-
-            var resize = function(img){
-                width = img.width;
-                height = img.height;
-
-                if (maxHeight<maxWidth){
-
-                    setHeight();
-                    if (width>maxWidth) setWidth();
-                }
-                else{
-                    setWidth();
-                    if (height>maxHeight) setHeight();
-                }
-
-                if (width===0 || height===0) return;
-
-
-                //img.width = width;
-                //img.height = height;
-
-                //TODO: Insert image into a canvas and do a proper resize
-                //ctx.putImageData(img, 0, 0);
-                //resizeCanvas(canvas, width, height, true);
-                //var base64image = canvas.toDataURL("image/png");
-
-            };
-
-            resize(this);
-
-        };
-        var t = new Date().getTime();
-        if (dashboard.id){
-            img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
-            imageContainer.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
-        }
-
-        var dashboardBody = createElement("div", dashboardItem.innerDiv, "dashboard-item-body");
-
-        var dashboardTitle = createElement("div", dashboardBody, "dashboard-item-title");
-        dashboardTitle.innerText = dashboard.name;
-
+      //Set description
+        var description;
         if (dashboard.info){
-            var description = dashboard.info.description;
-            if (description){
-                description.split(/\n\n/).forEach((d)=>{
-                    d = d.trim();
-                    if (d.length===0) return;
-                    var dashboardDescription = createElement("div", dashboardBody, "dashboard-item-description");
-                    dashboardDescription.innerHTML = d;
-                });
+            description = dashboard.info.description;
+        }
+        else{
+            description = dashboard.description;
+        }
+        me.setDescription(description);
+
+
+      //Set image/thumbnail
+        var img = createTempImage();
+        if (dashboard.thumbnail){
+            img.src = URL.createObjectURL(dashboard.thumbnail);
+        }
+        else{
+            var t = new Date().getTime();
+            if (dashboard.id){
+                img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
+                //dashboardImage.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
             }
         }
+    };
+
+
+  //**************************************************************************
+  //** setTitle
+  //**************************************************************************
+    this.setTitle = function(title){
+        if (!title) title = "";
+        dashboardTitle.innerText = title;
+    };
+
+
+  //**************************************************************************
+  //** setDescription
+  //**************************************************************************
+    this.setDescription = function(description){
+        dashboardDescription.innerHTML = "";
+        if (description){
+            description.split(/\n\n/).forEach((d)=>{
+                d = d.trim();
+                if (d.length===0) return;
+                createElement("div", dashboardDescription, "dashboard-item-description").innerHTML = d;
+            });
+        }
+    };
+
+
+  //**************************************************************************
+  //** setImage
+  //**************************************************************************
+    this.setImage = function(src){
+        if (!src){
+            placeholderImage.show();
+            return;
+        }
+        placeholderImage.hide();
+        var img = createTempImage();
+        img.src = URL.createObjectURL(src);
+    };
+
+
+  //**************************************************************************
+  //** createTempImage
+  //**************************************************************************
+    var createTempImage = function(){
+        var img = createElement("img");
+        img.onload = function() {
+            if (typeof img.src === "string"){
+                dashboardImage.style.backgroundImage = "url(" + img.src + ")";
+                //dashboardImage.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
+                img = null;
+            }
+            else{
+                var reader = new FileReader();
+                reader.onload = function(event){
+                    dashboardImage.style.backgroundImage = "url(" + event.target.result + ")";
+                    img = null;
+                };
+                reader.readAsBinaryString(img.src);
+            }
+
+        };
+        return img;
     };
 
 
@@ -151,6 +171,7 @@ bluewave.dashboard.CardView = function(parent, config) {
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
+    var addShowHide = javaxt.dhtml.utils.addShowHide;
     var createElement = javaxt.dhtml.utils.createElement;
     var createDashboardItem = bluewave.utils.createDashboardItem;
 
