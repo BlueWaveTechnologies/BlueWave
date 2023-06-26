@@ -132,6 +132,7 @@ bluewave.dashboard.CardView = function(parent, config) {
   //** setImage
   //**************************************************************************
     this.setImage = function(src){
+        dashboardImage.style.backgroundImage = "none";
         if (!src){
             placeholderImage.show();
             return;

@@ -302,7 +302,7 @@ bluewave.dashboard.Composer = function(parent, config) {
         var explorerButtons = explorer.getButtons();
         for (var key in explorerButtons) {
             if (explorerButtons.hasOwnProperty(key)){
-                button[key] = explorerButtons[key];
+                //button[key] = explorerButtons[key];
             }
         }
 
@@ -1194,54 +1194,67 @@ console.log(view);
   //**************************************************************************
     var editName = function(name, callback){
         if (!propertyEditor){
+
             var win = createWindow({
                 title: "Save Dashboard",
-                width: 450,
+                width: 850,
                 valign: "top",
                 modal: true,
-                style: config.style.window,
-                buttons: [
-                    {
-                        name: "Cancel",
-                        onclick: function(){
-                            propertyEditor.clear();
-                            win.close();
-                        }
-                    },
-                    {
-                        name: "Submit",
-                        onclick: function(){
-
-//                            var inputs = form.getData();
-//                            var name = inputs.name;
-//                            if (name) name = name.trim();
-//                            if (name==null || name==="") {
-//                                warn("Name is required", form.findField("name"));
-//                                return;
-//                            }
-//
-//                            waitmask.show();
-//                            checkName(name, function(isValid){
-//                                waitmask.hide();
-//                                if (!isValid){
-//                                    warn("Name is not unique", form.findField("name"));
-//                                }
-//                                else{
-//                                    win.close();
-//                                    propertyEditor.onSubmit(inputs);
-//                                }
-//                            });
-                        }
-                    }
-                ]
+                style: merge({body: {padding: "7px 7px 0"}}, config.style.window)
             });
 
             propertyEditor = new bluewave.dashboard.Properties(win.getBody(), config);
+
+
+            var footer = win.getFooter();
+            footer.style.padding = "0 10px 10px";
+
+            var buttonBar = createTable(footer).addRow();
+            buttonBar.addColumn({width: "100%"});
+
+            var cancelButton = createElement('input', buttonBar.addColumn(), config.style.form.button);
+            cancelButton.type = "button";
+            cancelButton.value = "Cancel";
+            cancelButton.onclick = function(){
+                propertyEditor.clear();
+                win.close();
+            };
+
+            var submitButton = createElement('input', buttonBar.addColumn(), config.style.form.button);
+            submitButton.type = "button";
+            submitButton.value = "Submit";
+            submitButton.onclick = function(){
+//                var inputs = form.getData();
+//                var name = inputs.name;
+//                if (name) name = name.trim();
+//                if (name==null || name==="") {
+//                    warn("Name is required", form.findField("name"));
+//                    return;
+//                }
+//
+//                waitmask.show();
+//                checkName(name, function(isValid){
+//                    waitmask.hide();
+//                    if (!isValid){
+//                        warn("Name is not unique", form.findField("name"));
+//                    }
+//                    else{
+//                        win.close();
+//                        propertyEditor.onSubmit(inputs);
+//                    }
+//                });
+            };
+
+
             propertyEditor.show = function(){
                 win.show();
             };
         }
 
+
+        var dashboard = {
+
+        };
 
         propertyEditor.update();
 

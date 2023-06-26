@@ -30,11 +30,10 @@ bluewave.dashboard.Properties = function(parent, config) {
 
 
       //Create form
-        var td = tr.addColumn({
+        createForm(tr.addColumn({
             width: "100%",
             paddingRight: "7px"
-        });
-        createForm(td);
+        }));
 
 
       //Create preview
@@ -60,7 +59,7 @@ bluewave.dashboard.Properties = function(parent, config) {
         me.clear();
         if (!dashboard) dashboard = {};
 
-        
+
         preview.update(dashboard);
 
 
@@ -70,6 +69,15 @@ bluewave.dashboard.Properties = function(parent, config) {
         var name = dashboard.name;
         if (name) form.setValue("name", name);
 
+
+        if (dashboard.info){
+            var description = dashboard.info.description;
+            if (description) form.setValue("description", description);
+        }
+
+        if (dashboard.thumbnail){
+            form.setValue("thumbnail", dashboard.thumbnail);
+        }
     };
 
 
@@ -77,13 +85,37 @@ bluewave.dashboard.Properties = function(parent, config) {
   //** submit
   //**************************************************************************
     this.submit = function(){
-        var inputs = form.getData();
+        var inputs = getProperties();
         var name = inputs.name;
-        if (name) name = name.trim();
-        if (name==null || name==="") {
+        if (!name) {
             warn("Name is required", form.findField("name"));
             return;
         }
+    };
+
+
+  //**************************************************************************
+  //** getProperties
+  //**************************************************************************
+    this.getProperties = function(){
+        var inputs = form.getData();
+
+        var name = inputs.name;
+        if (name) name = name.trim();
+        if (!name && name.length===0){
+            delete inputs.name;
+        }
+
+        var description = inputs.description;
+        if (description) description = description.trim();
+        if (!description && description.length===0){
+            delete inputs.description;
+        }
+
+        var thumbnail = inputs.thumbnail;
+        if (!thumbnail) delete inputs.thumbnail;
+
+        return inputs;
     };
 
 
@@ -98,8 +130,7 @@ bluewave.dashboard.Properties = function(parent, config) {
         });
 
 
-        var uploadPanel = createUploadPanel();
-
+      //Create form panel
         form = new javaxt.dhtml.Form(parent, {
             style: config.style.form,
             items: [
@@ -125,13 +156,37 @@ bluewave.dashboard.Properties = function(parent, config) {
                     items: [
                         {
                             name: "thumbnail",
-                            type: uploadPanel
+                            type: createUploadPanel()
                         }
 
                     ]
                 }
             ]
         });
+
+
+      //Update thumbnail area
+        var input = form.findField("thumbnail");
+        var row = input.row;
+        var cols = [];
+        for (var i=0; i<row.childNodes.length; i++){
+            cols.push(row.childNodes[i]);
+        }
+        row.removeChild(cols[0]);
+        row.removeChild(cols[1]);
+        cols[2].colSpan = "3";
+        cols[2].style.padding = "0";
+        cols[2].style.textAlign = "center";
+
+
+
+      //Watch for changes in the form
+        form.onChange = function(input, value){
+            if (input.name==="name") preview.setTitle(value);
+            if (input.name==="description") preview.setDescription(value);
+            if (input.name==="thumbnail") preview.setImage(value);
+            //preview.update(me.getProperties());
+        };
     };
 
 
@@ -140,20 +195,49 @@ bluewave.dashboard.Properties = function(parent, config) {
   //**************************************************************************
     var createUploadPanel = function(){
 
+      //Create div with enough height to match the preview panel
         var div = createElement("div", {
             width: "100%",
-            height: "334px"
+            height: "345px"
         });
 
-        return {
+
+      //Create thumbnailEditor
+        var thumbnailEditor = new javaxt.dhtml.ThumbnailEditor(div, {
+            thumbnailWidth: 285,
+            thumbnailHeight: 255,
+            mask: false,
+            style: {
+                uploadArea: "dashboard-upload-area"
+            }
+        });
+
+
+      //Update vertical position of the thumbnailEditor
+        thumbnailEditor.el.className = "middle";
+
+
+      //Create form input
+        var input = {
             el: div,
             getValue: function(){
-
+                return thumbnailEditor.getImage("jpg");
             },
-            setValue: function(){
-
-            }
+            setValue: function(src){
+                console.log(src);
+            },
+            onChange: function(){}
         };
+
+
+      //Watch for changes to the thumbnailEditor and relay it to the form input
+        thumbnailEditor.onChange = function(){
+            input.onChange();
+        };
+
+
+      //Return form input
+        return input;
     };
 
 
@@ -164,39 +248,25 @@ bluewave.dashboard.Properties = function(parent, config) {
 
       //Create spacer
         createElement("div", parent, {
-            width: "350px"
+            width: "400px"
         });
 
 
 
-        var div = createElement("div", "dashboard-homepage");
+        var div = createElement("div", "dashboard-homepage nobackground");
         div.style.height = "100%";
         div.style.textAlign = "center";
         div.style.overflowY = "auto";
 
 
-        var innerDiv = createElement("div", div, {
+      //Create dashboard card
+        preview = new bluewave.dashboard.CardView(createElement("div", div, {
             height: "100%"
-        });
-
-
-        preview = new bluewave.dashboard.CardView(innerDiv);
+        }));
 
 
 
-        var formInput = {
-            el: div,
-            getValue: function(){
-
-            },
-            setValue: function(){
-
-            }
-        };
-
-
-
-        var f =
+      //Create form with a "Preview" groupbox
         new javaxt.dhtml.Form(parent, {
             style: config.style.form,
             items: [
@@ -205,15 +275,19 @@ bluewave.dashboard.Properties = function(parent, config) {
                     items: [
                         {
                             name: "preview",
-                            type: formInput
+                            type: {
+                                el: div,
+                                getValue: function(){},
+                                setValue: function(){}
+                            }
                         }
-
                     ]
                 }
             ]
         });
 
-        formInput.el.parentNode.previousSibling.style.padding = "0 0 0 0";
+
+        div.parentNode.previousSibling.style.padding = "0 0 0 0";
     };
 
 
