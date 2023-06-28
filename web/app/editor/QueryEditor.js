@@ -21,7 +21,8 @@ bluewave.editor.QueryEditor = function(parent, config) {
                 run: "fas fa-play",
                 cancel: "fas fa-stop"
             }
-        }
+        },
+        queryService: "query/"
     };
 
     var waitmask;
@@ -49,7 +50,7 @@ bluewave.editor.QueryEditor = function(parent, config) {
             style: config.style,
             waitmask: waitmask,
             queryLanguage: "cypher",
-            queryService: "query/job/",
+            queryService: config.queryService + "job/",
             getTables: function(){},
             onTreeClick: function(item){
                 var cql = "MATCH (n:" + item.name + ")\n";
@@ -68,28 +69,6 @@ bluewave.editor.QueryEditor = function(parent, config) {
                 this.getComponents().editor.setValue(cql);
             }
         });
-
-
-//
-//
-//        dbView.show = function(){
-//            win.show();
-//            waitmask.show(500);
-//            getNodes(dbView.getComponents().tree);
-//
-//            if (!timer){
-//                timer = setInterval(function(){
-//                    if (win.isOpen()){
-//                        getNodes(dbView.getComponents().tree);
-//                    }
-//                }, 15*1000);
-//            }
-//        };
-//
-//        dbView.hide = function(){
-//            win.hide();
-//        };
-//
     };
 
 
@@ -119,7 +98,11 @@ bluewave.editor.QueryEditor = function(parent, config) {
 
         console.log(nodeConfig);
 
+      //Update query
+        dbView.setQuery(nodeConfig.query);
 
+
+      //Update tree
         if (!timer){
             timer = true;
             getNodes(dbView.getComponents().tree, function(){
@@ -147,6 +130,33 @@ bluewave.editor.QueryEditor = function(parent, config) {
 
 
         return config;
+    };
+
+
+  //**************************************************************************
+  //** getData
+  //**************************************************************************
+  /** Returns all the records associated with the current query via a given
+   *  callback. The data is a JSON array representing CSV data.
+   */
+    this.getData = function(callback){
+        if (!callback) return;
+
+        var query = dbView.getQuery();
+
+        getCSV(query, function(csv){
+            if (csv){
+                csv = parseCSV(csv, {
+                    headers: true
+                });
+            }
+            else{
+                csv = [];
+            }
+
+            callback.apply(me, [csv]);
+
+        }, this);
     };
 
 
@@ -180,11 +190,42 @@ bluewave.editor.QueryEditor = function(parent, config) {
 
 
   //**************************************************************************
+  //** getCSV
+  //**************************************************************************
+    var getCSV = function(query, callback, scope){
+
+        if (!query || query.length===0){
+            callback.apply(scope, []);
+            return;
+        }
+
+        var payload = {
+            query: query,
+            format: "csv",
+            limit: -1
+        };
+
+        post(config.queryService, JSON.stringify(payload), {
+            success : function(text){
+                if (text && text.length===0) text = null;
+                callback.apply(scope, [text]);
+            },
+            failure: function(response){
+                alert(response);
+                callback.apply(scope, []);
+            }
+        });
+    };
+
+
+  //**************************************************************************
   //** Utils
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var createElement = javaxt.dhtml.utils.createElement;
+    var post = javaxt.dhtml.utils.post;
     var get = bluewave.utils.get;
+    var parseCSV = bluewave.utils.parseCSV;
 
     init();
 };
