@@ -247,7 +247,7 @@ bluewave.Homepage = function(parent, config) {
                     sharedDashboards.push(dashboard.id);
                 }
             }
-            if (myDashboards.length>0){
+            if (myDashboards.length>0 && sharedDashboards.length>0){
                 groups = new javaxt.dhtml.DataStore();
                 groups.add({
                     name: "My Dashboards",
@@ -769,7 +769,7 @@ bluewave.Homepage = function(parent, config) {
                 }
             }
             if (!groups) groups = new javaxt.dhtml.DataStore();
-            if (myDashboards.length>0){
+            if (myDashboards.length>0 && sharedDashboards.length>0){
                 groups.add({
                     name: "My Dashboards",
                     dashboards: myDashboards
