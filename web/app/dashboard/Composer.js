@@ -190,8 +190,13 @@ bluewave.dashboard.Composer = function(parent, config) {
                     class: bluewave.editor.LayoutEditor
                 },
                 inputNodes: [
-
-                ]
+                    "query", "datafile", "filter",
+                    "pieChart", "barChart", "lineChart",
+                    "histogramChart", "scatterChart",
+                    "mapChart", "treeMapChart", "calendarChart",
+                    "sankeyChart"
+                ],
+                output: false
             }
         ],
 
