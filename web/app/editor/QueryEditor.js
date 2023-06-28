@@ -76,7 +76,7 @@ bluewave.editor.QueryEditor = function(parent, config) {
   //** clear
   //**************************************************************************
     this.clear = function(){
-
+        dbView.clear();
     };
 
 
@@ -96,10 +96,16 @@ bluewave.editor.QueryEditor = function(parent, config) {
         merge(clone, config.chart);
         var nodeConfig = clone;
 
-        console.log(nodeConfig);
 
       //Update query
-        dbView.setQuery(nodeConfig.query);
+        var query = nodeConfig.query;
+        if (query){
+            query = query.trim();
+            if (query.length>0){
+                dbView.setQuery(query);
+                dbView.executeQuery();
+            }
+        }
 
 
       //Update tree
@@ -121,7 +127,8 @@ bluewave.editor.QueryEditor = function(parent, config) {
     this.getConfig = function(){
 
         var config = {
-            query: dbView.getQuery()
+            query: dbView.getQuery(),
+            hasHeader: true //required for parseData() in Utils.js
         };
 
 
