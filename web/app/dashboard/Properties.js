@@ -60,9 +60,15 @@ bluewave.dashboard.Properties = function(parent, config) {
         if (!dashboard) dashboard = {};
 
 
+      //Update preview
         preview.update(dashboard);
 
 
+      //Update ID
+        form.setValue("id", dashboard.id);
+
+
+      //Update name
         var nameField = form.findField("name");
         if (nameField.resetColor) nameField.resetColor();
 
@@ -70,11 +76,18 @@ bluewave.dashboard.Properties = function(parent, config) {
         if (name) form.setValue("name", name);
 
 
+      //Update description
+        var description;
         if (dashboard.info){
-            var description = dashboard.info.description;
-            if (description) form.setValue("description", description);
+            description = dashboard.info.description;
         }
+        else{
+            description = dashboard.description;
+        }
+        if (description) form.setValue("description", description);
 
+
+      //Update thumbnail
         if (dashboard.thumbnail){
             form.setValue("thumbnail", dashboard.thumbnail);
         }
@@ -82,15 +95,50 @@ bluewave.dashboard.Properties = function(parent, config) {
 
 
   //**************************************************************************
-  //** submit
+  //** validate
   //**************************************************************************
-    this.submit = function(){
-        var inputs = getProperties();
+  /** Used to check if the form contains errors
+   */
+    this.validate = function(callback){
+        if (!callback) return;
+
+        var inputs = me.getProperties();
         var name = inputs.name;
         if (!name) {
             warn("Name is required", form.findField("name"));
+            callback.apply(me, [false]);
             return;
         }
+
+        var id = parseInt(inputs.id);
+        get("dashboards?fields=id,name",{
+            success: function(dashboards) {
+
+                var isValid = true;
+                for (var i in dashboards){
+                    var dashboard = dashboards[i];
+                    if (dashboard.name.toLowerCase()===name.toLowerCase()){
+                        if (dashboard.id!==id){
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isValid){
+                    warn("Name is not unique", form.findField("name"));
+                }
+
+                callback.apply(me, [isValid]);
+            },
+            failure: function(request){
+                alert(request);
+                callback.apply(me, [false]);
+            }
+        });
+
+
+        return inputs;
     };
 
 
@@ -160,6 +208,11 @@ bluewave.dashboard.Properties = function(parent, config) {
                         }
 
                     ]
+                },
+                {
+                    name: "id",
+                    label: "id",
+                    type: "hidden"
                 }
             ]
         });
@@ -221,7 +274,7 @@ bluewave.dashboard.Properties = function(parent, config) {
         var input = {
             el: div,
             getValue: function(){
-                return thumbnailEditor.getImage("jpg");
+                return thumbnailEditor.getImage();
             },
             setValue: function(src){
                 console.log(src);
@@ -298,7 +351,7 @@ bluewave.dashboard.Properties = function(parent, config) {
     var createElement = javaxt.dhtml.utils.createElement;
     var createTable = javaxt.dhtml.utils.createTable;
     var warn = bluewave.utils.warn;
-
+    var get = bluewave.utils.get;
 
 
     init();
