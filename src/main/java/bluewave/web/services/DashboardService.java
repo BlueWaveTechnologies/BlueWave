@@ -34,8 +34,8 @@ public class DashboardService extends WebService {
   //**************************************************************************
     public DashboardService(bluewave.web.WebServices ws, javaxt.io.Directory web) throws Exception {
         this.ws = ws;
-        super.addClass(bluewave.app.Dashboard.class);
-        super.addClass(bluewave.app.DashboardUser.class);
+        super.addModel(bluewave.app.Dashboard.class);
+        super.addModel(bluewave.app.DashboardUser.class);
         //super.addClass(bluewave.app.DashboardGroup.class);
         loadPlugins();
     }
@@ -92,6 +92,10 @@ public class DashboardService extends WebService {
 
 
             if (op.equals("get") || op.equals("list")){
+
+                //sqlEditor.removeField("description");
+
+
                 sqlEditor.addConstraint("id in (" +
                 "select dashboard.id " +
                 "from APPLICATION.DASHBOARD left join APPLICATION.DASHBOARD_USER " +
@@ -148,6 +152,7 @@ public class DashboardService extends WebService {
       //Create new instance of the class
         Dashboard dashboard;
         Long id = json.get("id").toLong();
+        String description = json.remove("description").toString();
         boolean isNew = false;
         if (id!=null){
             dashboard = new Dashboard(id);
@@ -157,6 +162,13 @@ public class DashboardService extends WebService {
             dashboard = new Dashboard(json);
             isNew = true;
         }
+
+
+      //Update info
+        JSONObject info = dashboard.getInfo();
+        if (info==null) info = new JSONObject();
+        info.set("description", description);
+        dashboard.setInfo(info);
 
 
 
