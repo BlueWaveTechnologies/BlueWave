@@ -27,9 +27,6 @@ bluewave.dashboard.Composer = function(parent, config) {
                     width: 1020,
                     height: 600,
                     resizable: true,
-//                    beforeClose: function(){
-//                        dbView.onClose();
-//                    },
                     class: bluewave.editor.QueryEditor
                 },
                 inputNodes: [
@@ -341,6 +338,18 @@ bluewave.dashboard.Composer = function(parent, config) {
     this.clear = function(){
 
 
+      //Hide arrow
+        hint.hide(true);
+
+
+      //Disable all buttons
+        for (var key in button) {
+            if (button.hasOwnProperty(key)){
+                button[key].disable();
+            }
+        }
+
+
       //Clear dashboard panel
         dashboardPanel.clear();
 
@@ -371,7 +380,7 @@ bluewave.dashboard.Composer = function(parent, config) {
    *  @param view Preferred view ("Edit", "Preview", or "Dashboard")
    */
     this.update = function(dashboard, readOnly, view){
-
+        me.clear();
 
       //Process args
         if (!dashboard) dashboard = {};
@@ -379,6 +388,7 @@ bluewave.dashboard.Composer = function(parent, config) {
         if (!(view==="Edit" || view==="Preview" || view==="Dashboard")) view="Edit";
 
 console.log(view);
+console.log(dashboard);
 
 
       //Show mask
@@ -402,94 +412,85 @@ console.log(view);
 
 
       //Update buttons
-        updateButtons();
+        //updateButtons();
 
 
 
-      //Return early if the dashboard is missing config info
-        if (!dashboard.info) return;
+        if (dashboard.info){
 
 
 
-      //Update explorer
-        explorer.update(dashboard, readOnly, function(){
+          //Update explorer
+            explorer.update(dashboard, readOnly, function(){
 
 
-          //Find any data nodes
-            var csvRequests = [];
-            var nodes = explorer.getNodes();
-            for (var key in nodes) {
-                if (nodes.hasOwnProperty(key)){
-                    var node = nodes[key];
-
-                    if (node.type==="addData" || node.type==="query"){
-
-
-                      //Update node with csv data
-                        node.csv = null;
-                        csvRequests.push(node);
-
-
-                      //Update buttons
-                        if (!me.isReadOnly()){
-                            for (var buttonName in button) {
-                                if (button.hasOwnProperty(buttonName)){
-                                    button[buttonName].enable();
-                                }
-                            }
+              //Find any data nodes
+                var dataRequests = [];
+                var nodes = explorer.getNodes();
+                for (var key in nodes) {
+                    if (nodes.hasOwnProperty(key)){
+                        var node = nodes[key];
+                        var editor = explorer.getNodeEditor(node);
+                        if (editor && editor.getData){
+                            dataRequests.push(editor);
                         }
                     }
-
                 }
-            }
 
 
 
+              //Execute data requests
+                if (dataRequests.length>0){
+                    waitmask.show(500);
+                    var showMask = true;
+                    var updateNodes = function(){
+                        var editor = dataRequests.pop();
+                        var node = editor.getNode();
+                        editor.getData(function(data){
+                            if (!data) node.data = [];
+                            else node.data = JSON.parse(JSON.stringify(data));
+
+                            if (dataRequests.length===0){
+                                showMask = false;
+                                waitmask.hide();
+                                editPanel.focus();
+                            }
+                            else{
+                                updateNodes();
+                            }
+
+                        });
+                    };
+                    updateNodes();
 
 
-          //Execute CSV requests
-            if (csvRequests.length>0){
-                waitmask.show(500);
-                var showMask = true;
-                var updateNodes = function(){
-                    var node = csvRequests.pop();
-                    getCSV(node.config.query, function(csv){
-                        this.csv = csv;
-                        if (csvRequests.length===0){
-                            showMask = false;
-                            waitmask.hide();
-                            editPanel.focus();
+                  //Something is causing the waitmask to hide early. This is a workaround
+                    var timer;
+                    var checkMask = function(){
+                        if (showMask){
+                            waitmask.show();
+                            timer = setTimeout(checkMask, 100);
                         }
                         else{
-                            updateNodes();
+                            clearTimeout(timer);
                         }
-                    }, node);
-                };
-                updateNodes();
+                    };
+                    timer = setTimeout(checkMask, 100);
 
+                    updateButtons();
+                }
+                else{
+                    waitmask.hide();
+                    updateButtons();
+                    editPanel.focus();
+                }
 
-              //Something is causing the waitmask to hide early. This is a workaround
-                var timer;
-                var checkMask = function(){
-                    if (showMask){
-                        waitmask.show();
-                        timer = setTimeout(checkMask, 100);
-                    }
-                    else{
-                        clearTimeout(timer);
-                    }
-                };
-                timer = setTimeout(checkMask, 100);
+            });
+        }
+        else{
 
-            }
-            else{
-                waitmask.hide();
-                editPanel.focus();
-            }
-
-        });
-
-
+            updateButtons();
+        }
     };
 
 
@@ -562,6 +563,14 @@ console.log(view);
 
 
   //**************************************************************************
+  //** getDashboardID
+  //**************************************************************************
+    this.getDashboardID = function(){
+        return explorer.getID();
+    };
+
+
+  //**************************************************************************
   //** getTitle
   //**************************************************************************
     this.getTitle = function(){
@@ -590,54 +599,78 @@ console.log(view);
 
 
   //**************************************************************************
-  //** save
+  //** edit
   //**************************************************************************
-    this.save = function(callback){
-        if (me.isReadOnly()){
-            if (callback) callback();
-            return;
-        }
+    this.edit = function(){
+        if (explorer.isReadOnly()) return;
+
+        var dashboard = {
+            id: explorer.getID(),
+            name: explorer.getName(),
+            description: explorer.getDescription(),
+            thumbnail: explorer.getThumbnail()
+        };
 
 
-        waitmask.show(500);
-        getName(function(formInputs){
-            explorer.setName(formInputs.name);
-
-
+        editProperties(dashboard, function(formInputs){
             console.log(formInputs);
 
-            var dashboard = explorer.getDashboard();
-            var thumbnail = dashboard.thumbnail;
+            explorer.setName(formInputs.name);
+            explorer.setDescription(formInputs.description);
+            explorer.setThumbnail(formInputs.thumbnail);
 
-            post("dashboard", JSON.stringify(dashboard),{
-                success: function(text) {
-                    me.onUpdate();
-                    var id = parseInt(text);
-                    explorer.setID(id);
-                    updateButtons();
-                    if (thumbnail){
-                        saveThumbnail(thumbnail, id, function(request){
+            save(explorer.getDashboard());
+        });
+    };
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    this.save = function(){
+        if (explorer.isReadOnly()) return;
+
+        if (isNaN(explorer.getID())){
+            me.edit();
+        }
+        else{
+            save(explorer.getDashboard());
+        }
+    };
+
+
+  //**************************************************************************
+  //** save
+  //**************************************************************************
+    var save = function(dashboard){
+        var thumbnail = dashboard.thumbnail;
+
+        waitmask.show(500);
+        post("dashboard", JSON.stringify(dashboard),{
+            success: function(text) {
+                me.onUpdate();
+                var id = parseInt(text);
+                explorer.setID(id);
+                updateButtons();
+                if (thumbnail){
+                    saveThumbnail(thumbnail, id, {
+                        success: function(){
                             waitmask.hide();
-                            if (callback) callback();
-                            if (request.status===200){
-
-                            }
-                            else{
-                                alert(request);
-                            }
-                        });
-                    }
-                    else{
-                        waitmask.hide();
-                        if (callback) callback();
-                    }
-                },
-                failure: function(request){
-                    alert(request);
-                    waitmask.hide();
-                    if (callback) callback();
+                        },
+                        failure: function(request){
+                            alert(request);
+                            waitmask.hide();
+                        }
+                    });
                 }
-            });
+                else{
+                    waitmask.hide();
+                }
+            },
+            failure: function(request){
+                alert(request);
+                waitmask.hide();
+            }
         });
     };
 
@@ -645,7 +678,7 @@ console.log(view);
   //**************************************************************************
   //** saveThumbnail
   //**************************************************************************
-    var saveThumbnail = function(thumbnail, dashboardID, callback){
+    var saveThumbnail = function(thumbnail, dashboardID, config){
 
       //Convert base64 encoded string into a binary object
         var data = thumbnail;
@@ -658,15 +691,17 @@ console.log(view);
         formData.append("image", blob);
         formData.set("id", dashboardID);
 
-      //Send form data to the dashboard service to save thumbnail
-        var request = new XMLHttpRequest();
-        request.open('POST', 'dashboard/thumbnail', true);
-        request.onreadystatechange = function(){
-            if (request.readyState === 4) {
-                if (callback) callback.apply(me, [request]);
-            }
-        };
-        request.send(formData);
+        post("dashboard/thumbnail", formData, config);
+
+//      //Send form data to the dashboard service to save thumbnail
+//        var request = new XMLHttpRequest();
+//        request.open('POST', 'dashboard/thumbnail', true);
+//        request.onreadystatechange = function(){
+//            if (request.readyState === 4) {
+//                if (callback) callback.apply(me, [request]);
+//            }
+//        };
+//        request.send(formData);
     };
 
 
@@ -682,6 +717,7 @@ console.log(view);
             else btn.style = defaultStyle;
             return bluewave.utils.createButton(parent, btn);
         };
+
 
       //Add button
         button["save"] = createButton(toolbar, {
@@ -708,13 +744,7 @@ console.log(view);
             icon: "fas fa-edit",
             disabled: true
         });
-        button["edit"].onClick = function(){
-            editName(name, function(inputs){
-                name = inputs.name;
-                me.save();
-            });
-        };
-
+        button["edit"].onClick = me.edit;
 
 
       //Delete button
@@ -741,8 +771,6 @@ console.log(view);
                                 waitmask.hide();
                             }
                         });
-
-
                     }
                 }
             });
@@ -761,10 +789,7 @@ console.log(view);
             editUsers();
         };
 
-
-
     };
-
 
 
   //**************************************************************************
@@ -772,85 +797,9 @@ console.log(view);
   //**************************************************************************
     var createExplorer = function(parent){
 
-//      //Get default config for explorer
-//        var explorerConfig = new bluewave.Explorer(null, config).getConfig();
-//
-//
-//      //Update default config
-//        explorerConfig.nodes.forEach((node)=>{
-//            if (node.type==="mapChart"){
-//                node.editor.data = {
-//                    politicalBoundaries: "/data/political_boundaries"
-//                };
-//            }
-//        });
-
-
-
-
-        //explorer = new bluewave.Explorer(editPanel, config);
-//        explorer.onChange = function(event){
-//            if (event==='nodeRemoved'){
-////                if (nodeType==="layout" && !getLayoutNode()) toggleButton.hide();
-////                updateButtons();
-//            }
-//        };
-
 
       //Instantiate and render explorer in the parent
         explorer = new bluewave.Explorer(parent, config);
-
-
-//      //Add custom update() method to explorer
-//        var _update = explorer.update;
-//        explorer.update = function(){
-//            _update.apply(me, arguments);
-//            explorer.orgDashboard = JSON.parse(JSON.stringify(explorer.getDashboard()));
-//        };
-//
-//
-//      //Add custom clear() method to explorer
-//        var _clear = explorer.clear;
-//        explorer.clear = function(){
-//            explorer.orgDashboard = {};
-//            _clear();
-//        };
-//
-//
-//      //Add custom isDirty() method to explorer
-//        explorer.isDirty = function(dashboard){
-//            if (!dashboard) dashboard = explorer.getDashboard();
-//            if (isDirty(dashboard, explorer.orgDashboard)){
-//
-//                var numNodes = 0;
-//                try{
-//                    for (var key in dashboard.info.nodes) {
-//                        if (dashboard.info.nodes.hasOwnProperty(key)){
-//                            numNodes++;
-//                        }
-//                    }
-//                }
-//                catch(e){}
-//
-//                var orgNodes = 0;
-//                try{
-//                    for (var key in explorer.orgDashboard.info.nodes) {
-//                        if (dashboard.info.nodes.hasOwnProperty(key)){
-//                            orgNodes++;
-//                        }
-//                    }
-//                }
-//                catch(e){}
-//
-//                if (numNodes===0 && orgNodes===0) return false;
-//
-//
-//                return true;
-//            }
-//            else{
-//                return false;
-//            }
-//        };
 
 
       //Watch for onChange events
@@ -858,15 +807,18 @@ console.log(view);
             //console.log(event);
 
             if (event==='nodeCreated'){
+                var node = arguments[1];
+                if (node.type==='query') node.ondblclick();
                 updateButtons();
             }
             if (event==='nodeRemoved'){
+                var node = arguments[1];
+                if (node.type==="layout" && !getLayoutNode()) toggleButton.hide();
 //                var nodes = explorer.getNodes();
 //                try{
 //                    for (var key in nodes) {
 //                        if (nodes.hasOwnProperty(key)){
 //                            var node = nodes[key];
-//                            //if (nodeType==="layout" && !getLayoutNode()) toggleButton.hide();
 //                        }
 //                    }
 //                }
@@ -948,24 +900,20 @@ console.log(view);
         var visibleNodes = Object.keys(explorer.getNodes()).length;
 
 
-      //Show arrow if there are no nodes in the canvas and update the save button
+      //Show arrow if there are no nodes in the canvas
         if (visibleNodes===0){
             hint.show();
-            button["save"].disable();
         }
-        else{
-            button["save"].enable();
-        }
-
 
 
       //Update toolbar
         if (isNaN(explorer.getID())){
-            button["edit"].disable();
-            button["delete"].disable();
-            button["users"].disable();
+            if (visibleNodes>0){
+                button["save"].enable();
+            }
         }
         else{
+            button["save"].enable();
             button["edit"].enable();
             button["delete"].enable();
             button["users"].enable();
@@ -1143,61 +1091,10 @@ console.log(view);
     };
 
 
-
   //**************************************************************************
-  //** getName
+  //** editProperties
   //**************************************************************************
-    var getName = function(callback){
-        var name = explorer.getName();
-        if (!name){
-            editName(null, callback);
-        }
-        else{
-            checkName(name, function(isValid){
-                if (!isValid){
-                    editName(name, callback);
-                }
-                else{
-                    callback.apply(me,[{
-                        name: name
-                    }]);
-                }
-            });
-        }
-    };
-
-
-  //**************************************************************************
-  //** checkName
-  //**************************************************************************
-    var checkName = function(name, callback){
-        get("dashboards?fields=id,name",{
-            success: function(dashboards) {
-                var id = explorer.getID();
-                var isValid = true;
-                for (var i in dashboards){
-                    var dashboard = dashboards[i];
-                    if (dashboard.name.toLowerCase()===name.toLowerCase()){
-                        if (dashboard.id!==id){
-                            isValid = false;
-                            break;
-                        }
-                    }
-                }
-                callback.apply(me,[isValid]);
-            },
-            failure: function(request){
-                alert(request);
-                callback.apply(me,[false]);
-            }
-        });
-    };
-
-
-  //**************************************************************************
-  //** editName
-  //**************************************************************************
-    var editName = function(name, callback){
+    var editProperties = function(dashboard, callback){
         if (!propertyEditor){
 
             var win = createWindow({
@@ -1217,59 +1114,43 @@ console.log(view);
             var buttonBar = createTable(footer).addRow();
             buttonBar.addColumn({width: "100%"});
 
-            var cancelButton = createElement('input', buttonBar.addColumn(), config.style.form.button);
-            cancelButton.type = "button";
-            cancelButton.value = "Cancel";
+            var createButton = function(label){
+                var input = createElement('input', buttonBar.addColumn(), config.style.form.button);
+                input.type = "button";
+                input.value = label;
+                return input;
+            };
+
+            var cancelButton = createButton("Cancel");
             cancelButton.onclick = function(){
                 propertyEditor.clear();
                 win.close();
             };
 
-            var submitButton = createElement('input', buttonBar.addColumn(), config.style.form.button);
-            submitButton.type = "button";
-            submitButton.value = "Submit";
+            var submitButton = createButton("Submit");
             submitButton.onclick = function(){
-//                var inputs = form.getData();
-//                var name = inputs.name;
-//                if (name) name = name.trim();
-//                if (name==null || name==="") {
-//                    warn("Name is required", form.findField("name"));
-//                    return;
-//                }
-//
-//                waitmask.show();
-//                checkName(name, function(isValid){
-//                    waitmask.hide();
-//                    if (!isValid){
-//                        warn("Name is not unique", form.findField("name"));
-//                    }
-//                    else{
-//                        win.close();
-//                        propertyEditor.onSubmit(inputs);
-//                    }
-//                });
+                propertyEditor.validate(function(isValid){
+                    if (isValid){
+                        var properties = propertyEditor.getProperties();
+                        win.close();
+                        if (callback) callback.apply(me, [properties]);
+                    }
+                });
             };
 
 
             propertyEditor.show = function(){
                 win.show();
             };
+
+            propertyEditor.setTitle = function(str){
+                win.setTitle(str);
+            };
         }
 
 
-        var dashboard = {
 
-        };
-
-        propertyEditor.update();
-
-
-
-        propertyEditor.onSubmit = function(inputs){
-            if (callback) callback.apply(me,[inputs]);
-        };
-
-        waitmask.hide();
+        propertyEditor.update(dashboard);
         propertyEditor.show();
     };
 
@@ -1512,37 +1393,6 @@ console.log(view);
     };
 
 
-
-  //**************************************************************************
-  //** getCSV
-  //**************************************************************************
-    var getCSV = function(query, callback, scope){
-
-        if (!query || query.length===0){
-            callback.apply(scope, []);
-            return;
-        }
-
-        var payload = {
-            query: query,
-            format: "csv",
-            limit: -1
-        };
-
-        post("query", JSON.stringify(payload), {
-            success : function(text){
-                callback.apply(scope, [text]);
-            },
-            failure: function(response){
-                alert(response);
-                callback.apply(scope, []);
-            }
-        });
-    };
-
-
-
-
   //**************************************************************************
   //** Utils
   //**************************************************************************
@@ -1550,11 +1400,12 @@ console.log(view);
     var onRender = javaxt.dhtml.utils.onRender;
     var isDirty = javaxt.dhtml.utils.isDirty;
     var isArray = javaxt.dhtml.utils.isArray;
-    var setStyle = javaxt.dhtml.utils.setStyle;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addResizeListener = javaxt.dhtml.utils.addResizeListener;
     var createElement = javaxt.dhtml.utils.createElement;
     var createTable = javaxt.dhtml.utils.createTable;
+    var post = javaxt.dhtml.utils.post;
+    var del = javaxt.dhtml.utils.del;
 
     var createSpacer = bluewave.utils.createSpacer;
     var resizeCanvas = bluewave.utils.resizeCanvas;
