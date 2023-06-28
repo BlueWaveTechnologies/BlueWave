@@ -411,7 +411,7 @@ bluewave.Application = function(parent, config) {
 
       //Create new panels
         if (showHomepage){
-            get("dashboards?fields=id,name,className,info",{
+            get("dashboards?fields=id,name,className",{
                 success: function(dashboards) {
 
                   //Convert the dashboards array into a datastore
@@ -420,9 +420,20 @@ bluewave.Application = function(parent, config) {
 
 
                   //Render homepage (or explorer panel if there are no dashboards)
-                    if (dashboards.length===0){
-                        titleDiv.hide();
-                        raisePanel(bluewave.dashboard.Composer);
+                    if (dashboards.length<2){
+
+                        if (dashboards.length===1){
+                            titleDiv.show();
+                            renderDashboard({
+                                dashboard: dashboards.get(0)
+                            });
+                            currDashboardItem = null;
+                        }
+                        else{
+                            titleDiv.hide();
+                            var app = raisePanel(bluewave.dashboard.Composer);
+                            if (!explorerPanel) explorerPanel = app;
+                        }
                     }
                     else{
                         titleDiv.show();
@@ -850,7 +861,7 @@ bluewave.Application = function(parent, config) {
                               //the carousel time to finish it's animation
                                 setTimeout(function(){
                                     waitmask.hide();
-                                    explorerPanel.update(d, readOnly, "Dashboard");
+                                    explorerPanel.update(d, readOnly);
                                     explorerPanel.show();
                                     me.setTitle(explorerPanel.getTitle());
 
