@@ -411,86 +411,73 @@ console.log(dashboard);
 
 
 
-      //Update buttons
-        //updateButtons();
+      //Update explorer
+        explorer.update(dashboard, readOnly, function(){
 
 
-
-        if (dashboard.info){
-
-
-
-          //Update explorer
-            explorer.update(dashboard, readOnly, function(){
-
-
-              //Find any data nodes
-                var dataRequests = [];
-                var nodes = explorer.getNodes();
-                for (var key in nodes) {
-                    if (nodes.hasOwnProperty(key)){
-                        var node = nodes[key];
-                        var editor = explorer.getNodeEditor(node);
-                        if (editor && editor.getData){
-                            dataRequests.push(editor);
-                        }
+          //Find any data nodes
+            var dataRequests = [];
+            var nodes = explorer.getNodes();
+            for (var key in nodes) {
+                if (nodes.hasOwnProperty(key)){
+                    var node = nodes[key];
+                    var editor = explorer.getNodeEditor(node);
+                    if (editor && editor.getData){
+                        dataRequests.push(editor);
                     }
                 }
+            }
 
 
 
-              //Execute data requests
-                if (dataRequests.length>0){
-                    waitmask.show(500);
-                    var showMask = true;
-                    var updateNodes = function(){
-                        var editor = dataRequests.pop();
-                        var node = editor.getNode();
-                        editor.getData(function(data){
-                            if (!data) node.data = [];
-                            else node.data = JSON.parse(JSON.stringify(data));
+          //Execute data requests
+            if (dataRequests.length>0){
+                waitmask.show(500);
+                var showMask = true;
+                var updateNodes = function(){
+                    var editor = dataRequests.pop();
+                    var node = editor.getNode();
+                    editor.getData(function(data){
+                        if (!data) node.data = [];
+                        else node.data = JSON.parse(JSON.stringify(data));
 
-                            if (dataRequests.length===0){
-                                showMask = false;
-                                waitmask.hide();
-                                editPanel.focus();
-                            }
-                            else{
-                                updateNodes();
-                            }
-
-                        });
-                    };
-                    updateNodes();
-
-
-                  //Something is causing the waitmask to hide early. This is a workaround
-                    var timer;
-                    var checkMask = function(){
-                        if (showMask){
-                            waitmask.show();
-                            timer = setTimeout(checkMask, 100);
+                        if (dataRequests.length===0){
+                            showMask = false;
+                            waitmask.hide();
+                            updateButtons();
+                            editPanel.focus();
                         }
                         else{
-                            clearTimeout(timer);
+                            updateNodes();
                         }
-                    };
-                    timer = setTimeout(checkMask, 100);
 
-                    updateButtons();
-                }
-                else{
-                    waitmask.hide();
-                    updateButtons();
-                    editPanel.focus();
-                }
+                    });
+                };
+                updateNodes();
 
-            });
-        }
-        else{
 
-            updateButtons();
-        }
+              //Something is causing the waitmask to hide early. This is a workaround
+                var timer;
+                var checkMask = function(){
+                    if (showMask){
+                        waitmask.show();
+                        timer = setTimeout(checkMask, 100);
+                    }
+                    else{
+                        clearTimeout(timer);
+                    }
+                };
+                timer = setTimeout(checkMask, 100);
+
+            }
+            else{
+                waitmask.hide();
+                updateButtons();
+                editPanel.focus();
+            }
+
+        });
+
     };
 
 
@@ -630,7 +617,7 @@ console.log(dashboard);
     this.save = function(){
         if (explorer.isReadOnly()) return;
 
-        if (isNaN(explorer.getID())){
+        if (!isNumber(explorer.getID())){
             me.edit();
         }
         else{
@@ -887,38 +874,29 @@ console.log(dashboard);
         }
 
 
-      //Return early as needed
-        if (me.isReadOnly()) return;
+
+        if (!me.isReadOnly()){
+
+          //Show arrow if there are no nodes in the canvas
+            var visibleNodes = Object.keys(explorer.getNodes()).length;
+            if (visibleNodes===0){
+                hint.show();
+            }
 
 
-      //Enable editor buttons
-        if (button.query) button.query.enable();
-        if (button.sankeyChart) button.sankeyChart.enable();
-
-
-      //Get number of nodes in the canvas
-        var visibleNodes = Object.keys(explorer.getNodes()).length;
-
-
-      //Show arrow if there are no nodes in the canvas
-        if (visibleNodes===0){
-            hint.show();
-        }
-
-
-      //Update toolbar
-        if (isNaN(explorer.getID())){
-            if (visibleNodes>0){
+          //Update toolbar
+            if (isNumber(explorer.getID())){
                 button["save"].enable();
+                button["edit"].enable();
+                button["delete"].enable();
+                button["users"].enable();
+            }
+            else{
+                if (visibleNodes>0){
+                    button["save"].enable();
+                }
             }
         }
-        else{
-            button["save"].enable();
-            button["edit"].enable();
-            button["delete"].enable();
-            button["users"].enable();
-        }
-
     };
 
 
@@ -1410,8 +1388,7 @@ console.log(dashboard);
     var createSpacer = bluewave.utils.createSpacer;
     var resizeCanvas = bluewave.utils.resizeCanvas;
     var createDashboardItem = bluewave.utils.createDashboardItem;
-
-
+    var isNumber = bluewave.chart.utils.isNumber;
 
     init();
 };
