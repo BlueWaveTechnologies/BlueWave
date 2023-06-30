@@ -197,7 +197,7 @@ bluewave.Homepage = function(parent, config) {
             }
 
 
-            var newGroup = isNaN(group.id);
+            var newGroup = !isNumber(group.id);
             getGroups(function(groups){
                 saveGroup(group, function(){
                     if (newGroup){
@@ -564,7 +564,7 @@ bluewave.Homepage = function(parent, config) {
 
       //Do some sanity checking to prevent dragging/dropping into the same group
         if (!orgGroup) return;
-        if (orgGroup.id===newGroup.id && !isNaN(orgGroup.id) && !isNaN(newGroup.id)) return;
+        if (orgGroup.id===newGroup.id && isNumber(orgGroup.id) && isNumber(newGroup.id)) return;
         if (orgGroup===newGroup) return;
 
 
@@ -579,27 +579,27 @@ bluewave.Homepage = function(parent, config) {
 
 
       //Save orginal and new groups as needed
-        if (isNaN(newGroup.id)){
-            if (isNaN(orgGroup.id)){
-                refresh();
-            }
-            else{
-                saveGroup(orgGroup, function(){
-                    refresh();
-                });
-            }
-        }
-        else{
+        if (isNumber(newGroup.id)){
             saveGroup(newGroup, function(){
-                if (isNaN(orgGroup.id)){
-                    refresh();
-                }
-                else{
+                if (isNumber(orgGroup.id)){
                     saveGroup(orgGroup, function(){
                         refresh();
                     });
                 }
+                else{
+                    refresh();
+                }
             });
+        }
+        else {
+            if (isNumber(orgGroup.id)){
+                saveGroup(orgGroup, function(){
+                    refresh();
+                });
+            }
+            else{
+                refresh();
+            }
         }
     };
 
@@ -840,7 +840,7 @@ bluewave.Homepage = function(parent, config) {
   //** isDefaultGroup
   //**************************************************************************
     var isDefaultGroup = function(group){
-        return (isNaN(group.id) && (group.name=="My Dashboards" || group.name=="Shared Dashboards"));
+        return (!isNumber(group.id) && (group.name=="My Dashboards" || group.name=="Shared Dashboards"));
     };
 
 
@@ -1082,6 +1082,7 @@ bluewave.Homepage = function(parent, config) {
     var post = javaxt.dhtml.utils.post;
     var createElement = javaxt.dhtml.utils.createElement;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var isNumber = bluewave.chart.utils.isNumber;
     var warn = bluewave.utils.warn;
 
     init();

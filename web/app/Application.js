@@ -627,7 +627,7 @@ bluewave.Application = function(parent, config) {
             if (explorerPanel){
                 var dashboardID = explorerPanel.getDashboardID();
 
-                if (!isNaN(dashboardID)){
+                if (isNumber(dashboardID)){
                     if (op==="update"){
                         get("DashboardUsers?id="+id,{
                             success: function(arr){
@@ -932,8 +932,7 @@ bluewave.Application = function(parent, config) {
     var getMainMenu = function(){
         if (!mainMenu){
 
-            var div = createElement("div");
-            div.className = "app-menu";
+            var div = createElement("div", "app-menu");
 
 
             div.appendChild(createMenuOption("Dashboard Home", "home", function(){
@@ -1247,7 +1246,7 @@ bluewave.Application = function(parent, config) {
     var onRender = javaxt.dhtml.utils.onRender;
     var destroy = javaxt.dhtml.utils.destroy;
     var get = bluewave.utils.get;
-
+    var isNumber = bluewave.chart.utils.isNumber;
 
     init();
 
