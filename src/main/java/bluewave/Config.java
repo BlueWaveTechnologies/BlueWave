@@ -118,6 +118,15 @@ public class Config {
 
           //Initialize schema (create tables, indexes, etc)
             DbUtils.initSchema(database, schema, null);
+            if (database.getDriver().equals("H2")){
+                try(Connection conn = database.getConnection()){
+                    conn.execute("CREATE ALIAS IF NOT EXISTS JSON_VALUE AS '\n" +
+                    "String jsonValue(String json, String key) {\n" +
+                    "    return new javaxt.json.JSONObject(json).get(key).toString();\n" +
+                    "}\n" +
+                    "';");
+                }
+            }
 
 
           //Enable metadata caching
