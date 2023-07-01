@@ -93,9 +93,26 @@ public class DashboardService extends WebService {
 
             if (op.equals("get") || op.equals("list")){
 
-                //sqlEditor.removeField("description");
+
+              //Replace description field as needed
+                if (sqlEditor.hasField("description")){
+
+                    String replacement = null;
+                    Driver db = conn.getDatabase().getDriver();
+                    if (db.equals("H2")){
+                        replacement = "JSON_VALUE(info, 'description') as description";
+                    }
+                    else if (db.equals("PostgreSQL")){
+                        replacement = "info ->> description as description";
+                    }
+
+                    if (replacement!=null){
+                        sqlEditor.replaceField("description", replacement);
+                    }
+                }
 
 
+              //Add additional constraints
                 sqlEditor.addConstraint("id in (" +
                 "select dashboard.id " +
                 "from APPLICATION.DASHBOARD left join APPLICATION.DASHBOARD_USER " +
