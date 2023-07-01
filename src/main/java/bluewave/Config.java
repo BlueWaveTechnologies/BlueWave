@@ -119,6 +119,9 @@ public class Config {
           //Initialize schema (create tables, indexes, etc)
             DbUtils.initSchema(database, schema, null);
             if (database.getDriver().equals("H2")){
+                java.util.Properties properties = new java.util.Properties();
+                properties.setProperty("MODE", "PostgreSQL");
+                database.setProperties(properties);
                 try(Connection conn = database.getConnection()){
                     conn.execute("CREATE ALIAS IF NOT EXISTS JSON_VALUE AS '\n" +
                     "String jsonValue(String json, String key) {\n" +
