@@ -91,14 +91,13 @@ bluewave.dashboard.CardView = function(parent, config) {
 
       //Set image/thumbnail
         var img = createTempImage();
-        if (dashboard.thumbnail){
+        try{
             img.src = URL.createObjectURL(dashboard.thumbnail);
         }
-        else{
-            var t = new Date().getTime();
+        catch(e){
             if (dashboard.id){
+                var t = new Date().getTime();
                 img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
-                //dashboardImage.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
             }
         }
     };
@@ -132,14 +131,12 @@ bluewave.dashboard.CardView = function(parent, config) {
   //** setImage
   //**************************************************************************
     this.setImage = function(src){
+        placeholderImage.show();
         dashboardImage.style.backgroundImage = "none";
-        if (!src){
-            placeholderImage.show();
-            return;
+        if (src){
+            var img = createTempImage();
+            img.src = URL.createObjectURL(src);
         }
-        placeholderImage.hide();
-        var img = createTempImage();
-        img.src = URL.createObjectURL(src);
     };
 
 
@@ -151,13 +148,14 @@ bluewave.dashboard.CardView = function(parent, config) {
         img.onload = function() {
             if (typeof img.src === "string"){
                 dashboardImage.style.backgroundImage = "url(" + img.src + ")";
-                //dashboardImage.style.backgroundImage = "url(dashboard/thumbnail?id=" + dashboard.id + "&_=" + t + ")";
+                placeholderImage.hide();
                 img = null;
             }
             else{
                 var reader = new FileReader();
                 reader.onload = function(event){
                     dashboardImage.style.backgroundImage = "url(" + event.target.result + ")";
+                    placeholderImage.hide();
                     img = null;
                 };
                 reader.readAsBinaryString(img.src);

@@ -89,6 +89,7 @@ bluewave.dashboard.Properties = function(parent, config) {
 
       //Update thumbnail
         if (dashboard.thumbnail){
+            console.log(dashboard.thumbnail);
             form.setValue("thumbnail", dashboard.thumbnail);
         }
     };
@@ -277,7 +278,7 @@ bluewave.dashboard.Properties = function(parent, config) {
                 return thumbnailEditor.getImage();
             },
             setValue: function(src){
-                console.log(src);
+                //console.log(src);
             },
             onChange: function(){}
         };

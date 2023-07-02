@@ -667,15 +667,19 @@ console.log(dashboard);
   //**************************************************************************
     var saveThumbnail = function(thumbnail, dashboardID, config){
 
-      //Convert base64 encoded string into a binary object
-        var data = thumbnail;
-        var type = data.substring(data.indexOf(":")+1, data.indexOf(";"));
-        data = data.substring(("data:" + type + ";base64,").length);
-        var blob = base64ToBlob(data, type);
+
+        if (typeof thumbnail === "string"){
+          //Convert base64 encoded string into a binary object
+            var data = thumbnail;
+            var type = data.substring(data.indexOf(":")+1, data.indexOf(";"));
+            data = data.substring(("data:" + type + ";base64,").length);
+            thumbnail = base64ToBlob(data, type);
+        }
+
 
       //Create form data
         var formData = new FormData();
-        formData.append("image", blob);
+        formData.append("image", thumbnail);
         formData.set("id", dashboardID);
 
         post("dashboard/thumbnail", formData, config);
@@ -1376,8 +1380,6 @@ console.log(dashboard);
   //**************************************************************************
     var merge = javaxt.dhtml.utils.merge;
     var onRender = javaxt.dhtml.utils.onRender;
-    var isDirty = javaxt.dhtml.utils.isDirty;
-    var isArray = javaxt.dhtml.utils.isArray;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
     var addResizeListener = javaxt.dhtml.utils.addResizeListener;
     var createElement = javaxt.dhtml.utils.createElement;
@@ -1386,7 +1388,6 @@ console.log(dashboard);
     var del = javaxt.dhtml.utils.del;
 
     var createSpacer = bluewave.utils.createSpacer;
-    var resizeCanvas = bluewave.utils.resizeCanvas;
     var createDashboardItem = bluewave.utils.createDashboardItem;
     var isNumber = bluewave.chart.utils.isNumber;
 

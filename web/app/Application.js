@@ -411,7 +411,7 @@ bluewave.Application = function(parent, config) {
 
       //Create new panels
         if (showHomepage){
-            get("dashboards?fields=id,name,className",{
+            get("dashboards?fields=id,name,description,className",{
                 success: function(dashboards) {
 
                   //Convert the dashboards array into a datastore
