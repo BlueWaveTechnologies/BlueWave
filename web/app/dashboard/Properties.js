@@ -252,7 +252,7 @@ bluewave.dashboard.Properties = function(parent, config) {
       //Create div with enough height to match the preview panel
         var div = createElement("div", {
             width: "100%",
-            height: "345px"
+            height: "320px"
         });
 
 
