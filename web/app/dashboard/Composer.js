@@ -387,8 +387,6 @@ bluewave.dashboard.Composer = function(parent, config) {
         if (!(readOnly===true || readOnly===false)) readOnly = false;
         if (!(view==="Edit" || view==="Preview" || view==="Dashboard")) view="Edit";
 
-console.log(view);
-console.log(dashboard);
 
 
       //Show mask
@@ -435,8 +433,9 @@ console.log(dashboard);
                 waitmask.show(500);
                 var showMask = true;
                 var updateNodes = function(){
-                    var editor = dataRequests.pop();
+                    var editor = dataRequests.shift();
                     var node = editor.getNode();
+                    editor.update(node);
                     editor.getData(function(data){
                         if (!data) node.data = [];
                         else node.data = JSON.parse(JSON.stringify(data));
@@ -456,18 +455,18 @@ console.log(dashboard);
                 updateNodes();
 
 
-              //Something is causing the waitmask to hide early. This is a workaround
-                var timer;
-                var checkMask = function(){
-                    if (showMask){
-                        waitmask.show();
-                        timer = setTimeout(checkMask, 100);
-                    }
-                    else{
-                        clearTimeout(timer);
-                    }
-                };
-                timer = setTimeout(checkMask, 100);
+//              //Something is causing the waitmask to hide early. This is a workaround
+//                var timer;
+//                var checkMask = function(){
+//                    if (showMask){
+//                        waitmask.show();
+//                        timer = setTimeout(checkMask, 100);
+//                    }
+//                    else{
+//                        clearTimeout(timer);
+//                    }
+//                };
+//                timer = setTimeout(checkMask, 100);
 
             }
             else{
