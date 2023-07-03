@@ -284,11 +284,16 @@ body, textarea, input, select, td, th {
     height: 500px !important;
     padding: 0;
     border-radius: 5px;
-    box-shadow: 1px 4px 12px 1px rgb(0 0 0 / 30%);
-    margin: 15px;
+    box-shadow: 1px 4px 12px 1px rgba(0, 0, 0, 0.30);
+    margin: 20px;
     overflow: hidden;
     border: none;
     cursor: pointer;
+}
+
+.dashboard-homepage .dashboard-item:hover{
+    box-shadow: 0px 20px 14px 0 rgba(0, 0, 0, 0.2), 14px 20px 20px 0 rgba(0, 0, 0, 0.2);
+    transition: all .4s ease;
 }
 
 .dashboard-item-image {
