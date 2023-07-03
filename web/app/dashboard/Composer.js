@@ -668,8 +668,8 @@ console.log(dashboard);
     var saveThumbnail = function(thumbnail, dashboardID, config){
 
 
+      //Convert base64 encoded string into a binary object as needed
         if (typeof thumbnail === "string"){
-          //Convert base64 encoded string into a binary object
             var data = thumbnail;
             var type = data.substring(data.indexOf(":")+1, data.indexOf(";"));
             data = data.substring(("data:" + type + ";base64,").length);
@@ -677,22 +677,11 @@ console.log(dashboard);
         }
 
 
-      //Create form data
+      //POST thumbnail and dashboardID to the server
         var formData = new FormData();
         formData.append("image", thumbnail);
         formData.set("id", dashboardID);
-
         post("dashboard/thumbnail", formData, config);
-
-//      //Send form data to the dashboard service to save thumbnail
-//        var request = new XMLHttpRequest();
-//        request.open('POST', 'dashboard/thumbnail', true);
-//        request.onreadystatechange = function(){
-//            if (request.readyState === 4) {
-//                if (callback) callback.apply(me, [request]);
-//            }
-//        };
-//        request.send(formData);
     };
 
 
@@ -700,7 +689,7 @@ console.log(dashboard);
   //** createToolbar
   //**************************************************************************
     var createToolbar = function(parent){
-        var toolbar = createElement('div', parent);
+        var toolbar = createElement("div", parent, "dashboard-toolbar");
 
         var createButton = function(parent, btn){
             var defaultStyle = JSON.parse(JSON.stringify(config.style.toolbarButton));

@@ -125,11 +125,12 @@ body, textarea, input, select, td, th {
 
 .dashboard-title {
     height: 70px;
-    background-color: #fcfcfc;
+    background-color: #f3f3f3; /* same as dashboard homepage */
     text-align: center;
-    line-height: 59px;
+    line-height: 70px;
     color: #007CBA;
-    font-size: 20px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 30px;
 }
 
 .dashboard-footer {
@@ -230,9 +231,10 @@ body, textarea, input, select, td, th {
 .dashboard-toolbar {
     height: 36px;
     padding: 4px 10px;
-    background-color: #e8e8e8;
+    background-color: #fff;
     border-top: 1px solid #dcdcdc;
     border-bottom: 1px solid #dcdcdc;
+    /* background-image: linear-gradient(to bottom, #fff, #f8f8f8);*/
 }
 
 .dashboard-slider {
