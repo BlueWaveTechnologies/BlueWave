@@ -121,7 +121,7 @@ public class Neo4J implements AutoCloseable {
         this.port = port;
     }
 
-    
+
   //**************************************************************************
   //** getProperties
   //**************************************************************************
@@ -171,14 +171,14 @@ public class Neo4J implements AutoCloseable {
   //**************************************************************************
     @Override
     public void close() throws Exception{
-        if (driver!=null){ 
+        if (driver!=null){
             driver.close();
             driver = null;
         }
         version = edition = null;
     }
-    
-    
+
+
   //**************************************************************************
   //** getVersion
   //**************************************************************************
@@ -188,8 +188,8 @@ public class Neo4J implements AutoCloseable {
         if (version==null) getServerInfo();
         return version;
     }
-    
-    
+
+
   //**************************************************************************
   //** getEdition
   //**************************************************************************
@@ -199,8 +199,8 @@ public class Neo4J implements AutoCloseable {
         if (edition==null) getServerInfo();
         return edition;
     }
-    
-    
+
+
   //**************************************************************************
   //** getServerInfo
   //**************************************************************************
@@ -210,7 +210,7 @@ public class Neo4J implements AutoCloseable {
         Session session = null;
         try{
             session = getSession();
-            Result rs = session.run("call dbms.components() yield versions, edition " + 
+            Result rs = session.run("call dbms.components() yield versions, edition " +
             "unwind versions as version return version, edition");
             while (rs.hasNext()){
                 org.neo4j.driver.Record r = rs.next();
@@ -224,8 +224,8 @@ public class Neo4J implements AutoCloseable {
             //throw e;
         }
     }
-    
-    
+
+
   //**************************************************************************
   //** toJson
   //**************************************************************************
@@ -241,5 +241,5 @@ public class Neo4J implements AutoCloseable {
         json.set("edition", getEdition());
         return json;
     }
-    
+
 }

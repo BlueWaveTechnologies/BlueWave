@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Display&family=Nunito&display=swap');
+
 html, body {
     height:100%;
     margin: 0;
@@ -84,18 +86,19 @@ select:focus, textarea:focus, input:focus{
 
         .login-logo {
             margin: -20px 0 56px 0;
-            background: url(../images/logo.png) no-repeat;
+            background: url(../images/blue-logo-100.png) no-repeat;
             width: 600px;
             height: 144px;
             margin-left: -72px;
             border-radius: 5px 5px 0 0;
-            background-position-x: 130px;
+            background-position-x: 76px;
             background-color: #1974a9;
             color: #fff;
-            background-position-y: 40px;
+            background-position-y: 20px;
         }
         .login-logo:after {
             content:"BlueWave";
+            font-family: 'Nunito', sans-serif;
             margin-left: 190px;
             display: inline-block;
             float: left;
@@ -103,6 +106,7 @@ select:focus, textarea:focus, input:focus{
             white-space: nowrap;
             color: #fff;
             margin-top: 37px;
+            text-shadow: 0px 3px 5px rgba(9,57,88,0.42); /*matches shadow in logo*/
         }
 
     }

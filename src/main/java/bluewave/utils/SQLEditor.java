@@ -44,11 +44,65 @@ public class SQLEditor {
 
 
   //**************************************************************************
+  //** hasField
+  //**************************************************************************
+  /** Returns true if the select clause contains a given field
+   */
+    public boolean hasField(String field){
+
+        if (field==null || field.isBlank()) return false;
+        field = field.trim().toLowerCase();
+
+        if (parser==null) parser = new javaxt.sql.Parser(sql);
+
+        for (javaxt.sql.Parser.SelectStatement stmt : parser.getSelectStatements()){
+            if (stmt.getField().toLowerCase().startsWith(field)){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+  //**************************************************************************
+  //** replaceField
+  //**************************************************************************
+  /** Used to update the select clause by replacing a field
+   */
+    public void replaceField(String field, String replacement){
+
+        if (field==null || field.isBlank()) return;
+        field = field.trim().toLowerCase();
+
+        if (parser==null) parser = new javaxt.sql.Parser(sql);
+
+      //Get select statements
+        ArrayList<javaxt.sql.Parser.SelectStatement> selectStatements = new ArrayList<>();
+        for (javaxt.sql.Parser.SelectStatement stmt : parser.getSelectStatements()){
+            if (stmt.getField().toLowerCase().startsWith(field)){
+                selectStatements.add(parser.new SelectStatement(replacement));
+            }
+            else{
+                selectStatements.add(stmt);
+            }
+        }
+
+      //Update sql
+        updateSelect(selectStatements);
+    }
+
+
+  //**************************************************************************
   //** removeField
   //**************************************************************************
   /** Used to update the select clause by removing a field
    */
     public void removeField(String field){
+
+        if (field==null || field.isBlank()) return;
+        field = field.trim().toLowerCase();
+
         if (parser==null) parser = new javaxt.sql.Parser(sql);
 
       //Get select statements
@@ -110,5 +164,20 @@ public class SQLEditor {
    */
     public String getSQL(){
         return sql;
+    }
+
+    
+  //**************************************************************************
+  //** updateSelect
+  //**************************************************************************
+    private void updateSelect(ArrayList<javaxt.sql.Parser.SelectStatement> selectStatements){
+
+        StringBuilder str = new StringBuilder();
+        for (javaxt.sql.Parser.SelectStatement stmt : selectStatements){
+            if (str.length()>0) str.append(", ");
+            str.append(stmt.toString());
+        }
+
+        parser.setSelect(str.toString());
     }
 }

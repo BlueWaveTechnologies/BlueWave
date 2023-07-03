@@ -316,17 +316,13 @@ public class DataService extends WebService {
   /** Used to generate a CSV file from SQL query
    */
     public static String getCSV(String sql, Database database) throws Exception{
-        Connection conn = null;
-        try{
-            conn = database.getConnection();
+
+        try (Connection conn = database.getConnection()){
 
             StringBuilder str = new StringBuilder();
             boolean addHeader = true;
-            Recordset rs = new Recordset();
-            rs.setFetchSize(1000);
-            rs.open(sql, conn);
-            while (rs.hasNext()){
-                Field[] fields = rs.getFields();
+            for (javaxt.sql.Record record : conn.getRecords(sql)){
+                Field[] fields = record.getFields();
 
               //Add header as needed
                 if (addHeader){
@@ -361,16 +357,12 @@ public class DataService extends WebService {
                 }
                 str.append("\r\n");
 
-                rs.moveNext();
             }
-            rs.close();
-            conn.close();
 
             return str.toString().trim();
         }
         catch(Exception e){
             System.out.println(sql);
-            if (conn!=null) conn.close();
             throw e;
         }
     }

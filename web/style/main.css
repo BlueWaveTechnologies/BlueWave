@@ -1,5 +1,6 @@
 @import url(https://fonts.googleapis.com/css?family=Open+Sans);
 @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Display&family=Nunito&display=swap');
 
 html, body {
     height:100%;
@@ -21,28 +22,30 @@ body, textarea, input, select, td, th {
 /**************************************************************************/
 
 .app-header {
-    background-color: #007cba;
+    background-color: #006192; /*#007cba;*/
     height: 86px;
     color: #fff;
 }
 
 
 .app-header-icon {
-    background: url(../images/logo.png) no-repeat;
-    width: 43px;
-    height: 58px;
-    margin: 7px 0 0 14px;
+    background: url(../images/blue-logo-70.png) no-repeat;
+    width: 70px;
+    height: 70px;
+    margin: 0 0 0 14px;
 }
 
 .app-header-icon:after {
     content:"BlueWave";
-    margin-left: 54px;
+    font-family: 'Nunito', sans-serif;
+    text-shadow: 0px 3px 5px rgba(9,57,88,0.72); /*matches shadow in logo*/
+    margin-left: 77px;
     display: inline-block;
     float: left;
-    font-size: 50px;
+    font-size: 46px;
     white-space: nowrap;
     color: #fff;
-    margin-top: -6px;
+    margin-top: 2px;
 }
 
 .app-header-profile,
@@ -63,12 +66,12 @@ body, textarea, input, select, td, th {
 }
 
  .app-header-profile:hover {
-    background-color: #ffb576;
+    background-color: #ffac65; /*#ffb576;*/
     transition: 0.4s;
  }
 
 .app-header-menu {
-    background-color: #007cba;
+    background-color: #006192;
     margin-left: 0;
  }
 
@@ -77,7 +80,7 @@ body, textarea, input, select, td, th {
 }
 
  .app-header-menu:hover {
-     background-color: #3baaff;
+     background-color: #0e79af; /*#3baaff;*/
      transition: 0.4s;
  }
 
@@ -122,11 +125,12 @@ body, textarea, input, select, td, th {
 
 .dashboard-title {
     height: 70px;
-    background-color: #fcfcfc;
+    background-color: #f3f3f3; /* same as dashboard homepage */
     text-align: center;
-    line-height: 59px;
+    line-height: 70px;
     color: #007CBA;
-    font-size: 20px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 30px;
 }
 
 .dashboard-footer {
@@ -227,9 +231,10 @@ body, textarea, input, select, td, th {
 .dashboard-toolbar {
     height: 36px;
     padding: 4px 10px;
-    background-color: #e8e8e8;
+    background-color: #fff;
     border-top: 1px solid #dcdcdc;
     border-bottom: 1px solid #dcdcdc;
+    /* background-image: linear-gradient(to bottom, #fff, #f8f8f8);*/
 }
 
 .dashboard-slider {
@@ -253,12 +258,68 @@ body, textarea, input, select, td, th {
 /** Dashboard Homepage
 /**************************************************************************/
 .dashboard-homepage {
-    background-color: #ececec;
+    background-color: #f3f3f3;
 }
+
+.dashboard-homepage::before {
+    content: "";
+    background: #f3f3f3 url('../images/background.png') no-repeat left top;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    opacity: 0.85;
+}
+
+.dashboard-homepage.nobackground::before {background: none;}
 
 .dashboard-homepage .dashboard-item {
     float: none;
+    width: 285px !important;
+    height: 465px !important;
+    padding: 0;
+    border-radius: 5px;
+    box-shadow: 1px 4px 12px 1px rgba(0, 0, 0, 0.30);
+    margin: 20px;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
 }
+
+.dashboard-homepage .dashboard-item:hover{
+    box-shadow: 0px 20px 14px 0 rgba(0, 0, 0, 0.2), 14px 20px 20px 0 rgba(0, 0, 0, 0.2);
+    transition: all .4s ease;
+}
+
+.dashboard-item-image {
+    height: 255px;
+    background-repeat: no-repeat;
+    overflow: hidden;
+}
+
+.dashboard-item-body {
+    padding: 7px;
+    text-align: left;
+}
+
+.dashboard-item-title {
+    font-size: 20px;
+    padding: 7px 0;
+    color: #007cba;
+}
+
+.dashboard-item-description {
+    font-size: 12px;
+    color: #777;
+    padding: 7px 0;
+}
+
+
 
 .dashboard-homepage .dashboard-item .fas {
     color: #eaeaea;
@@ -305,7 +366,7 @@ body, textarea, input, select, td, th {
     border: 1px solid #c7c7c7;
     margin: 30px 15px 20px;
     border-radius: 0 5px 5px 5px;
-    background-color: #f5f5f5;
+    background-color: rgba(255,255,255,0.65);
     padding: 15px 10px;
     position: relative;
     min-height: 250px;
@@ -313,13 +374,13 @@ body, textarea, input, select, td, th {
 
 .dashboard-group-header {
     display: inline-block;
-    top: -21px;
+    top: -23px;
     position: absolute;
     left: -1px;
     padding: 2px 7px 0 7px;
-    background-color: #f5f5f5;
+    background-color: #fbfbfb; /* matches background-color of dashboard-group with opacity fill */
     color: #585858;
-    font-size: 13px;
+    font-size: 15px;
     border: 1px solid #c7c7c7;
     border-radius: 5px 5px 0 0;
     border-bottom: 0 none;
@@ -356,6 +417,43 @@ body, textarea, input, select, td, th {
     cursor: pointer;
     float: right;
     margin-top: 3px;
+}
+
+
+/**************************************************************************/
+/** Dashboard Property Editor
+/**************************************************************************/
+
+.dashboard-upload-area {
+    border: 2px dashed #7e93a0;
+    background-color: #f2f5f7;
+    transition: 0.2s;
+}
+
+.dashboard-upload-area::before {
+    font-family: "Font Awesome 5 Free";
+    content: "\f382"; /*cloud-upload-alt*/
+    display: block;
+    vertical-align: middle;
+    font-weight: 900;
+    font-size: 42px;
+    color: #9fb1bd;
+}
+
+.dashboard-upload-area::after {
+    content: "Drag and drop image here";
+    font-size: 16px;
+    color: #8e9da7;
+    font-weight: bold;
+}
+
+.dashboard-upload-area::before,
+.dashboard-upload-area::after {
+    position: relative;
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
 }
 
 
@@ -770,6 +868,7 @@ li.tree-node:hover {
     border-radius: 4px 4px 0px 0px;
     padding-left: 10px;
     overflow: hidden;
+    white-space: nowrap;
 }
 
 .drawflow-node-overlay{

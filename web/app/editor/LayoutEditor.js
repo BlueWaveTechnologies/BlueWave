@@ -1,15 +1,15 @@
 if(!bluewave) var bluewave={};
-if(!bluewave.charts) bluewave.charts={};
+if(!bluewave.editor) bluewave.editor={};
 
 //******************************************************************************
-//**  Layout
+//**  LayoutEditor
 //******************************************************************************
 /**
  *   Panel used to create dashboard layouts
  *
  ******************************************************************************/
 
-bluewave.charts.Layout = function(parent, config) {
+bluewave.editor.LayoutEditor = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
@@ -34,56 +34,40 @@ bluewave.charts.Layout = function(parent, config) {
         config = merge(config, defaultConfig);
 
 
-        var div = document.createElement("div");
-        div.style.height = "100%";
-        parent.appendChild(div);
+        var div = createElement("div", parent, {
+            height: "100%"
+        });
         me.el = div;
 
 
       //Create main table
-        var table = createTable();
-        var tbody = table.firstChild;
-        var tr, td;
+        var table = createTable(div);
 
 
       //Create header nav
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        tr.appendChild(td);
-        createHeader(td);
+        titleDiv = table.addRow().addColumn("dashboard-title noselect");
 
 
       //Create body
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
-        td.className = "grid-panel";
-        td.style.height = "100%";
-        td.style.padding = "26px";
-        tr.appendChild(td);
-        body = td;
+        body = table.addRow().addColumn("grid-panel");
+        body.style.height = "100%";
+        body.style.padding = "26px";
 
-        div.appendChild(table);
 
 
       //Create overflow wrapper for the main div
-        var outerDiv = document.createElement("div");
-        outerDiv.className = "dashboard-layout";
+        var outerDiv = createElement("div", body, "dashboard-layout");
         outerDiv.style.height = "100%";
         outerDiv.style.overflowY = "auto";
-        td.appendChild(outerDiv);
 
 
       //Create main div
-        mainDiv = document.createElement("div");
-        mainDiv.className = "dashboard-layout";
+        mainDiv = createElement("div", outerDiv, "dashboard-layout");
         mainDiv.style.height = "100%";
-        outerDiv.appendChild(mainDiv);
 
 
       //Create mask for resizer
-        mask = document.createElement('div');
+        mask = createElement('div', div);
         mask.style.position = "absolute";
         mask.style.left = "0px";
         mask.style.top = "0px";
@@ -91,7 +75,7 @@ bluewave.charts.Layout = function(parent, config) {
         mask.style.height = "100%";
         mask.style.display = "none";
         mask.style.visibility = "hidden";
-        div.appendChild(mask);
+
     };
 
 
@@ -296,16 +280,6 @@ bluewave.charts.Layout = function(parent, config) {
             }
         }
         return layout;
-    };
-
-
-  //**************************************************************************
-  //** createHeader
-  //**************************************************************************
-    var createHeader = function(parent){
-        titleDiv = document.createElement("div");
-        titleDiv.className = "dashboard-title noselect";
-        parent.appendChild(titleDiv);
     };
 
 
@@ -624,6 +598,7 @@ bluewave.charts.Layout = function(parent, config) {
     var round = javaxt.dhtml.utils.round;
     var onRender = javaxt.dhtml.utils.onRender;
     var createTable = javaxt.dhtml.utils.createTable;
+    var createElement = javaxt.dhtml.utils.createElement;
     var createDashboardItem = bluewave.utils.createDashboardItem;
 
     init();

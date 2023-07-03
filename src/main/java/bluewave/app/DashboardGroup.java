@@ -75,26 +75,14 @@ public class DashboardGroup extends javaxt.sql.Model {
             this.info = new JSONObject(getValue(rs, "info").toString());
 
 
-            javaxt.sql.Connection conn = null;
-            try{
-                conn = getConnection(this.getClass());
+            try (javaxt.sql.Connection conn = getConnection(this.getClass())) {
 
 
               //Set dashboards
-                ArrayList<Long> dashboardIDs = new ArrayList<Long>();
-                for (javaxt.sql.Recordset row : conn.getRecordset(
+                for (javaxt.sql.Record record : conn.getRecords(
                     "select dashboard_id from application.dashboard_group_dashboard where dashboard_group_id="+id)){
-                    dashboardIDs.add(row.getValue(0).toLong());
+                    dashboards.add(new Dashboard(record.get(0).toLong()));
                 }
-                for (long dashboardID : dashboardIDs){
-                    dashboards.add(new Dashboard(dashboardID));
-                }
-
-                conn.close();
-            }
-            catch(SQLException e){
-                if (conn!=null) conn.close();
-                throw e;
             }
 
 
@@ -134,9 +122,8 @@ public class DashboardGroup extends javaxt.sql.Model {
 
       //Set dashboards
         if (json.has("dashboards")){
-            JSONArray _dashboards = json.get("dashboards").toJSONArray();
-            for (int i=0; i<_dashboards.length(); i++){
-                dashboards.add(new Dashboard(_dashboards.get(i).toJSONObject()));
+            for (JSONValue _dashboards : json.get("dashboards").toJSONArray()){
+                dashboards.add(new Dashboard(_dashboards.toJSONObject()));
             }
         }
     }
@@ -195,35 +182,34 @@ public class DashboardGroup extends javaxt.sql.Model {
   /** Used to save a DashboardGroup in the database.
    */
     public void save() throws SQLException {
+
+      //Update record in the dashboard_group table
         super.save();
-        javaxt.sql.Connection conn = null;
-        try{
-            conn = getConnection(this.getClass());
-            javaxt.sql.Recordset rs = new javaxt.sql.Recordset();
+
+
+      //Save models
+        try (javaxt.sql.Connection conn = getConnection(this.getClass())) {
+            String target;
             
           //Save dashboards
-            ArrayList<Long> dashboardIDs = new ArrayList<Long>();
-            for (Dashboard obj : dashboards){
+            ArrayList<Long> dashboardIDs = new ArrayList<>();
+            for (Dashboard obj : this.dashboards){
                 obj.save();
                 dashboardIDs.add(obj.getID());
             }
 
-            conn.execute("delete from application.dashboard_group_dashboard where dashboard_group_id=" + id);
-            rs.open("select * from application.dashboard_group_dashboard where dashboard_group_id=" + id, conn, false);
-            for (long dashboardID : dashboardIDs){
-                rs.addNew();
-                rs.setValue("dashboard_group_id", id);
-                rs.setValue("dashboard_id", dashboardID);
-                rs.update();
+
+          //Link dashboards to this DashboardGroup
+            target = "application.dashboard_group_dashboard where dashboard_group_id=" + this.id;
+            conn.execute("delete from " + target);
+            try (javaxt.sql.Recordset rs = conn.getRecordset("select * from " + target, false)){
+                for (long dashboardID : dashboardIDs){
+                    rs.addNew();
+                    rs.setValue("dashboard_group_id", this.id);
+                    rs.setValue("dashboard_id", dashboardID);
+                    rs.update();
+                }
             }
-            rs.close();
-
-
-            conn.close();
-        }
-        catch(SQLException e){
-            if (conn!=null) conn.close();
-            throw e;
         }
     }
 

@@ -1,14 +1,15 @@
 if(!bluewave) var bluewave={};
+if(!bluewave.dashboard) bluewave.dashboard={};
 
 //******************************************************************************
-//**  Permissions
+//**  Dashboard Permissions
 //******************************************************************************
 /**
  *   Panel used to view and manage permissions for individual dashboards
  *
  ******************************************************************************/
 
-bluewave.Permissions = function(parent, config) {
+bluewave.dashboard.Permissions = function(parent, config) {
 
     var me = this;
     var defaultConfig = {
@@ -31,30 +32,22 @@ bluewave.Permissions = function(parent, config) {
 
 
       //Create main table
-        var table = createTable();
-        var tbody = table.firstChild;
-        var tr, td;
+        var table = createTable(parent);
+        var td;
 
 
       //Row 1
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
+        td = table.addRow().addColumn();
         td.className = "panel-toolbar";
-        tr.appendChild(td);
         createToolbar(td);
 
 
       //Row 2
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
+        td = table.addRow().addColumn();
         td.style.height = "100%";
-        tr.appendChild(td);
         createBody(td);
 
 
-        parent.appendChild(table);
         me.el = table;
     };
 
@@ -83,7 +76,7 @@ bluewave.Permissions = function(parent, config) {
   //** createToolbar
   //**************************************************************************
     var createToolbar = function(parent){
-        var toolbar = document.createElement('div');
+        var toolbar = createElement('div', parent);
 
 
       //Add button
@@ -135,9 +128,6 @@ bluewave.Permissions = function(parent, config) {
         refreshButton.onClick = function(){
             grid.update();
         };
-
-
-        parent.appendChild(toolbar);
     };
 
 
@@ -196,8 +186,7 @@ bluewave.Permissions = function(parent, config) {
                 if (dashboardUser.accessLevel<3) dashboardUser.readOnly = true;
 
                 if (dashboardUser.readOnly){
-                    var icon = document.createElement("i");
-                    icon.className = "fas fa-check";
+                    var icon = createElement("i", "fas fa-check");
                     icon.style.lineHeight = "35px";
                     icon.style.color = "green";
                     row.set('Read Only', icon);
@@ -283,7 +272,7 @@ bluewave.Permissions = function(parent, config) {
                 style: config.style.window
             });
 
-            var userList = new javaxt.dhtml.ComboBox(document.createElement("div"), {
+            var userList = new javaxt.dhtml.ComboBox(createElement("div"), {
                 style: config.style.combobox,
                 scrollbar: true
             });
@@ -482,6 +471,7 @@ bluewave.Permissions = function(parent, config) {
     var del = javaxt.dhtml.utils.delete;
     var merge = javaxt.dhtml.utils.merge;
     var createTable = javaxt.dhtml.utils.createTable;
+    var createElement = javaxt.dhtml.utils.createElement;
     var createSpacer = bluewave.utils.createSpacer;
     var warn = bluewave.utils.warn;
 

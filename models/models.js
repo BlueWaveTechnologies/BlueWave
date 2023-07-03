@@ -24,6 +24,7 @@ var models = {
   //** User
   //**************************************************************************
     User: {
+        implements: ['java.security.Principal', 'javaxt.express.User'],
         fields: [
             {name: 'username',    type: 'string'},
             {name: 'password',    type: 'password'},

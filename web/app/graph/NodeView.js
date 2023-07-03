@@ -52,10 +52,10 @@ bluewave.NodeView = function(parent, config) {
 
 
       //Create main div
-        var div = document.createElement("div");
-        div.style.height = "100%";
-        div.style.position = "relative";
-        parent.appendChild(div);
+        var div = createElement("div", parent, {
+            position: "relative",
+            height: "100%"
+        });
         me.el = div;
 
 
@@ -147,7 +147,7 @@ bluewave.NodeView = function(parent, config) {
             tooltip.show();
             tooltip.innerHTML = "<b>" + d.node + "</b><br>" +
             formatNumber(d[key]) + " " + (key=="count"? "nodes" : key);
-    
+
             var box = tooltip.parentNode.getBoundingClientRect();
             tooltip.style.left = (d3.event.pageX-box.left)+20 + "px";
             tooltip.style.top = (d3.event.pageY-box.top) + "px";
@@ -240,13 +240,13 @@ bluewave.NodeView = function(parent, config) {
   //** createMenu
   //**************************************************************************
     var createMenu = function(parent){
-        var div = document.createElement("div");
+        var div = createElement("div", parent, {
+            position: "absolute",
+            width: "150px",
+            top: 0,
+            right: 0
+        });
         div.className = "dashboard-item";
-        div.style.width = "150px";
-        div.style.position = "absolute";
-        div.style.top = 0;
-        div.style.right = 0;
-        parent.appendChild(div);
 
         form = new javaxt.dhtml.Form(div, {
             style: config.style.form,
@@ -280,12 +280,10 @@ bluewave.NodeView = function(parent, config) {
   //** createTooltip
   //**************************************************************************
     var createTooltip = function(parent){
-        tooltip = document.createElement("div");
-        tooltip.className = "tooltip";
+        tooltip = createElement("div", parent, "tooltip");
         tooltip.style.top = 0;
         addShowHide(tooltip);
         tooltip.hide();
-        parent.appendChild(tooltip);
     };
 
 
@@ -330,7 +328,7 @@ bluewave.NodeView = function(parent, config) {
     var drawClickedNodeRelationship = function(graph) {
 
 
-    }
+    };
 
 
 
@@ -348,6 +346,7 @@ bluewave.NodeView = function(parent, config) {
     var get = bluewave.utils.get;
     var merge = javaxt.dhtml.utils.merge;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var createElement = javaxt.dhtml.utils.createElement;
     var getColorPalette = bluewave.utils.getColorPalette;
 
     init();

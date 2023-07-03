@@ -124,7 +124,7 @@ public class MapService extends WebService {
   //** getBasemaps
   //**************************************************************************
     public ServiceResponse getBasemaps(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
         return new ServiceResponse(Config.get("basemaps").toJSONArray());
     }
 
@@ -172,7 +172,7 @@ public class MapService extends WebService {
    *  for a given mode of transport (land, sea, air)
    */
     public ServiceResponse getRoute(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
       //Parse params
         String type = request.getParameter("type").toString();
@@ -206,19 +206,14 @@ public class MapService extends WebService {
 
 
       //Get route
-        try{
-            JSONObject geoJson = null;
-            if (type.equalsIgnoreCase("Shipping")){
-                geoJson = Routing.getShippingRoute(c1, c2, method);
-            }
-            else{
-                geoJson = Routing.getGreatCircleRoute(c1, c2, 50);
-            }
-            return new ServiceResponse(geoJson);
+        JSONObject geoJson;
+        if (type.equalsIgnoreCase("Shipping")){
+            geoJson = Routing.getShippingRoute(c1, c2, method);
         }
-        catch(Exception ex){
-            return new ServiceResponse(ex);
+        else{
+            geoJson = Routing.getGreatCircleRoute(c1, c2, 50);
         }
+        return new ServiceResponse(geoJson);
     }
 
 
@@ -228,7 +223,7 @@ public class MapService extends WebService {
   /** Used to generate a map pin with optional text or icon
    */
     public ServiceResponse getPin(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
       //Parse args
         Integer size = request.getParameter("size").toInteger();
@@ -372,7 +367,7 @@ public class MapService extends WebService {
   /** Used to generate a map icon
    */
     public ServiceResponse getIcon(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
       //Parse args
         Integer size = request.getParameter("size").toInteger();
@@ -428,7 +423,7 @@ public class MapService extends WebService {
   //** getHospitals
   //**************************************************************************
     public ServiceResponse getHospitals(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
 
         Geometry geom;
@@ -465,7 +460,7 @@ public class MapService extends WebService {
   /** Returns a lat/lon coordinate for a given address
    */
     public ServiceResponse getCoordinate(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
 
       //Extract parameters
@@ -474,7 +469,7 @@ public class MapService extends WebService {
 
 
       //Construct url to hit the google maps geocoding service:
-        StringBuffer url = new StringBuffer();
+        StringBuilder url = new StringBuilder();
         url.append("https://maps.google.com/maps/api/geocode/json?");
         url.append("address=");
         url.append(address);
@@ -506,7 +501,7 @@ public class MapService extends WebService {
   /** Gets a image from a remote map server and returns it as a local image
    */
     public ServiceResponse getTile(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
         String url = request.getParameter("url").toString();
         String format = "png"; //get format from response header?
         javaxt.io.Image img = new javaxt.http.Request(url).getResponse().getImage();

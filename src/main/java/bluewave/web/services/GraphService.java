@@ -15,7 +15,6 @@ import javaxt.sql.*;
 import javaxt.json.*;
 
 import java.util.*;
-import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import java.awt.Color;
@@ -120,7 +119,7 @@ public class GraphService extends WebService {
   /** REST endpoint to receive status messages from the Graph (e.g. Neo4J)
    */
     public ServiceResponse saveUpdate(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
 
       //Check if client is authorized to make this request
@@ -152,7 +151,7 @@ public class GraphService extends WebService {
   //** getNodes
   //**************************************************************************
     public ServiceResponse getNodes(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
         try{
             JSONObject nodes = getNodes();
@@ -209,7 +208,7 @@ public class GraphService extends WebService {
   //** getProperties
   //**************************************************************************
     public ServiceResponse getProperties(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
 
         try{
@@ -245,7 +244,7 @@ public class GraphService extends WebService {
   //**************************************************************************
   //** getRelationships
   //**************************************************************************
-    public ServiceResponse getRelationships(ServiceRequest request, Database database) throws ServletException, IOException {
+    public ServiceResponse getRelationships(ServiceRequest request, Database database) throws Exception {
         Session session = null;
         try {
 
@@ -309,7 +308,7 @@ public class GraphService extends WebService {
   //** getNetwork
   //**************************************************************************
     public ServiceResponse getNetwork(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
         try {
 
           //Get network
@@ -601,7 +600,7 @@ public class GraphService extends WebService {
   //** getExtents
   //**************************************************************************
     public ServiceResponse getExtents(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
         try{
             SpatialIndex spatialIndex = getSpatialIndex();
@@ -620,7 +619,7 @@ public class GraphService extends WebService {
   //** getImage
   //**************************************************************************
     public ServiceResponse getImage(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
         try{
 
@@ -736,7 +735,7 @@ public class GraphService extends WebService {
   //** getSelect
   //**************************************************************************
     public ServiceResponse getSelect(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
         String point = request.getParameter("point").toString();
         if (point==null) return new ServiceResponse(400, "Point is required");
@@ -818,7 +817,7 @@ public class GraphService extends WebService {
   //** getCache
   //**************************************************************************
     public ServiceResponse getCache(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
       //Prevent non-admin users from seeing the cache
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -840,7 +839,7 @@ public class GraphService extends WebService {
   //** deleteCache
   //**************************************************************************
     public ServiceResponse deleteCache(ServiceRequest request, Database database)
-        throws ServletException, IOException {
+        throws Exception {
 
       //Prevent non-admin users from deleting the cache
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -904,7 +903,7 @@ public class GraphService extends WebService {
   //**************************************************************************
   /** Used to ingest a file found on the server
    */
-    public ServiceResponse getIngest(ServiceRequest request, Database database) throws ServletException {
+    public ServiceResponse getIngest(ServiceRequest request, Database database) throws Exception {
 
       //Get user associated with the request
         bluewave.app.User user = (bluewave.app.User) request.getUser();
@@ -946,24 +945,18 @@ public class GraphService extends WebService {
 
 
       //Import file
-        try{
-            bluewave.graph.Neo4J graph = bluewave.Config.getGraph(user);
-            if (fileType.equals("csv")){
-                bluewave.graph.Import.importCSV(file, nodeType, keys, 12, graph);
-            }
-            else if (fileType.equals("json")){
-                String target = request.getParameter("target").toString();
-                bluewave.graph.Import.importJSON(file, nodeType, target, graph);
-            }
-            else{
-                return new ServiceResponse(400, "unsupported file type");
-            }
-            return new ServiceResponse(200);
+        bluewave.graph.Neo4J graph = bluewave.Config.getGraph(user);
+        if (fileType.equals("csv")){
+            bluewave.graph.Import.importCSV(file, nodeType, keys, 12, graph);
         }
-        catch(Exception e){
-            return new ServiceResponse(e);
+        else if (fileType.equals("json")){
+            String target = request.getParameter("target").toString();
+            bluewave.graph.Import.importJSON(file, nodeType, target, graph);
         }
-
+        else{
+            return new ServiceResponse(400, "unsupported file type");
+        }
+        return new ServiceResponse(200);
     }
 
 
@@ -973,47 +966,34 @@ public class GraphService extends WebService {
   /** Used to initialize the log database
    */
     private void initDatabase() throws Exception {
+        javaxt.io.File db = new javaxt.io.File(logDB.getHost() + ".mv.db");
 
 
-      //Create tables as needed
-        Connection conn = null;
-        try{
-            conn = logDB.getConnection();
-
-            boolean initSchema;
-            javaxt.io.File db = new javaxt.io.File(logDB.getHost() + ".mv.db");
-            if (!db.exists()){
-                initSchema = true;
-            }
-            else{
-                Table[] tables = Database.getTables(conn);
-                initSchema = tables.length==0;
-            }
-
-
-            if (initSchema){
-                db.getDirectory().create();
-
-                String cmd =
-                "CREATE TABLE IF NOT EXISTS TRANSACTION( " +
-                "id bigint auto_increment, " +
-                "action varchar(10), "+
-                "type varchar(25), " +
-                "data clob, " +
-                "username varchar(35), " +
-                "timestamp LONG);";
-
-                java.sql.Statement stmt = conn.getConnection().createStatement();
-                stmt.execute(cmd);
-                stmt.close();
-            }
-
-
-            conn.close();
+        boolean initSchema;
+        if (!db.exists()){
+            initSchema = true;
         }
-        catch(Exception e){
-            if (conn!=null) conn.close();
-            throw e;
+        else{
+            Table[] tables = logDB.getTables();
+            initSchema = tables.length==0;
+        }
+
+
+      //Create transaction table as needed
+        if (initSchema){
+            db.getDirectory().create();
+
+            try (Connection conn = logDB.getConnection()){
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS TRANSACTION( " +
+                    "id bigint auto_increment, " +
+                    "action varchar(10), "+
+                    "type varchar(25), " +
+                    "data clob, " +
+                    "username varchar(35), " +
+                    "timestamp LONG);"
+                );
+            }
         }
 
 
@@ -1037,9 +1017,7 @@ public class GraphService extends WebService {
         String user = info.get("user").toString();
 
 
-        Connection conn = null;
-        try{
-            conn = logDB.getConnection();
+        try (Connection conn = logDB.getConnection()){
             java.sql.Connection c = conn.getConnection();
 
             PreparedStatement preparedStatement = c.prepareStatement(
@@ -1057,10 +1035,9 @@ public class GraphService extends WebService {
             preparedStatement.executeUpdate();
             preparedStatement.close();
 
-            conn.close();
         }
         catch(Exception e){
-            if (conn!=null) conn.close();
+
         }
 
     }

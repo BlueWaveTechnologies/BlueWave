@@ -459,7 +459,7 @@ public class Maintenance {
    */
     private static String getRegEx(String wildcard){
         wildcard = wildcard.trim();
-        StringBuffer s = new StringBuffer(wildcard.length());
+        StringBuilder s = new StringBuilder(wildcard.length());
         s.append('^');
         for (int i = 0, is = wildcard.length(); i < is; i++) {
             char c = wildcard.charAt(i);

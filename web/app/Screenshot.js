@@ -90,30 +90,20 @@ bluewave.Screenshot = function(parent, config) {
 
 
       //Create table
-        var table = createTable();
-        var tbody = table.firstChild;
+        var table = createTable(win.getBody());
         var tr, td;
 
-        tr = document.createElement("tr");
-        tr.className = "screenshot-confirmation";
-        tbody.appendChild(tr);
-        td = document.createElement("td");
+        tr = table.addRow("screenshot-confirmation");
+        td = tr.addColumn();
         td.innerHTML = '<i class="far fa-check-circle"></i>';
-        tr.appendChild(td);
-        td = document.createElement("td");
-        td.innerHTML = "Image Ready!";
-        tr.appendChild(td);
 
-        tr = document.createElement("tr");
-        tbody.appendChild(tr);
-        td = document.createElement("td");
+        td = tr.addColumn();
+        td.innerHTML = "Image Ready!";
+
+
+        td = table.addRow().addColumn();
         td.colSpan = 2;
         td.style.height = "100%";
-        tr.appendChild(td);
-
-        var div = win.getBody();
-        div.appendChild(table);
-
 
 
 

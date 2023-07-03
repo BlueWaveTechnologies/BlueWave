@@ -2,6 +2,7 @@ package bluewave;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import javaxt.express.utils.DbUtils;
+import static javaxt.express.ConfigFile.*;
 import static javaxt.utils.Console.console;
 import javaxt.json.*;
 import javaxt.sql.*;
@@ -19,6 +20,8 @@ import javaxt.sql.*;
 public class Config {
 
     private static javaxt.express.Config config = new javaxt.express.Config();
+    private static boolean databaseInitialized = false;
+
     private Config(){}
 
 
@@ -93,32 +96,59 @@ public class Config {
   /** Used to initialize the database
    */
     public static void initDatabase() throws Exception {
-        Database database = config.getDatabase();
+        if (databaseInitialized) return;
+
+        try{
+
+          //Get database config
+            Database database = config.getDatabase();
 
 
-      //Get database schema
-        String schema = null;
-        Object obj = config.getDatabase().getProperties().get("schema");
-        if (obj!=null){
-            javaxt.io.File schemaFile = (javaxt.io.File) obj;
-            if (schemaFile.exists()){
-                schema = schemaFile.getText();
+          //Get database schema
+            String schema = null;
+            Object obj = config.getDatabase().getProperties().get("schema");
+            if (obj!=null){
+                javaxt.io.File schemaFile = (javaxt.io.File) obj;
+                if (schemaFile.exists()){
+                    schema = schemaFile.getText();
+                }
             }
+            if (schema==null) throw new Exception("Schema not found");
+
+
+          //Initialize schema (create tables, indexes, etc)
+            DbUtils.initSchema(database, schema, null);
+            if (database.getDriver().equals("H2")){
+                java.util.Properties properties = new java.util.Properties();
+                properties.setProperty("MODE", "PostgreSQL");
+                database.setProperties(properties);
+                try(Connection conn = database.getConnection()){
+                    conn.execute("CREATE ALIAS IF NOT EXISTS JSON_VALUE AS '\n" +
+                    "String jsonValue(String json, String key) {\n" +
+                    "    return new javaxt.json.JSONObject(json).get(key).toString();\n" +
+                    "}\n" +
+                    "';");
+                }
+            }
+
+
+          //Enable metadata caching
+            database.enableMetadataCache(true);
+
+
+          //Inititalize connection pool
+            database.initConnectionPool();
+
+
+          //Initialize models
+            javaxt.io.Jar jar = (javaxt.io.Jar) config.get("jar").toObject();
+            Model.init(jar, database.getConnectionPool());
+
+            databaseInitialized = true;
         }
-        if (schema==null) throw new Exception("Schema not found");
-
-
-      //Initialize schema (create tables, indexes, etc)
-        DbUtils.initSchema(database, schema, null);
-
-
-      //Inititalize connection pool
-        database.initConnectionPool();
-
-
-      //Initialize models
-        javaxt.io.Jar jar = (javaxt.io.Jar) config.get("jar").toObject();
-        Model.init(jar, database.getConnectionPool());
+        catch(Exception e){
+            throw e;
+        }
     }
 
 
@@ -333,11 +363,11 @@ public class Config {
         return indexDir;
     }
 
-    
+
   //**************************************************************************
   //** getPlugins
   //**************************************************************************
-    public static ArrayList<Plugin> getPlugins(){       
+    public static ArrayList<Plugin> getPlugins(){
         ArrayList<Plugin> plugins = new ArrayList<>();
         try{
             javaxt.io.Directory pluginDir = getDirectory("webserver", "pluginDir");
@@ -350,7 +380,6 @@ public class Config {
         catch(Exception e){}
         return plugins;
     }
-
 
   //**************************************************************************
   //** getDirectory
@@ -372,121 +401,6 @@ public class Config {
         }
         catch(Exception e){
             return null;
-        }
-    }
-
-
-  //**************************************************************************
-  //** getFile
-  //**************************************************************************
-  /** Returns a File for a given path
-   *  @param path Full canonical path to a file or a relative path (relative
-   *  to the jarFile)
-   */
-    public static javaxt.io.File getFile(String path, javaxt.io.File jarFile){
-        javaxt.io.File file = new javaxt.io.File(path);
-        if (!file.exists()){
-            file = new javaxt.io.File(jarFile.MapPath(path));
-        }
-        return file;
-    }
-
-
-  //**************************************************************************
-  //** updateDir
-  //**************************************************************************
-  /** Used to update a path to a directory defined in a config file. Resolves
-   *  both canonical and relative paths (relative to the configFile).
-   */
-    public static void updateDir(String key, JSONObject config, javaxt.io.File configFile, boolean create){
-        if (config!=null && config.has(key)){
-            String path = config.get(key).toString();
-            if (path==null){
-                config.remove(key);
-            }
-            else{
-                path = path.trim();
-                if (path.length()==0){
-                    config.remove(key);
-                }
-                else{
-
-                    javaxt.io.Directory dir = new javaxt.io.Directory(path);
-                    if (dir.exists()){
-                        try{
-                            java.io.File f = new java.io.File(path);
-                            javaxt.io.Directory d = new javaxt.io.Directory(f.getCanonicalFile());
-                            if (!dir.toString().equals(d.toString())){
-                                dir = d;
-                            }
-                        }
-                        catch(Exception e){
-                        }
-                    }
-                    else{
-                        dir = new javaxt.io.Directory(new java.io.File(configFile.MapPath(path)));
-                    }
-
-
-                    if (!dir.exists() && create) dir.create();
-
-
-                    if (dir.exists()){
-                        config.set(key, dir.toString());
-                    }
-                    else{
-                        config.remove(key);
-                    }
-                }
-            }
-        }
-    }
-
-
-  //**************************************************************************
-  //** updateFile
-  //**************************************************************************
-  /** Used to update a path to a file defined in a config file. Resolves
-   *  both canonical and relative paths (relative to the configFile).
-   */
-    public static void updateFile(String key, JSONObject config, javaxt.io.File configFile){
-        if (config.has(key)){
-            String path = config.get(key).toString();
-            if (path==null){
-                config.remove(key);
-            }
-            else{
-                path = path.trim();
-                if (path.length()==0){
-                    config.remove(key);
-                }
-                else{
-
-                    javaxt.io.File file = new javaxt.io.File(path);
-                    if (file.exists()){
-                        try{
-                            java.io.File f = new java.io.File(path);
-                            javaxt.io.File _file = new javaxt.io.File(f.getCanonicalFile());
-                            if (!file.toString().equals(_file.toString())){
-                                file = _file;
-                            }
-                        }
-                        catch(Exception e){
-                        }
-                    }
-                    else{
-                        file = new javaxt.io.File(configFile.MapPath(path));
-                    }
-
-                    config.set(key, file.toString());
-//                    if (file.exists()){
-//                        config.set(key, file.toString());
-//                    }
-//                    else{
-//                        config.remove(key);
-//                    }
-                }
-            }
         }
     }
 

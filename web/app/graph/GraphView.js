@@ -50,9 +50,9 @@ bluewave.GraphView = function(parent, config) {
 
 
       //Create main div
-        var div = document.createElement("div");
-        div.style.height = "100%";
-        parent.appendChild(div);
+        var div = createElement("div", parent, {
+            height: "100%"
+        });
         me.el = div;
 
 
@@ -409,6 +409,7 @@ bluewave.GraphView = function(parent, config) {
     var get = bluewave.utils.get;
     var merge = javaxt.dhtml.utils.merge;
     var isArray = javaxt.dhtml.utils.isArray;
+    var createElement = javaxt.dhtml.utils.createElement;
     var getColorPalette = bluewave.utils.getColorPalette;
 
     init();

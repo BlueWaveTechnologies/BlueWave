@@ -12,7 +12,6 @@ bluewave.Homepage = function(parent, config) {
 
     var me = this;
     var mainDiv;
-    var t = new Date().getTime();
     var dashboardItems = [];
     var dashboardMenu, groupMenu; //callouts
     var waitmask;
@@ -28,18 +27,15 @@ bluewave.Homepage = function(parent, config) {
         if (!config.waitmask) config.waitmask = new javaxt.express.WaitMask(document.body);
         waitmask = config.waitmask;
 
-        var div = document.createElement("div");
+        var div = createElement("div", parent);
         div.className = "dashboard-homepage";
         div.style.height = "100%";
         div.style.textAlign = "center";
         div.style.overflowY = "auto";
-        parent.appendChild(div);
         me.el = div;
 
-        var innerDiv = document.createElement("div");
-        innerDiv.style.height = "100%";
-        div.appendChild(innerDiv);
-        mainDiv = innerDiv;
+        mainDiv = createElement("div", div);
+        mainDiv.style.height = "100%";
 
 
       //Add listeners to the "Dashboard" store
@@ -79,7 +75,7 @@ bluewave.Homepage = function(parent, config) {
   //**************************************************************************
   //** onClick
   //**************************************************************************
-    this.onClick = function(dashboard){};
+    this.onClick = function(dashboardItem){};
 
 
   //**************************************************************************
@@ -201,7 +197,7 @@ bluewave.Homepage = function(parent, config) {
             }
 
 
-            var newGroup = isNaN(group.id);
+            var newGroup = !isNumber(group.id);
             getGroups(function(groups){
                 saveGroup(group, function(){
                     if (newGroup){
@@ -251,7 +247,7 @@ bluewave.Homepage = function(parent, config) {
                     sharedDashboards.push(dashboard.id);
                 }
             }
-            if (myDashboards.length>0){
+            if (myDashboards.length>0 && sharedDashboards.length>0){
                 groups = new javaxt.dhtml.DataStore();
                 groups.add({
                     name: "My Dashboards",
@@ -352,16 +348,12 @@ bluewave.Homepage = function(parent, config) {
   //** add
   //**************************************************************************
     var add = function(dashboard, parent){
-        var title = dashboard.name;
 
 
       //Create dashboardItem
-        var dashboardItem = createDashboardItem(parent, {
-            width: 360,
-            height: 230,
-            subtitle: title,
-            settings: true
-        });
+        var preview = new bluewave.dashboard.CardView(parent);
+        preview.update(dashboard);
+        var dashboardItem = preview.getDashboardItem();
         dashboardItem.dashboard = dashboard;
         dashboardItems.push(dashboardItem);
 
@@ -373,8 +365,9 @@ bluewave.Homepage = function(parent, config) {
 
 
       //Update dashboardItem
-        dashboardItem.innerDiv.style.cursor = "pointer";
-        dashboardItem.innerDiv.style.textAlign = "center";
+        dashboardItem.innerDiv.style.verticalAlign = "top";
+        //dashboardItem.innerDiv.style.cursor = "pointer";
+        //dashboardItem.innerDiv.style.textAlign = "center";
         dashboardItem.innerDiv.onclick = function(){
             if (dashboardMenu) dashboardMenu.hide();
             me.onClick(dashboardItem);
@@ -438,72 +431,6 @@ bluewave.Homepage = function(parent, config) {
                 });
             }
         };
-
-
-        var icon = document.createElement("i");
-        icon.className = "fas fa-camera";
-        dashboardItem.innerDiv.appendChild(icon);
-
-
-        var img = document.createElement("img");
-        img.className = "noselect";
-        img.style.cursor = "pointer";
-        img.onload = function() {
-            dashboardItem.innerDiv.innerHTML = "";
-            var rect = javaxt.dhtml.utils.getRect(dashboardItem.innerDiv);
-            dashboardItem.innerDiv.appendChild(this);
-            this.style.border = "1px solid #ececec"; //this should be in the css
-
-
-            var maxWidth = rect.width;
-            var maxHeight = rect.height;
-            var width = 0;
-            var height = 0;
-
-            var setWidth = function(){
-                var ratio = maxWidth/width;
-                width = width*ratio;
-                height = height*ratio;
-            };
-
-            var setHeight = function(){
-                var ratio = maxHeight/height;
-                width = width*ratio;
-                height = height*ratio;
-            };
-
-
-            var resize = function(img){
-                width = img.width;
-                height = img.height;
-
-                if (maxHeight<maxWidth){
-
-                    setHeight();
-                    if (width>maxWidth) setWidth();
-                }
-                else{
-                    setWidth();
-                    if (height>maxHeight) setHeight();
-                }
-
-                if (width===0 || height===0) return;
-
-
-                img.width = width;
-                img.height = height;
-
-                //TODO: Insert image into a canvas and do a proper resize
-                //ctx.putImageData(img, 0, 0);
-                //resizeCanvas(canvas, width, height, true);
-                //var base64image = canvas.toDataURL("image/png");
-
-            };
-
-            resize(this);
-
-        };
-        img.src = "dashboard/thumbnail?id=" + dashboard.id + "&_=" + t;
     };
 
 
@@ -512,30 +439,27 @@ bluewave.Homepage = function(parent, config) {
   //**************************************************************************
     var createGroupBox = function(group){
 
-        var div = document.createElement("div");
-        div.className = "dashboard-group";
+        var div = createElement("div", "dashboard-group");
         div.style.position = "relative";
         div.addEventListener('dragover', onDragOver, false);
         div.addEventListener('drop', onDrop, false);
         div.group = group;
 
 
-        var header = document.createElement("div");
-        header.className = "dashboard-group-header noselect";
+        var header = createElement("div", div, "dashboard-group-header noselect");
         header.style.position = "absolute";
-        div.appendChild(header);
 
-        var label = document.createElement("span");
+
+        var label = createElement("span", header);
         label.innerText = group.name;
-        header.appendChild(label);
+
 
         if (!isDefaultGroup(group)){
 
-            var settings = document.createElement("div");
-            settings.className = "dashboard-group-settings";
+            var settings = createElement("div", header, "dashboard-group-settings");
             settings.innerHTML = '<i class="fas fa-cog"></i>';
             settings.style.opacity = 0;
-            header.appendChild(settings);
+
 
           //Show/hide setting wheel using the mouse over and out events
             header.onmouseover = function(){
@@ -640,7 +564,7 @@ bluewave.Homepage = function(parent, config) {
 
       //Do some sanity checking to prevent dragging/dropping into the same group
         if (!orgGroup) return;
-        if (orgGroup.id===newGroup.id && !isNaN(orgGroup.id) && !isNaN(newGroup.id)) return;
+        if (orgGroup.id===newGroup.id && isNumber(orgGroup.id) && isNumber(newGroup.id)) return;
         if (orgGroup===newGroup) return;
 
 
@@ -655,27 +579,27 @@ bluewave.Homepage = function(parent, config) {
 
 
       //Save orginal and new groups as needed
-        if (isNaN(newGroup.id)){
-            if (isNaN(orgGroup.id)){
-                refresh();
-            }
-            else{
-                saveGroup(orgGroup, function(){
-                    refresh();
-                });
-            }
-        }
-        else{
+        if (isNumber(newGroup.id)){
             saveGroup(newGroup, function(){
-                if (isNaN(orgGroup.id)){
-                    refresh();
-                }
-                else{
+                if (isNumber(orgGroup.id)){
                     saveGroup(orgGroup, function(){
                         refresh();
                     });
                 }
+                else{
+                    refresh();
+                }
             });
+        }
+        else {
+            if (isNumber(orgGroup.id)){
+                saveGroup(orgGroup, function(){
+                    refresh();
+                });
+            }
+            else{
+                refresh();
+            }
         }
     };
 
@@ -689,8 +613,7 @@ bluewave.Homepage = function(parent, config) {
                 style: config.style.callout
             });
 
-            var div = document.createElement("div");
-            div.className = "dashboard-homepage-menu";
+            var div = createElement("div", dashboardMenu.getInnerDiv(), "dashboard-homepage-menu");
 
             var menu = {};
 
@@ -728,7 +651,6 @@ bluewave.Homepage = function(parent, config) {
 
             div.appendChild(menu.delete);
             div.appendChild(menu.move);
-            dashboardMenu.getInnerDiv().appendChild(div);
 
 
             dashboardMenu.updateMenu = function(permissions){
@@ -774,8 +696,7 @@ bluewave.Homepage = function(parent, config) {
                 style: config.style.callout
             });
 
-            var div = document.createElement("div");
-            div.className = "dashboard-homepage-menu";
+            var div = createElement("div", groupMenu.getInnerDiv(), "dashboard-homepage-menu");
 
             var menu = {};
 
@@ -803,7 +724,6 @@ bluewave.Homepage = function(parent, config) {
 
             div.appendChild(menu.edit);
             div.appendChild(menu.delete);
-            groupMenu.getInnerDiv().appendChild(div);
         }
         return groupMenu;
     };
@@ -813,8 +733,7 @@ bluewave.Homepage = function(parent, config) {
   //** createMenuOption
   //**************************************************************************
     var createMenuOption = function(label, icon, onClick){
-        var div = document.createElement("div");
-        div.className = "dashboard-homepage-menu-item noselect";
+        var div = createElement("div", "dashboard-homepage-menu-item noselect");
         if (icon && icon.length>0){
             div.innerHTML = '<i class="fas fa-' + icon + '"></i>' + label;
         }
@@ -850,7 +769,7 @@ bluewave.Homepage = function(parent, config) {
                 }
             }
             if (!groups) groups = new javaxt.dhtml.DataStore();
-            if (myDashboards.length>0){
+            if (myDashboards.length>0 && sharedDashboards.length>0){
                 groups.add({
                     name: "My Dashboards",
                     dashboards: myDashboards
@@ -921,7 +840,7 @@ bluewave.Homepage = function(parent, config) {
   //** isDefaultGroup
   //**************************************************************************
     var isDefaultGroup = function(group){
-        return (isNaN(group.id) && (group.name=="My Dashboards" || group.name=="Shared Dashboards"));
+        return (!isNumber(group.id) && (group.name=="My Dashboards" || group.name=="Shared Dashboards"));
     };
 
 
@@ -1019,20 +938,17 @@ bluewave.Homepage = function(parent, config) {
 
 
           //Create buttons
-            var buttonDiv = document.createElement("div");
-            buttonDiv.className = "button-div";
+            var buttonDiv = createElement("div", "button-div");
             win.setFooter(buttonDiv);
             var createButton = function(label, callback){
-                var input = document.createElement("input");
+                var input = createElement("input", buttonDiv, "form-button");
                 input.type = "button";
-                input.className = "form-button";
                 input.name = label;
                 input.value = label;
                 input.onclick = function(){
                     if (callback) callback();
                     else win.close();
                 };
-                buttonDiv.appendChild(input);
                 return input;
             };
             createButton("OK", function(){
@@ -1085,8 +1001,7 @@ bluewave.Homepage = function(parent, config) {
 
           //Create icon method
             var createIcon = function(){
-                var icon = document.createElement("i");
-                icon.className = "fas fa-check";
+                var icon = createElement("i", "fas fa-check");
                 icon.style.marginTop = "10px";
                 return icon;
             };
@@ -1165,8 +1080,9 @@ bluewave.Homepage = function(parent, config) {
     var get = bluewave.utils.get;
     var del = javaxt.dhtml.utils.delete;
     var post = javaxt.dhtml.utils.post;
-    var createDashboardItem = bluewave.utils.createDashboardItem;
+    var createElement = javaxt.dhtml.utils.createElement;
     var addShowHide = javaxt.dhtml.utils.addShowHide;
+    var isNumber = bluewave.chart.utils.isNumber;
     var warn = bluewave.utils.warn;
 
     init();
