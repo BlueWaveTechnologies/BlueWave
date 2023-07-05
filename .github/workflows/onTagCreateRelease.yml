@@ -153,7 +153,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions
         with:
-          tag_name: ${{ env.releaseLabel }}
+          tag_name: v${{ env.releaseLabel }}
           release_name: Release ${{ env.releaseLabel }}
           body: |
             BlueWave Release ${{ env.releaseLabel }}
