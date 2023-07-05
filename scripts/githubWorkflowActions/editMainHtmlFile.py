@@ -7,12 +7,7 @@ mainLocation = os.path.dirname(os.getcwd())+"/BlueWave/web/"
 newLocation = os.path.dirname(os.getcwd())+"/BlueWave/compiledProjectDirectory/"
 
 itemsToRemove = [
-'src="app', 
-"<!-- Admin Modules -->",
- "<!-- Graph Stuff -->",
-  "<!-- Misc -->",
- "<!-- Dashboard Creator -->",
- "<!-- Dashboards -->"
+'src="app'
  ]
 
 with open(mainLocation + "/main.html", "r") as f:
@@ -32,9 +27,8 @@ with open(newLocation + "/web/main.html", "w") as f:
             # add the line to the new HTML file
             f.write(line)
 
-        # add the BlueWave file reference just below the kartographia reference
-        if '<script src="lib/kartographia/kartographia.js" type="text/javascript"></script>' in line:
+        # add the BlueWave file reference
+        if '<!-- BlueWave Application -->' in line:
             
-            f.write('\n\n<!-- BlueWave-->\n')
-            f.write('<script src="bluewave.js" type="text/javascript"></script>\n')
+            f.write('<script src="bluewave.js"></script>\n')
 
