@@ -181,17 +181,15 @@ public class Main {
 
 
 
-                ArrayList<InetSocketAddress> addresses = new ArrayList<>();
-                Integer port = webConfig.get("port").toInteger();
+              //Get port (optional)
                 if (args.containsKey("-port")){
-                    port = Integer.parseInt(args.get("-port"));
+                    Integer port = Integer.parseInt(args.get("-port"));
+                    if (port!=null) webConfig.set("port", port);
                 }
 
 
-
-                addresses.add(new InetSocketAddress("0.0.0.0", port==null ? 80 : port));
-                new javaxt.http.Server(addresses, 250, new WebApp(webConfig)).start();
-
+              //Start web app
+                new WebApp(webConfig).start();
                 // bluewave.graph.Maintenance.syncUsers(Config.getGraph(null));
             }
         }

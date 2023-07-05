@@ -1,7 +1,10 @@
 package bluewave.web;
 import bluewave.Config;
-import java.io.IOException;
+
 import java.util.*;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.security.KeyStore;
 
 import javaxt.express.*;
 import javaxt.http.servlet.*;
@@ -31,11 +34,16 @@ public class WebApp extends HttpServlet {
     private String appName;
     private String appStyle;
     private String auth;
+    private ArrayList<InetSocketAddress> addresses;
+    private Integer maxThreads;
+    private JSONObject config;
 
 
   //**************************************************************************
   //** Constructor
   //**************************************************************************
+  /** Constructor that assumes a config.json sits next to the jar file
+   */
     public WebApp() throws Exception {
 
       //Get config file
@@ -51,7 +59,7 @@ public class WebApp extends HttpServlet {
 
       //Initialize this class
         JSONObject webConfig = Config.get("webserver").toJSONObject();
-        init(webConfig);
+        parseConfig(webConfig);
     }
 
 
@@ -59,14 +67,16 @@ public class WebApp extends HttpServlet {
   //** Constructor
   //**************************************************************************
     public WebApp(JSONObject config) throws Exception {
-        init(config);
+        parseConfig(config);
     }
 
 
   //**************************************************************************
   //** init
   //**************************************************************************
-    private void init(JSONObject config) throws Exception {
+    private void parseConfig(JSONObject config) throws Exception {
+        this.config = config;
+
 
       //Set path to the web directory
         if (config.has("webDir")){
@@ -88,16 +98,6 @@ public class WebApp extends HttpServlet {
         }
 
 
-      //Start the notification service
-        NotificationService.start();
-
-
-      //Instantiate file manager
-        fileManager = new FileManager(web);
-
-
-      //Instantiate web services
-        ws = new WebServices(web, config);
 
 
       //Instantiate authenticator
@@ -138,17 +138,108 @@ public class WebApp extends HttpServlet {
         if (appStyle==null) appStyle = "";
 
 
+      //Get keystore (optional)
+        KeyStore keystore = null;
+        char[] keypass = null;
+        if (config.has("keystore") && config.has("keypass")){
+            try{
+                keypass = config.get("keypass").toString().toCharArray();
+                keystore = KeyStore.getInstance("JKS");
+                keystore.load(new java.io.FileInputStream(config.get("keystore").toString()), keypass);
+            }
+            catch(Exception e){
+                keystore = null;
+                keypass = null;
+            }
+        }
+
+
       //Get logging info (optional)
         if (config.has("logDir")){
             String logDir = config.get("logDir").toString();
             javaxt.io.Directory dir = new javaxt.io.Directory(logDir);
             if (!dir.exists()) dir.create();
             if (dir.exists()){
+                dir = new javaxt.io.Directory(dir + "web");
+                if (!dir.exists()) dir.create();
                 logger = new Logger(dir.toFile());
-                new Thread(logger).start();
             }
             else console.log("Invalid \"logDir\" defined in config file");
         }
+
+
+      //Generate list of socket addresses to bind to
+        addresses = new ArrayList<>();
+        Integer port = config.get("port").toInteger();
+        if (port==null){
+            addresses.add(new InetSocketAddress("0.0.0.0", 80));
+            if (keystore!=null){
+                try{
+                    setKeyStore(keystore, new String(keypass));
+                    setTrustStore(keystore);
+                    addresses.add(new InetSocketAddress("0.0.0.0", 443));
+                }
+                catch(Exception e){
+                    //e.printStackTrace();
+                }
+            }
+        }
+        else{
+            addresses.add(new InetSocketAddress("0.0.0.0", port));
+        }
+
+
+      //Get max threads
+        maxThreads = config.get("maxThreads").toInteger();
+        if (maxThreads==null || maxThreads<0) maxThreads = 250;
+    }
+
+
+  //**************************************************************************
+  //** start
+  //**************************************************************************
+  /** Used to start the web server and related services
+   */
+    public void start(){
+        start(false);
+    }
+
+
+  //**************************************************************************
+  //** start
+  //**************************************************************************
+  /** Used to start the web server and related services
+   *  @param embedded If true, will not start an HTTP server. This method is
+   *  used to embed the application in another web server.
+   */
+    public void start(boolean embedded){
+
+      //Start the notification service
+        NotificationService.start();
+
+
+      //Instantiate file manager
+        fileManager = new FileManager(web);
+
+
+      //Instantiate web services
+        try{
+            ws = new WebServices(web, config);
+        }
+        catch(Exception e){
+            throw new RuntimeException(e);
+        }
+
+
+      //Start logger
+        if (logger!=null) new Thread(logger).start();
+
+
+
+      //Start web server
+        if (embedded || addresses==null || addresses.isEmpty()) return;
+        new javaxt.http.Server(addresses, maxThreads, this).start();
+
     }
 
 
@@ -159,6 +250,25 @@ public class WebApp extends HttpServlet {
    */
     public void processRequest(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
+
+
+
+      //Check if the server support HTTPS
+        if (this.supportsHttps()){
+
+          //Set "Content-Security-Policy"
+            response.setHeader("Content-Security-Policy", "upgrade-insecure-requests");
+
+
+          //Redirect http request to https as needed
+            javaxt.utils.URL url = new javaxt.utils.URL(request.getURL());
+            if (!url.getProtocol().equalsIgnoreCase("https")){
+                url.setProtocol("https");
+                response.sendRedirect(url.toString(), true);
+                return;
+            }
+        }
+
 
 
       //Get path from url, excluding servlet path and leading "/" character
@@ -388,6 +498,28 @@ public class WebApp extends HttpServlet {
       //Add custom app style
         if (path.endsWith("branding.css")){
             response.write(appStyle);
+            return;
+        }
+
+
+      //Special case for Certbot. When generating certificates using the
+      //certonly command, Certbot creates a hidden directory in the web root.
+      //The web server must return the files in this hidden directory. However,
+      //the filemanager does not allow access to hidden directories so we need
+      //to handle these requests manually.
+        if (path.startsWith(".well-known")){
+            console.log(path);
+            java.io.File file = new java.io.File(web + path);
+            console.log(file + "\t" + file.exists());
+
+          //Send file
+            if (file.exists()){
+                response.write(file, javaxt.io.File.getContentType(file.getName()), true);
+            }
+            else{
+                response.setStatus(404);
+                response.setContentType("text/plain");
+            }
             return;
         }
 
