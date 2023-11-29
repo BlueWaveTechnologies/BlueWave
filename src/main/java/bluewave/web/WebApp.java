@@ -479,7 +479,7 @@ public class WebApp extends HttpServlet {
         if (path.endsWith("main.html")){
             try{
                 request.authenticate();
-                User user = (User) request.getUserPrincipal();
+                bluewave.app.User user = (bluewave.app.User) request.getUserPrincipal();
                 if (user.getAccessLevel()<2) throw new Exception();
             }
             catch(Exception e){

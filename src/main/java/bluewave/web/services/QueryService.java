@@ -500,7 +500,7 @@ public class QueryService extends WebService {
    */
     private ServiceResponse list(ServiceRequest request) {
 
-        User user = (User) request.getUser();
+        bluewave.app.User user = (bluewave.app.User) request.getUser();
         JSONArray arr = new JSONArray();
         synchronized (jobs) {
             Iterator<String> it = jobs.keySet().iterator();
@@ -781,7 +781,7 @@ public class QueryService extends WebService {
                 addMetadata = params.get("metadata").toBoolean();
             }
         }
-        
+
         public bluewave.app.User getUser(){
             return user;
         }
